@@ -1,36 +1,70 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AskAtlas Web Client
+
+The web client for AskAtlas, built with [Next.js](https://nextjs.org).
+
+## Prerequisites
+
+Before getting started, ensure you have the following installed:
+
+- [Node.js](https://nodejs.org/) - Version 22 or higher
+- [pnpm](https://pnpm.io/) - For package management
+- [Docker](https://www.docker.com/)  - For containerization
+- [Infisical CLI](https://infisical.com/docs/cli/overview) - For environment variables
 
 ## Getting Started
 
-First, run the development server:
+1. **Install dependencies:**
+   ```bash
+   make install
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+2. **Run the development server:**
+   ```bash
+   make dev
+   ```
+   This will start the app on [http://localhost:3000](http://localhost:3000) with dev environment variables loaded via Infisical.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Makefile Commands
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+This project uses a `makefile` to standardize common tasks. Run `make <command>` to execute them.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Development & Build
+| Command | Description |
+|---------|-------------|
+| `make dev` | Starts the development server using Infisical for env vars. |
+| `make build` | Builds the application for production. |
+| `make staging` | Builds and runs the app in staging mode. |
+| `make prod` | Builds and runs the app in production mode. |
+| `make clean` | Removes `.next` and `node_modules`. |
 
-## Learn More
+### Code Quality
+| Command | Description |
+|---------|-------------|
+| `make lint` | Runs the linter. |
+| `make lint-fix` | Runs the linter and fixes issues. |
+| `make format` | Formats code using Prettier. |
+| `make format-check` | Checks if code is correctly formatted. |
+| `make typecheck` | Runs TypeScript type checking. |
 
-To learn more about Next.js, take a look at the following resources:
+### Testing
+| Command | Description |
+|---------|-------------|
+| `make test` | Runs unit/integration tests. |
+| `make test-e2e` | Runs Playwright E2E tests (dev environment). |
+| `make test-e2e-staging` | Runs E2E tests against staging. |
+| `make test-e2e-prod` | Runs E2E tests against production. |
+| `make test-e2e-codegen` | Opens Playwright codegen for creating tests. |
+| `make e2e-report` | Shows the Playwright test report. |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Docker
+| Command | Description |
+|---------|-------------|
+| `make docker-build` | Builds the Docker image `askatlas-web`. |
+| `make docker-run-local` | Runs the Docker container locally on port 3000. |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `app/`: Next.js App Router pages and layouts.
+- `lib/`: Shared utilities and business logic.
+- `public/`: Static assets.
+- `e2e/`: Playwright end-to-end tests.
