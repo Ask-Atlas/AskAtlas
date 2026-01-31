@@ -11,7 +11,7 @@ build:
 	pnpm run build
 
 install:
-	pnpm install
+	 pnpm install
 
 clean:
 	rm -rf .next node_modules
@@ -27,6 +27,9 @@ lint:
 
 lint-fix:
 	pnpm run lint --fix
+
+typecheck:
+	pnpm exec tsc --noEmit
 
 test:
 	pnpm run test
@@ -46,4 +49,10 @@ test-e2e-codegen:
 e2e-report:
 	pnpm exec playwright show-report
 
-.phony: dev build staging prod clean install format lint lint-fix format-check test test-e2e test-e2e-staging test-e2e-prod test-e2e-codegen e2e-report
+docker-build:
+	docker build -t askatlas-web .
+
+docker-run-local:
+	docker run -p 3000:3000 --env-file .env.local askatlas-web
+
+.PHONY: dev build staging prod clean install format lint lint-fix format-check test typecheck test-e2e test-e2e-staging test-e2e-prod test-e2e-codegen e2e-report docker-build docker-run-local
