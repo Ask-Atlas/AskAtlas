@@ -2,10 +2,6 @@ name: API Application Deployments
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - "api/**"
-      - ".github/workflows/api-deployments.yml"
 
 jobs:
   build:
