@@ -10,7 +10,7 @@ COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /api ./cmd/api
 
-FROM alpine:3.19 AS production
+FROM alpine:3.20 AS production
 
 RUN addgroup -S nonroot && adduser -S nonroot -G nonroot
 
