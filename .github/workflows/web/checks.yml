@@ -1,10 +1,10 @@
-name: Web CI
+name: Web Application Checks
 
 on:
   pull_request:
     paths:
       - 'web/**'
-      - '.github/workflows/web-ci.yml'
+      - '.github/workflows/web/checks.yml'
 
 defaults:
   run:
