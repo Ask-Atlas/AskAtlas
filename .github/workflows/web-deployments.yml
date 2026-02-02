@@ -34,7 +34,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/askatlas/web
+          images: ghcr.io/ask-atlas/web
           tags: |
             type=sha,format=long
             type=raw,value=${{ github.ref_name }}-latest
