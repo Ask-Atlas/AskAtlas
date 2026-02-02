@@ -38,8 +38,8 @@ This project uses a `makefile` to standardize common tasks. Run `make <command>`
 | Command             | Description                                          |
 | ------------------- | ---------------------------------------------------- |
 | `make dev`          | Starts the development server (`go run`).            |
-| `make stage`        | Starts the development server (`go run`).            |
-| `make prod`         | Starts the development server (`go run`).            |
+| `make stage`        | Starts the staging server (`go run`).                |
+| `make prod`         | Starts the production server (`go run`).             |
 | `make build`        | Builds the binary to `api`.                          |
 
 ### Code Quality
