@@ -52,6 +52,14 @@ init_and_validate() {
 deploy_container() {
     local container_name="$1"
     local image="$2"
+    local env="$3"
+
+    local -A INFISICAL_ENVS
+    INFISICAL_ENVS=(
+        [dev]="development"
+        [stage]="staging"
+        [prod]="production"
+    )
 
     docker stop "$container_name" 2>/dev/null || echo "Container not running"
     docker rm "$container_name" 2>/dev/null || echo "Container does not exist"
@@ -63,6 +71,10 @@ deploy_container() {
         --memory="$MEM_LIMIT" \
         --memory-reservation="$MEM_RESERVATION" \
         -e PORT="$PORT" \
+        -e INFISICAL_MACHINE_CLIENT_ID="$INFISICAL_CLIENT_ID" \
+        -e INFISICAL_MACHINE_CLIENT_SECRET="$INFISICAL_CLIENT_SECRET" \
+        -e PROJECT_ID="$INFISICAL_PROJECT_ID" \
+        -e INFISICAL_SECRET_ENV="${INFISICAL_ENVS["$env"]}" \
         "$image"
 
     echo "Waiting for container to start..."

@@ -31,7 +31,7 @@ docker image inspect "$LOCAL_TAG" &>/dev/null && {
 }
 docker tag "$IMAGE" "$LOCAL_TAG"
 
-deploy_container "$CONTAINER_NAME" "$IMAGE" || {
+deploy_container "$CONTAINER_NAME" "$IMAGE" "$ENV" || {
     echo "Deployment failed"
     exit 1
 }
