@@ -2,7 +2,13 @@ BINARY_NAME=api
 MAIN_PATH=./cmd/api/main.go
 
 dev:
-	go run $(MAIN_PATH)
+	infisical run --env=dev -- go run $(MAIN_PATH)
+
+stage:
+	infisical run --env=staging -- go run $(MAIN_PATH)
+
+prod:
+	infisical run --env=prod -- go run $(MAIN_PATH)
 
 build:
 	go build -o $(BINARY_NAME) $(MAIN_PATH)
@@ -36,4 +42,4 @@ docker-build:
 docker-run:
 	docker run -p 8080:8080 --env-file .env.local askatlas-api
 
-.PHONY: dev docker-build docker-run format format-check lint test
+.PHONY: dev stage prod docker-build docker-run format format-check lint test
