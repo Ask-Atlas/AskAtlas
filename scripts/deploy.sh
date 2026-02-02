@@ -36,7 +36,7 @@ deploy_container "$CONTAINER_NAME" "$IMAGE" "$ENV" || {
     exit 1
 }
 
-docker image prune -f --filter "dangling=true"
+docker image prune -f --filter "dangling=true" || echo "Pruneing in progress or failed"
 docker ps --filter name="$CONTAINER_NAME" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 docker stats "$CONTAINER_NAME" --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}"
 echo "✓ Deployment complete!"
