@@ -1,0 +1,48 @@
+name: API Application Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        type: choice
+        options:
+        - dev
+        - stage
+        - prod
+
+jobs:
+  rollback:
+    name: Rollback ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Copy deploy script to VM
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "scripts/rollback.sh,scripts/deploy-common.sh"
+          target: "/tmp"
+          
+      - name: Rollback VM
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_API_CLIENT_ID }}
+          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_API_CLIENT_SECRET }}
+          INFISICAL_PROJECT_ID: ${{ secrets.INFISICAL_API_PROJECT_ID }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          envs: INFISICAL_CLIENT_ID,INFISICAL_CLIENT_SECRET,INFISICAL_PROJECT_ID
+          script: |
+            set -e
+            chmod +x /tmp/scripts/rollback.sh /tmp/scripts/deploy-common.sh
+            /tmp/scripts/rollback.sh ${{ inputs.environment }} api
+            rm -rf /tmp/scripts
