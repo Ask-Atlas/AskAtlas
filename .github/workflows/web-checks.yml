@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - 'web/**'
-      - '.github/workflows/web/checks.yml'
+      - '.github/workflows/web-checks.yml'
 
 defaults:
   run:

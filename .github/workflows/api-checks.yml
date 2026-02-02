@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - "api/**"
-      - ".github/workflows/api/checks.yml"
+      - ".github/workflows/api-checks.yml"
 
 defaults:
   run:
