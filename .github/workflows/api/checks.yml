@@ -1,10 +1,10 @@
-name: API CI
+name: API Application Checks
 
 on:
   pull_request:
     paths:
       - "api/**"
-      - ".github/workflows/api-ci.yml"
+      - ".github/workflows/api/checks.yml"
 
 defaults:
   run:
@@ -79,4 +79,3 @@ jobs:
         run: make install
       - name: Build
         run: make build
-    
