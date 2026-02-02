@@ -14,7 +14,7 @@ TAG="$3"
 
 init_and_validate "$ENV" "$APP"
 
-IMAGE="ghcr.io/askatlas/$APP:$TAG"
+IMAGE="ghcr.io/ask-atlas/$APP:$TAG"
 LOCAL_TAG="$APP:$ENV-latest"
 PREVIOUS_TAG="$APP:$ENV-previous"
 
