@@ -27,8 +27,8 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: scripts/rollback.sh
-          target: /tmp
+          source: "scripts/rollback.sh,scripts/deploy-common.sh"
+          target: "/tmp"
           
       - name: Rollback VM
         uses: appleboy/ssh-action@v1.2.0
@@ -37,6 +37,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            chmod +x /tmp/rollback.sh
-            /tmp/rollback.sh ${{ inputs.environment }} web
-            rm /tmp/rollback.sh
+            set -e
+            chmod +x /tmp/scripts/rollback.sh /tmp/scripts/deploy-common.sh
+            /tmp/scripts/rollback.sh ${{ inputs.environment }} web
+            rm -rf /tmp/scripts

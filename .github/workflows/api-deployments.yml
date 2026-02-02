@@ -66,7 +66,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "scripts/deploy.sh"
+          source: "scripts/deploy.sh,scripts/deploy-common.sh"
           target: "/tmp"
       
       - name: Deploy to VM
@@ -80,7 +80,8 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           envs: GHCR_USERNAME,GHCR_TOKEN
           script: |
-            chmod +x /tmp/scripts/deploy.sh
+            set -e
+            chmod +x /tmp/scripts/deploy.sh /tmp/scripts/deploy-common.sh
             /tmp/scripts/deploy.sh dev api ${{ needs.build.outputs.image_tag }}
             rm -rf /tmp/scripts
 
@@ -99,7 +100,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "scripts/deploy.sh"
+          source: "scripts/deploy.sh,scripts/deploy-common.sh"
           target: "/tmp"
       
       - name: Deploy to VM
@@ -113,7 +114,8 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           envs: GHCR_USERNAME,GHCR_TOKEN
           script: |
-            chmod +x /tmp/scripts/deploy.sh
+            set -e
+            chmod +x /tmp/scripts/deploy.sh /tmp/scripts/deploy-common.sh
             /tmp/scripts/deploy.sh stage api ${{ needs.build.outputs.image_tag }}
             rm -rf /tmp/scripts
 
@@ -132,7 +134,7 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "scripts/deploy.sh"
+          source: "scripts/deploy.sh,scripts/deploy-common.sh"
           target: "/tmp"
       
       - name: Deploy to VM
@@ -146,6 +148,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           envs: GHCR_USERNAME,GHCR_TOKEN
           script: |
-            chmod +x /tmp/scripts/deploy.sh
+            set -e
+            chmod +x /tmp/scripts/deploy.sh /tmp/scripts/deploy-common.sh
             /tmp/scripts/deploy.sh prod api ${{ needs.build.outputs.image_tag }}
             rm -rf /tmp/scripts
