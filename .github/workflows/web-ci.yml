@@ -1,0 +1,69 @@
+name: Web CI
+
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - '.github/workflows/web-ci.yml'
+
+defaults:
+  run:
+    working-directory: web
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          cache-dependency-path: 'web/pnpm-lock.yaml'
+      - run: make install
+      - run: make lint
+  formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          cache-dependency-path: 'web/pnpm-lock.yaml'
+      - run: make install
+      - run: make format-check
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          cache-dependency-path: 'web/pnpm-lock.yaml'
+      - run: make install
+      - run: make typecheck
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+          cache-dependency-path: 'web/pnpm-lock.yaml'
+      - run: make install
+      - run: make build
