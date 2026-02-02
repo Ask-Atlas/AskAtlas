@@ -55,10 +55,11 @@ deploy_container() {
     local env="$3"
 
     local -A INFISICAL_ENVS
+   # Infisical CLI only accepts "dev" and "prod" as env flags
     INFISICAL_ENVS=(
-        [dev]="development"
+        [dev]="dev"
         [stage]="staging"
-        [prod]="production"
+        [prod]="prod"
     )
 
     docker stop "$container_name" 2>/dev/null || echo "Container not running"
