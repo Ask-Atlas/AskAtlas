@@ -2,7 +2,10 @@ name: Web Application Deployments
 
 on:
   workflow_dispatch:
-
+  pull_request:
+    paths:
+      - "web/**"
+      - ".github/workflows/web-deployments.yml" 
 jobs:
   build:
     name: Build and Push
