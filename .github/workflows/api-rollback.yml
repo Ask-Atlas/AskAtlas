@@ -32,10 +32,15 @@ jobs:
           
       - name: Rollback VM
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_API_CLIENT_ID }}
+          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_API_CLIENT_SECRET }}
+          INFISICAL_PROJECT_ID: ${{ secrets.INFISICAL_API_PROJECT_ID }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
+          envs: INFISICAL_CLIENT_ID,INFISICAL_CLIENT_SECRET,INFISICAL_PROJECT_ID
           script: |
             set -e
             chmod +x /tmp/scripts/rollback.sh /tmp/scripts/deploy-common.sh
