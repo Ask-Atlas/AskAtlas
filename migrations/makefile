@@ -1,6 +1,5 @@
 SHELL := /bin/bash
-.PHONY: help migrate-up migrate-down migrate-status migrate-create \
-        db-shell db-backup db-restore install
+.PHONY: help migrate-up migrate-down migrate-status migrate-create
 .DELETE_ON_ERROR:
 .SUFFIXES:
 
