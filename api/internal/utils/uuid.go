@@ -8,8 +8,8 @@ import (
 )
 
 func PgxToGoogleUUID(u pgtype.UUID) (uuid.UUID, error) {
-    if !u.Valid {
-        return uuid.Nil, fmt.Errorf("uuid is NULL/invalid")
-    }
-    return uuid.FromBytes(u.Bytes[:])
+	if !u.Valid {
+		return uuid.Nil, fmt.Errorf("uuid is NULL/invalid")
+	}
+	return uuid.FromBytes(u.Bytes[:])
 }

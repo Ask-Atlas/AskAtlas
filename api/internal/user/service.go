@@ -19,7 +19,7 @@ func NewService(repo Repository) *service {
 	return &service{repo: repo}
 }
 
-func (s *service) UpsertClerkUser(ctx context.Context, payload UpsertUserPayload ) (User, error) {
+func (s *service) UpsertClerkUser(ctx context.Context, payload UpsertUserPayload) (User, error) {
 	arg, err := ToUpsertClerkUserParams(payload)
 	if err != nil {
 		return User{}, err

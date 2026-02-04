@@ -49,7 +49,7 @@ func (ch *ClerkHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to handle webhook event",
 			"error", err,
-			"type", event.GetType(),)
+			"type", event.GetType())
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}

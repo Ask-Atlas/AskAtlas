@@ -8,7 +8,6 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 )
 
-
 type sqlcRepository struct {
 	queries *db.Queries
 }
