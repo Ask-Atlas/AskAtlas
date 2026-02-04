@@ -35,6 +35,8 @@ tidy:
 tidy-check:
 	./scripts/check-tidy.sh
 
+sqlc/generate:
+	go tool sqlc generate
 
 docker-build:
 	docker build -t askatlas-api .
