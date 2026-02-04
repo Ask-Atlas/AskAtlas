@@ -54,7 +54,7 @@ migrate-down:
 	$(call prod-confirm)
 	@if [ -n "$(version)" ]; then \
 		echo "Migrating to version $(version)..."; \
-		$(MIGRATE) -database "$(call build-url)" down "$(version)"; \
+		$(MIGRATE) -database "$(call build-url)" goto "$(version)"; \
 	elif [ -n "$(steps)" ]; then \
 		echo "Migrating down $(steps) steps..."; \
 		$(MIGRATE) -database "$(call build-url)" down "$(steps)"; \
