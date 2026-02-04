@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"bytes"
 	"io"
 	"log/slog"
 	"net/http"
@@ -28,6 +29,8 @@ func SVIXVerifier(secret string) func(next http.Handler) http.Handler {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
+
+			r.Body = io.NopCloser(bytes.NewBuffer(body))
 
 			next.ServeHTTP(w, r)
 		})
