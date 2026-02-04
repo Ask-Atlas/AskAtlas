@@ -3,7 +3,7 @@ SHELL := /bin/bash
 .DELETE_ON_ERROR:
 .SUFFIXES:
 
-ENV ?= dev 
+ENV ?= dev
 ENVS := dev staging prod
 
 ifeq ($(filter $(ENV), $(ENVS)), )
@@ -13,16 +13,16 @@ endif
 .DEFAULT_GOAL := help
 help:
 	@echo "Available targets:"
-	@echo "  migrate-up - Migrate up"
-	@echo "  migrate-down - Migrate down"
-	@echo "  migrate-status - Migrate status"
-	@echo "  migrate-create - Migrate create"
+	@echo "  migrate-up - Migrate up to the latest version"
+	@echo "  migrate-down - Migrate down to a specific version or steps"
+	@echo "  migrate-status - Show migration status"
+	@echo "  migrate-create - Create a new migration"
 	@echo ""
 	@echo "Example Usage"
 	@echo "  make migrate-up ENV=dev"
-	@echo "  make migrate-down ENV=dev"
+	@echo "  make migrate-down ENV=dev version=20240101120000"
 	@echo "  make migrate-status ENV=dev"
-	@echo "  make migrate-create ENV=dev"
+	@echo "  make migrate-create ENV=dev name=add_users_table"
 
 define prod-confirm
 	@if [ "$(ENV)" = "prod" ]; then \
@@ -69,4 +69,4 @@ migrate-create:
 		exit 1; \
 	fi
 	@echo "Creating migration..."
-	$(MIGRATE) seq "$(name)"
+	migrate create -ext sql -dir sql "$(name)"
