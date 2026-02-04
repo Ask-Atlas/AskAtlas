@@ -10,7 +10,7 @@ import (
 
 type UserService interface {
 	UpsertClerkUser(ctx context.Context, arg user.UpsertUserPayload) (user.User, error)
-	DeleteUser(ctx context.Context, clerkID string) error
+	SoftDeleteUserByClerkID(ctx context.Context, clerkID string) error
 }
 
 type clerkService struct {
@@ -57,7 +57,7 @@ func (cs *clerkService) handleUserUpdated(ctx context.Context, event UserUpdateE
 }
 
 func (cs *clerkService) handleUserDeleted(ctx context.Context, event UserDeletedEvent) error {
-	if err := cs.userService.DeleteUser(ctx, event.Data.ID); err != nil {
+	if err := cs.userService.SoftDeleteUserByClerkID(ctx, event.Data.ID); err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
 
