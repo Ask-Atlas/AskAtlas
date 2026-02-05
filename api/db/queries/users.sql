@@ -15,6 +15,7 @@ SET
     first_name = EXCLUDED.first_name,
     last_name = EXCLUDED.last_name,
     middle_name = EXCLUDED.middle_name,
+    metadata = EXCLUDED.metadata,
     updated_at = NOW(),
     deleted_at = NULL
 RETURNING *;
