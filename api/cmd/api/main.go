@@ -29,13 +29,13 @@ func main() {
 	r.Use(chiMiddleware.Recoverer)
 
 	ctx := context.Background()
-	database_url := os.Getenv("DATABASE_URL")
-	if database_url == "" {
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
 		slog.Error("DATABASE_URL environment variable is not set")
 		os.Exit(1)
 	}
 
-	connPool, err := pgxpool.New(ctx, database_url)
+	connPool, err := pgxpool.New(ctx, databaseURL)
 	if err != nil {
 		slog.Error("failed to create database connection pool", "error", err)
 		os.Exit(1)
