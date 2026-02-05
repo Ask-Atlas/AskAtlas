@@ -116,7 +116,7 @@ func TestToUpserUserPayload(t *testing.T) {
 		name      string
 		clerkUser clerk.ClerkUser
 		wantEmail string
-		wantError   bool
+		wantError bool
 	}{
 		{
 			name: "Primary Email Present",
@@ -130,7 +130,7 @@ func TestToUpserUserPayload(t *testing.T) {
 				FirstName:             utils.Ptr("John"),
 			},
 			wantEmail: "[EMAIL_ADDRESS]",
-			wantError:   false,
+			wantError: false,
 		},
 		{
 			name: "No Primary Email, Take First",
@@ -142,7 +142,7 @@ func TestToUpserUserPayload(t *testing.T) {
 				FirstName: utils.Ptr("John"),
 			},
 			wantEmail: "[EMAIL_ADDRESS]",
-			wantError:   false,
+			wantError: false,
 		},
 		{
 			name: "No Emails",
@@ -151,7 +151,7 @@ func TestToUpserUserPayload(t *testing.T) {
 				EmailAddresses: []clerk.EmailAddress{},
 			},
 			wantEmail: "",
-			wantError:   true,
+			wantError: true,
 		},
 	}
 
