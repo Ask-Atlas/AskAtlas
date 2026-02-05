@@ -103,16 +103,22 @@ type ClerkUser struct {
 	LegalAcceptedAt               *int64         `json:"legal_accepted_at"`
 }
 
-func (cl *ClerkUser) GetPrimaryEmailAddress() *EmailAddress {
-	if cl.PrimaryEmailAddressID == nil {
+// Clerk dashboard is setup to require an email however it is possible to not set a primary email address
+// so we will return the first email address if the primary is not set
+func (cl *ClerkUser) GetPrimaryOrFirstEmailAddress() *EmailAddress {
+	if len(cl.EmailAddresses) == 0 {
 		return nil
 	}
-	for _, emailAddress := range cl.EmailAddresses {
-		if emailAddress.ID == *cl.PrimaryEmailAddressID {
-			return &emailAddress
+
+	if cl.PrimaryEmailAddressID != nil {
+		for _, emailAddress := range cl.EmailAddresses {
+			if emailAddress.ID == *cl.PrimaryEmailAddressID {
+				return &emailAddress
+			}
 		}
 	}
-	return nil
+
+	return &cl.EmailAddresses[0]
 }
 
 type DeletedUser struct {

@@ -36,10 +36,7 @@ func (cs *clerkService) HandleWebhookEvent(ctx context.Context, event Event) err
 }
 
 func (cs *clerkService) handleUserCreated(ctx context.Context, event UserCreatedEvent) error {
-	return cs.handleUserUpdated(ctx, UserUpdateEvent{
-		BaseEvent: event.BaseEvent,
-		Data:      event.Data,
-	})
+	return cs.handleUserUpdated(ctx, UserUpdateEvent(event))
 }
 
 func (cs *clerkService) handleUserUpdated(ctx context.Context, event UserUpdateEvent) error {

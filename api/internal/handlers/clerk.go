@@ -33,23 +33,30 @@ func (ch *ClerkHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	msg_id := r.Header.Get("svix-id")
 	event, err := clerk.ParseWebhookEvent(body)
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to parse webhook event",
 			"error", err,
 			"body", string(body),
+			"msg_id", msg_id,
 		)
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return
 	}
 
-	slog.InfoContext(ctx, "received webhook event", "event", event)
+	slog.InfoContext(ctx, "received webhook event",
+		"msg_id", msg_id,
+		"type", event.GetType(),
+	)
 
 	err = ch.clerkService.HandleWebhookEvent(ctx, event)
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to handle webhook event",
 			"error", err,
-			"type", event.GetType())
+			"type", event.GetType(),
+			"msg_id", msg_id,
+		)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}

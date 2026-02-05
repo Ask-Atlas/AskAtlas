@@ -48,7 +48,7 @@ const (
 )
 
 func ToUpsertUserPayload(clerkUser ClerkUser) (user.UpsertUserPayload, error) {
-	emailAddress := clerkUser.GetPrimaryEmailAddress()
+	emailAddress := clerkUser.GetPrimaryOrFirstEmailAddress()
 	if emailAddress == nil {
 		return user.UpsertUserPayload{}, fmt.Errorf("user has no primary email address")
 	}
