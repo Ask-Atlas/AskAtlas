@@ -57,6 +57,7 @@ This project uses a `makefile` to standardize common tasks. Run `make <command>`
 | Command     | Description      |
 | ----------- | ---------------- |
 | `make test` | Runs unit tests. |
+| `make mockery` | Generates mocks for interfaces. |
 
 ### Docker
 

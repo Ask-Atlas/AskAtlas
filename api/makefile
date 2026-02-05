@@ -28,6 +28,9 @@ lint:
 test:
 	go test ./...
 
+mockery:
+	go tool mockery
+
 tidy:
 	go mod tidy
 	go mod verify

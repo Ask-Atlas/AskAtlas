@@ -1,0 +1,13 @@
+all: false
+dir: '{{.InterfaceDir}}/mocks'
+filename: '{{.InterfaceName}}.go'
+formatter: goimports
+log-level: info
+structname: '{{.Mock}}{{.InterfaceName}}'
+pkgname: 'mock_{{.SrcPackageName}}'
+recursive: true
+template: testify
+packages:
+  github.com/Ask-Atlas/AskAtlas/api/internal:
+    config:
+      all: true
