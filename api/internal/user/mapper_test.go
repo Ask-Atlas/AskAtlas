@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-func TestToUpserClerkUserParams(t *testing.T) {
+func TestToUpsertClerkUserParams(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
