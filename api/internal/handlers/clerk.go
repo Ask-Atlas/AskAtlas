@@ -40,7 +40,7 @@ func (ch *ClerkHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 			"error", err,
 			"msgID", msgID,
 		)
-		http.Error(w, "Bad Request", http.StatusBadRequest)
+		http.Error(w, "Unprocessable Entity", http.StatusUnprocessableEntity)
 		return
 	}
 
