@@ -10,6 +10,7 @@ import {
   MobileNavToggle,
   MobileNavMenu,
 } from "@/components/ui/resizable-navbar";
+import { ModeToggle } from "@/components/ui/mode-toggle";
 import { useState } from "react";
 
 // Template from https://ui.aceternity.com/components/resizable-navbar
@@ -40,6 +41,9 @@ export function MarketingNavbar() {
           <NavbarLogo />
           <NavItems items={navItems} />
           <div className="flex items-center gap-4">
+            <NavbarButton variant="secondary">
+              <ModeToggle />
+            </NavbarButton>
             <NavbarButton variant="secondary">Login</NavbarButton>
             <NavbarButton variant="primary">Get Started</NavbarButton>
           </div>
@@ -49,16 +53,19 @@ export function MarketingNavbar() {
         <MobileNav>
           <MobileNavHeader>
             <NavbarLogo />
-            <MobileNavToggle
-              isOpen={isMobileMenuOpen}
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            />
+            <div className="flex items-center gap-4">
+              <ModeToggle /> {/* Render directly, DO NOT wrap in NavbarButton */}
+              <MobileNavToggle
+                isOpen={isMobileMenuOpen}
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              />
+            </div>
           </MobileNavHeader>
 
           <MobileNavMenu
             isOpen={isMobileMenuOpen}
             onClose={() => setIsMobileMenuOpen(false)}
-          >
+          >            
             {navItems.map((item, idx) => (
               <a
                 key={`mobile-link-${idx}`}
@@ -69,7 +76,6 @@ export function MarketingNavbar() {
                 <span className="block">{item.name}</span>
               </a>
             ))}
-            <div className="flex w-full flex-col gap-4">
               <NavbarButton
                 onClick={() => setIsMobileMenuOpen(false)}
                 variant="primary"
@@ -84,7 +90,6 @@ export function MarketingNavbar() {
               >
                 Get Started
               </NavbarButton>
-            </div>
           </MobileNavMenu>
         </MobileNav>
       </Navbar>
