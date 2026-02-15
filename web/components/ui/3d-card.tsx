@@ -7,6 +7,7 @@ import React, {
   useContext,
   useRef,
   useEffect,
+  useCallback,
 } from "react";
 
 const MouseEnterContext = createContext<
@@ -115,26 +116,26 @@ export const CardItem = ({
   const withUnit = (value: number | string, unit: string) =>
     typeof value === "number" ? `${value}${unit}` : value;
 
-  useEffect(() => {
-    handleAnimations();
-  }, [
-    isMouseEntered,
-    translateX,
-    translateY,
-    translateZ,
-    rotateX,
-    rotateY,
-    rotateZ,
-  ]);
-
-  const handleAnimations = () => {
+  const handleAnimations = useCallback(() => {
     if (!ref.current) return;
     if (isMouseEntered) {
       ref.current.style.transform = `translateX(${withUnit(translateX, "px")}) translateY(${withUnit(translateY, "px")}) translateZ(${withUnit(translateZ, "px")}) rotateX(${withUnit(rotateX, "deg")}) rotateY(${withUnit(rotateY, "deg")}) rotateZ(${withUnit(rotateZ, "deg")})`;
     } else {
       ref.current.style.transform = `translateX(0px) translateY(0px) translateZ(0px) rotateX(0deg) rotateY(0deg) rotateZ(0deg)`;
     }
-  };
+  }, [
+    isMouseEntered,
+    rotateX,
+    rotateY,
+    rotateZ,
+    translateX,
+    translateY,
+    translateZ,
+  ]);
+
+  useEffect(() => {
+    handleAnimations();
+  }, [handleAnimations]);
 
   return (
     <Tag
