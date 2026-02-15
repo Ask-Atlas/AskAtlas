@@ -1,10 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom";
-import Home from "./page";
+import Home from "./(marketing)/page";
 
 describe("Home", () => {
   it("renders the page", () => {
     render(<Home />);
-    expect(screen.getByText(/To get started/i)).toBeInTheDocument();
+    expect(screen.getByText(/One app for every class/i)).toBeInTheDocument();
   });
 });
