@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import * as React from 'react';
-import { motion, type Variants } from 'motion/react';
+import * as React from "react";
+import { motion, type Variants } from "motion/react";
 
 import {
   getVariants,
   useAnimateIconContext,
   IconWrapper,
   type IconProps,
-} from '@/components/animate-ui/icons/icon';
+} from "@/components/animate-ui/icons/icon";
 
 type MenuProps = IconProps<keyof typeof animations>;
 
@@ -24,9 +24,9 @@ const animations = {
         rotate: -45,
         x: -2.35,
         y: 0.35,
-        transformOrigin: 'top right',
+        transformOrigin: "top right",
         transition: {
-          type: 'spring',
+          type: "spring",
           stiffness: 200,
           damping: 20,
         },
@@ -39,7 +39,7 @@ const animations = {
       animate: {
         opacity: 0,
         transition: {
-          ease: 'easeInOut',
+          ease: "easeInOut",
           duration: 0.2,
         },
       },
@@ -54,9 +54,9 @@ const animations = {
         rotate: 45,
         x: -2.35,
         y: -0.35,
-        transformOrigin: 'bottom right',
+        transformOrigin: "bottom right",
         transition: {
-          type: 'spring',
+          type: "spring",
           stiffness: 200,
           damping: 20,
         },
