@@ -8,6 +8,7 @@ export interface MarketingCommonDictionary {
     links: MarketingLinkCopy[];
     loginCta: string;
     primaryCta: string;
+    dashboardCta: string;
   };
   footer: {
     links: MarketingLinkCopy[];
