@@ -26,7 +26,6 @@ function getNavMain(
       title: copy.sidebar.items.home,
       url: "/home",
       icon: Home,
-      isActive: true,
     },
     {
       title: copy.sidebar.items.starred,
@@ -198,7 +197,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link href="/home">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-linear-to-br from-primary to-primary/70 text-primary-foreground">
                   <Globe className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
