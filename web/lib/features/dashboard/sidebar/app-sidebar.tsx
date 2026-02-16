@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { BookOpen, FileText, Globe, Home, Library, Star } from "lucide-react";
 import { useDashboardCommonCopy } from "@/lib/features/dashboard/i18n/common/common-copy-provider";
+import { DASHBOARD_ROUTES } from "@/lib/features/dashboard/navigation/routes";
 
 import { NavMain } from "@/lib/features/dashboard/sidebar/nav-main";
 import { NavUser } from "@/lib/features/dashboard/sidebar/nav-user";
@@ -24,17 +25,17 @@ function getNavMain(
   return [
     {
       title: copy.sidebar.items.home,
-      url: "/home",
+      url: DASHBOARD_ROUTES.home,
       icon: Home,
     },
     {
       title: copy.sidebar.items.starred,
-      url: "/me/saved",
+      url: DASHBOARD_ROUTES.saved,
       icon: Star,
       items: [
         {
           title: copy.sidebar.items.starredAll,
-          url: "/me/saved",
+          url: DASHBOARD_ROUTES.saved,
         },
         {
           type: "separator",
@@ -46,15 +47,15 @@ function getNavMain(
           items: [
             {
               title: copy.sidebar.items.samples.machineLearningFundamentals,
-              url: "/courses/machine-learning-fundamentals",
+              url: DASHBOARD_ROUTES.samples.machineLearningFundamentals,
             },
             {
               title: copy.sidebar.items.samples.binaryTreesCheatSheet,
-              url: "/study-guides/binary-trees-cheat-sheet",
+              url: DASHBOARD_ROUTES.samples.binaryTreesCheatSheet,
             },
             {
               title: copy.sidebar.items.samples.neuralNetworksPaper,
-              url: "/resources/neural-networks-paper",
+              url: DASHBOARD_ROUTES.samples.neuralNetworksPaper,
             },
           ],
         },
@@ -62,16 +63,16 @@ function getNavMain(
     },
     {
       title: copy.sidebar.items.courses,
-      url: "/courses",
+      url: DASHBOARD_ROUTES.courses,
       icon: BookOpen,
       items: [
         {
           title: copy.sidebar.items.coursesBrowse,
-          url: "/courses",
+          url: DASHBOARD_ROUTES.courses,
         },
         {
           title: copy.sidebar.items.coursesMine,
-          url: "/me/courses",
+          url: DASHBOARD_ROUTES.myCourses,
         },
         {
           type: "separator",
@@ -83,19 +84,19 @@ function getNavMain(
           items: [
             {
               title: copy.sidebar.items.samples.introPsychology,
-              url: "/courses/introduction-to-psychology",
+              url: DASHBOARD_ROUTES.samples.introPsychology,
             },
             {
               title: copy.sidebar.items.samples.dataStructuresAlgorithms,
-              url: "/courses/data-structures-and-algorithms",
+              url: DASHBOARD_ROUTES.samples.dataStructuresAlgorithms,
             },
             {
               title: copy.sidebar.items.samples.modernWebDevelopment,
-              url: "/courses/modern-web-development",
+              url: DASHBOARD_ROUTES.samples.modernWebDevelopment,
             },
             {
               title: copy.sidebar.items.samples.machineLearningFundamentals,
-              url: "/courses/machine-learning-fundamentals",
+              url: DASHBOARD_ROUTES.samples.machineLearningFundamentals,
             },
           ],
         },
@@ -103,16 +104,16 @@ function getNavMain(
     },
     {
       title: copy.sidebar.items.studyGuides,
-      url: "/study-guides",
+      url: DASHBOARD_ROUTES.studyGuides,
       icon: FileText,
       items: [
         {
           title: copy.sidebar.items.guidesCreate,
-          url: "/study-guides/new",
+          url: DASHBOARD_ROUTES.newStudyGuide,
         },
         {
           title: copy.sidebar.items.guidesMine,
-          url: "/me/study-guides",
+          url: DASHBOARD_ROUTES.myStudyGuides,
         },
         {
           type: "separator",
@@ -124,15 +125,15 @@ function getNavMain(
           items: [
             {
               title: copy.sidebar.items.samples.midtermReviewPsychology,
-              url: "/study-guides/midterm-review-psychology",
+              url: DASHBOARD_ROUTES.samples.midtermReviewPsychology,
             },
             {
               title: copy.sidebar.items.samples.binaryTreesCheatSheet,
-              url: "/study-guides/binary-trees-cheat-sheet",
+              url: DASHBOARD_ROUTES.samples.binaryTreesCheatSheet,
             },
             {
               title: copy.sidebar.items.samples.algorithmComplexityNotes,
-              url: "/study-guides/algorithm-complexity-notes",
+              url: DASHBOARD_ROUTES.samples.algorithmComplexityNotes,
             },
           ],
         },
@@ -140,16 +141,16 @@ function getNavMain(
     },
     {
       title: copy.sidebar.items.resources,
-      url: "/resources",
+      url: DASHBOARD_ROUTES.resources,
       icon: Library,
       items: [
         {
           title: copy.sidebar.items.resourcesUpload,
-          url: "/resources/upload",
+          url: DASHBOARD_ROUTES.uploadResource,
         },
         {
           title: copy.sidebar.items.resourcesView,
-          url: "/resources",
+          url: DASHBOARD_ROUTES.resources,
         },
         {
           type: "separator",
@@ -161,15 +162,15 @@ function getNavMain(
           items: [
             {
               title: copy.sidebar.items.samples.neuralNetworksPaper,
-              url: "/resources/neural-networks-paper",
+              url: DASHBOARD_ROUTES.samples.neuralNetworksPaper,
             },
             {
               title: copy.sidebar.items.samples.databasesQuickReference,
-              url: "/resources/databases-quick-reference",
+              url: DASHBOARD_ROUTES.samples.databasesQuickReference,
             },
             {
               title: copy.sidebar.items.samples.cloudComputingNotes,
-              url: "/resources/cloud-computing-notes",
+              url: DASHBOARD_ROUTES.samples.cloudComputingNotes,
             },
           ],
         },
@@ -178,15 +179,18 @@ function getNavMain(
   ];
 }
 
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
+const defaultUser: React.ComponentProps<typeof NavUser>["user"] = {
+  name: "Demo User",
+  email: "demo@example.com",
+  avatar: "/avatars/shadcn.jpg",
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  user = defaultUser,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & {
+  user?: React.ComponentProps<typeof NavUser>["user"];
+}) {
   const copy = useDashboardCommonCopy();
   const navMain = getNavMain(copy);
 
@@ -217,7 +221,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={navMain} groupLabel={copy.sidebar.groupLabel} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} labels={copy.userMenu} />
+        <NavUser user={user} labels={copy.userMenu} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

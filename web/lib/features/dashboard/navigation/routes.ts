@@ -1,0 +1,23 @@
+export const DASHBOARD_ROUTES = {
+  home: "/home",
+  courses: "/courses",
+  myCourses: "/me/courses",
+  studyGuides: "/study-guides",
+  newStudyGuide: "/study-guides/new",
+  myStudyGuides: "/me/study-guides",
+  resources: "/resources",
+  uploadResource: "/resources/upload",
+  saved: "/me/saved",
+  samples: {
+    machineLearningFundamentals: "/courses/machine-learning-fundamentals",
+    binaryTreesCheatSheet: "/study-guides/binary-trees-cheat-sheet",
+    neuralNetworksPaper: "/resources/neural-networks-paper",
+    introPsychology: "/courses/introduction-to-psychology",
+    dataStructuresAlgorithms: "/courses/data-structures-and-algorithms",
+    modernWebDevelopment: "/courses/modern-web-development",
+    midtermReviewPsychology: "/study-guides/midterm-review-psychology",
+    algorithmComplexityNotes: "/study-guides/algorithm-complexity-notes",
+    databasesQuickReference: "/resources/databases-quick-reference",
+    cloudComputingNotes: "/resources/cloud-computing-notes",
+  },
+} as const;
