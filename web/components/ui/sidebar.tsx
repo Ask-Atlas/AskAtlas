@@ -606,8 +606,8 @@ function SidebarMenuSkeleton({
 }: React.ComponentProps<"div"> & {
   showIcon?: boolean;
 }) {
-  // Random width between 50 to 90%.
   const width = React.useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity -- Preserving original shadcn/ui behavior for varied skeleton widths.
     return `${Math.floor(Math.random() * 40) + 50}%`;
   }, []);
 
