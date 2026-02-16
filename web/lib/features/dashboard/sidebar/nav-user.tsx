@@ -25,6 +25,8 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useNavUser } from "./use-nav-user";
+import { NavUserSkeleton } from "./nav-user-skeleton";
 
 interface NavUserLabels {
   upgradeToPro: string;
@@ -44,8 +46,17 @@ function getInitials(name: string): string {
   return parts.map((part) => part.charAt(0).toUpperCase()).join("");
 }
 
+interface NavUserProps {
+  user: {
+    name: string;
+    email: string;
+    avatar: string;
+  };
+  labels?: NavUserLabels;
+}
+
 export function NavUser({
-  user,
+  user: initialUser,
   labels = {
     upgradeToPro: "Upgrade to Pro",
     account: "Account",
@@ -53,16 +64,15 @@ export function NavUser({
     notifications: "Notifications",
     logout: "Log out",
   },
-}: {
-  user: {
-    name: string;
-    email: string;
-    avatar: string;
-  };
-  labels?: NavUserLabels;
-}) {
+}: NavUserProps) {
   const { isMobile } = useSidebar();
+  const { user, isLoading, signOut, openUserProfile } = useNavUser(initialUser);
+
   const initials = getInitials(user.name);
+
+  if (isLoading) {
+    return <NavUserSkeleton />;
+  }
 
   return (
     <SidebarMenu>
@@ -115,7 +125,7 @@ export function NavUser({
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={() => openUserProfile()}>
                 <BadgeCheck />
                 {labels.account}
               </DropdownMenuItem>
@@ -129,7 +139,7 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => signOut()}>
               <LogOut />
               {labels.logout}
             </DropdownMenuItem>
