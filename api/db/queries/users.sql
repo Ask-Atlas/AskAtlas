@@ -20,7 +20,7 @@ SET
     deleted_at = NULL
 RETURNING *;
 
--- name: SoftDeleteUserByClerkID :exec
+-- name: SoftDeleteUserByClerkID :execrows
 UPDATE users
 SET
     deleted_at = NOW(),

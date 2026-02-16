@@ -72,3 +72,23 @@ func TestClerkHandler_Webhook_ServiceError(t *testing.T) {
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
+
+func TestClerkHandler_Webhook_UserNotFoundOnDelete(t *testing.T) {
+	t.Parallel()
+	body := `{"type": "user.deleted", "data": {"id": "user_missing", "deleted": true}}`
+
+	mockService := mock_handlers.NewMockClerkService(t)
+	mockService.EXPECT().
+		HandleWebhookEvent(mock.Anything, mock.Anything).
+		Return(clerk.ErrUserNotFound)
+
+	h := handlers.NewClerkWebhookHandler(mockService)
+
+	req := httptest.NewRequest(http.MethodPost, "/webhooks/clerk", bytes.NewBufferString(body))
+	req.Header.Set("svix-id", "msg_123")
+	w := httptest.NewRecorder()
+
+	h.Webhook(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}

@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const softDeleteUserByClerkID = `-- name: SoftDeleteUserByClerkID :exec
+const softDeleteUserByClerkID = `-- name: SoftDeleteUserByClerkID :execrows
 UPDATE users
 SET
     deleted_at = NOW(),
@@ -21,9 +21,12 @@ WHERE
     AND deleted_at IS NULL
 `
 
-func (q *Queries) SoftDeleteUserByClerkID(ctx context.Context, clerkID string) error {
-	_, err := q.db.Exec(ctx, softDeleteUserByClerkID, clerkID)
-	return err
+func (q *Queries) SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error) {
+	result, err := q.db.Exec(ctx, softDeleteUserByClerkID, clerkID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const upsertClerkUser = `-- name: UpsertClerkUser :one
@@ -43,6 +46,7 @@ SET
     first_name = EXCLUDED.first_name,
     last_name = EXCLUDED.last_name,
     middle_name = EXCLUDED.middle_name,
+    metadata = EXCLUDED.metadata,
     updated_at = NOW(),
     deleted_at = NULL
 RETURNING id, clerk_id, email, first_name, last_name, middle_name, created_at, updated_at, deleted_at, metadata

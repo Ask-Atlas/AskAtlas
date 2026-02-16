@@ -9,7 +9,7 @@ import (
 )
 
 type Querier interface {
-	SoftDeleteUserByClerkID(ctx context.Context, clerkID string) error
+	SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
 	UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
 }
 
