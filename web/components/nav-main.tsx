@@ -43,10 +43,16 @@ type NavItem = {
   items?: (NavSubLink | NavSubSection | NavSeparator)[];
 };
 
-export function NavMain({ items }: { items: NavItem[] }) {
+export function NavMain({
+  items,
+  groupLabel = "Navigation",
+}: {
+  items: NavItem[];
+  groupLabel?: string;
+}) {
   return (
     <SidebarGroup>
-      <SidebarGroupLabel className="sr-only">Navigation</SidebarGroupLabel>
+      <SidebarGroupLabel className="sr-only">{groupLabel}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) =>
           item.items?.length ? (

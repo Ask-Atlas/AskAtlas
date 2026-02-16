@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { BookOpen, FileText, Globe, Home, Library, Star } from "lucide-react";
+import { useDashboardCommonCopy } from "@/lib/features/dashboard/i18n/common/common-copy-provider";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -17,174 +18,179 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 
-const navMain: React.ComponentProps<typeof NavMain>["items"] = [
-  {
-    title: "Home",
-    url: "/home",
-    icon: Home,
-    isActive: true,
-  },
-  {
-    title: "Starred",
-    url: "/me/saved",
-    icon: Star,
-    items: [
-      {
-        title: "All Starred",
-        url: "/me/saved",
-      },
-      {
-        type: "separator",
-      },
-      {
-        type: "section",
-        title: "Recently Starred",
-        defaultOpen: true,
-        items: [
-          {
-            title: "Machine Learning Fundamentals",
-            url: "/courses/machine-learning-fundamentals",
-          },
-          {
-            title: "Binary Trees Cheat Sheet",
-            url: "/study-guides/binary-trees-cheat-sheet",
-          },
-          {
-            title: "Neural Networks Paper",
-            url: "/resources/neural-networks-paper",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Courses",
-    url: "/courses",
-    icon: BookOpen,
-    items: [
-      {
-        title: "Browse Courses",
-        url: "/courses",
-      },
-      {
-        title: "My Courses",
-        url: "/me/courses",
-      },
-      {
-        type: "separator",
-      },
-      {
-        type: "section",
-        title: "My Courses",
-        defaultOpen: true,
-        items: [
-          {
-            title: "Introduction to Psychology",
-            url: "/courses/introduction-to-psychology",
-          },
-          {
-            title: "Data Structures & Algorithms",
-            url: "/courses/data-structures-and-algorithms",
-          },
-          {
-            title: "Modern Web Development",
-            url: "/courses/modern-web-development",
-          },
-          {
-            title: "Machine Learning Fundamentals",
-            url: "/courses/machine-learning-fundamentals",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Study Guides",
-    url: "/study-guides",
-    icon: FileText,
-    items: [
-      {
-        title: "Create New Guide",
-        url: "/study-guides/new",
-      },
-      {
-        title: "My Study Guides",
-        url: "/me/study-guides",
-      },
-      {
-        type: "separator",
-      },
-      {
-        type: "section",
-        title: "Recently Viewed",
-        defaultOpen: true,
-        items: [
-          {
-            title: "Midterm Review - Psychology",
-            url: "/study-guides/midterm-review-psychology",
-          },
-          {
-            title: "Binary Trees Cheat Sheet",
-            url: "/study-guides/binary-trees-cheat-sheet",
-          },
-          {
-            title: "Algorithm Complexity Notes",
-            url: "/study-guides/algorithm-complexity-notes",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    title: "Resources",
-    url: "/resources",
-    icon: Library,
-    items: [
-      {
-        title: "Upload Resource",
-        url: "/resources/upload",
-      },
-      {
-        title: "View Resources",
-        url: "/resources",
-      },
-      {
-        type: "separator",
-      },
-      {
-        type: "section",
-        title: "Recently Viewed",
-        defaultOpen: true,
-        items: [
-          {
-            title: "Neural Networks Paper",
-            url: "/resources/neural-networks-paper",
-          },
-          {
-            title: "Databases Quick Reference",
-            url: "/resources/databases-quick-reference",
-          },
-          {
-            title: "Cloud Computing Notes",
-            url: "/resources/cloud-computing-notes",
-          },
-        ],
-      },
-    ],
-  },
-];
+function getNavMain(
+  copy: ReturnType<typeof useDashboardCommonCopy>,
+): React.ComponentProps<typeof NavMain>["items"] {
+  return [
+    {
+      title: copy.sidebar.items.home,
+      url: "/home",
+      icon: Home,
+      isActive: true,
+    },
+    {
+      title: copy.sidebar.items.starred,
+      url: "/me/saved",
+      icon: Star,
+      items: [
+        {
+          title: copy.sidebar.items.starredAll,
+          url: "/me/saved",
+        },
+        {
+          type: "separator",
+        },
+        {
+          type: "section",
+          title: copy.sidebar.items.starredRecent,
+          defaultOpen: true,
+          items: [
+            {
+              title: copy.sidebar.items.samples.machineLearningFundamentals,
+              url: "/courses/machine-learning-fundamentals",
+            },
+            {
+              title: copy.sidebar.items.samples.binaryTreesCheatSheet,
+              url: "/study-guides/binary-trees-cheat-sheet",
+            },
+            {
+              title: copy.sidebar.items.samples.neuralNetworksPaper,
+              url: "/resources/neural-networks-paper",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      title: copy.sidebar.items.courses,
+      url: "/courses",
+      icon: BookOpen,
+      items: [
+        {
+          title: copy.sidebar.items.coursesBrowse,
+          url: "/courses",
+        },
+        {
+          title: copy.sidebar.items.coursesMine,
+          url: "/me/courses",
+        },
+        {
+          type: "separator",
+        },
+        {
+          type: "section",
+          title: copy.sidebar.items.coursesSectionMine,
+          defaultOpen: true,
+          items: [
+            {
+              title: copy.sidebar.items.samples.introPsychology,
+              url: "/courses/introduction-to-psychology",
+            },
+            {
+              title: copy.sidebar.items.samples.dataStructuresAlgorithms,
+              url: "/courses/data-structures-and-algorithms",
+            },
+            {
+              title: copy.sidebar.items.samples.modernWebDevelopment,
+              url: "/courses/modern-web-development",
+            },
+            {
+              title: copy.sidebar.items.samples.machineLearningFundamentals,
+              url: "/courses/machine-learning-fundamentals",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      title: copy.sidebar.items.studyGuides,
+      url: "/study-guides",
+      icon: FileText,
+      items: [
+        {
+          title: copy.sidebar.items.guidesCreate,
+          url: "/study-guides/new",
+        },
+        {
+          title: copy.sidebar.items.guidesMine,
+          url: "/me/study-guides",
+        },
+        {
+          type: "separator",
+        },
+        {
+          type: "section",
+          title: copy.sidebar.items.guidesRecent,
+          defaultOpen: true,
+          items: [
+            {
+              title: copy.sidebar.items.samples.midtermReviewPsychology,
+              url: "/study-guides/midterm-review-psychology",
+            },
+            {
+              title: copy.sidebar.items.samples.binaryTreesCheatSheet,
+              url: "/study-guides/binary-trees-cheat-sheet",
+            },
+            {
+              title: copy.sidebar.items.samples.algorithmComplexityNotes,
+              url: "/study-guides/algorithm-complexity-notes",
+            },
+          ],
+        },
+      ],
+    },
+    {
+      title: copy.sidebar.items.resources,
+      url: "/resources",
+      icon: Library,
+      items: [
+        {
+          title: copy.sidebar.items.resourcesUpload,
+          url: "/resources/upload",
+        },
+        {
+          title: copy.sidebar.items.resourcesView,
+          url: "/resources",
+        },
+        {
+          type: "separator",
+        },
+        {
+          type: "section",
+          title: copy.sidebar.items.resourcesRecent,
+          defaultOpen: true,
+          items: [
+            {
+              title: copy.sidebar.items.samples.neuralNetworksPaper,
+              url: "/resources/neural-networks-paper",
+            },
+            {
+              title: copy.sidebar.items.samples.databasesQuickReference,
+              url: "/resources/databases-quick-reference",
+            },
+            {
+              title: copy.sidebar.items.samples.cloudComputingNotes,
+              url: "/resources/cloud-computing-notes",
+            },
+          ],
+        },
+      ],
+    },
+  ];
+}
 
-// This is sample data.
 const data = {
   user: {
     name: "shadcn",
     email: "m@example.com",
     avatar: "/avatars/shadcn.jpg",
   },
-  navMain,
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const copy = useDashboardCommonCopy();
+  const navMain = getNavMain(copy);
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -196,9 +202,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   <Globe className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">AskAtlas</span>
+                  <span className="truncate font-semibold">
+                    {copy.sidebar.brandName}
+                  </span>
                   <span className="truncate text-xs text-muted-foreground">
-                    Your study workspace
+                    {copy.sidebar.brandTagline}
                   </span>
                 </div>
               </Link>
@@ -207,10 +215,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={navMain} groupLabel={copy.sidebar.groupLabel} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={data.user} labels={copy.userMenu} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

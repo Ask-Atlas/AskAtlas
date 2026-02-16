@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useDashboardCommonCopy } from "@/lib/features/dashboard/i18n/common/common-copy-provider";
 
 import {
   Breadcrumb,
@@ -8,18 +9,6 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
-
-const breadcrumbLabelByPath: Record<string, string> = {
-  "/home": "Home",
-  "/courses": "Browse Courses",
-  "/me/courses": "My Courses",
-  "/study-guides": "Study Guides",
-  "/study-guides/new": "Create Study Guide",
-  "/me/study-guides": "My Study Guides",
-  "/resources": "Resources",
-  "/resources/upload": "Upload Resource",
-  "/me/saved": "Starred",
-};
 
 function segmentToLabel(segment: string) {
   return segment
@@ -29,25 +18,47 @@ function segmentToLabel(segment: string) {
     .join(" ");
 }
 
-function getBreadcrumbLabel(pathname: string) {
-  const matchedLabel = breadcrumbLabelByPath[pathname];
+function getBreadcrumbLabel(
+  pathname: string,
+  labels: Record<string, string>,
+  homeFallback: string,
+) {
+  const matchedCopy = labels[pathname];
 
-  if (matchedLabel) {
-    return matchedLabel;
+  if (matchedCopy) {
+    return matchedCopy;
   }
 
   const segments = pathname.split("/").filter(Boolean);
 
   if (!segments.length) {
-    return "Home";
+    return homeFallback;
   }
 
   return segmentToLabel(segments[segments.length - 1]);
 }
 
 export function DashboardBreadcrumb() {
+  const copy = useDashboardCommonCopy();
   const pathname = usePathname();
-  const label = getBreadcrumbLabel(pathname);
+
+  const breadcrumbLabelByPath: Record<string, string> = {
+    "/home": copy.breadcrumb.home,
+    "/courses": copy.breadcrumb.browseCourses,
+    "/me/courses": copy.breadcrumb.myCourses,
+    "/study-guides": copy.breadcrumb.studyGuides,
+    "/study-guides/new": copy.breadcrumb.createStudyGuide,
+    "/me/study-guides": copy.breadcrumb.myStudyGuides,
+    "/resources": copy.breadcrumb.resources,
+    "/resources/upload": copy.breadcrumb.uploadResource,
+    "/me/saved": copy.breadcrumb.starred,
+  };
+
+  const label = getBreadcrumbLabel(
+    pathname,
+    breadcrumbLabelByPath,
+    copy.breadcrumb.home,
+  );
 
   return (
     <Breadcrumb>

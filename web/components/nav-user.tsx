@@ -26,14 +26,30 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
+interface NavUserLabels {
+  upgradeToPro: string;
+  account: string;
+  billing: string;
+  notifications: string;
+  logout: string;
+}
+
 export function NavUser({
   user,
+  labels = {
+    upgradeToPro: "Upgrade to Pro",
+    account: "Account",
+    billing: "Billing",
+    notifications: "Notifications",
+    logout: "Log out",
+  },
 }: {
   user: {
     name: string;
     email: string;
     avatar: string;
   };
+  labels?: NavUserLabels;
 }) {
   const { isMobile } = useSidebar();
 
@@ -79,28 +95,28 @@ export function NavUser({
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <Sparkles />
-                Upgrade to Pro
+                {labels.upgradeToPro}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
                 <BadgeCheck />
-                Account
+                {labels.account}
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <CreditCard />
-                Billing
+                {labels.billing}
               </DropdownMenuItem>
               <DropdownMenuItem>
                 <Bell />
-                Notifications
+                {labels.notifications}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <LogOut />
-              Log out
+              {labels.logout}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
