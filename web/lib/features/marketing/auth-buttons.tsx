@@ -51,16 +51,18 @@ export function SignedInButtons({ onClick, isMobile }: AuthButtonsProps) {
     <SignedIn>
       <NavbarButton
         href="/home"
-        variant="secondary"
+        variant={isMobile ? "primary" : "secondary"}
         className={isMobile ? "w-full" : undefined}
         aria-label={commonCopy.nav.dashboardCta}
         onClick={onClick}
       >
         {commonCopy.nav.dashboardCta}
       </NavbarButton>
-      <span className={isMobile ? "flex justify-center pt-2" : undefined}>
-        <UserButton />
-      </span>
+      {!isMobile && (
+        <div className="flex justify-center">
+          <UserButton />
+        </div>
+      )}
     </SignedIn>
   );
 }

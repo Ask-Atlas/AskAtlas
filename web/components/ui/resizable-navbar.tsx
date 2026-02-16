@@ -278,6 +278,20 @@ export const NavbarButton = ({
       "bg-linear-to-b from-blue-500 to-blue-700 text-white shadow-[0px_2px_0px_0px_rgba(255,255,255,0.3)_inset]",
   };
 
+  const combinedClassName = cn(baseStyles, variantStyles[variant], className);
+
+  if (href && Tag === "button") {
+    return (
+      <Link
+        href={href}
+        className={cn(combinedClassName, className)}
+        {...(props as Omit<React.ComponentPropsWithoutRef<"a">, "href">)}
+      >
+        {children}
+      </Link>
+    );
+  }
+
   return (
     <Tag
       href={href || undefined}

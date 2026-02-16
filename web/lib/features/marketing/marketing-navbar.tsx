@@ -14,6 +14,7 @@ import { ModeToggle } from "@/components/ui/mode-toggle";
 import { SignedInButtons, SignedOutButtons } from "./auth-buttons";
 import { useState } from "react";
 import { useCommonCopy } from "./i18n/common/common-copy-provider";
+import Link from "next/link";
 
 export function MarketingNavbar() {
   const commonCopy = useCommonCopy();
@@ -59,7 +60,7 @@ export function MarketingNavbar() {
             onClose={() => setIsMobileMenuOpen(false)}
           >
             {navItems.map((item) => (
-              <a
+              <Link
                 key={item.link}
                 href={item.link}
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -74,7 +75,7 @@ export function MarketingNavbar() {
                 }}
               >
                 <span className="block">{item.name}</span>
-              </a>
+              </Link>
             ))}
             <SignedOutButtons
               isMobile
