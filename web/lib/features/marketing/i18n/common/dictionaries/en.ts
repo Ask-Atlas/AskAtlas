@@ -9,6 +9,7 @@ const enMarketingCommonDictionary: MarketingCommonDictionary = {
     ],
     loginCta: "Sign in",
     primaryCta: "Create account",
+    dashboardCta: "My Workspace",
   },
   footer: {
     links: [

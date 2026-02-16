@@ -11,6 +11,7 @@ import {
   MobileNavMenu,
 } from "@/components/ui/resizable-navbar";
 import { ModeToggle } from "@/components/ui/mode-toggle";
+import { SignedInButtons, SignedOutButtons } from "./auth-buttons";
 import { useState } from "react";
 import { useCommonCopy } from "./i18n/common/common-copy-provider";
 
@@ -33,12 +34,8 @@ export function MarketingNavbar() {
             <NavbarButton as="div" variant="secondary" className="px-0 py-0">
               <ModeToggle />
             </NavbarButton>
-            <NavbarButton variant="secondary">
-              {commonCopy.nav.loginCta}
-            </NavbarButton>
-            <NavbarButton variant="primary">
-              {commonCopy.nav.primaryCta}
-            </NavbarButton>
+            <SignedOutButtons />
+            <SignedInButtons />
           </div>
         </NavBody>
 
@@ -67,24 +64,26 @@ export function MarketingNavbar() {
                 href={item.link}
                 onClick={() => setIsMobileMenuOpen(false)}
                 className="relative text-neutral-600 dark:text-neutral-300"
+                tabIndex={0}
+                aria-label={item.name}
+                role="link"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    setIsMobileMenuOpen(false);
+                  }
+                }}
               >
                 <span className="block">{item.name}</span>
               </a>
             ))}
-            <NavbarButton
+            <SignedOutButtons
+              isMobile
               onClick={() => setIsMobileMenuOpen(false)}
-              variant="secondary"
-              className="w-full"
-            >
-              {commonCopy.nav.loginCta}
-            </NavbarButton>
-            <NavbarButton
+            />
+            <SignedInButtons
+              isMobile
               onClick={() => setIsMobileMenuOpen(false)}
-              variant="primary"
-              className="w-full"
-            >
-              {commonCopy.nav.primaryCta}
-            </NavbarButton>
+            />
           </MobileNavMenu>
         </MobileNav>
       </Navbar>
