@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -56,6 +57,12 @@ func (ch *ClerkHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 			"type", event.GetType(),
 			"msgID", msgID,
 		)
+
+		if errors.Is(err, clerk.ErrUserNotFound) {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
+
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}

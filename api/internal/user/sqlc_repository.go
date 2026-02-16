@@ -27,8 +27,14 @@ func (r *sqlcRepository) UpsertClerkUser(ctx context.Context, arg db.UpsertClerk
 
 func (r *sqlcRepository) SoftDeleteUserByClerkID(ctx context.Context, clerkID string) error {
 	slog.Info("soft deleting user by clerk id", "clerk_id", clerkID)
-	if err := r.queries.SoftDeleteUserByClerkID(ctx, clerkID); err != nil {
+	affectedRows, err := r.queries.SoftDeleteUserByClerkID(ctx, clerkID)
+	if err != nil {
 		return fmt.Errorf("failed to soft delete user by clerk id: %w", err)
 	}
+
+	if affectedRows == 0 {
+		return ErrUserNotFound
+	}
+
 	return nil
 }

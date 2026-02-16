@@ -2,6 +2,7 @@ package clerk
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -55,6 +56,10 @@ func (cs *clerkService) handleUserUpdated(ctx context.Context, event UserUpdateE
 
 func (cs *clerkService) handleUserDeleted(ctx context.Context, event UserDeletedEvent) error {
 	if err := cs.userService.SoftDeleteUserByClerkID(ctx, event.Data.ID); err != nil {
+		if errors.Is(err, user.ErrUserNotFound) {
+			return ErrUserNotFound
+		}
+
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
 
