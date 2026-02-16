@@ -1,4 +1,4 @@
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar } from "@/lib/features/dashboard/sidebar";
 import { DashboardBreadcrumb } from "./dashboard-breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import { DashboardCommonCopyProvider } from "@/lib/features/dashboard/i18n/common/common-copy-provider";

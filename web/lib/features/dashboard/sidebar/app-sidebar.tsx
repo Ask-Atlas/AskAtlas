@@ -5,8 +5,8 @@ import Link from "next/link";
 import { BookOpen, FileText, Globe, Home, Library, Star } from "lucide-react";
 import { useDashboardCommonCopy } from "@/lib/features/dashboard/i18n/common/common-copy-provider";
 
-import { NavMain } from "@/components/nav-main";
-import { NavUser } from "@/components/nav-user";
+import { NavMain } from "@/lib/features/dashboard/sidebar/nav-main";
+import { NavUser } from "@/lib/features/dashboard/sidebar/nav-user";
 import {
   Sidebar,
   SidebarContent,
