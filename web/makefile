@@ -2,13 +2,13 @@ dev:
 	infisical run --env=dev -- pnpm run dev
 
 staging:
-	pnpm run build && infisical run --env=staging -- pnpm run start
+	infisical run --env=staging -- sh -c "pnpm run build && pnpm run start"
 
 prod:
-	pnpm run build && infisical run --env=prod -- pnpm run start
+	infisical run --env=prod -- sh -c "pnpm run build && pnpm run start"
 
 build:
-	pnpm run build
+	infisical run --env=dev -- pnpm run build
 
 install:
 	 pnpm install
