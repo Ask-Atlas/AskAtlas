@@ -65,7 +65,11 @@ func main() {
 		r.With(clerkSignatureVerifier).Post("/clerk", clerkWebhookHandler.Webhook)
 	})
 
-	addr := ":8080"
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	addr := ":" + port
 	slog.Info("Server starting", "addr", addr)
 	if err := http.ListenAndServe(addr, r); err != nil {
 		slog.Error("Server failed to start", "error", err)
