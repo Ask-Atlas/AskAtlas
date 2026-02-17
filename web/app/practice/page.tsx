@@ -34,6 +34,20 @@ const studyGuides: StudyGuide[] = [
 
 export default function PracticePage() {
   const [selectedGuide, setSelectedGuide] = useState<StudyGuide | null>(null);
+  
+  // If a guide is selected, show a different screen
+  if (selectedGuide) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <h1 className="text-3xl font-bold mb-4">
+            You selected: {selectedGuide.name}
+          </h1>
+          <p className="text-gray-400">Quiz interface coming next!</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
