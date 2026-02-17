@@ -33,6 +33,8 @@ const studyGuides: StudyGuide[] = [
 
 
 export default function PracticePage() {
+  const [selectedGuide, setSelectedGuide] = useState<StudyGuide | null>(null);
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
@@ -57,9 +59,10 @@ export default function PracticePage() {
         
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {studyGuides.map((guide) => (
-            <div
-              key={guide.id}
-              className="p-6 bg-white/5 border border-white/10 rounded-xl hover:border-orange-500/50 transition-all duration-200"
+            <button
+                key={guide.id}
+                onClick={() => setSelectedGuide(guide)}
+                className="text-left p-6 bg-white/5 border border-white/10 rounded-xl hover:border-orange-500/50 hover:bg-white/[0.07] transition-all duration-200 cursor-pointer"
             >
               <div className="flex items-start justify-between mb-4">
                 <Badge variant="outline" className="border-blue-500/50 text-blue-400">
@@ -76,7 +79,7 @@ export default function PracticePage() {
                 <span>Start Practice</span>
                 <span className="ml-2">→</span>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </div>
