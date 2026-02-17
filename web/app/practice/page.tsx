@@ -123,6 +123,30 @@ export default function PracticePage() {
                 >
                 Submit Answer
                 </Button>
+
+                {showFeedback && (
+                <div className={`mt-6 p-6 rounded-xl border-2 ${
+                    isCorrect 
+                    ? "bg-green-500/10 border-green-500/50" 
+                    : "bg-red-500/10 border-red-500/50"
+                }`}>
+                    <div className="flex items-start gap-4">
+                    <div className="text-3xl">
+                        {isCorrect ? "🎉" : "📚"}
+                    </div>
+                    <div>
+                        <h3 className={`text-lg font-semibold mb-2 ${
+                        isCorrect ? "text-green-400" : "text-red-400"
+                        }`}>
+                        {isCorrect ? "Correct!" : "Not quite"}
+                        </h3>
+                        <p className="text-gray-300">
+                        {isCorrect ? firstQuestion.feedback.correct : firstQuestion.feedback.incorrect}
+                        </p>
+                    </div>
+                    </div>
+                </div>
+                )}
             </div>
             ) : (
             <p className="text-gray-400">No questions available yet!</p>
