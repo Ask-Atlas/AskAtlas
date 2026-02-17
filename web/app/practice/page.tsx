@@ -69,6 +69,7 @@ export default function PracticePage() {
   const [userAnswer, setUserAnswer] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [showHint, setShowHint] = useState(false);
 
     // If a guide is selected, show the quiz
     if (selectedGuide) {
@@ -113,6 +114,25 @@ export default function PracticePage() {
                         {option}
                     </button>
                     ))}
+                </div>
+                )}
+
+                {!showFeedback && (
+                <div className="mt-6">
+                    <Button
+                    onClick={() => setShowHint(!showHint)}
+                    variant="outline"
+                    size="sm"
+                    className="border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10"
+                    >
+                    {showHint ? "Hide Hint" : "💡 Show Hint"}
+                    </Button>
+                    
+                    {showHint && (
+                    <div className="mt-4 p-4 bg-yellow-500/5 border border-yellow-500/20 rounded-lg">
+                        <p className="text-sm text-yellow-200">{firstQuestion.hint}</p>
+                    </div>
+                    )}
                 </div>
                 )}
 
