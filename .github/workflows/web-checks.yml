@@ -65,5 +65,18 @@ jobs:
           node-version: 22
           cache: 'pnpm'
           cache-dependency-path: 'web/pnpm-lock.yaml'
+      - name: Install Infisical CLI
+        run: |
+          curl -1sLf 'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.deb.sh' | sudo -E bash
+          sudo apt-get update && sudo apt-get install -y infisical
       - run: make install
-      - run: make build
+      - name: Build with Infisical secrets
+        run: |
+          INFISICAL_TOKEN=$(infisical login --method=universal-auth \
+            --client-id="${{ secrets.INFISICAL_WEB_CLIENT_ID }}" \
+            --client-secret="${{ secrets.INFISICAL_WEB_CLIENT_SECRET }}" \
+            --plain --silent)
+          infisical run --token "$INFISICAL_TOKEN" \
+            --projectId "${{ secrets.INFISICAL_WEB_PROJECT_ID }}" \
+            --env "dev" \
+            -- make build
