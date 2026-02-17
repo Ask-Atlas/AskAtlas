@@ -3,11 +3,27 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 
+type QuestionType = "multiple-choice" | "true-false" | "freeform";
+
+interface Question {
+  id: string;
+  type: QuestionType;
+  question: string;
+  options?: string[];
+  correctAnswer: string | boolean;
+  hint: string;
+  feedback: {
+    correct: string;
+    incorrect: string;
+  };
+}
+
 interface StudyGuide {
   id: string;
   name: string;
   topic: string;
   questionCount: number;
+  questions: Question[];
 }
 
 const studyGuides: StudyGuide[] = [
@@ -15,39 +31,70 @@ const studyGuides: StudyGuide[] = [
     id: "1",
     name: "World Geography",
     topic: "Geography",
-    questionCount: 3,
+    questionCount: 1,
+    questions: [
+      {
+        id: "1",
+        type: "multiple-choice",
+        question: "What is the capital of France?",
+        options: ["London", "Paris", "Berlin", "Madrid"],
+        correctAnswer: "Paris",
+        hint: "Think of the Eiffel Tower!",
+        feedback: {
+          correct: "Excellent! Paris is indeed the capital and largest city of France.",
+          incorrect: "Not quite. Paris is the capital of France, famous for the Eiffel Tower and the Louvre."
+        }
+      }
+    ]
   },
   {
     id: "2",
     name: "Basic Science",
     topic: "Science",
-    questionCount: 2,
+    questionCount: 0,
+    questions: []
   },
   {
     id: "3",
     name: "World History",
     topic: "History",
-    questionCount: 2,
+    questionCount: 0,
+    questions: []
   }
 ];
-
 
 export default function PracticePage() {
   const [selectedGuide, setSelectedGuide] = useState<StudyGuide | null>(null);
   
-  // If a guide is selected, show a different screen
-  if (selectedGuide) {
+    // If a guide is selected, show the quiz
+    if (selectedGuide) {
+    const firstQuestion = selectedGuide.questions[0];
+    
     return (
-      <div className="min-h-screen bg-black text-white">
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <h1 className="text-3xl font-bold mb-4">
-            You selected: {selectedGuide.name}
-          </h1>
-          <p className="text-gray-400">Quiz interface coming next!</p>
+        <div className="min-h-screen bg-black text-white">
+        <div className="max-w-4xl mx-auto px-6 py-12">
+            <h2 className="text-2xl font-semibold mb-2">{selectedGuide.name}</h2>
+            <p className="text-gray-400 mb-8">{selectedGuide.topic}</p>
+            
+            {firstQuestion ? (
+            <div className="bg-white/5 border border-white/10 rounded-xl p-8">
+                <Badge className="mb-6 border-blue-500/50 text-blue-400" variant="outline">
+                Multiple Choice
+                </Badge>
+                
+                <h3 className="text-xl font-semibold mb-6">
+                {firstQuestion.question}
+                </h3>
+                
+                <p className="text-gray-400">Answer options coming next...</p>
+            </div>
+            ) : (
+            <p className="text-gray-400">No questions available yet!</p>
+            )}
         </div>
-      </div>
+        </div>
     );
-  }
+    }
 
   return (
     <div className="min-h-screen bg-black text-white">
