@@ -2,17 +2,27 @@ name: API Application Deployments
 
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+        - dev
+        - stage
+        - prod
 
 jobs:
   build:
-    name: Build and Push
+    name: Build and Push (${{ inputs.environment }})
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     outputs:
       image_tag: ${{ steps.meta.outputs.version }}
-    
+    environment: ${{ inputs.environment }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -34,7 +44,7 @@ jobs:
           images: ghcr.io/ask-atlas/api
           tags: |
             type=sha,format=long
-            type=raw,value=${{ github.ref_name }}-latest
+            type=raw,value=${{ github.ref_name }}-${{ inputs.environment }}-latest
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -47,11 +57,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy-dev:
-    name: Deploy to Dev
+  deploy:
+    name: Deploy to ${{ inputs.environment }}
     needs: build
     runs-on: ubuntu-latest
-    environment: dev
+    environment: ${{ inputs.environment }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -81,79 +91,5 @@ jobs:
           script: |
             set -e
             chmod +x /tmp/scripts/deploy.sh /tmp/scripts/deploy-common.sh
-            /tmp/scripts/deploy.sh dev api ${{ needs.build.outputs.image_tag }}
-            rm -rf /tmp/scripts
-
-  deploy-stage:
-    name: Deploy to Stage
-    needs: build
-    runs-on: ubuntu-latest
-    environment: stage
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        
-      - name: Copy deploy script to VM
-        uses: appleboy/scp-action@v1
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          source: "scripts/deploy.sh,scripts/deploy-common.sh"
-          target: "/tmp"
-      
-      - name: Deploy to VM
-        uses: appleboy/ssh-action@v1.2.0
-        env:
-          GHCR_USERNAME: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_API_CLIENT_ID }}
-          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_API_CLIENT_SECRET }}
-          INFISICAL_PROJECT_ID: ${{ secrets.INFISICAL_API_PROJECT_ID }}
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          envs: GHCR_USERNAME,GHCR_TOKEN,INFISICAL_CLIENT_ID,INFISICAL_CLIENT_SECRET,INFISICAL_PROJECT_ID
-          script: |
-            set -e
-            chmod +x /tmp/scripts/deploy.sh /tmp/scripts/deploy-common.sh
-            /tmp/scripts/deploy.sh stage api ${{ needs.build.outputs.image_tag }}
-            rm -rf /tmp/scripts
-
-  deploy-prod:
-    name: Deploy to Prod
-    needs: build
-    runs-on: ubuntu-latest
-    environment: prod
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-      
-      - name: Copy deploy script to VM
-        uses: appleboy/scp-action@v1
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          source: "scripts/deploy.sh,scripts/deploy-common.sh"
-          target: "/tmp"
-      
-      - name: Deploy to VM
-        uses: appleboy/ssh-action@v1.2.0
-        env:
-          GHCR_USERNAME: ${{ github.actor }}
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          INFISICAL_CLIENT_ID: ${{ secrets.INFISICAL_API_CLIENT_ID }}
-          INFISICAL_CLIENT_SECRET: ${{ secrets.INFISICAL_API_CLIENT_SECRET }}
-          INFISICAL_PROJECT_ID: ${{ secrets.INFISICAL_API_PROJECT_ID }}
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          envs: GHCR_USERNAME,GHCR_TOKEN,INFISICAL_CLIENT_ID,INFISICAL_CLIENT_SECRET,INFISICAL_PROJECT_ID
-          script: |
-            set -e
-            chmod +x /tmp/scripts/deploy.sh /tmp/scripts/deploy-common.sh
-            /tmp/scripts/deploy.sh prod api ${{ needs.build.outputs.image_tag }}
+            /tmp/scripts/deploy.sh ${{ inputs.environment }} api ${{ needs.build.outputs.image_tag }}
             rm -rf /tmp/scripts
