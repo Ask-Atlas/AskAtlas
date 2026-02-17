@@ -85,9 +85,28 @@ export default function PracticePage() {
     
     return (
         <div className="min-h-screen bg-black text-white">
+            {/* Header with Back Button */}
+            <div className="border-b border-white/10 bg-white/5">
+                <div className="max-w-7xl mx-auto px-6 py-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <Button
+                                onClick={() => setSelectedGuide(null)}
+                                variant="ghost"
+                                size="sm"
+                                className="text-gray-400 hover:text-white"
+                            >
+                                ← Back
+                            </Button>
+                            <div>
+                                <h2 className="font-semibold">{selectedGuide.name}</h2>
+                                <p className="text-sm text-gray-400">{selectedGuide.topic}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div className="max-w-4xl mx-auto px-6 py-12">
-            <h2 className="text-2xl font-semibold mb-2">{selectedGuide.name}</h2>
-            <p className="text-gray-400 mb-8">{selectedGuide.topic}</p>
             
             {firstQuestion ? (
             <div className="bg-white/5 border border-white/10 rounded-xl p-8">
