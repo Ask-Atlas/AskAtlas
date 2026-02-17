@@ -29,12 +29,22 @@ COPY . .
 # Learn more here: https://nextjs.org/telemetry
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN \
-    if [ -f yarn.lock ]; then yarn run build; \
-    elif [ -f package-lock.json ]; then npm run build; \
-    elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm run build; \
-    else echo "Lockfile not found." && exit 1; \
-    fi
+# Install Infisical CLI so NEXT_PUBLIC_* vars are available at build time
+RUN apk add --no-cache bash sudo curl
+RUN curl -1sLf \
+    'https://dl.cloudsmith.io/public/infisical/infisical-cli/setup.alpine.sh' \
+    | bash
+RUN apk update && sudo apk add infisical=0.43.32
+
+# Infisical credentials (already available in the environment from CI/CD)
+ARG INFISICAL_MACHINE_CLIENT_ID
+ARG INFISICAL_MACHINE_CLIENT_SECRET
+ARG PROJECT_ID
+ARG INFISICAL_SECRET_ENV
+
+COPY build.sh ./
+RUN chmod +x build.sh
+RUN corepack enable pnpm && ./build.sh
 
 # Production image, copy all the files and run next
 FROM base AS runner
