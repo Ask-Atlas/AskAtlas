@@ -65,6 +65,7 @@ const studyGuides: StudyGuide[] = [
 
 export default function PracticePage() {
   const [selectedGuide, setSelectedGuide] = useState<StudyGuide | null>(null);
+  const [userAnswer, setUserAnswer] = useState<string | null>(null);
   
     // If a guide is selected, show the quiz
     if (selectedGuide) {
@@ -86,7 +87,23 @@ export default function PracticePage() {
                 {firstQuestion.question}
                 </h3>
                 
-                <p className="text-gray-400">Answer options coming next...</p>
+                {firstQuestion.options && (
+                <div className="space-y-3">
+                    {firstQuestion.options.map((option, index) => (
+                    <button
+                        key={index}
+                        onClick={() => setUserAnswer(option)}
+                        className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-200 ${
+                        userAnswer === option 
+                            ? "border-orange-500 bg-orange-500/10" 
+                            : "border-white/10 hover:border-orange-500/50 hover:bg-orange-500/5"
+                        }`}
+                    >
+                        {option}
+                    </button>
+                    ))}
+                </div>
+                )}
             </div>
             ) : (
             <p className="text-gray-400">No questions available yet!</p>
