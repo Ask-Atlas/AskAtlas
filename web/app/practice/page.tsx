@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 type QuestionType = "multiple-choice" | "true-false" | "freeform";
 
@@ -66,10 +67,20 @@ const studyGuides: StudyGuide[] = [
 export default function PracticePage() {
   const [selectedGuide, setSelectedGuide] = useState<StudyGuide | null>(null);
   const [userAnswer, setUserAnswer] = useState<string | null>(null);
-  
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+
     // If a guide is selected, show the quiz
     if (selectedGuide) {
     const firstQuestion = selectedGuide.questions[0];
+    
+    const checkAnswer = () => {
+        if (!firstQuestion || !userAnswer) return;
+        
+        const correct = userAnswer === firstQuestion.correctAnswer;
+        setIsCorrect(correct);
+        setShowFeedback(true);
+    };
     
     return (
         <div className="min-h-screen bg-black text-white">
@@ -104,6 +115,14 @@ export default function PracticePage() {
                     ))}
                 </div>
                 )}
+
+                <Button
+                onClick={checkAnswer}
+                disabled={!userAnswer}
+                className="w-full mt-6 bg-orange-500 hover:bg-orange-600 text-white"
+                >
+                Submit Answer
+                </Button>
             </div>
             ) : (
             <p className="text-gray-400">No questions available yet!</p>
