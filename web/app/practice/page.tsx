@@ -1,4 +1,36 @@
+"use client";
+
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+
+interface StudyGuide {
+  id: string;
+  name: string;
+  topic: string;
+  questionCount: number;
+}
+
+const studyGuides: StudyGuide[] = [
+  {
+    id: "1",
+    name: "World Geography",
+    topic: "Geography",
+    questionCount: 3,
+  },
+  {
+    id: "2",
+    name: "Basic Science",
+    topic: "Science",
+    questionCount: 2,
+  },
+  {
+    id: "3",
+    name: "World History",
+    topic: "History",
+    questionCount: 2,
+  }
+];
+
 
 export default function PracticePage() {
   return (
@@ -19,9 +51,34 @@ export default function PracticePage() {
         </div>
       </div>
 
-      {/* Placeholder for content */}
+      {/* Study Guide Selection */}
       <div className="max-w-7xl mx-auto px-6 py-12">
-        <p className="text-gray-400">Study guide selection coming next...</p>
+        <h2 className="text-2xl font-semibold mb-6">Select a Study Guide</h2>
+        
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {studyGuides.map((guide) => (
+            <div
+              key={guide.id}
+              className="p-6 bg-white/5 border border-white/10 rounded-xl hover:border-orange-500/50 transition-all duration-200"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <Badge variant="outline" className="border-blue-500/50 text-blue-400">
+                  {guide.topic}
+                </Badge>
+                <span className="text-sm text-gray-400">{guide.questionCount} questions</span>
+              </div>
+              
+              <h3 className="text-xl font-semibold mb-2">
+                {guide.name}
+              </h3>
+              
+              <div className="flex items-center text-sm text-gray-400 mt-4">
+                <span>Start Practice</span>
+                <span className="ml-2">→</span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
