@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
+	"github.com/google/uuid"
 )
 
 type sqlcRepository struct {
@@ -37,4 +38,16 @@ func (r *sqlcRepository) SoftDeleteUserByClerkID(ctx context.Context, clerkID st
 	}
 
 	return nil
+}
+
+func (r *sqlcRepository) GetUserIDByClerkID(ctx context.Context, clerkID string) (uuid.UUID, error) {
+	pgID, err := r.queries.GetUserIDByClerkID(ctx, clerkID)
+	if err != nil {
+		return uuid.UUID{}, fmt.Errorf("GetUserIDByClerkID: %w", err)
+	}
+	id, err := uuid.FromBytes(pgID.Bytes[:])
+	if err != nil {
+		return uuid.UUID{}, fmt.Errorf("GetUserIDByClerkID: invalid UUID: %w", err)
+	}
+	return id, nil
 }

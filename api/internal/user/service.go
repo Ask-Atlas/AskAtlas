@@ -4,11 +4,13 @@ import (
 	"context"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
+	"github.com/google/uuid"
 )
 
 type Repository interface {
 	UpsertClerkUser(ctx context.Context, arg db.UpsertClerkUserParams) (db.User, error)
 	SoftDeleteUserByClerkID(ctx context.Context, clerkID string) error
+	GetUserIDByClerkID(ctx context.Context, clerkID string) (uuid.UUID, error)
 }
 
 type service struct {
@@ -40,4 +42,8 @@ func (s *service) UpsertClerkUser(ctx context.Context, payload UpsertUserPayload
 
 func (s *service) SoftDeleteUserByClerkID(ctx context.Context, clerkID string) error {
 	return s.repo.SoftDeleteUserByClerkID(ctx, clerkID)
+}
+
+func (s *service) GetUserIDByClerkID(ctx context.Context, clerkID string) (uuid.UUID, error) {
+	return s.repo.GetUserIDByClerkID(ctx, clerkID)
 }
