@@ -7,6 +7,8 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestToUpsertClerkUserParams(t *testing.T) {
@@ -52,7 +54,7 @@ func TestToUpsertClerkUserParams(t *testing.T) {
 				FirstName:  "Jane",
 				LastName:   "Doe",
 				MiddleName: pgtype.Text{Valid: false},
-				Metadata:   nil,
+				Metadata:   []byte(nil),
 			},
 			wantError: false,
 		},
@@ -63,39 +65,21 @@ func TestToUpsertClerkUserParams(t *testing.T) {
 			t.Parallel()
 
 			got, err := ToUpsertClerkUserParams(tt.payload)
-			if (err != nil) != tt.wantError {
-				t.Errorf("ToUpsertClerkUserParams() error = %v, wantErr %v", err, tt.wantError)
+			if tt.wantError {
+				require.Error(t, err)
 				return
 			}
 
-			if got.ClerkID != tt.want.ClerkID {
-				t.Errorf("ToUpsertClerkUserParams() ClerkID = %v, want %v", got.ClerkID, tt.want.ClerkID)
-			}
-			if got.Email != tt.want.Email {
-				t.Errorf("ToUpsertClerkUserParams() Email = %v, want %v", got.Email, tt.want.Email)
-			}
-			if got.FirstName != tt.want.FirstName {
-				t.Errorf("ToUpsertClerkUserParams() FirstName = %v, want %v", got.FirstName, tt.want.FirstName)
-			}
-			if got.LastName != tt.want.LastName {
-				t.Errorf("ToUpsertClerkUserParams() LastName = %v, want %v", got.LastName, tt.want.LastName)
-			}
-			if got.MiddleName != tt.want.MiddleName {
-				t.Errorf("ToUpsertClerkUserParams() MiddleName = %v, want %v", got.MiddleName, tt.want.MiddleName)
-			}
-			gotMeta, ok1 := got.Metadata.([]byte)
-			wantMeta, ok2 := tt.want.Metadata.([]byte)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want.ClerkID, got.ClerkID)
+			assert.Equal(t, tt.want.Email, got.Email)
+			assert.Equal(t, tt.want.FirstName, got.FirstName)
+			assert.Equal(t, tt.want.LastName, got.LastName)
+			assert.Equal(t, tt.want.MiddleName, got.MiddleName)
 
-			if !ok1 && got.Metadata != nil {
-				t.Errorf("got.Metadata is not []byte")
-			}
-			if !ok2 && tt.want.Metadata != nil {
-				t.Errorf("tt.want.Metadata is not []byte")
-			}
-
-			if string(gotMeta) != string(wantMeta) {
-				t.Errorf("ToUpsertClerkUserParams() Metadata = %s, want %s", gotMeta, wantMeta)
-			}
+			// Handle metadata comparison specifically if needed, or rely on EqualValues if types match enough
+			// For []byte content, Equal is usually fine if the content is deterministic
+			assert.Equal(t, tt.want.Metadata, got.Metadata)
 		})
 	}
 }
@@ -160,38 +144,20 @@ func TestToUser(t *testing.T) {
 			t.Parallel()
 
 			got, err := ToUser(tt.dbUser)
-			if (err != nil) != tt.wantError {
-				t.Errorf("ToUser() error = %v, wantErr %v", err, tt.wantError)
+
+			if tt.wantError {
+				require.Error(t, err)
 				return
 			}
 
-			if got.ID != tt.want.ID {
-				t.Errorf("ToUser() ID = %v, want %v", got.ID, tt.want.ID)
-			}
-			if got.ClerkID != tt.want.ClerkID {
-				t.Errorf("ToUser() ClerkID = %v, want %v", got.ClerkID, tt.want.ClerkID)
-			}
-			if got.Email != tt.want.Email {
-				t.Errorf("ToUser() Email = %v, want %v", got.Email, tt.want.Email)
-			}
-			if got.FirstName != tt.want.FirstName {
-				t.Errorf("ToUser() FirstName = %v, want %v", got.FirstName, tt.want.FirstName)
-			}
-			if got.LastName != tt.want.LastName {
-				t.Errorf("ToUser() LastName = %v, want %v", got.LastName, tt.want.LastName)
-			}
-			if (got.MiddleName == nil) != (tt.want.MiddleName == nil) || (got.MiddleName != nil && *got.MiddleName != *tt.want.MiddleName) {
-				t.Errorf("ToUser() MiddleName = %v, want %v", got.MiddleName, tt.want.MiddleName)
-			}
-			if len(got.Metadata) != len(tt.want.Metadata) {
-				t.Errorf("ToUser() Metadata length = %v, want %v", len(got.Metadata), len(tt.want.Metadata))
-			} else {
-				for k, v := range tt.want.Metadata {
-					if gotVal, ok := got.Metadata[k]; !ok || gotVal != v {
-						t.Errorf("ToUser() Metadata[%v] = %v, want %v", k, gotVal, v)
-					}
-				}
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want.ID, got.ID)
+			assert.Equal(t, tt.want.ClerkID, got.ClerkID)
+			assert.Equal(t, tt.want.Email, got.Email)
+			assert.Equal(t, tt.want.FirstName, got.FirstName)
+			assert.Equal(t, tt.want.LastName, got.LastName)
+			assert.Equal(t, tt.want.MiddleName, got.MiddleName)
+			assert.Equal(t, tt.want.Metadata, got.Metadata)
 		})
 	}
 }
