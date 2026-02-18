@@ -11,8 +11,8 @@ import (
 )
 
 type Querier interface {
-	GetFileByID(ctx context.Context, fileID pgtype.UUID) (File, error)
 	GetFileIfViewable(ctx context.Context, arg GetFileIfViewableParams) (File, error)
+	GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtype.UUID, error)
 	ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFilesCreatedAscParams) ([]ListOwnedFilesCreatedAscRow, error)
 	ListOwnedFilesCreatedDesc(ctx context.Context, arg ListOwnedFilesCreatedDescParams) ([]ListOwnedFilesCreatedDescRow, error)
 	ListOwnedFilesMimeAsc(ctx context.Context, arg ListOwnedFilesMimeAscParams) ([]ListOwnedFilesMimeAscRow, error)

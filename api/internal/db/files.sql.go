@@ -11,30 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const getFileByID = `-- name: GetFileByID :one
-SELECT id, user_id, s3_key, name, mime_type, size, checksum, status, created_at, updated_at
-FROM files
-WHERE id = $1
-`
-
-func (q *Queries) GetFileByID(ctx context.Context, fileID pgtype.UUID) (File, error) {
-	row := q.db.QueryRow(ctx, getFileByID, fileID)
-	var i File
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.S3Key,
-		&i.Name,
-		&i.MimeType,
-		&i.Size,
-		&i.Checksum,
-		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const getFileIfViewable = `-- name: GetFileIfViewable :one
 SELECT f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at
 FROM files f

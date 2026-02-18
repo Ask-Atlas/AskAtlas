@@ -28,3 +28,6 @@ SET
 WHERE
     clerk_id = $1
     AND deleted_at IS NULL;
+
+-- name: GetUserIDByClerkID :one
+SELECT id FROM users WHERE clerk_id = $1 AND deleted_at IS NULL;
