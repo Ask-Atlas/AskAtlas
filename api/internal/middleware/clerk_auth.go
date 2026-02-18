@@ -1,10 +1,10 @@
 package middleware
 
 import (
-	"log/slog"
-	"net/http"
 	"database/sql"
 	"errors"
+	"log/slog"
+	"net/http"
 
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/authctx"
