@@ -25,7 +25,8 @@ func TestUserIDFromContext_MissingKey(t *testing.T) {
 }
 
 func TestUserIDFromContext_WrongType(t *testing.T) {
-	ctx := context.WithValue(context.Background(), "user_id", "not-a-uuid")
+	type key string
+	ctx := context.WithValue(context.Background(), key("user_id"), "not-a-uuid")
 	got, ok := authctx.UserIDFromContext(ctx)
 	assert.False(t, ok, "expected ok to be false when key type differs")
 	assert.Equal(t, uuid.UUID{}, got)
