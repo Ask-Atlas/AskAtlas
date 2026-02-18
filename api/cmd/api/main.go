@@ -7,8 +7,11 @@ import (
 	"os"
 	"time"
 
+	clerkSDK "github.com/clerk/clerk-sdk-go/v2"
+
 	"github.com/Ask-Atlas/AskAtlas/api/internal/clerk"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/files"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/handlers"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/logging"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/middleware"
@@ -55,7 +58,19 @@ func main() {
 	}
 	clerkSignatureVerifier := middleware.SVIXVerifier(clerkWebhookSecret)
 
-	// TODO: Add timeout to a config file instead of hardcoding
+	clerkSecretKey := os.Getenv("CLERK_SECRET_KEY")
+	if clerkSecretKey == "" {
+		slog.Error("CLERK_SECRET_KEY environment variable is not set")
+		os.Exit(1)
+	}
+	clerkSDK.SetKey(clerkSecretKey)
+
+	fileRepo := files.NewSQLCRepository(queries)
+	fileService := files.NewService(fileRepo)
+	fileHandler := handlers.NewFileHandler(fileService)
+
+	clerkAuth := middleware.ClerkAuth(userService)
+
 	r.Use(chiMiddleware.Timeout(60 * time.Second))
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("Hello World"))
@@ -63,6 +78,18 @@ func main() {
 
 	r.Route("/webhooks", func(r chi.Router) {
 		r.With(clerkSignatureVerifier).Post("/clerk", clerkWebhookHandler.Webhook)
+	})
+
+	r.Route("/api", func(r chi.Router) {
+		r.Use(clerkAuth)
+
+		r.Route("/me", func(r chi.Router) {
+			r.Get("/files", fileHandler.ListFiles)
+		})
+
+		r.Route("/files", func(r chi.Router) {
+			r.Get("/{file_id}", fileHandler.GetFile)
+		})
 	})
 
 	port := os.Getenv("PORT")
