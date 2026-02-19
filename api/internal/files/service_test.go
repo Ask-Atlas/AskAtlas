@@ -2,6 +2,7 @@ package files_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -26,7 +27,7 @@ func TestService_ListFiles_Scope(t *testing.T) {
 
 	_, _, err := svc.ListFiles(context.Background(), params)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "scope \"course\" is not yet implemented")
+	assert.Contains(t, err.Error(), fmt.Sprintf("scope %q is not yet implemented", files.ScopeCourse))
 }
 
 func TestService_ListFiles_Pagination_HasNextPage(t *testing.T) {
