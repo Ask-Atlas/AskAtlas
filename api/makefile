@@ -63,7 +63,7 @@ seed:
 		-action=$(ACTION) \
 		-count=$(COUNT) \
 		-max-rows=$(MAX_ROWS) \
-		$(if $(REPORT),-report)
+		$(if $(filter true,$(REPORT)),-report)
 
 ## make e2e E2E_TOKEN=<token> [ENV=dev|staging]
 e2e:
