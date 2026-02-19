@@ -2,11 +2,13 @@ package user
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type sqlcRepository struct {
@@ -43,11 +45,17 @@ func (r *sqlcRepository) SoftDeleteUserByClerkID(ctx context.Context, clerkID st
 func (r *sqlcRepository) GetUserIDByClerkID(ctx context.Context, clerkID string) (uuid.UUID, error) {
 	pgID, err := r.queries.GetUserIDByClerkID(ctx, clerkID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return uuid.UUID{}, ErrUserNotFound
+		}
 		return uuid.UUID{}, fmt.Errorf("GetUserIDByClerkID: %w", err)
+	}
+	if !pgID.Valid {
+		return uuid.UUID{}, fmt.Errorf("GetUserIDByClerkID: invalid/NULL UUID stored for user")
 	}
 	id, err := uuid.FromBytes(pgID.Bytes[:])
 	if err != nil {
-		return uuid.UUID{}, fmt.Errorf("GetUserIDByClerkID: invalid UUID: %w", err)
+		return uuid.UUID{}, fmt.Errorf("GetUserIDByClerkID: invalid UUID bytes: %w", err)
 	}
 	return id, nil
 }

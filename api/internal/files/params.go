@@ -192,22 +192,35 @@ func ParseListFilesParams(
 	}
 
 	var status, mimeType, searchQ *string
-	if raw := q.Get("status"); raw != "" {
-		if _, ok := validStatuses[raw]; !ok {
+
+	// Default to 'complete' if not provided.
+	rawStatus := q.Get("status")
+	if rawStatus == "" {
+		s := string(db.UploadStatusComplete)
+		status = &s
+	} else {
+		lowerStatus := strings.ToLower(rawStatus)
+		if _, ok := validStatuses[lowerStatus]; !ok {
 			details["status"] = "must be one of: pending, complete, failed"
 		} else {
-			status = &raw
+			status = &lowerStatus
 		}
 	}
+
 	if raw := q.Get("mime_type"); raw != "" {
-		if _, ok := validMimeTypes[raw]; !ok {
+		lowerMime := strings.ToLower(raw)
+		if _, ok := validMimeTypes[lowerMime]; !ok {
 			details["mime_type"] = "must be one of: image/jpeg, image/png, image/webp, application/pdf"
 		} else {
-			mimeType = &raw
+			mimeType = &lowerMime
 		}
 	}
+
 	if raw := q.Get("q"); raw != "" {
-		searchQ = &raw
+		escaped := strings.ReplaceAll(raw, "\\", "\\\\")
+		escaped = strings.ReplaceAll(escaped, "%", "\\%")
+		escaped = strings.ReplaceAll(escaped, "_", "\\_")
+		searchQ = &escaped
 	}
 
 	var minSize, maxSize *int64

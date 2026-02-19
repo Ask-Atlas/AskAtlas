@@ -39,6 +39,7 @@ func TestParseListFilesParams(t *testing.T) {
 				SortField:     files.SortFieldUpdatedAt,
 				SortDir:       files.SortDirDesc,
 				PageLimit:     25,
+				Status:        utils.Ptr("complete"),
 			},
 		},
 		{

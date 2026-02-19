@@ -110,7 +110,7 @@ WHERE f.user_id = $2
   AND ($8::timestamptz   IS NULL OR f.created_at <  $8::timestamptz)
   AND ($9::timestamptz IS NULL OR f.updated_at >= $9::timestamptz)
   AND ($10::timestamptz   IS NULL OR f.updated_at <  $10::timestamptz)
-  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%')
+  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%' ESCAPE '\')
   AND (
     $12::timestamptz IS NULL
     OR (f.created_at, f.id) > ($12::timestamptz, $13::uuid)
@@ -218,7 +218,7 @@ WHERE f.user_id = $2
   AND ($8::timestamptz   IS NULL OR f.created_at <  $8::timestamptz)
   AND ($9::timestamptz IS NULL OR f.updated_at >= $9::timestamptz)
   AND ($10::timestamptz   IS NULL OR f.updated_at <  $10::timestamptz)
-  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%')
+  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%' ESCAPE '\')
   AND (
     $12::timestamptz IS NULL
     OR (f.created_at, f.id) < ($12::timestamptz, $13::uuid)
@@ -326,7 +326,7 @@ WHERE f.user_id = $2
   AND ($8::timestamptz   IS NULL OR f.created_at <  $8::timestamptz)
   AND ($9::timestamptz IS NULL OR f.updated_at >= $9::timestamptz)
   AND ($10::timestamptz   IS NULL OR f.updated_at <  $10::timestamptz)
-  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%')
+  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%' ESCAPE '\')
   AND (
     $12::mime_type IS NULL
     OR (f.mime_type, f.id) > ($12::mime_type, $13::uuid)
@@ -434,7 +434,7 @@ WHERE f.user_id = $2
   AND ($8::timestamptz   IS NULL OR f.created_at <  $8::timestamptz)
   AND ($9::timestamptz IS NULL OR f.updated_at >= $9::timestamptz)
   AND ($10::timestamptz   IS NULL OR f.updated_at <  $10::timestamptz)
-  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%')
+  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%' ESCAPE '\')
   AND (
     $12::mime_type IS NULL
     OR (f.mime_type, f.id) < ($12::mime_type, $13::uuid)
@@ -542,7 +542,7 @@ WHERE f.user_id = $2
   AND ($8::timestamptz   IS NULL OR f.created_at <  $8::timestamptz)
   AND ($9::timestamptz IS NULL OR f.updated_at >= $9::timestamptz)
   AND ($10::timestamptz   IS NULL OR f.updated_at <  $10::timestamptz)
-  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%')
+  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%' ESCAPE '\')
   AND (
     $12::text IS NULL
     OR (lower(f.name), f.id) > ($12::text, $13::uuid)
@@ -650,7 +650,7 @@ WHERE f.user_id = $2
   AND ($8::timestamptz   IS NULL OR f.created_at <  $8::timestamptz)
   AND ($9::timestamptz IS NULL OR f.updated_at >= $9::timestamptz)
   AND ($10::timestamptz   IS NULL OR f.updated_at <  $10::timestamptz)
-  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%')
+  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%' ESCAPE '\')
   AND (
     $12::text IS NULL
     OR (lower(f.name), f.id) < ($12::text, $13::uuid)
@@ -758,7 +758,7 @@ WHERE f.user_id = $2
   AND ($8::timestamptz   IS NULL OR f.created_at <  $8::timestamptz)
   AND ($9::timestamptz IS NULL OR f.updated_at >= $9::timestamptz)
   AND ($10::timestamptz   IS NULL OR f.updated_at <  $10::timestamptz)
-  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%')
+  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%' ESCAPE '\')
   AND (
     $12::bigint IS NULL
     OR (f.size, f.id) > ($12::bigint, $13::uuid)
@@ -866,7 +866,7 @@ WHERE f.user_id = $2
   AND ($8::timestamptz   IS NULL OR f.created_at <  $8::timestamptz)
   AND ($9::timestamptz IS NULL OR f.updated_at >= $9::timestamptz)
   AND ($10::timestamptz   IS NULL OR f.updated_at <  $10::timestamptz)
-  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%')
+  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%' ESCAPE '\')
   AND (
     $12::bigint IS NULL
     OR (f.size, f.id) < ($12::bigint, $13::uuid)
@@ -974,7 +974,7 @@ WHERE f.user_id = $2
   AND ($8::timestamptz   IS NULL OR f.created_at <  $8::timestamptz)
   AND ($9::timestamptz IS NULL OR f.updated_at >= $9::timestamptz)
   AND ($10::timestamptz   IS NULL OR f.updated_at <  $10::timestamptz)
-  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%')
+  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%' ESCAPE '\')
   AND (
     $12::upload_status IS NULL
     OR (f.status, f.id) > ($12::upload_status, $13::uuid)
@@ -1082,7 +1082,7 @@ WHERE f.user_id = $2
   AND ($8::timestamptz   IS NULL OR f.created_at <  $8::timestamptz)
   AND ($9::timestamptz IS NULL OR f.updated_at >= $9::timestamptz)
   AND ($10::timestamptz   IS NULL OR f.updated_at <  $10::timestamptz)
-  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%')
+  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%' ESCAPE '\')
   AND (
     $12::upload_status IS NULL
     OR (f.status, f.id) < ($12::upload_status, $13::uuid)
@@ -1190,7 +1190,7 @@ WHERE f.user_id = $2
   AND ($8::timestamptz   IS NULL OR f.created_at <  $8::timestamptz)
   AND ($9::timestamptz IS NULL OR f.updated_at >= $9::timestamptz)
   AND ($10::timestamptz   IS NULL OR f.updated_at <  $10::timestamptz)
-  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%')
+  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%' ESCAPE '\')
   AND (
     $12::timestamptz IS NULL
     OR (f.updated_at, f.id) > ($12::timestamptz, $13::uuid)
@@ -1298,7 +1298,7 @@ WHERE f.user_id = $2
   AND ($8::timestamptz   IS NULL OR f.created_at <  $8::timestamptz)
   AND ($9::timestamptz IS NULL OR f.updated_at >= $9::timestamptz)
   AND ($10::timestamptz   IS NULL OR f.updated_at <  $10::timestamptz)
-  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%')
+  AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%' ESCAPE '\')
   AND (
     $12::timestamptz IS NULL
     OR (f.updated_at, f.id) < ($12::timestamptz, $13::uuid)
