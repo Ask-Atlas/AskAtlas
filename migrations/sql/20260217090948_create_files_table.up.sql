@@ -13,7 +13,7 @@ CREATE TYPE permission AS ENUM ('view', 'share', 'delete');
 
 CREATE TABLE files (
   id         UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id    UUID          NOT NULL REFERENCES users(id),
+  user_id    UUID          NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   s3_key     TEXT          NOT NULL,
   name       TEXT          NOT NULL,
   mime_type  mime_type     NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE file_grants (
   grantee_type grantee_type NOT NULL,
   grantee_id   UUID         NOT NULL,
   permission   permission   NOT NULL DEFAULT 'view',
-  granted_by   UUID         NOT NULL REFERENCES users(id),
+  granted_by   UUID         NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   created_at   TIMESTAMPTZ  NOT NULL DEFAULT now(),
   UNIQUE (file_id, grantee_type, grantee_id, permission)
 );
