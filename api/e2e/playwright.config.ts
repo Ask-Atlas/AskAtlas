@@ -10,7 +10,10 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL || "https://api-dev.askatlas.study",
     extraHTTPHeaders: {
-      Authorization: `Bearer ${process.env.E2E_TOKEN}`,
+      Authorization: `Bearer ${(() => {
+        if (!process.env.E2E_TOKEN) throw new Error("E2E_TOKEN is required");
+        return process.env.E2E_TOKEN;
+      })()}`,
     },
     trace: "on-first-retry",
   },
