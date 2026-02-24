@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getUserIDByClerkID = `-- name: GetUserIDByClerkID :one
+SELECT id FROM users WHERE clerk_id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, getUserIDByClerkID, clerkID)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const softDeleteUserByClerkID = `-- name: SoftDeleteUserByClerkID :execrows
 UPDATE users
 SET

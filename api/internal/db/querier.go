@@ -6,9 +6,25 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
+	GetFileIfViewable(ctx context.Context, arg GetFileIfViewableParams) (File, error)
+	GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtype.UUID, error)
+	ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFilesCreatedAscParams) ([]ListOwnedFilesCreatedAscRow, error)
+	ListOwnedFilesCreatedDesc(ctx context.Context, arg ListOwnedFilesCreatedDescParams) ([]ListOwnedFilesCreatedDescRow, error)
+	ListOwnedFilesMimeAsc(ctx context.Context, arg ListOwnedFilesMimeAscParams) ([]ListOwnedFilesMimeAscRow, error)
+	ListOwnedFilesMimeDesc(ctx context.Context, arg ListOwnedFilesMimeDescParams) ([]ListOwnedFilesMimeDescRow, error)
+	ListOwnedFilesNameAsc(ctx context.Context, arg ListOwnedFilesNameAscParams) ([]ListOwnedFilesNameAscRow, error)
+	ListOwnedFilesNameDesc(ctx context.Context, arg ListOwnedFilesNameDescParams) ([]ListOwnedFilesNameDescRow, error)
+	ListOwnedFilesSizeAsc(ctx context.Context, arg ListOwnedFilesSizeAscParams) ([]ListOwnedFilesSizeAscRow, error)
+	ListOwnedFilesSizeDesc(ctx context.Context, arg ListOwnedFilesSizeDescParams) ([]ListOwnedFilesSizeDescRow, error)
+	ListOwnedFilesStatusAsc(ctx context.Context, arg ListOwnedFilesStatusAscParams) ([]ListOwnedFilesStatusAscRow, error)
+	ListOwnedFilesStatusDesc(ctx context.Context, arg ListOwnedFilesStatusDescParams) ([]ListOwnedFilesStatusDescRow, error)
+	ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFilesUpdatedAscParams) ([]ListOwnedFilesUpdatedAscRow, error)
+	ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFilesUpdatedDescParams) ([]ListOwnedFilesUpdatedDescRow, error)
 	SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
 	UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
 }

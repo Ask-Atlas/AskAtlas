@@ -1,0 +1,13 @@
+{
+    "name": "askatlas-api-e2e",
+    "version": "1.0.0",
+    "description": "E2E API Tests for AskAtlas",
+    "scripts": {
+        "test": "playwright test"
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.41.0",
+        "@types/node": "^20.11.0",
+        "typescript": "^5.3.0"
+    }
+}

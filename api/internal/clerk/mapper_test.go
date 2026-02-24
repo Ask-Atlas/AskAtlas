@@ -1,11 +1,12 @@
 package clerk_test
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/clerk"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseWebhookEvent(t *testing.T) {
@@ -98,14 +99,14 @@ func TestParseWebhookEvent(t *testing.T) {
 			t.Parallel()
 
 			got, err := clerk.ParseWebhookEvent(tt.event)
-			if (err != nil) != tt.wantError {
-				t.Errorf("ParseWebhookEvent() error = %v, wantError %v", err, tt.wantError)
+			if tt.wantError {
+				require.Error(t, err)
+				require.Nil(t, got)
 				return
 			}
 
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("ParseWebhookEvent() got = %+v, want %+v", got, tt.want)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
@@ -124,12 +125,12 @@ func TestToUpserUserPayload(t *testing.T) {
 				ID: "user_123",
 				EmailAddresses: []clerk.EmailAddress{
 					{ID: "email_1", EmailAddress: "other@example.com"},
-					{ID: "email_2", EmailAddress: "[EMAIL_ADDRESS]"},
+					{ID: "email_2", EmailAddress: "primary@example.com"},
 				},
 				PrimaryEmailAddressID: utils.Ptr("email_2"),
 				FirstName:             utils.Ptr("John"),
 			},
-			wantEmail: "[EMAIL_ADDRESS]",
+			wantEmail: "primary@example.com",
 			wantError: false,
 		},
 		{
@@ -137,11 +138,11 @@ func TestToUpserUserPayload(t *testing.T) {
 			clerkUser: clerk.ClerkUser{
 				ID: "user_123",
 				EmailAddresses: []clerk.EmailAddress{
-					{ID: "email_1", EmailAddress: "[EMAIL_ADDRESS]"},
+					{ID: "email_1", EmailAddress: "first@example.com"},
 				},
 				FirstName: utils.Ptr("John"),
 			},
-			wantEmail: "[EMAIL_ADDRESS]",
+			wantEmail: "first@example.com",
 			wantError: false,
 		},
 		{
@@ -162,24 +163,13 @@ func TestToUpserUserPayload(t *testing.T) {
 			got, err := clerk.ToUpsertUserPayload(tt.clerkUser)
 
 			if tt.wantError {
-				if err == nil {
-					t.Error("ToUpsertUserPayload() expected error but got none")
-				}
+				require.Error(t, err)
 				return
 			}
 
-			if err != nil {
-				t.Errorf("ToUpsertUserPayload() unexpected error = %v", err)
-				return
-			}
-
-			if got.Email != tt.wantEmail {
-				t.Errorf("Email = %q, want %q", got.Email, tt.wantEmail)
-			}
-
-			if got.ClerkID != tt.clerkUser.ID {
-				t.Errorf("ClerkID = %q, want %q", got.ClerkID, tt.clerkUser.ID)
-			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantEmail, got.Email)
+			assert.Equal(t, tt.clerkUser.ID, got.ClerkID)
 		})
 	}
 }
