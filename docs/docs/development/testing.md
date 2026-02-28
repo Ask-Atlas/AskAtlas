@@ -78,8 +78,10 @@ E2E tests live in `api/e2e/tests/` and use [Playwright](https://playwright.dev/)
 
 ```bash
 cd api
-make e2e
+make e2e E2E_TOKEN=<your-jwt-token>
 ```
+
+The `E2E_TOKEN` is a valid Clerk JWT for an authenticated test user. You can obtain one from the browser's network tab or the Clerk dashboard.
 
 ## Frontend Tests
 

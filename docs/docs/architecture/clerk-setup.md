@@ -70,7 +70,7 @@ After configuring the webhook:
 The Go API registers the Clerk secret key at startup in `cmd/api/main.go`:
 
 ```go
-clerk.SetKey(os.Getenv("CLERK_SECRET_KEY"))
+clerkSDK.SetKey(clerkSecretKey)
 ```
 
 This must be called before any middleware or handlers that use the Clerk SDK.
