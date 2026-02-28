@@ -40,6 +40,10 @@ test:
 mockery:
 	go tool mockery
 
+generate-api:
+	mkdir -p internal/api
+	go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest -config oapi-codegen.yaml openapi.yaml
+
 tidy:
 	go mod tidy && go mod verify
 
