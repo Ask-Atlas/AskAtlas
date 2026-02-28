@@ -10,8 +10,8 @@ This guide covers how to add and edit documentation in the Docusaurus site.
 
 ```bash
 cd docs
-npm install
-npm start
+pnpm install
+pnpm start
 ```
 
 Opens `localhost:3000` with hot-reload. Changes to `.md` files are reflected immediately.
@@ -107,7 +107,7 @@ Supported diagram types: flowcharts, sequence diagrams, ER diagrams, etc. See [M
 ## Building for Production
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 This catches broken links and build errors. Always run this before pushing.
