@@ -11,12 +11,14 @@ const config: Config = {
     v4: true,
   },
 
-  // Set the production url of your site here
-  url: 'https://your-docusaurus-site.example.com',
-  baseUrl: '/',
+  // GitHub Pages deployment
+  url: 'https://ask-atlas.github.io',
+  baseUrl: '/AskAtlas/',
+  trailingSlash: false,
 
   organizationName: 'Ask-Atlas',
   projectName: 'AskAtlas',
+  deploymentBranch: 'gh-pages',
 
   onBrokenLinks: 'throw',
 
