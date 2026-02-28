@@ -18,7 +18,7 @@ Opens `localhost:3000` with hot-reload. Changes to `.md` files are reflected imm
 
 ## File Structure
 
-```
+```text
 docs/
 ├── docs/                    # Documentation pages (sidebar content)
 │   ├── intro.md             # Landing page for /docs
