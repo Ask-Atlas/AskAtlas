@@ -51,8 +51,13 @@ func NewInternalError() *AppError {
 	return &AppError{Code: http.StatusInternalServerError, Status: "Internal Server Error", Message: "Something went wrong"}
 }
 
-// ToHTTPError maps a sentinel error to an AppError
+// ToHTTPError maps a sentinel error or existing AppError to an AppError
 func ToHTTPError(err error) *AppError {
+	var appErr *AppError
+	if errors.As(err, &appErr) {
+		return appErr
+	}
+
 	switch {
 	case errors.Is(err, ErrNotFound):
 		return NewNotFound("Resource not found")
