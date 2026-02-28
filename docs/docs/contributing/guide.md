@@ -35,9 +35,17 @@ We use **semantic commits** to keep the git history readable and enable automate
 
 ## Pull Requests
 
+### Requirements to Merge
+
+Before a Pull Request can be merged into the default branch, it must meet the following criteria:
+
+1. **One Approval:** At least 1 review approval is required from another team member.
+2. **Passing Checks:** All automated CI/CD status checks (tests, linters, deployments) must pass.
+3. **Up to Date:** The PR branch must be up to date with the default branch.
+
 ### Squash Merges
 
-All PRs are **squash-merged** to keep the main branch history clean. The squash commit message should follow the semantic commit format.
+All PRs must be **squash-merged** to keep the main branch history clean. The squash commit message should follow the semantic commit format.
 
 ### PR Template
 

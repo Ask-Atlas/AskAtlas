@@ -29,7 +29,9 @@ chore: bump Go to 1.24.1
 
 ## Pull Requests
 
-- All PRs are **squash-merged** to keep history clean
+- All PRs must be **squash-merged** to keep history clean
+- All PRs require at least **1 approval** from a reviewer
+- All CI status checks (tests, linters, deployments) must pass before merging
 - Use the [PR template](.github/pull_request_template.md) — it's auto-populated when you open a PR
 - Self-review your code before requesting review
 
