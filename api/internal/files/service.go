@@ -87,7 +87,7 @@ func (s *Service) ListFiles(ctx context.Context, p ListFilesParams) ([]File, *st
 
 	var nextCursor *string
 	if hasMore && len(files) > 0 {
-		encoded, err := encodeCursor(buildCursor(files[len(files)-1], p.SortField))
+		encoded, err := EncodeCursor(buildCursor(files[len(files)-1], p.SortField))
 		if err != nil {
 			return nil, nil, fmt.Errorf("ListFiles: encode cursor: %w", err)
 		}
