@@ -35,6 +35,24 @@ docs/
 └── docusaurus.config.ts     # Site configuration
 ```
 
+## Generated Backend Docs Workflow
+
+The `docs/docs/backend/` pages are generated from Go source comments in `api/`.
+
+When you update exported Go types, functions, methods, or package comments:
+
+1. Regenerate backend docs:
+   ```bash
+   cd api
+   make generate-docs
+   ```
+2. Verify docs build cleanly:
+   ```bash
+   cd docs
+   pnpm run build
+   ```
+3. Commit both source changes and regenerated docs together.
+
 ## Adding a New Doc Page
 
 1. **Create the file** in the appropriate directory, e.g. `docs/development/my-topic.md`

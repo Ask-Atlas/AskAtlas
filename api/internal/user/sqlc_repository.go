@@ -23,7 +23,7 @@ func NewSQLCRepository(queries *db.Queries) *sqlcRepository {
 
 // UpsertClerkUser creates a new user or updates the fields of an existing user based on Clerk ID.
 func (r *sqlcRepository) UpsertClerkUser(ctx context.Context, arg db.UpsertClerkUserParams) (db.User, error) {
-	slog.Info("upserting clerk user", "clerk_id", arg.ClerkID, "email", arg.Email)
+	slog.Info("upserting clerk user", "clerk_id", arg.ClerkID)
 	user, err := r.queries.UpsertClerkUser(ctx, arg)
 	if err != nil {
 		return db.User{}, fmt.Errorf("failed to upsert clerk user: %w", err)

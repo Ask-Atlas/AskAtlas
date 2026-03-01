@@ -11,7 +11,7 @@ GOMARKDOC_VERSION        ?= v1.1.0
 GOMARKDOC_CMD            := go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@$(GOMARKDOC_VERSION)
 
 .PHONY: dev stage prod build install format format-check lint test tidy tidy-check \
-        sqlc/generate docker-build docker-run mockery seed e2e
+	sqlc/generate docker-build docker-run mockery seed e2e generate-docs
 
 dev:
 	infisical run --env=dev -- go run $(MAIN_PATH)
