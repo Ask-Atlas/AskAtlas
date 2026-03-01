@@ -2,6 +2,8 @@ openapi: 3.0.3
 info:
   title: AskAtlas API
   version: 1.0.0
+security:
+  - BearerAuth: []
 paths:
   /me/files:
     get:
@@ -142,6 +144,11 @@ paths:
           $ref: '#/components/responses/InternalServerError'
 
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     FileResponse:
       type: object
