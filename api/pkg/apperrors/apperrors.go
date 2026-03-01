@@ -1,6 +1,7 @@
 package apperrors
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -53,13 +54,8 @@ func NewInternalError() *AppError {
 
 // ToHTTPError maps a sentinel error or existing AppError to an AppError
 func ToHTTPError(err error) *AppError {
-	var appErr *AppError
-	if errors.As(err, &appErr) {
-		if appErr.Status == "" {
-			if statusText := http.StatusText(appErr.Code); statusText != "" {
-				appErr.Status = statusText
-			}
-		}
+	if appErr := (*AppError)(nil); errors.As(err, &appErr) {
+		appErr.Status = cmp.Or(appErr.Status, http.StatusText(appErr.Code))
 		return appErr
 	}
 
