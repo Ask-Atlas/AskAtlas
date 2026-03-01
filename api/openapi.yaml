@@ -2,6 +2,8 @@ openapi: 3.0.3
 info:
   title: AskAtlas API
   version: 1.0.0
+servers:
+  - url: /api
 security:
   - BearerAuth: []
 paths:

@@ -154,24 +154,17 @@ func mapListFilesParams(viewerID uuid.UUID, params api.ListFilesParams) (files.L
 	p.UpdatedFrom = params.UpdatedFrom
 	p.UpdatedTo = params.UpdatedTo
 
-	var errDetails map[string]string
+	errDetails := make(map[string]string)
 	if p.MinSize != nil && p.MaxSize != nil && *p.MinSize > *p.MaxSize {
-		errDetails = map[string]string{}
 		errDetails["min_size"] = "min_size cannot be greater than max_size"
 	}
 	if p.CreatedFrom != nil && p.CreatedTo != nil && p.CreatedFrom.After(*p.CreatedTo) {
-		if errDetails == nil {
-			errDetails = map[string]string{}
-		}
 		errDetails["created_from"] = "created_from cannot be after created_to"
 	}
 	if p.UpdatedFrom != nil && p.UpdatedTo != nil && p.UpdatedFrom.After(*p.UpdatedTo) {
-		if errDetails == nil {
-			errDetails = map[string]string{}
-		}
 		errDetails["updated_from"] = "updated_from cannot be after updated_to"
 	}
-	if errDetails != nil {
+	if len(errDetails) > 0 {
 		return p, apperrors.NewBadRequest("Invalid query parameters", errDetails)
 	}
 

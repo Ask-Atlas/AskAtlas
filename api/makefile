@@ -42,7 +42,7 @@ mockery:
 
 generate-api:
 	mkdir -p internal/api
-	go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest -config oapi-codegen.yaml openapi.yaml
+	go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.4.1 -config oapi-codegen.yaml openapi.yaml
 
 tidy:
 	go mod tidy && go mod verify

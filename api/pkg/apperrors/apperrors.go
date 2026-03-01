@@ -55,6 +55,11 @@ func NewInternalError() *AppError {
 func ToHTTPError(err error) *AppError {
 	var appErr *AppError
 	if errors.As(err, &appErr) {
+		if appErr.Status == "" {
+			if statusText := http.StatusText(appErr.Code); statusText != "" {
+				appErr.Status = statusText
+			}
+		}
 		return appErr
 	}
 

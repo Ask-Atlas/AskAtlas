@@ -11,14 +11,16 @@ var paramErrorRegex = regexp.MustCompile(`^parameter "([^"]+)"(?: in [^ ]+)? has
 
 // OAPIValidatorErrorHandler is a custom ErrorHandler for the OpenAPI request validator middleware.
 func OAPIValidatorErrorHandler(w http.ResponseWriter, message string, statusCode int) {
-	details := map[string]string{}
+	var details map[string]string
 	if statusCode == http.StatusBadRequest {
 		matches := paramErrorRegex.FindStringSubmatch(message)
 		if len(matches) == 3 {
+			details = map[string]string{}
 			field := matches[1]
 			errMsg := matches[2]
 			details[field] = errMsg
 		} else {
+			details = map[string]string{}
 			details["validation"] = message
 		}
 	}
