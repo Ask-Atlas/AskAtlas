@@ -28,7 +28,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           source: "scripts/rollback.sh,scripts/deploy-common.sh"
-          target: "/tmp"
+          target: "/tmp/${{ github.run_id }}"
           
       - name: Rollback VM
         uses: appleboy/ssh-action@v1.2.0
@@ -43,6 +43,6 @@ jobs:
           envs: INFISICAL_CLIENT_ID,INFISICAL_CLIENT_SECRET,INFISICAL_PROJECT_ID
           script: |
             set -e
-            chmod +x /tmp/scripts/rollback.sh /tmp/scripts/deploy-common.sh
-            /tmp/scripts/rollback.sh ${{ inputs.environment }} api
-            rm -rf /tmp/scripts
+            chmod +x /tmp/${{ github.run_id }}/scripts/rollback.sh /tmp/${{ github.run_id }}/scripts/deploy-common.sh
+            /tmp/${{ github.run_id }}/scripts/rollback.sh ${{ inputs.environment }} api
+            rm -rf /tmp/${{ github.run_id }}

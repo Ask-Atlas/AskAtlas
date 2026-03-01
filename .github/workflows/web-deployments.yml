@@ -84,7 +84,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           source: "scripts/deploy.sh,scripts/deploy-common.sh"
-          target: "/tmp"
+          target: "/tmp/${{ github.run_id }}"
       
       - name: Deploy to VM
         uses: appleboy/ssh-action@v1.2.0
@@ -101,6 +101,6 @@ jobs:
           envs: GHCR_USERNAME,GHCR_TOKEN,INFISICAL_CLIENT_ID,INFISICAL_CLIENT_SECRET,INFISICAL_PROJECT_ID
           script: |
             set -e
-            chmod +x /tmp/scripts/deploy.sh /tmp/scripts/deploy-common.sh
-            /tmp/scripts/deploy.sh ${{ inputs.environment }} web ${{ needs.build.outputs.image_tag }}
-            rm -rf /tmp/scripts
+            chmod +x /tmp/${{ github.run_id }}/scripts/deploy.sh /tmp/${{ github.run_id }}/scripts/deploy-common.sh
+            /tmp/${{ github.run_id }}/scripts/deploy.sh ${{ inputs.environment }} web ${{ needs.build.outputs.image_tag }}
+            rm -rf /tmp/${{ github.run_id }}
