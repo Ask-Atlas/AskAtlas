@@ -1,3 +1,5 @@
+// Package apperrors defines standard application-level errors and HTTP mappings.
+// It provides a unified way to represent, handle, and return errors across the API.
 package apperrors
 
 import (
@@ -8,6 +10,7 @@ import (
 	"net/http"
 )
 
+// Standard predefined application errors.
 var (
 	ErrNotFound     = errors.New("not found")
 	ErrConflict     = errors.New("already exists")
@@ -16,6 +19,8 @@ var (
 	ErrInvalidInput = errors.New("invalid input")
 )
 
+// AppError represents an HTTP-friendly error containing a status code,
+// a message, and optional validation details.
 type AppError struct {
 	Code    int               `json:"code"`
 	Status  string            `json:"status"`
@@ -24,30 +29,37 @@ type AppError struct {
 	Cause   error             `json:"-"`
 }
 
+// Error returns the underlying error message.
 func (e *AppError) Error() string {
 	return e.Message
 }
 
+// Unwrap returns the underlying cause of the error.
 func (e *AppError) Unwrap() error {
 	return e.Cause
 }
 
+// NewBadRequest creates an AppError with an HTTP 400 Bad Request status.
 func NewBadRequest(message string, details map[string]string) *AppError {
 	return &AppError{Code: http.StatusBadRequest, Status: "Bad Request", Message: message, Details: details}
 }
 
+// NewNotFound creates an AppError with an HTTP 404 Not Found status.
 func NewNotFound(message string) *AppError {
 	return &AppError{Code: http.StatusNotFound, Status: "Not Found", Message: message}
 }
 
+// NewUnauthorized creates an AppError with an HTTP 401 Unauthorized status.
 func NewUnauthorized() *AppError {
 	return &AppError{Code: http.StatusUnauthorized, Status: "Unauthorized", Message: "Authentication required"}
 }
 
+// NewForbidden creates an AppError with an HTTP 403 Forbidden status.
 func NewForbidden() *AppError {
 	return &AppError{Code: http.StatusForbidden, Status: "Forbidden", Message: "You do not have permission"}
 }
 
+// NewInternalError creates an AppError with an HTTP 500 Internal Server Error status.
 func NewInternalError() *AppError {
 	return &AppError{Code: http.StatusInternalServerError, Status: "Internal Server Error", Message: "Something went wrong"}
 }
@@ -81,6 +93,7 @@ func ToHTTPError(err error) *AppError {
 	}
 }
 
+// RespondWithError writes the given AppError as a JSON response to the client.
 func RespondWithError(w http.ResponseWriter, appErr *AppError) {
 	if appErr == nil {
 		appErr = NewInternalError()

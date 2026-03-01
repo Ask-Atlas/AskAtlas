@@ -1,3 +1,4 @@
+// Package handlers contains the HTTP handlers and routes for the API endpoints.
 package handlers
 
 import (
@@ -11,18 +12,22 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 )
 
+// ClerkService defines the interface for processing Clerk webhook payloads.
 type ClerkService interface {
 	HandleWebhookEvent(ctx context.Context, payload clerk.Event) error
 }
 
+// ClerkHandler manages incoming HTTP webhook requests from Clerk.
 type ClerkHandler struct {
 	clerkService ClerkService
 }
 
+// NewClerkWebhookHandler creates a new ClerkHandler with the given service.
 func NewClerkWebhookHandler(clerkService ClerkService) *ClerkHandler {
 	return &ClerkHandler{clerkService: clerkService}
 }
 
+// Webhook processes the incoming Clerk webhook request, parsing and dispatching the event.
 func (ch *ClerkHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

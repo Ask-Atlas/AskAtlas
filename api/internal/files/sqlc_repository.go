@@ -15,6 +15,7 @@ type sqlcRepository struct {
 	queries *db.Queries
 }
 
+// NewSQLCRepository creates a postgres-backed db Repository instance.
 func NewSQLCRepository(queries *db.Queries) Repository {
 	return &sqlcRepository{queries: queries}
 }

@@ -1,3 +1,4 @@
+// Package middleware provides reusable HTTP interceptors for routing and authentication.
 package middleware
 
 import (
@@ -12,6 +13,8 @@ import (
 	clerkhttp "github.com/clerk/clerk-sdk-go/v2/http"
 )
 
+// ClerkAuth creates an HTTP middleware that extracts the Clerk user session,
+// validates it, and resolves the database user ID injecting it into the context.
 func ClerkAuth(resolver authctx.UserIDResolver) func(http.Handler) http.Handler {
 	clerkMiddleware := clerkhttp.WithHeaderAuthorization(
 		clerkhttp.AuthorizationFailureHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

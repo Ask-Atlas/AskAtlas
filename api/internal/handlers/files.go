@@ -13,19 +13,23 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// FileService defines the application logic required by the FileHandler.
 type FileService interface {
 	GetFile(ctx context.Context, params files.GetFileParams) (files.File, error)
 	ListFiles(ctx context.Context, params files.ListFilesParams) ([]files.File, *string, error)
 }
 
+// FileHandler manages incoming HTTP requests relating to File operations.
 type FileHandler struct {
 	service FileService
 }
 
+// NewFileHandler creates a new FileHandler backed by the given FileService.
 func NewFileHandler(service FileService) *FileHandler {
 	return &FileHandler{service: service}
 }
 
+// GetFile handles requests to retrieve a single file by its unique identifier.
 func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
 	viewerID, appErr := viewerIDFromContext(r)
 	if appErr != nil {
@@ -51,6 +55,7 @@ func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request, fileId ope
 	respondJSON(w, http.StatusOK, toDTOFileResponse(file))
 }
 
+// ListFiles handles requests to retrieve a paginated list of files accessible to the viewer.
 func (h *FileHandler) ListFiles(w http.ResponseWriter, r *http.Request, params api.ListFilesParams) {
 	viewerID, appErr := viewerIDFromContext(r)
 	if appErr != nil {
@@ -86,6 +91,7 @@ func (h *FileHandler) ListFiles(w http.ResponseWriter, r *http.Request, params a
 	respondJSON(w, http.StatusOK, resp)
 }
 
+// mapListFilesParams converts the OpenAPI HTTP-layer parameters into domain service ListFilesParams.
 func mapListFilesParams(viewerID uuid.UUID, params api.ListFilesParams) (files.ListFilesParams, *apperrors.AppError) {
 	p := files.ListFilesParams{
 		ViewerID: viewerID,
@@ -179,6 +185,7 @@ func mapListFilesParams(viewerID uuid.UUID, params api.ListFilesParams) (files.L
 	return p, nil
 }
 
+// toDTOFileResponse converts a domain File object into the OpenAPI DTO FileResponse format.
 func toDTOFileResponse(f files.File) api.FileResponse {
 	return api.FileResponse{
 		Id:           openapi_types.UUID(f.ID),

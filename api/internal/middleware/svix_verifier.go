@@ -10,6 +10,8 @@ import (
 	svix "github.com/svix/svix-webhooks/go"
 )
 
+// SVIXVerifier creates an HTTP middleware that validates Svix webhook signatures.
+// It ensures that incoming webhook requests genuinely originate from Clerk.
 func SVIXVerifier(secret string) func(next http.Handler) http.Handler {
 	wh, err := svix.NewWebhook(secret)
 	if err != nil {

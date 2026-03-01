@@ -1,3 +1,4 @@
+// Package files contains the business logic, models, and data access layer for managing uploaded files.
 package files
 
 import (
@@ -23,6 +24,7 @@ type sharedRow struct {
 	LastViewedAt pgtype.Timestamptz
 }
 
+// mapListRow converts a database sharedRow into the domain File standard model.
 func mapListRow(r sharedRow) (File, error) {
 	id, err := utils.PgxToGoogleUUID(r.ID)
 	if err != nil {
@@ -47,6 +49,7 @@ func mapListRow(r sharedRow) (File, error) {
 	}, nil
 }
 
+// mapListRows converts a slice of database sharedRows into a slice of domain File models.
 func mapListRows(rows []sharedRow) ([]File, error) {
 	out := make([]File, 0, len(rows))
 	for _, r := range rows {
@@ -109,6 +112,7 @@ func sharedFromMimeDesc(r db.ListOwnedFilesMimeDescRow) sharedRow {
 	return sharedRow{r.ID, r.UserID, r.Name, r.Size, r.MimeType, r.Status, r.CreatedAt, r.UpdatedAt, r.FavoritedAt, r.LastViewedAt}
 }
 
+// mapDBFile converts a database File model into the domain File standard model.
 func mapDBFile(f db.File) (File, error) {
 	id, err := utils.PgxToGoogleUUID(f.ID)
 	if err != nil {

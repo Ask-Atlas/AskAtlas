@@ -7,6 +7,8 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/user"
 )
 
+// ParseWebhookEvent parses the raw JSON byte array into a typed Clerk Event.
+// It inspects the event type and returns the corresponding concrete event struct.
 func ParseWebhookEvent(event []byte) (Event, error) {
 	var base BaseEvent
 	if err := json.Unmarshal(event, &base); err != nil {
@@ -37,6 +39,7 @@ func ParseWebhookEvent(event []byte) (Event, error) {
 	}
 }
 
+// Constants representing metadata keys used for mapping Clerk data.
 const (
 	MetadataKeyProfileImageURL = "profile_image_url"
 	MetadataKeyImageURL        = "image_url"
@@ -47,6 +50,8 @@ const (
 	MetadataKeyLastActiveAt    = "last_active_at"
 )
 
+// ToUpsertUserPayload converts a ClerkUser webhook payload into an application-specific user UpsertUserPayload.
+// It extracts the primary email and maps various specific Clerk fields into a generic metadata map.
 func ToUpsertUserPayload(clerkUser ClerkUser) (user.UpsertUserPayload, error) {
 	emailAddress := clerkUser.GetPrimaryOrFirstEmailAddress()
 	if emailAddress == nil {
