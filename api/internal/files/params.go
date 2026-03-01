@@ -9,8 +9,13 @@ import (
 	"github.com/google/uuid"
 )
 
+// SortField represents the field by which a file query should be ordered.
 type SortField string
+
+// SortDir represents the direction by which a file query should be ordered.
 type SortDir string
+
+// FileScope represents the visibility bounds of a file query.
 type FileScope string
 
 const (
@@ -42,6 +47,7 @@ type Cursor struct {
 	MimeType  *string    `json:"mime_type,omitempty"`
 }
 
+// EncodeCursor serializes a Cursor struct into a base64-encoded string token.
 func EncodeCursor(c Cursor) (string, error) {
 	b, err := json.Marshal(c)
 	if err != nil {
@@ -50,6 +56,7 @@ func EncodeCursor(c Cursor) (string, error) {
 	return base64.URLEncoding.EncodeToString(b), nil
 }
 
+// DecodeCursor parses a base64-encoded string token back into a Cursor struct.
 func DecodeCursor(s string) (Cursor, error) {
 	b, err := base64.URLEncoding.DecodeString(s)
 	if err != nil {
@@ -86,6 +93,7 @@ type ListFilesParams struct {
 	Cursor    *Cursor
 }
 
+// GetFileParams contains the required inputs for fetching a single file.
 type GetFileParams struct {
 	ViewerID      uuid.UUID
 	FileID        uuid.UUID

@@ -1,3 +1,4 @@
+// Package api provides the HTTP handlers, structural models, and OpenAPI bindings for the application.
 package api
 
 import (

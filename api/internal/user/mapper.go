@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// ToUpsertClerkUserParams converts the domain payload into db-specific parameters.
 func ToUpsertClerkUserParams(payload UpsertUserPayload) (db.UpsertClerkUserParams, error) {
 	var middleName pgtype.Text
 	if payload.MiddleName != nil {
@@ -32,6 +33,7 @@ func ToUpsertClerkUserParams(payload UpsertUserPayload) (db.UpsertClerkUserParam
 	}, nil
 }
 
+// ToUser converts a db User entity into the generic domain User model.
 func ToUser(dbUser db.User) (User, error) {
 	var middleName *string
 	if dbUser.MiddleName.Valid {

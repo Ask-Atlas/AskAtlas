@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// respondJSON serializes the given payload to JSON and writes it to the response with the specified status code.
 func respondJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -18,6 +19,8 @@ func respondJSON(w http.ResponseWriter, status int, v any) {
 	}
 }
 
+// viewerIDFromContext extracts the authenticated user ID from the request context.
+// It returns an Unauthorized AppError if the context does not contain a valid user ID.
 func viewerIDFromContext(r *http.Request) (uuid.UUID, *apperrors.AppError) {
 	id, ok := authctx.UserIDFromContext(r.Context())
 	if !ok {

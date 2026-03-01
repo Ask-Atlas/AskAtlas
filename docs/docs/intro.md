@@ -35,7 +35,7 @@ AskAtlas is an all-in-one student workspace for planning, practice, and class co
 - [Testing](./development/testing) — Unit and E2E testing strategy
 
 ### API Reference
-- [Files](./api-reference/files) — File listing and retrieval endpoints
+- [Files](./api/list-files) — File listing and retrieval endpoints
 
 ### Contributing
 - [Contributing Guide](./contributing/guide) — Commits, PRs, and workflow

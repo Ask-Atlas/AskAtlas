@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
+// File represents an uploaded file managed by the system.
 type File struct {
 	ID           uuid.UUID
 	UserID       uuid.UUID

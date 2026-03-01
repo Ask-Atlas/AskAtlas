@@ -31,7 +31,26 @@ const config: Config = {
     mermaid: true,
   },
 
-  themes: ['@docusaurus/theme-mermaid'],
+  themes: ['docusaurus-theme-openapi-docs', '@docusaurus/theme-mermaid'],
+
+  plugins: [
+    [
+      'docusaurus-plugin-openapi-docs',
+      {
+        id: 'api',
+        docsPluginId: 'classic',
+        config: {
+          askatlas: {
+            specPath: '../api/openapi.yaml',
+            outputDir: 'docs/api',
+            sidebarOptions: {
+              groupPathsBy: 'tag',
+            },
+          },
+        },
+      } satisfies import('docusaurus-plugin-openapi-docs').PluginOptions,
+    ],
+  ],
 
   presets: [
     [
@@ -41,6 +60,7 @@ const config: Config = {
           sidebarPath: './sidebars.ts',
           editUrl:
             'https://github.com/Ask-Atlas/AskAtlas/tree/main/docs/',
+          docItemComponent: '@theme/ApiItem', // Derived from docusaurus-theme-openapi-docs
         },
         blog: {
           showReadingTime: true,

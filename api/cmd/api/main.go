@@ -1,3 +1,6 @@
+// Package main is the entry point for the AskAtlas API.
+// It initializes the database connection, configures middleware,
+// sets up routes, and starts the HTTP server.
 package main
 
 import (

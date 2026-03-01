@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// Repository defines the data-access interface required by the files Service.
 type Repository interface {
 	GetFileIfViewable(ctx context.Context, arg db.GetFileIfViewableParams) (db.File, error)
 
@@ -36,6 +37,7 @@ type Service struct {
 	queryTable map[sortKey]queryFn
 }
 
+// NewService creates a new Service instance configured with the given repository.
 func NewService(repo Repository) *Service {
 	s := &Service{repo: repo}
 	s.queryTable = map[sortKey]queryFn{
@@ -55,6 +57,7 @@ func NewService(repo Repository) *Service {
 	return s
 }
 
+// GetFile retrieves a single file, verifying that the requesting user has access to it.
 func (s *Service) GetFile(ctx context.Context, p GetFileParams) (File, error) {
 	row, err := s.repo.GetFileIfViewable(ctx, db.GetFileIfViewableParams{
 		FileID:        utils.UUID(p.FileID),
@@ -68,6 +71,7 @@ func (s *Service) GetFile(ctx context.Context, p GetFileParams) (File, error) {
 	return mapDBFile(row)
 }
 
+// ListFiles queries the repository for a paginated list of files matching the given parameters.
 func (s *Service) ListFiles(ctx context.Context, p ListFilesParams) ([]File, *string, error) {
 	if p.Scope != ScopeOwned {
 		return nil, nil, fmt.Errorf("ListFiles: scope %q is not yet implemented", p.Scope)
