@@ -26,7 +26,8 @@ docs/
 │   ├── architecture/        # System design and data models
 │   ├── infrastructure/      # CI/CD, deployment, environments
 │   ├── development/         # Code patterns and conventions
-│   ├── api-reference/       # Endpoint contracts
+│   ├── api/                 # Generated API reference (do not edit)
+│   ├── backend/             # Generated GoDoc for backend (do not edit)
 │   ├── contributing/        # Contribution guidelines
 │   └── sprint-reviews/      # Sprint reports
 ├── blog/                    # Blog posts

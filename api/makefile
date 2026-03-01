@@ -47,7 +47,7 @@ generate-api:
 generate-docs:
 	rm -rf ../docs/docs/backend
 	mkdir -p ../docs/docs/backend
-	go list ./cmd/... ./internal/... ./pkg/... | grep -v -E '/mock|/mocks' | sed 's|github.com/Ask-Atlas/AskAtlas/api/|./|' | xargs go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest -o ../docs/docs/backend/{{.Dir}}.md
+	go list ./cmd/... ./internal/... ./pkg/... | grep -v -E '/mock|/mocks' | sed 's|github.com/Ask-Atlas/AskAtlas/api/|./|' | xargs go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@v1.1.0 -o ../docs/docs/backend/{{.Dir}}.md
 tidy:
 	go mod tidy && go mod verify
 

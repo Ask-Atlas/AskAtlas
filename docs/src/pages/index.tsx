@@ -56,7 +56,7 @@ const sections: SectionItem[] = [
   },
   {
     title: '📡 API Reference',
-    link: '/docs/api-reference/files',
+    link: '/docs/api/list-files',
     description: 'Endpoint contracts, request parameters, and response shapes.',
   },
   {
