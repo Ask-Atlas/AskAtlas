@@ -44,6 +44,10 @@ generate-api:
 	mkdir -p internal/api
 	go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.6.0 -config oapi-codegen.yaml openapi.yaml
 
+generate-docs:
+	rm -rf ../docs/docs/backend
+	mkdir -p ../docs/docs/backend
+	go list ./cmd/... ./internal/... ./pkg/... | grep -v -E '/mock|/mocks' | sed 's|github.com/Ask-Atlas/AskAtlas/api/|./|' | xargs go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest -o ../docs/docs/backend/{{.Dir}}.md
 tidy:
 	go mod tidy && go mod verify
 
