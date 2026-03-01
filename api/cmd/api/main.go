@@ -9,6 +9,7 @@ import (
 
 	clerkSDK "github.com/clerk/clerk-sdk-go/v2"
 
+	"github.com/Ask-Atlas/AskAtlas/api/internal/api"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/clerk"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/files"
@@ -19,6 +20,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+	middleware_oapi "github.com/oapi-codegen/nethttp-middleware"
 )
 
 func main() {
@@ -80,15 +82,23 @@ func main() {
 		r.With(clerkSignatureVerifier).Post("/clerk", clerkWebhookHandler.Webhook)
 	})
 
+	swagger, err := api.GetSwagger()
+	if err != nil {
+		slog.Error("failed to load swagger spec", "error", err)
+		os.Exit(1)
+	}
+	swagger.Servers = nil
+
+	oapiOptions := middleware_oapi.Options{
+		ErrorHandler: api.OAPIValidatorErrorHandler,
+	}
+
 	r.Route("/api", func(r chi.Router) {
 		r.Use(clerkAuth)
-
-		r.Route("/me", func(r chi.Router) {
-			r.Get("/files", fileHandler.ListFiles)
-		})
-
-		r.Route("/files", func(r chi.Router) {
-			r.Get("/{file_id}", fileHandler.GetFile)
+		r.Use(middleware_oapi.OapiRequestValidatorWithOptions(swagger, &oapiOptions))
+		api.HandlerWithOptions(fileHandler, api.ChiServerOptions{
+			BaseRouter:       r,
+			ErrorHandlerFunc: api.OAPIStrictErrorHandler,
 		})
 	})
 

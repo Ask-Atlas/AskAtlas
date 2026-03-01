@@ -1,6 +1,7 @@
 package apperrors
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -51,8 +52,19 @@ func NewInternalError() *AppError {
 	return &AppError{Code: http.StatusInternalServerError, Status: "Internal Server Error", Message: "Something went wrong"}
 }
 
-// ToHTTPError maps a sentinel error to an AppError
+// ToHTTPError maps a sentinel error or existing AppError to an AppError
 func ToHTTPError(err error) *AppError {
+	if appErr := (*AppError)(nil); errors.As(err, &appErr) {
+		if appErr == nil {
+			return NewInternalError()
+		}
+		if appErr.Code < 100 || appErr.Code > 999 {
+			appErr.Code = http.StatusInternalServerError
+		}
+		appErr.Status = cmp.Or(appErr.Status, http.StatusText(appErr.Code))
+		return appErr
+	}
+
 	switch {
 	case errors.Is(err, ErrNotFound):
 		return NewNotFound("Resource not found")
@@ -70,6 +82,14 @@ func ToHTTPError(err error) *AppError {
 }
 
 func RespondWithError(w http.ResponseWriter, appErr *AppError) {
+	if appErr == nil {
+		appErr = NewInternalError()
+	}
+	if appErr.Code < 100 || appErr.Code > 999 {
+		appErr.Code = http.StatusInternalServerError
+		appErr.Status = http.StatusText(http.StatusInternalServerError)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(appErr.Code)
 	if err := json.NewEncoder(w).Encode(appErr); err != nil {

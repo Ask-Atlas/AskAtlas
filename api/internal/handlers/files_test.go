@@ -7,10 +7,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Ask-Atlas/AskAtlas/api/internal/api"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/files"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/handlers"
 	mock_handlers "github.com/Ask-Atlas/AskAtlas/api/internal/handlers/mocks"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/authctx"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -22,10 +24,13 @@ func TestFileHandler_ListFiles_Success(t *testing.T) {
 	h := handlers.NewFileHandler(mockSvc)
 
 	userID := uuid.New()
-	req := httptest.NewRequest(http.MethodGet, "/files?page_limit=10", nil)
+	req := httptest.NewRequest(http.MethodGet, "/me/files?page_limit=10", nil)
 	ctx := authctx.WithUserID(req.Context(), userID)
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
+
+	r := chi.NewRouter()
+	api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
 
 	returnedFiles := []files.File{
 		{ID: uuid.New(), Name: "file1.txt", Status: "complete"},
@@ -37,11 +42,11 @@ func TestFileHandler_ListFiles_Success(t *testing.T) {
 		return p.PageLimit == 10 && p.ViewerID == userID
 	})).Return(returnedFiles, &nextCursor, nil)
 
-	h.ListFiles(w, req)
+	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	var resp files.ListFilesResponse
+	var resp api.ListFilesResponse
 	err := json.NewDecoder(w.Body).Decode(&resp)
 	require.NoError(t, err)
 
@@ -55,12 +60,14 @@ func TestFileHandler_ListFiles_InvalidParams(t *testing.T) {
 	h := handlers.NewFileHandler(mockSvc)
 
 	userID := uuid.New()
-	req := httptest.NewRequest(http.MethodGet, "/files?page_limit=0", nil)
+	req := httptest.NewRequest(http.MethodGet, "/me/files?page_limit=abc", nil)
 	ctx := authctx.WithUserID(req.Context(), userID)
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
-	h.ListFiles(w, req)
+	r := chi.NewRouter()
+	api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
@@ -70,7 +77,7 @@ func TestFileHandler_ListFiles_ServiceError(t *testing.T) {
 	h := handlers.NewFileHandler(mockSvc)
 
 	userID := uuid.New()
-	req := httptest.NewRequest(http.MethodGet, "/files", nil)
+	req := httptest.NewRequest(http.MethodGet, "/me/files", nil)
 	ctx := authctx.WithUserID(req.Context(), userID)
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
@@ -79,7 +86,9 @@ func TestFileHandler_ListFiles_ServiceError(t *testing.T) {
 		ListFiles(mock.Anything, mock.Anything).
 		Return(nil, nil, errors.New("svc error"))
 
-	h.ListFiles(w, req)
+	r := chi.NewRouter()
+	api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }

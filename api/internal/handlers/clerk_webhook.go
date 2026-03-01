@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/clerk"
+	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 )
 
 type ClerkService interface {
@@ -30,7 +31,7 @@ func (ch *ClerkHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 		slog.ErrorContext(ctx, "failed to read webhook event",
 			"error", err,
 		)
-		http.Error(w, "Bad Request", http.StatusBadRequest)
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Bad Request", nil))
 		return
 	}
 
@@ -41,7 +42,11 @@ func (ch *ClerkHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 			"error", err,
 			"msgID", msgID,
 		)
-		http.Error(w, "Unprocessable Entity", http.StatusUnprocessableEntity)
+		apperrors.RespondWithError(w, &apperrors.AppError{
+			Code:    http.StatusUnprocessableEntity,
+			Status:  "Unprocessable Entity",
+			Message: "Unprocessable Entity",
+		})
 		return
 	}
 
@@ -59,11 +64,11 @@ func (ch *ClerkHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 		)
 
 		if errors.Is(err, clerk.ErrUserNotFound) {
-			http.Error(w, "Not Found", http.StatusNotFound)
+			apperrors.RespondWithError(w, apperrors.NewNotFound("Not Found"))
 			return
 		}
 
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		apperrors.RespondWithError(w, apperrors.NewInternalError())
 		return
 	}
 
