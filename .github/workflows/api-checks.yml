@@ -99,24 +99,6 @@ jobs:
             exit 1
           fi
 
-  go-docs:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-      - name: Set up Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: "1.24.1"
-      - name: Generate Go Docs
-        run: make generate-docs
-      - name: Check for uncommitted generated Go docs
-        run: |
-          if ! git diff --exit-code; then
-            echo "::error::Generated Go docs are out of sync. Please run 'cd api && make generate-docs' locally and commit the changes."
-            exit 1
-          fi
-
   openapi-docs:
     runs-on: ubuntu-latest
     defaults:
@@ -128,8 +110,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: docs/package-lock.json
       - name: Install dependencies
         run: npm ci

@@ -7,6 +7,9 @@ ACTION  ?= seed
 COUNT   ?= 50
 MAX_ROWS ?= 1000
 
+GOMARKDOC_VERSION        ?= v1.1.0
+GOMARKDOC_CMD            := go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@$(GOMARKDOC_VERSION)
+
 .PHONY: dev stage prod build install format format-check lint test tidy tidy-check \
         sqlc/generate docker-build docker-run mockery seed e2e
 
@@ -47,7 +50,10 @@ generate-api:
 generate-docs:
 	rm -rf ../docs/docs/backend
 	mkdir -p ../docs/docs/backend
-	go list ./cmd/... ./internal/... ./pkg/... | grep -v -E '/mock|/mocks' | sed 's|github.com/Ask-Atlas/AskAtlas/api/|./|' | xargs go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@v1.1.0 -o ../docs/docs/backend/{{.Dir}}.md
+	go list ./cmd/... ./internal/... ./pkg/... \
+		| grep -v -E '/mock|/mocks' \
+		| sed 's|github.com/Ask-Atlas/AskAtlas/api/|./|' \
+		| xargs $(GOMARKDOC_CMD) -o ../docs/docs/backend/{{.Dir}}.md
 tidy:
 	go mod tidy && go mod verify
 
