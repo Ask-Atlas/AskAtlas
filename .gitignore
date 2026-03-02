@@ -2,3 +2,10 @@
 .env*
 !.env.example
 .DS_Store
+
+# Docusaurus
+docs/node_modules
+docs/build
+docs/.docusaurus
+
+.claude

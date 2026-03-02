@@ -1,0 +1,9 @@
+sprint:
+  label: Sprint Review
+  description: Sprint review and retrospective
+update:
+  label: Update
+  description: General project updates
+architecture:
+  label: Architecture
+  description: Architecture decisions and deep dives

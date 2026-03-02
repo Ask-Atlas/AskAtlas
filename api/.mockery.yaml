@@ -11,3 +11,6 @@ packages:
   github.com/Ask-Atlas/AskAtlas/api/internal:
     config:
       all: true
+  github.com/Ask-Atlas/AskAtlas/api/pkg:
+    config:
+      all: true

@@ -1,3 +1,4 @@
+// Package handlers contains the HTTP handlers and routes for the API endpoints.
 package handlers
 
 import (
@@ -8,20 +9,25 @@ import (
 	"net/http"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/clerk"
+	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 )
 
+// ClerkService defines the interface for processing Clerk webhook payloads.
 type ClerkService interface {
 	HandleWebhookEvent(ctx context.Context, payload clerk.Event) error
 }
 
+// ClerkHandler manages incoming HTTP webhook requests from Clerk.
 type ClerkHandler struct {
 	clerkService ClerkService
 }
 
+// NewClerkWebhookHandler creates a new ClerkHandler with the given service.
 func NewClerkWebhookHandler(clerkService ClerkService) *ClerkHandler {
 	return &ClerkHandler{clerkService: clerkService}
 }
 
+// Webhook processes the incoming Clerk webhook request, parsing and dispatching the event.
 func (ch *ClerkHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -30,7 +36,7 @@ func (ch *ClerkHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 		slog.ErrorContext(ctx, "failed to read webhook event",
 			"error", err,
 		)
-		http.Error(w, "Bad Request", http.StatusBadRequest)
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Bad Request", nil))
 		return
 	}
 
@@ -41,7 +47,11 @@ func (ch *ClerkHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 			"error", err,
 			"msgID", msgID,
 		)
-		http.Error(w, "Unprocessable Entity", http.StatusUnprocessableEntity)
+		apperrors.RespondWithError(w, &apperrors.AppError{
+			Code:    http.StatusUnprocessableEntity,
+			Status:  "Unprocessable Entity",
+			Message: "Unprocessable Entity",
+		})
 		return
 	}
 
@@ -59,11 +69,11 @@ func (ch *ClerkHandler) Webhook(w http.ResponseWriter, r *http.Request) {
 		)
 
 		if errors.Is(err, clerk.ErrUserNotFound) {
-			http.Error(w, "Not Found", http.StatusNotFound)
+			apperrors.RespondWithError(w, apperrors.NewNotFound("Not Found"))
 			return
 		}
 
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		apperrors.RespondWithError(w, apperrors.NewInternalError())
 		return
 	}
 

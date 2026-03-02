@@ -1,3 +1,4 @@
+// Package logging provides a configurable structured logger using slog.
 package logging
 
 import (
@@ -11,6 +12,7 @@ import (
 	"github.com/lmittmann/tint"
 )
 
+// loggerConfig holds the configuration state for the logger initialization.
 type loggerConfig struct {
 	env       string
 	level     slog.Level
@@ -19,38 +21,45 @@ type loggerConfig struct {
 	handler   slog.Handler
 }
 
+// Option defines a functional configuration option for the logger.
 type Option func(*loggerConfig)
 
+// WithEnv sets the environment string.
 func WithEnv(env string) Option {
 	return func(config *loggerConfig) {
 		config.env = env
 	}
 }
 
+// WithLevel sets the minimum logging severity level.
 func WithLevel(level slog.Level) Option {
 	return func(config *loggerConfig) {
 		config.level = level
 	}
 }
 
+// WithAddSource controls whether logged items include the calling source file and line.
 func WithAddSource(addSource bool) Option {
 	return func(config *loggerConfig) {
 		config.addSource = &addSource
 	}
 }
 
+// WithWriter changes the output destination from the default os.Stdout.
 func WithWriter(writer io.Writer) Option {
 	return func(config *loggerConfig) {
 		config.writer = writer
 	}
 }
 
+// WithHandler explicitly sets the underlying slog.Handler, bypassing the defaults.
 func WithHandler(handler slog.Handler) Option {
 	return func(config *loggerConfig) {
 		config.handler = handler
 	}
 }
 
+// NewLogger instantiates a new configured slog instance.
 func NewLogger(opts ...Option) *slog.Logger {
 	cfg := loggerConfig{
 		env:    os.Getenv("APP_ENV"),
@@ -92,6 +101,7 @@ func NewLogger(opts ...Option) *slog.Logger {
 
 }
 
+// RequestLogger returns an HTTP middleware that logs the method, path, status, and duration of requests.
 func RequestLogger(log *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

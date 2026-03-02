@@ -5,8 +5,226 @@
 package db
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type GranteeType string
+
+const (
+	GranteeTypeUser       GranteeType = "user"
+	GranteeTypeCourse     GranteeType = "course"
+	GranteeTypeStudyGuide GranteeType = "study_guide"
+)
+
+func (e *GranteeType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = GranteeType(s)
+	case string:
+		*e = GranteeType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for GranteeType: %T", src)
+	}
+	return nil
+}
+
+type NullGranteeType struct {
+	GranteeType GranteeType `json:"grantee_type"`
+	Valid       bool        `json:"valid"` // Valid is true if GranteeType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullGranteeType) Scan(value interface{}) error {
+	if value == nil {
+		ns.GranteeType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.GranteeType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullGranteeType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.GranteeType), nil
+}
+
+type MimeType string
+
+const (
+	MimeTypeImageJpeg      MimeType = "image/jpeg"
+	MimeTypeImagePng       MimeType = "image/png"
+	MimeTypeImageWebp      MimeType = "image/webp"
+	MimeTypeApplicationPdf MimeType = "application/pdf"
+)
+
+func (e *MimeType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = MimeType(s)
+	case string:
+		*e = MimeType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for MimeType: %T", src)
+	}
+	return nil
+}
+
+type NullMimeType struct {
+	MimeType MimeType `json:"mime_type"`
+	Valid    bool     `json:"valid"` // Valid is true if MimeType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullMimeType) Scan(value interface{}) error {
+	if value == nil {
+		ns.MimeType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.MimeType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullMimeType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.MimeType), nil
+}
+
+type Permission string
+
+const (
+	PermissionView   Permission = "view"
+	PermissionShare  Permission = "share"
+	PermissionDelete Permission = "delete"
+)
+
+func (e *Permission) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = Permission(s)
+	case string:
+		*e = Permission(s)
+	default:
+		return fmt.Errorf("unsupported scan type for Permission: %T", src)
+	}
+	return nil
+}
+
+type NullPermission struct {
+	Permission Permission `json:"permission"`
+	Valid      bool       `json:"valid"` // Valid is true if Permission is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPermission) Scan(value interface{}) error {
+	if value == nil {
+		ns.Permission, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.Permission.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPermission) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.Permission), nil
+}
+
+type UploadStatus string
+
+const (
+	UploadStatusPending  UploadStatus = "pending"
+	UploadStatusComplete UploadStatus = "complete"
+	UploadStatusFailed   UploadStatus = "failed"
+)
+
+func (e *UploadStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UploadStatus(s)
+	case string:
+		*e = UploadStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UploadStatus: %T", src)
+	}
+	return nil
+}
+
+type NullUploadStatus struct {
+	UploadStatus UploadStatus `json:"upload_status"`
+	Valid        bool         `json:"valid"` // Valid is true if UploadStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUploadStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.UploadStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UploadStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUploadStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UploadStatus), nil
+}
+
+type File struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	S3Key     string             `json:"s3_key"`
+	Name      string             `json:"name"`
+	MimeType  MimeType           `json:"mime_type"`
+	Size      int64              `json:"size"`
+	Checksum  pgtype.Text        `json:"checksum"`
+	Status    UploadStatus       `json:"status"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type FileFavorite struct {
+	UserID    pgtype.UUID        `json:"user_id"`
+	FileID    pgtype.UUID        `json:"file_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type FileGrant struct {
+	ID          pgtype.UUID        `json:"id"`
+	FileID      pgtype.UUID        `json:"file_id"`
+	GranteeType GranteeType        `json:"grantee_type"`
+	GranteeID   pgtype.UUID        `json:"grantee_id"`
+	Permission  Permission         `json:"permission"`
+	GrantedBy   pgtype.UUID        `json:"granted_by"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type FileLastViewed struct {
+	UserID   pgtype.UUID        `json:"user_id"`
+	FileID   pgtype.UUID        `json:"file_id"`
+	ViewedAt pgtype.Timestamptz `json:"viewed_at"`
+}
+
+type FileView struct {
+	ID       pgtype.UUID        `json:"id"`
+	FileID   pgtype.UUID        `json:"file_id"`
+	UserID   pgtype.UUID        `json:"user_id"`
+	ViewedAt pgtype.Timestamptz `json:"viewed_at"`
+}
 
 type User struct {
 	ID         pgtype.UUID        `json:"id"`

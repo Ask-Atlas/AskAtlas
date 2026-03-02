@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
+	"github.com/google/uuid"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -36,6 +37,74 @@ type MockRepository_Expecter struct {
 
 func (_m *MockRepository) EXPECT() *MockRepository_Expecter {
 	return &MockRepository_Expecter{mock: &_m.Mock}
+}
+
+// GetUserIDByClerkID provides a mock function for the type MockRepository
+func (_mock *MockRepository) GetUserIDByClerkID(ctx context.Context, clerkID string) (uuid.UUID, error) {
+	ret := _mock.Called(ctx, clerkID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUserIDByClerkID")
+	}
+
+	var r0 uuid.UUID
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) (uuid.UUID, error)); ok {
+		return returnFunc(ctx, clerkID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) uuid.UUID); ok {
+		r0 = returnFunc(ctx, clerkID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(uuid.UUID)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, clerkID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_GetUserIDByClerkID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUserIDByClerkID'
+type MockRepository_GetUserIDByClerkID_Call struct {
+	*mock.Call
+}
+
+// GetUserIDByClerkID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - clerkID string
+func (_e *MockRepository_Expecter) GetUserIDByClerkID(ctx interface{}, clerkID interface{}) *MockRepository_GetUserIDByClerkID_Call {
+	return &MockRepository_GetUserIDByClerkID_Call{Call: _e.mock.On("GetUserIDByClerkID", ctx, clerkID)}
+}
+
+func (_c *MockRepository_GetUserIDByClerkID_Call) Run(run func(ctx context.Context, clerkID string)) *MockRepository_GetUserIDByClerkID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_GetUserIDByClerkID_Call) Return(uUID uuid.UUID, err error) *MockRepository_GetUserIDByClerkID_Call {
+	_c.Call.Return(uUID, err)
+	return _c
+}
+
+func (_c *MockRepository_GetUserIDByClerkID_Call) RunAndReturn(run func(ctx context.Context, clerkID string) (uuid.UUID, error)) *MockRepository_GetUserIDByClerkID_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // SoftDeleteUserByClerkID provides a mock function for the type MockRepository

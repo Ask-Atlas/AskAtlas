@@ -9,12 +9,14 @@ const (
 	UserDeleted EventType = "user.deleted"
 )
 
+// Event defines the standard interface for all Clerk webhook events.
 type Event interface {
 	GetType() EventType
 	GetTimestamp() int64
 	GetObject() string
 }
 
+// BaseEvent provides the common fields shared by all Clerk webhook events.
 type BaseEvent struct {
 	Object          string          `json:"object"`
 	Type            EventType       `json:"type"`
@@ -22,27 +24,33 @@ type BaseEvent struct {
 	EventAttributes EventAttributes `json:"data"`
 }
 
+// GetType returns the event type.
 func (e BaseEvent) GetType() EventType {
 	return e.Type
 }
 
+// GetTimestamp returns the Unix timestamp of the event.
 func (e BaseEvent) GetTimestamp() int64 {
 	return e.Timestamp
 }
 
+// GetObject returns the object type of the event.
 func (e BaseEvent) GetObject() string {
 	return e.Object
 }
 
+// EventAttributes contains the contextual metadata for a Clerk event.
 type EventAttributes struct {
 	HTTPRequest HTTPRequest `json:"request"`
 }
 
+// HTTPRequest contains the request information that triggered the event.
 type HTTPRequest struct {
 	ClientIP  string `json:"client_ip"`
 	UserAgent string `json:"user_agent"`
 }
 
+// EmailAddress represents a user's email address object from Clerk.
 type EmailAddress struct {
 	ID           string       `json:"id"`
 	EmailAddress string       `json:"email_address"`
@@ -52,6 +60,7 @@ type EmailAddress struct {
 	Object       string       `json:"object"`
 }
 
+// Verification describes the status of an external verification strategy.
 type Verification struct {
 	Status   string `json:"status"`
 	Strategy string `json:"strategy"`
@@ -121,22 +130,26 @@ func (cl *ClerkUser) GetPrimaryOrFirstEmailAddress() *EmailAddress {
 	return &cl.EmailAddresses[0]
 }
 
+// DeletedUser represents a tombstone object sent by Clerk when a user is deleted.
 type DeletedUser struct {
 	ID      string `json:"id"`
 	Object  string `json:"object"`
 	Deleted bool   `json:"deleted"`
 }
 
+// UserCreatedEvent represents the "user.created" webhook event payload.
 type UserCreatedEvent struct {
 	BaseEvent
 	Data ClerkUser `json:"data"`
 }
 
+// UserUpdateEvent represents the "user.updated" webhook event payload.
 type UserUpdateEvent struct {
 	BaseEvent
 	Data ClerkUser `json:"data"`
 }
 
+// UserDeletedEvent represents the "user.deleted" webhook event payload.
 type UserDeletedEvent struct {
 	BaseEvent
 	Data DeletedUser `json:"data"`
