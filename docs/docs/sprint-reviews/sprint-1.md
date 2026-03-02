@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Sprint 1 Report (01/26/26 – 03/01/26)
 
-**Sprint demo video:** https://youtu.be/3PZzi8RMt3c
+[**Sprint demo video**](https://youtu.be/3PZzi8RMt3c)
 
 ## What's New (User Facing)
 
