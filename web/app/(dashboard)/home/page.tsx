@@ -28,7 +28,7 @@ interface StudyGuide {
 
 interface ActivityEvent {
   id: string;
-  type: "create" | "edit";
+  type: "create" | "edit" | "study";
   fileName: string;
   timestamp: string;
 }
