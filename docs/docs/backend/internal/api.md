@@ -27,6 +27,16 @@ Package api provides the HTTP handlers, structural models, and OpenAPI bindings 
 - [type BadRequest](<#BadRequest>)
 - [type BadRequestJSONResponse](<#BadRequestJSONResponse>)
 - [type ChiServerOptions](<#ChiServerOptions>)
+- [type DeleteFile204Response](<#DeleteFile204Response>)
+  - [func \(response DeleteFile204Response\) VisitDeleteFileResponse\(w http.ResponseWriter\) error](<#DeleteFile204Response.VisitDeleteFileResponse>)
+- [type DeleteFile401JSONResponse](<#DeleteFile401JSONResponse>)
+  - [func \(response DeleteFile401JSONResponse\) VisitDeleteFileResponse\(w http.ResponseWriter\) error](<#DeleteFile401JSONResponse.VisitDeleteFileResponse>)
+- [type DeleteFile404JSONResponse](<#DeleteFile404JSONResponse>)
+  - [func \(response DeleteFile404JSONResponse\) VisitDeleteFileResponse\(w http.ResponseWriter\) error](<#DeleteFile404JSONResponse.VisitDeleteFileResponse>)
+- [type DeleteFile500JSONResponse](<#DeleteFile500JSONResponse>)
+  - [func \(response DeleteFile500JSONResponse\) VisitDeleteFileResponse\(w http.ResponseWriter\) error](<#DeleteFile500JSONResponse.VisitDeleteFileResponse>)
+- [type DeleteFileRequestObject](<#DeleteFileRequestObject>)
+- [type DeleteFileResponseObject](<#DeleteFileResponseObject>)
 - [type FileResponse](<#FileResponse>)
 - [type Forbidden](<#Forbidden>)
 - [type ForbiddenJSONResponse](<#ForbiddenJSONResponse>)
@@ -83,6 +93,7 @@ Package api provides the HTTP handlers, structural models, and OpenAPI bindings 
   - [func NewStrictHandler\(ssi StrictServerInterface, middlewares \[\]StrictMiddlewareFunc\) ServerInterface](<#NewStrictHandler>)
   - [func NewStrictHandlerWithOptions\(ssi StrictServerInterface, middlewares \[\]StrictMiddlewareFunc, options StrictHTTPServerOptions\) ServerInterface](<#NewStrictHandlerWithOptions>)
 - [type ServerInterfaceWrapper](<#ServerInterfaceWrapper>)
+  - [func \(siw \*ServerInterfaceWrapper\) DeleteFile\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.DeleteFile>)
   - [func \(siw \*ServerInterfaceWrapper\) GetFile\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.GetFile>)
   - [func \(siw \*ServerInterfaceWrapper\) ListFiles\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.ListFiles>)
 - [type StrictHTTPServerOptions](<#StrictHTTPServerOptions>)
@@ -97,6 +108,7 @@ Package api provides the HTTP handlers, structural models, and OpenAPI bindings 
   - [func \(e \*UnescapedCookieParamError\) Error\(\) string](<#UnescapedCookieParamError.Error>)
   - [func \(e \*UnescapedCookieParamError\) Unwrap\(\) error](<#UnescapedCookieParamError.Unwrap>)
 - [type Unimplemented](<#Unimplemented>)
+  - [func \(\_ Unimplemented\) DeleteFile\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#Unimplemented.DeleteFile>)
   - [func \(\_ Unimplemented\) GetFile\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#Unimplemented.GetFile>)
   - [func \(\_ Unimplemented\) ListFiles\(w http.ResponseWriter, r \*http.Request, params ListFilesParams\)](<#Unimplemented.ListFiles>)
 - [type UnmarshalingParamError](<#UnmarshalingParamError>)
@@ -115,7 +127,7 @@ const (
 ```
 
 <a name="GetSwagger"></a>
-## func [GetSwagger](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L861>)
+## func [GetSwagger](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L979>)
 
 ```go
 func GetSwagger() (swagger *openapi3.T, err error)
@@ -124,7 +136,7 @@ func GetSwagger() (swagger *openapi3.T, err error)
 GetSwagger returns the Swagger specification corresponding to the generated code in this file. The external references of Swagger specification are resolved. The logic of resolving external references is tightly connected to "import\-mapping" feature. Externally referenced files must be embedded in the corresponding golang packages. Urls can be supported but this task was out of the scope.
 
 <a name="Handler"></a>
-## func [Handler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L523>)
+## func [Handler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L563>)
 
 ```go
 func Handler(si ServerInterface) http.Handler
@@ -133,7 +145,7 @@ func Handler(si ServerInterface) http.Handler
 Handler creates http.Handler with routing matching OpenAPI spec.
 
 <a name="HandlerFromMux"></a>
-## func [HandlerFromMux](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L535>)
+## func [HandlerFromMux](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L575>)
 
 ```go
 func HandlerFromMux(si ServerInterface, r chi.Router) http.Handler
@@ -142,7 +154,7 @@ func HandlerFromMux(si ServerInterface, r chi.Router) http.Handler
 HandlerFromMux creates http.Handler with routing matching OpenAPI spec based on the provided mux.
 
 <a name="HandlerFromMuxWithBaseURL"></a>
-## func [HandlerFromMuxWithBaseURL](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L541>)
+## func [HandlerFromMuxWithBaseURL](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L581>)
 
 ```go
 func HandlerFromMuxWithBaseURL(si ServerInterface, r chi.Router, baseURL string) http.Handler
@@ -151,7 +163,7 @@ func HandlerFromMuxWithBaseURL(si ServerInterface, r chi.Router, baseURL string)
 
 
 <a name="HandlerWithOptions"></a>
-## func [HandlerWithOptions](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L549>)
+## func [HandlerWithOptions](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L589>)
 
 ```go
 func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handler
@@ -178,7 +190,7 @@ func OAPIValidatorErrorHandler(w http.ResponseWriter, message string, statusCode
 OAPIValidatorErrorHandler is a custom ErrorHandler for the OpenAPI request validator middleware.
 
 <a name="PathToRawSpec"></a>
-## func [PathToRawSpec](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L847>)
+## func [PathToRawSpec](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L965>)
 
 ```go
 func PathToRawSpec(pathToFile string) map[string]func() ([]byte, error)
@@ -210,7 +222,7 @@ type BadRequest = AppError
 ```
 
 <a name="BadRequestJSONResponse"></a>
-## type [BadRequestJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L576>)
+## type [BadRequestJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L619>)
 
 
 
@@ -219,7 +231,7 @@ type BadRequestJSONResponse AppError
 ```
 
 <a name="ChiServerOptions"></a>
-## type [ChiServerOptions](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L527-L532>)
+## type [ChiServerOptions](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L567-L572>)
 
 
 
@@ -229,6 +241,103 @@ type ChiServerOptions struct {
     BaseRouter       chi.Router
     Middlewares      []MiddlewareFunc
     ErrorHandlerFunc func(w http.ResponseWriter, r *http.Request, err error)
+}
+```
+
+<a name="DeleteFile204Response"></a>
+## type [DeleteFile204Response](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L637-L638>)
+
+
+
+```go
+type DeleteFile204Response struct {
+}
+```
+
+<a name="DeleteFile204Response.VisitDeleteFileResponse"></a>
+### func \(DeleteFile204Response\) [VisitDeleteFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L640>)
+
+```go
+func (response DeleteFile204Response) VisitDeleteFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DeleteFile401JSONResponse"></a>
+## type [DeleteFile401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L645>)
+
+
+
+```go
+type DeleteFile401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="DeleteFile401JSONResponse.VisitDeleteFileResponse"></a>
+### func \(DeleteFile401JSONResponse\) [VisitDeleteFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L647>)
+
+```go
+func (response DeleteFile401JSONResponse) VisitDeleteFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DeleteFile404JSONResponse"></a>
+## type [DeleteFile404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L654>)
+
+
+
+```go
+type DeleteFile404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="DeleteFile404JSONResponse.VisitDeleteFileResponse"></a>
+### func \(DeleteFile404JSONResponse\) [VisitDeleteFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L656>)
+
+```go
+func (response DeleteFile404JSONResponse) VisitDeleteFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DeleteFile500JSONResponse"></a>
+## type [DeleteFile500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L663-L665>)
+
+
+
+```go
+type DeleteFile500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="DeleteFile500JSONResponse.VisitDeleteFileResponse"></a>
+### func \(DeleteFile500JSONResponse\) [VisitDeleteFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L667>)
+
+```go
+func (response DeleteFile500JSONResponse) VisitDeleteFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DeleteFileRequestObject"></a>
+## type [DeleteFileRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L629-L631>)
+
+
+
+```go
+type DeleteFileRequestObject struct {
+    FileId openapi_types.UUID `json:"file_id"`
+}
+```
+
+<a name="DeleteFileResponseObject"></a>
+## type [DeleteFileResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L633-L635>)
+
+
+
+```go
+type DeleteFileResponseObject interface {
+    VisitDeleteFileResponse(w http.ResponseWriter) error
 }
 ```
 
@@ -261,7 +370,7 @@ type Forbidden = AppError
 ```
 
 <a name="ForbiddenJSONResponse"></a>
-## type [ForbiddenJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L578>)
+## type [ForbiddenJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L621>)
 
 
 
@@ -270,7 +379,7 @@ type ForbiddenJSONResponse AppError
 ```
 
 <a name="GetFile200JSONResponse"></a>
-## type [GetFile200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L594>)
+## type [GetFile200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L682>)
 
 
 
@@ -279,7 +388,7 @@ type GetFile200JSONResponse FileResponse
 ```
 
 <a name="GetFile200JSONResponse.VisitGetFileResponse"></a>
-### func \(GetFile200JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L596>)
+### func \(GetFile200JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L684>)
 
 ```go
 func (response GetFile200JSONResponse) VisitGetFileResponse(w http.ResponseWriter) error
@@ -288,7 +397,7 @@ func (response GetFile200JSONResponse) VisitGetFileResponse(w http.ResponseWrite
 
 
 <a name="GetFile400JSONResponse"></a>
-## type [GetFile400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L603>)
+## type [GetFile400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L691>)
 
 
 
@@ -297,7 +406,7 @@ type GetFile400JSONResponse struct{ BadRequestJSONResponse }
 ```
 
 <a name="GetFile400JSONResponse.VisitGetFileResponse"></a>
-### func \(GetFile400JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L605>)
+### func \(GetFile400JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L693>)
 
 ```go
 func (response GetFile400JSONResponse) VisitGetFileResponse(w http.ResponseWriter) error
@@ -306,7 +415,7 @@ func (response GetFile400JSONResponse) VisitGetFileResponse(w http.ResponseWrite
 
 
 <a name="GetFile401JSONResponse"></a>
-## type [GetFile401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L612>)
+## type [GetFile401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L700>)
 
 
 
@@ -315,7 +424,7 @@ type GetFile401JSONResponse struct{ UnauthorizedJSONResponse }
 ```
 
 <a name="GetFile401JSONResponse.VisitGetFileResponse"></a>
-### func \(GetFile401JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L614>)
+### func \(GetFile401JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L702>)
 
 ```go
 func (response GetFile401JSONResponse) VisitGetFileResponse(w http.ResponseWriter) error
@@ -324,7 +433,7 @@ func (response GetFile401JSONResponse) VisitGetFileResponse(w http.ResponseWrite
 
 
 <a name="GetFile403JSONResponse"></a>
-## type [GetFile403JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L621>)
+## type [GetFile403JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L709>)
 
 
 
@@ -333,7 +442,7 @@ type GetFile403JSONResponse struct{ ForbiddenJSONResponse }
 ```
 
 <a name="GetFile403JSONResponse.VisitGetFileResponse"></a>
-### func \(GetFile403JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L623>)
+### func \(GetFile403JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L711>)
 
 ```go
 func (response GetFile403JSONResponse) VisitGetFileResponse(w http.ResponseWriter) error
@@ -342,7 +451,7 @@ func (response GetFile403JSONResponse) VisitGetFileResponse(w http.ResponseWrite
 
 
 <a name="GetFile404JSONResponse"></a>
-## type [GetFile404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L630>)
+## type [GetFile404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L718>)
 
 
 
@@ -351,7 +460,7 @@ type GetFile404JSONResponse struct{ NotFoundJSONResponse }
 ```
 
 <a name="GetFile404JSONResponse.VisitGetFileResponse"></a>
-### func \(GetFile404JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L632>)
+### func \(GetFile404JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L720>)
 
 ```go
 func (response GetFile404JSONResponse) VisitGetFileResponse(w http.ResponseWriter) error
@@ -360,7 +469,7 @@ func (response GetFile404JSONResponse) VisitGetFileResponse(w http.ResponseWrite
 
 
 <a name="GetFile500JSONResponse"></a>
-## type [GetFile500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L639-L641>)
+## type [GetFile500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L727-L729>)
 
 
 
@@ -371,7 +480,7 @@ type GetFile500JSONResponse struct {
 ```
 
 <a name="GetFile500JSONResponse.VisitGetFileResponse"></a>
-### func \(GetFile500JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L643>)
+### func \(GetFile500JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L731>)
 
 ```go
 func (response GetFile500JSONResponse) VisitGetFileResponse(w http.ResponseWriter) error
@@ -380,7 +489,7 @@ func (response GetFile500JSONResponse) VisitGetFileResponse(w http.ResponseWrite
 
 
 <a name="GetFileRequestObject"></a>
-## type [GetFileRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L586-L588>)
+## type [GetFileRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L674-L676>)
 
 
 
@@ -391,7 +500,7 @@ type GetFileRequestObject struct {
 ```
 
 <a name="GetFileResponseObject"></a>
-## type [GetFileResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L590-L592>)
+## type [GetFileResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L678-L680>)
 
 
 
@@ -411,7 +520,7 @@ type InternalServerError = AppError
 ```
 
 <a name="InternalServerErrorJSONResponse"></a>
-## type [InternalServerErrorJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L580>)
+## type [InternalServerErrorJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L623>)
 
 
 
@@ -420,7 +529,7 @@ type InternalServerErrorJSONResponse AppError
 ```
 
 <a name="InvalidParamFormatError"></a>
-## type [InvalidParamFormatError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L500-L503>)
+## type [InvalidParamFormatError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L540-L543>)
 
 
 
@@ -432,7 +541,7 @@ type InvalidParamFormatError struct {
 ```
 
 <a name="InvalidParamFormatError.Error"></a>
-### func \(\*InvalidParamFormatError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L505>)
+### func \(\*InvalidParamFormatError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L545>)
 
 ```go
 func (e *InvalidParamFormatError) Error() string
@@ -441,7 +550,7 @@ func (e *InvalidParamFormatError) Error() string
 
 
 <a name="InvalidParamFormatError.Unwrap"></a>
-### func \(\*InvalidParamFormatError\) [Unwrap](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L509>)
+### func \(\*InvalidParamFormatError\) [Unwrap](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L549>)
 
 ```go
 func (e *InvalidParamFormatError) Unwrap() error
@@ -450,7 +559,7 @@ func (e *InvalidParamFormatError) Unwrap() error
 
 
 <a name="ListFiles200JSONResponse"></a>
-## type [ListFiles200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L658>)
+## type [ListFiles200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L746>)
 
 
 
@@ -459,7 +568,7 @@ type ListFiles200JSONResponse ListFilesResponse
 ```
 
 <a name="ListFiles200JSONResponse.VisitListFilesResponse"></a>
-### func \(ListFiles200JSONResponse\) [VisitListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L660>)
+### func \(ListFiles200JSONResponse\) [VisitListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L748>)
 
 ```go
 func (response ListFiles200JSONResponse) VisitListFilesResponse(w http.ResponseWriter) error
@@ -468,7 +577,7 @@ func (response ListFiles200JSONResponse) VisitListFilesResponse(w http.ResponseW
 
 
 <a name="ListFiles400JSONResponse"></a>
-## type [ListFiles400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L667>)
+## type [ListFiles400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L755>)
 
 
 
@@ -477,7 +586,7 @@ type ListFiles400JSONResponse struct{ BadRequestJSONResponse }
 ```
 
 <a name="ListFiles400JSONResponse.VisitListFilesResponse"></a>
-### func \(ListFiles400JSONResponse\) [VisitListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L669>)
+### func \(ListFiles400JSONResponse\) [VisitListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L757>)
 
 ```go
 func (response ListFiles400JSONResponse) VisitListFilesResponse(w http.ResponseWriter) error
@@ -486,7 +595,7 @@ func (response ListFiles400JSONResponse) VisitListFilesResponse(w http.ResponseW
 
 
 <a name="ListFiles401JSONResponse"></a>
-## type [ListFiles401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L676>)
+## type [ListFiles401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L764>)
 
 
 
@@ -495,7 +604,7 @@ type ListFiles401JSONResponse struct{ UnauthorizedJSONResponse }
 ```
 
 <a name="ListFiles401JSONResponse.VisitListFilesResponse"></a>
-### func \(ListFiles401JSONResponse\) [VisitListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L678>)
+### func \(ListFiles401JSONResponse\) [VisitListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L766>)
 
 ```go
 func (response ListFiles401JSONResponse) VisitListFilesResponse(w http.ResponseWriter) error
@@ -504,7 +613,7 @@ func (response ListFiles401JSONResponse) VisitListFilesResponse(w http.ResponseW
 
 
 <a name="ListFiles500JSONResponse"></a>
-## type [ListFiles500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L685-L687>)
+## type [ListFiles500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L773-L775>)
 
 
 
@@ -515,7 +624,7 @@ type ListFiles500JSONResponse struct {
 ```
 
 <a name="ListFiles500JSONResponse.VisitListFilesResponse"></a>
-### func \(ListFiles500JSONResponse\) [VisitListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L689>)
+### func \(ListFiles500JSONResponse\) [VisitListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L777>)
 
 ```go
 func (response ListFiles500JSONResponse) VisitListFilesResponse(w http.ResponseWriter) error
@@ -719,7 +828,7 @@ func (e ListFilesParamsStatus) Valid() bool
 Valid indicates whether the value is a known member of the ListFilesParamsStatus enum.
 
 <a name="ListFilesRequestObject"></a>
-## type [ListFilesRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L650-L652>)
+## type [ListFilesRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L738-L740>)
 
 
 
@@ -743,7 +852,7 @@ type ListFilesResponse struct {
 ```
 
 <a name="ListFilesResponseObject"></a>
-## type [ListFilesResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L654-L656>)
+## type [ListFilesResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L742-L744>)
 
 
 
@@ -754,7 +863,7 @@ type ListFilesResponseObject interface {
 ```
 
 <a name="MiddlewareFunc"></a>
-## type [MiddlewareFunc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L283>)
+## type [MiddlewareFunc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L292>)
 
 
 
@@ -772,7 +881,7 @@ type NotFound = AppError
 ```
 
 <a name="NotFoundJSONResponse"></a>
-## type [NotFoundJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L582>)
+## type [NotFoundJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L625>)
 
 
 
@@ -781,7 +890,7 @@ type NotFoundJSONResponse AppError
 ```
 
 <a name="RequiredHeaderError"></a>
-## type [RequiredHeaderError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L487-L490>)
+## type [RequiredHeaderError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L527-L530>)
 
 
 
@@ -793,7 +902,7 @@ type RequiredHeaderError struct {
 ```
 
 <a name="RequiredHeaderError.Error"></a>
-### func \(\*RequiredHeaderError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L492>)
+### func \(\*RequiredHeaderError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L532>)
 
 ```go
 func (e *RequiredHeaderError) Error() string
@@ -802,7 +911,7 @@ func (e *RequiredHeaderError) Error() string
 
 
 <a name="RequiredHeaderError.Unwrap"></a>
-### func \(\*RequiredHeaderError\) [Unwrap](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L496>)
+### func \(\*RequiredHeaderError\) [Unwrap](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L536>)
 
 ```go
 func (e *RequiredHeaderError) Unwrap() error
@@ -811,7 +920,7 @@ func (e *RequiredHeaderError) Unwrap() error
 
 
 <a name="RequiredParamError"></a>
-## type [RequiredParamError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L479-L481>)
+## type [RequiredParamError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L519-L521>)
 
 
 
@@ -822,7 +931,7 @@ type RequiredParamError struct {
 ```
 
 <a name="RequiredParamError.Error"></a>
-### func \(\*RequiredParamError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L483>)
+### func \(\*RequiredParamError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L523>)
 
 ```go
 func (e *RequiredParamError) Error() string
@@ -831,12 +940,15 @@ func (e *RequiredParamError) Error() string
 
 
 <a name="ServerInterface"></a>
-## type [ServerInterface](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L251-L258>)
+## type [ServerInterface](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L251-L261>)
 
 ServerInterface represents all server handlers.
 
 ```go
 type ServerInterface interface {
+    // Delete a file by ID
+    // (DELETE /files/{file_id})
+    DeleteFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
     // Get a file by ID
     // (GET /files/{file_id})
     GetFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
@@ -847,7 +959,7 @@ type ServerInterface interface {
 ```
 
 <a name="NewStrictHandler"></a>
-### func [NewStrictHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L714>)
+### func [NewStrictHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L805>)
 
 ```go
 func NewStrictHandler(ssi StrictServerInterface, middlewares []StrictMiddlewareFunc) ServerInterface
@@ -856,7 +968,7 @@ func NewStrictHandler(ssi StrictServerInterface, middlewares []StrictMiddlewareF
 
 
 <a name="NewStrictHandlerWithOptions"></a>
-### func [NewStrictHandlerWithOptions](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L725>)
+### func [NewStrictHandlerWithOptions](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L816>)
 
 ```go
 func NewStrictHandlerWithOptions(ssi StrictServerInterface, middlewares []StrictMiddlewareFunc, options StrictHTTPServerOptions) ServerInterface
@@ -865,7 +977,7 @@ func NewStrictHandlerWithOptions(ssi StrictServerInterface, middlewares []Strict
 
 
 <a name="ServerInterfaceWrapper"></a>
-## type [ServerInterfaceWrapper](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L277-L281>)
+## type [ServerInterfaceWrapper](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L286-L290>)
 
 ServerInterfaceWrapper converts contexts to parameters.
 
@@ -877,8 +989,17 @@ type ServerInterfaceWrapper struct {
 }
 ```
 
+<a name="ServerInterfaceWrapper.DeleteFile"></a>
+### func \(\*ServerInterfaceWrapper\) [DeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L295>)
+
+```go
+func (siw *ServerInterfaceWrapper) DeleteFile(w http.ResponseWriter, r *http.Request)
+```
+
+DeleteFile operation middleware
+
 <a name="ServerInterfaceWrapper.GetFile"></a>
-### func \(\*ServerInterfaceWrapper\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L286>)
+### func \(\*ServerInterfaceWrapper\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L326>)
 
 ```go
 func (siw *ServerInterfaceWrapper) GetFile(w http.ResponseWriter, r *http.Request)
@@ -887,7 +1008,7 @@ func (siw *ServerInterfaceWrapper) GetFile(w http.ResponseWriter, r *http.Reques
 GetFile operation middleware
 
 <a name="ServerInterfaceWrapper.ListFiles"></a>
-### func \(\*ServerInterfaceWrapper\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L317>)
+### func \(\*ServerInterfaceWrapper\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L357>)
 
 ```go
 func (siw *ServerInterfaceWrapper) ListFiles(w http.ResponseWriter, r *http.Request)
@@ -896,7 +1017,7 @@ func (siw *ServerInterfaceWrapper) ListFiles(w http.ResponseWriter, r *http.Requ
 ListFiles operation middleware
 
 <a name="StrictHTTPServerOptions"></a>
-## type [StrictHTTPServerOptions](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L709-L712>)
+## type [StrictHTTPServerOptions](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L800-L803>)
 
 
 
@@ -908,7 +1029,7 @@ type StrictHTTPServerOptions struct {
 ```
 
 <a name="StrictHandlerFunc"></a>
-## type [StrictHandlerFunc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L706>)
+## type [StrictHandlerFunc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L797>)
 
 
 
@@ -917,7 +1038,7 @@ type StrictHandlerFunc = strictnethttp.StrictHTTPHandlerFunc
 ```
 
 <a name="StrictMiddlewareFunc"></a>
-## type [StrictMiddlewareFunc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L707>)
+## type [StrictMiddlewareFunc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L798>)
 
 
 
@@ -926,12 +1047,15 @@ type StrictMiddlewareFunc = strictnethttp.StrictHTTPMiddlewareFunc
 ```
 
 <a name="StrictServerInterface"></a>
-## type [StrictServerInterface](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L697-L704>)
+## type [StrictServerInterface](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L785-L795>)
 
 StrictServerInterface represents all server handlers.
 
 ```go
 type StrictServerInterface interface {
+    // Delete a file by ID
+    // (DELETE /files/{file_id})
+    DeleteFile(ctx context.Context, request DeleteFileRequestObject) (DeleteFileResponseObject, error)
     // Get a file by ID
     // (GET /files/{file_id})
     GetFile(ctx context.Context, request GetFileRequestObject) (GetFileResponseObject, error)
@@ -942,7 +1066,7 @@ type StrictServerInterface interface {
 ```
 
 <a name="TooManyValuesForParamError"></a>
-## type [TooManyValuesForParamError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L513-L516>)
+## type [TooManyValuesForParamError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L553-L556>)
 
 
 
@@ -954,7 +1078,7 @@ type TooManyValuesForParamError struct {
 ```
 
 <a name="TooManyValuesForParamError.Error"></a>
-### func \(\*TooManyValuesForParamError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L518>)
+### func \(\*TooManyValuesForParamError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L558>)
 
 ```go
 func (e *TooManyValuesForParamError) Error() string
@@ -972,7 +1096,7 @@ type Unauthorized = AppError
 ```
 
 <a name="UnauthorizedJSONResponse"></a>
-## type [UnauthorizedJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L584>)
+## type [UnauthorizedJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L627>)
 
 
 
@@ -981,7 +1105,7 @@ type UnauthorizedJSONResponse AppError
 ```
 
 <a name="UnescapedCookieParamError"></a>
-## type [UnescapedCookieParamError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L453-L456>)
+## type [UnescapedCookieParamError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L493-L496>)
 
 
 
@@ -993,7 +1117,7 @@ type UnescapedCookieParamError struct {
 ```
 
 <a name="UnescapedCookieParamError.Error"></a>
-### func \(\*UnescapedCookieParamError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L458>)
+### func \(\*UnescapedCookieParamError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L498>)
 
 ```go
 func (e *UnescapedCookieParamError) Error() string
@@ -1002,7 +1126,7 @@ func (e *UnescapedCookieParamError) Error() string
 
 
 <a name="UnescapedCookieParamError.Unwrap"></a>
-### func \(\*UnescapedCookieParamError\) [Unwrap](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L462>)
+### func \(\*UnescapedCookieParamError\) [Unwrap](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L502>)
 
 ```go
 func (e *UnescapedCookieParamError) Unwrap() error
@@ -1011,7 +1135,7 @@ func (e *UnescapedCookieParamError) Unwrap() error
 
 
 <a name="Unimplemented"></a>
-## type [Unimplemented](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L262>)
+## type [Unimplemented](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L265>)
 
 
 
@@ -1019,8 +1143,17 @@ func (e *UnescapedCookieParamError) Unwrap() error
 type Unimplemented struct{}
 ```
 
+<a name="Unimplemented.DeleteFile"></a>
+### func \(Unimplemented\) [DeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L269>)
+
+```go
+func (_ Unimplemented) DeleteFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+```
+
+Delete a file by ID \(DELETE /files/\{file\_id\}\)
+
 <a name="Unimplemented.GetFile"></a>
-### func \(Unimplemented\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L266>)
+### func \(Unimplemented\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L275>)
 
 ```go
 func (_ Unimplemented) GetFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
@@ -1029,7 +1162,7 @@ func (_ Unimplemented) GetFile(w http.ResponseWriter, r *http.Request, fileId op
 Get a file by ID \(GET /files/\{file\_id\}\)
 
 <a name="Unimplemented.ListFiles"></a>
-### func \(Unimplemented\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L272>)
+### func \(Unimplemented\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L281>)
 
 ```go
 func (_ Unimplemented) ListFiles(w http.ResponseWriter, r *http.Request, params ListFilesParams)
@@ -1038,7 +1171,7 @@ func (_ Unimplemented) ListFiles(w http.ResponseWriter, r *http.Request, params 
 List files for the current user \(GET /me/files\)
 
 <a name="UnmarshalingParamError"></a>
-## type [UnmarshalingParamError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L466-L469>)
+## type [UnmarshalingParamError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L506-L509>)
 
 
 
@@ -1050,7 +1183,7 @@ type UnmarshalingParamError struct {
 ```
 
 <a name="UnmarshalingParamError.Error"></a>
-### func \(\*UnmarshalingParamError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L471>)
+### func \(\*UnmarshalingParamError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L511>)
 
 ```go
 func (e *UnmarshalingParamError) Error() string
@@ -1059,7 +1192,7 @@ func (e *UnmarshalingParamError) Error() string
 
 
 <a name="UnmarshalingParamError.Unwrap"></a>
-### func \(\*UnmarshalingParamError\) [Unwrap](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L475>)
+### func \(\*UnmarshalingParamError\) [Unwrap](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L515>)
 
 ```go
 func (e *UnmarshalingParamError) Unwrap() error

@@ -15,10 +15,15 @@ Package handlers contains the HTTP handlers and routes for the API endpoints.
   - [func \(ch \*ClerkHandler\) Webhook\(w http.ResponseWriter, r \*http.Request\)](<#ClerkHandler.Webhook>)
 - [type ClerkService](<#ClerkService>)
 - [type FileHandler](<#FileHandler>)
-  - [func NewFileHandler\(service FileService\) \*FileHandler](<#NewFileHandler>)
+  - [func NewFileHandler\(service FileService, publisher files.QStashPublisher\) \*FileHandler](<#NewFileHandler>)
+  - [func \(h \*FileHandler\) DeleteFile\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#FileHandler.DeleteFile>)
   - [func \(h \*FileHandler\) GetFile\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#FileHandler.GetFile>)
   - [func \(h \*FileHandler\) ListFiles\(w http.ResponseWriter, r \*http.Request, params api.ListFilesParams\)](<#FileHandler.ListFiles>)
 - [type FileService](<#FileService>)
+- [type JobHandler](<#JobHandler>)
+  - [func NewJobHandler\(s3 \*s3client.Client, queries \*db.Queries\) \*JobHandler](<#NewJobHandler>)
+  - [func \(h \*JobHandler\) DeleteFileFailedJob\(w http.ResponseWriter, r \*http.Request\)](<#JobHandler.DeleteFileFailedJob>)
+  - [func \(h \*JobHandler\) DeleteFileJob\(w http.ResponseWriter, r \*http.Request\)](<#JobHandler.DeleteFileJob>)
 
 
 <a name="ClerkHandler"></a>
@@ -62,7 +67,7 @@ type ClerkService interface {
 ```
 
 <a name="FileHandler"></a>
-## type [FileHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L23-L25>)
+## type [FileHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L24-L27>)
 
 FileHandler manages incoming HTTP requests relating to File operations.
 
@@ -73,25 +78,34 @@ type FileHandler struct {
 ```
 
 <a name="NewFileHandler"></a>
-### func [NewFileHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L28>)
+### func [NewFileHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L30>)
 
 ```go
-func NewFileHandler(service FileService) *FileHandler
+func NewFileHandler(service FileService, publisher files.QStashPublisher) *FileHandler
 ```
 
 NewFileHandler creates a new FileHandler backed by the given FileService.
 
+<a name="FileHandler.DeleteFile"></a>
+### func \(\*FileHandler\) [DeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L35>)
+
+```go
+func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+```
+
+GetFile handles requests to retrieve a single file by its unique identifier.
+
 <a name="FileHandler.GetFile"></a>
-### func \(\*FileHandler\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L33>)
+### func \(\*FileHandler\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L59>)
 
 ```go
 func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
 ```
 
-GetFile handles requests to retrieve a single file by its unique identifier.
+
 
 <a name="FileHandler.ListFiles"></a>
-### func \(\*FileHandler\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L59>)
+### func \(\*FileHandler\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L85>)
 
 ```go
 func (h *FileHandler) ListFiles(w http.ResponseWriter, r *http.Request, params api.ListFilesParams)
@@ -100,7 +114,7 @@ func (h *FileHandler) ListFiles(w http.ResponseWriter, r *http.Request, params a
 ListFiles handles requests to retrieve a paginated list of files accessible to the viewer.
 
 <a name="FileService"></a>
-## type [FileService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L17-L20>)
+## type [FileService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L17-L21>)
 
 FileService defines the application logic required by the FileHandler.
 
@@ -108,7 +122,46 @@ FileService defines the application logic required by the FileHandler.
 type FileService interface {
     GetFile(ctx context.Context, params files.GetFileParams) (files.File, error)
     ListFiles(ctx context.Context, params files.ListFilesParams) ([]files.File, *string, error)
+    DeleteFile(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher) error
 }
 ```
+
+<a name="JobHandler"></a>
+## type [JobHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/jobs.go#L17-L20>)
+
+JobHandler handles async job requests from QStash.
+
+```go
+type JobHandler struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewJobHandler"></a>
+### func [NewJobHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/jobs.go#L23>)
+
+```go
+func NewJobHandler(s3 *s3client.Client, queries *db.Queries) *JobHandler
+```
+
+NewJobHandler creates a JobHandler with S3 and DB clients.
+
+<a name="JobHandler.DeleteFileFailedJob"></a>
+### func \(\*JobHandler\) [DeleteFileFailedJob](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/jobs.go#L68>)
+
+```go
+func (h *JobHandler) DeleteFileFailedJob(w http.ResponseWriter, r *http.Request)
+```
+
+DeleteFileFailedJob handles POST /jobs/delete\-file\-failed. Called by QStash when the delete\-file job fails after all retries.
+
+<a name="JobHandler.DeleteFileJob"></a>
+### func \(\*JobHandler\) [DeleteFileJob](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/jobs.go#L29>)
+
+```go
+func (h *JobHandler) DeleteFileJob(w http.ResponseWriter, r *http.Request)
+```
+
+DeleteFileJob handles POST /jobs/delete\-file. It deletes the S3 object and marks the file as deleted in the DB.
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)
