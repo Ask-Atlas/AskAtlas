@@ -11,6 +11,48 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type FileDeletionStatus string
+
+const (
+	FileDeletionStatusPendingDeletion FileDeletionStatus = "pending_deletion"
+	FileDeletionStatusDeleted         FileDeletionStatus = "deleted"
+)
+
+func (e *FileDeletionStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = FileDeletionStatus(s)
+	case string:
+		*e = FileDeletionStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for FileDeletionStatus: %T", src)
+	}
+	return nil
+}
+
+type NullFileDeletionStatus struct {
+	FileDeletionStatus FileDeletionStatus `json:"file_deletion_status"`
+	Valid              bool               `json:"valid"` // Valid is true if FileDeletionStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullFileDeletionStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.FileDeletionStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.FileDeletionStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullFileDeletionStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.FileDeletionStatus), nil
+}
+
 type GranteeType string
 
 const (
@@ -185,16 +227,20 @@ func (ns NullUploadStatus) Value() (driver.Value, error) {
 }
 
 type File struct {
-	ID        pgtype.UUID        `json:"id"`
-	UserID    pgtype.UUID        `json:"user_id"`
-	S3Key     string             `json:"s3_key"`
-	Name      string             `json:"name"`
-	MimeType  MimeType           `json:"mime_type"`
-	Size      int64              `json:"size"`
-	Checksum  pgtype.Text        `json:"checksum"`
-	Status    UploadStatus       `json:"status"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	ID             pgtype.UUID            `json:"id"`
+	UserID         pgtype.UUID            `json:"user_id"`
+	S3Key          string                 `json:"s3_key"`
+	Name           string                 `json:"name"`
+	MimeType       MimeType               `json:"mime_type"`
+	Size           int64                  `json:"size"`
+	Checksum       pgtype.Text            `json:"checksum"`
+	Status         UploadStatus           `json:"status"`
+	CreatedAt      pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+	DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+	DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+	S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
+	DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
 }
 
 type FileFavorite struct {

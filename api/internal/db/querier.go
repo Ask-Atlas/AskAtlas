@@ -11,6 +11,7 @@ import (
 )
 
 type Querier interface {
+	GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) (GetFileByOwnerRow, error)
 	GetFileIfViewable(ctx context.Context, arg GetFileIfViewableParams) (File, error)
 	GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtype.UUID, error)
 	ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFilesCreatedAscParams) ([]ListOwnedFilesCreatedAscRow, error)
@@ -25,6 +26,9 @@ type Querier interface {
 	ListOwnedFilesStatusDesc(ctx context.Context, arg ListOwnedFilesStatusDescParams) ([]ListOwnedFilesStatusDescRow, error)
 	ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFilesUpdatedAscParams) ([]ListOwnedFilesUpdatedAscRow, error)
 	ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFilesUpdatedDescParams) ([]ListOwnedFilesUpdatedDescRow, error)
+	MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
+	SetFileDeletionJobID(ctx context.Context, arg SetFileDeletionJobIDParams) error
+	SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)
 	SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
 	UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
 }
