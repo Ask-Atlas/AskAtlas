@@ -22,6 +22,12 @@ const sidebar: SidebarsConfig = {
           label: "Get a file by ID",
           className: "api-method get",
         },
+        {
+          type: "doc",
+          id: "api/delete-file",
+          label: "Delete a file by ID",
+          className: "api-method delete",
+        },
       ],
     },
   ],
