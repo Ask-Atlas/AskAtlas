@@ -29,7 +29,11 @@ func (r *sqlcRepository) InTx(ctx context.Context, fn func(Repository) error) er
 	if err != nil {
 		return fmt.Errorf("InTx: begin tx: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() {
+		if rollbackErr := tx.Rollback(ctx); rollbackErr != nil && !errors.Is(rollbackErr, pgx.ErrTxClosed) {
+			slog.Error("failed to rollback transaction", "error", rollbackErr)
+		}
+	}()
 
 	txRepo := &sqlcRepository{pool: r.pool, queries: r.queries.WithTx(tx)}
 	if err := fn(txRepo); err != nil {
