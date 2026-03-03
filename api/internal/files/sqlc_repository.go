@@ -9,15 +9,38 @@ import (
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type sqlcRepository struct {
+	pool    *pgxpool.Pool
 	queries *db.Queries
 }
 
 // NewSQLCRepository creates a postgres-backed db Repository instance.
-func NewSQLCRepository(queries *db.Queries) Repository {
-	return &sqlcRepository{queries: queries}
+func NewSQLCRepository(pool *pgxpool.Pool, queries *db.Queries) Repository {
+	return &sqlcRepository{pool: pool, queries: queries}
+}
+
+func (r *sqlcRepository) InTx(ctx context.Context, fn func(Repository) error) error {
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return fmt.Errorf("InTx: begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	txRepo := &sqlcRepository{pool: r.pool, queries: r.queries.WithTx(tx)}
+	if err := fn(txRepo); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("InTx: commit: %w", err)
+	}
+
+	return nil
 }
 
 func (r *sqlcRepository) GetFileIfViewable(ctx context.Context, arg db.GetFileIfViewableParams) (db.File, error) {
@@ -164,4 +187,41 @@ func (r *sqlcRepository) ListOwnedFilesMimeDesc(ctx context.Context, arg db.List
 	}
 
 	return files, nil
+}
+
+func (r *sqlcRepository) GetFileByOwner(ctx context.Context, arg db.GetFileByOwnerParams) (db.GetFileByOwnerRow, error) {
+	slog.Debug("getting file by owner", "file_id", arg.FileID, "owner_id", arg.OwnerID)
+	file, err := r.queries.GetFileByOwner(ctx, arg)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return db.GetFileByOwnerRow{}, fmt.Errorf("GetFileByOwner: %w", apperrors.ErrNotFound)
+		}
+		return db.GetFileByOwnerRow{}, fmt.Errorf("GetFileByOwner: %w", err)
+	}
+	return file, nil
+}
+
+func (r *sqlcRepository) SoftDeleteFile(ctx context.Context, arg db.SoftDeleteFileParams) (int64, error) {
+	slog.Debug("soft deleting file", "file_id", arg.FileID, "owner_id", arg.OwnerID)
+	rows, err := r.queries.SoftDeleteFile(ctx, arg)
+	if err != nil {
+		return 0, fmt.Errorf("SoftDeleteFile: %w", err)
+	}
+	return rows, nil
+}
+
+func (r *sqlcRepository) SetFileDeletionJobID(ctx context.Context, arg db.SetFileDeletionJobIDParams) error {
+	slog.Debug("setting deletion job id", "file_id", arg.FileID)
+	if err := r.queries.SetFileDeletionJobID(ctx, arg); err != nil {
+		return fmt.Errorf("SetFileDeletionJobID: %w", err)
+	}
+	return nil
+}
+
+func (r *sqlcRepository) MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error {
+	slog.Debug("marking file deleted", "file_id", fileID)
+	if err := r.queries.MarkFileDeleted(ctx, fileID); err != nil {
+		return fmt.Errorf("MarkFileDeleted: %w", err)
+	}
+	return nil
 }

@@ -1,0 +1,89 @@
+package config
+
+import (
+	"fmt"
+	"os"
+	"strings"
+)
+
+// Config contains runtime configuration required by the API application.
+type Config struct {
+	DatabaseURL             string
+	ClerkWebhookSecret      string
+	ClerkSecretKey          string
+	QStashToken             string
+	QStashCurrentSigningKey string
+	QStashNextSigningKey    string
+	AppBaseURL              string
+	AppEnv                  string
+	S3Bucket                string
+	Port                    string
+}
+
+// Load reads and validates runtime configuration from environment variables.
+func Load() (Config, error) {
+	cfg := Config{
+		DatabaseURL:             strings.TrimSpace(os.Getenv("DATABASE_URL")),
+		ClerkWebhookSecret:      strings.TrimSpace(os.Getenv("CLERK_WEBHOOK_SECRET")),
+		ClerkSecretKey:          strings.TrimSpace(os.Getenv("CLERK_SECRET_KEY")),
+		QStashToken:             strings.TrimSpace(os.Getenv("QSTASH_TOKEN")),
+		QStashCurrentSigningKey: strings.TrimSpace(os.Getenv("QSTASH_CURRENT_SIGNING_KEY")),
+		QStashNextSigningKey:    strings.TrimSpace(os.Getenv("QSTASH_NEXT_SIGNING_KEY")),
+		AppBaseURL:              strings.TrimSpace(os.Getenv("APP_BASE_URL")),
+		S3Bucket:                strings.TrimSpace(os.Getenv("S3_BUCKET")),
+		Port:                    strings.TrimSpace(os.Getenv("PORT")),
+	}
+
+	if cfg.Port == "" {
+		cfg.Port = "8080"
+	}
+
+	var err error
+	cfg.AppEnv, err = resolveAppEnv()
+	if err != nil {
+		return Config{}, err
+	}
+
+	if cfg.DatabaseURL == "" {
+		return Config{}, fmt.Errorf("DATABASE_URL environment variable is not set")
+	}
+	if cfg.ClerkWebhookSecret == "" {
+		return Config{}, fmt.Errorf("CLERK_WEBHOOK_SECRET environment variable is not set")
+	}
+	if cfg.ClerkSecretKey == "" {
+		return Config{}, fmt.Errorf("CLERK_SECRET_KEY environment variable is not set")
+	}
+	if cfg.QStashToken == "" {
+		return Config{}, fmt.Errorf("QSTASH_TOKEN environment variable is not set")
+	}
+	if cfg.QStashCurrentSigningKey == "" {
+		return Config{}, fmt.Errorf("QSTASH_CURRENT_SIGNING_KEY environment variable is not set")
+	}
+	if cfg.QStashNextSigningKey == "" {
+		return Config{}, fmt.Errorf("QSTASH_NEXT_SIGNING_KEY environment variable is not set")
+	}
+	if cfg.AppBaseURL == "" {
+		return Config{}, fmt.Errorf("APP_BASE_URL environment variable is not set")
+	}
+	if cfg.S3Bucket == "" {
+		return Config{}, fmt.Errorf("S3_BUCKET environment variable is not set")
+	}
+
+	return cfg, nil
+}
+
+func resolveAppEnv() (string, error) {
+	env := strings.ToLower(strings.TrimSpace(os.Getenv("APP_ENV")))
+	if env == "" {
+		env = strings.ToLower(strings.TrimSpace(os.Getenv("APPENV")))
+	}
+
+	switch env {
+	case "dev", "staging", "prod":
+		return env, nil
+	case "":
+		return "", fmt.Errorf("APP_ENV (or APPENV) must be set to one of: dev, staging, prod")
+	default:
+		return "", fmt.Errorf("APP_ENV has invalid value %q; expected one of: dev, staging, prod", env)
+	}
+}

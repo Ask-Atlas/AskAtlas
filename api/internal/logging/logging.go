@@ -62,7 +62,7 @@ func WithHandler(handler slog.Handler) Option {
 // NewLogger instantiates a new configured slog instance.
 func NewLogger(opts ...Option) *slog.Logger {
 	cfg := loggerConfig{
-		env:    os.Getenv("APP_ENV"),
+		env:    "dev",
 		level:  slog.LevelInfo,
 		writer: os.Stdout,
 	}

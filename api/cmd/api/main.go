@@ -14,11 +14,14 @@ import (
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/api"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/clerk"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/config"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/files"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/handlers"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/logging"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/middleware"
+	qstashclient "github.com/Ask-Atlas/AskAtlas/api/internal/qstash"
+	s3client "github.com/Ask-Atlas/AskAtlas/api/internal/s3"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/user"
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
@@ -27,7 +30,13 @@ import (
 )
 
 func main() {
-	logger := logging.NewLogger()
+	cfg, err := config.Load()
+	if err != nil {
+		slog.Error("failed to load config", "error", err)
+		os.Exit(1)
+	}
+
+	logger := logging.NewLogger(logging.WithEnv(cfg.AppEnv))
 	slog.SetDefault(logger)
 	r := chi.NewRouter()
 
@@ -37,13 +46,7 @@ func main() {
 	r.Use(chiMiddleware.Recoverer)
 
 	ctx := context.Background()
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		slog.Error("DATABASE_URL environment variable is not set")
-		os.Exit(1)
-	}
-
-	connPool, err := pgxpool.New(ctx, databaseURL)
+	connPool, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
 		slog.Error("failed to create database connection pool", "error", err)
 		os.Exit(1)
@@ -56,23 +59,21 @@ func main() {
 	clerkService := clerk.NewClerkService(userService)
 	clerkWebhookHandler := handlers.NewClerkWebhookHandler(clerkService)
 
-	clerkWebhookSecret := os.Getenv("CLERK_WEBHOOK_SECRET")
-	if clerkWebhookSecret == "" {
-		slog.Error("CLERK_WEBHOOK_SECRET environment variable is not set")
+	clerkSignatureVerifier := middleware.SVIXVerifier(cfg.ClerkWebhookSecret)
+	clerkSDK.SetKey(cfg.ClerkSecretKey)
+
+	s3Client, err := s3client.New(ctx, cfg.S3Bucket)
+	if err != nil {
+		slog.Error("failed to create S3 client", "error", err)
 		os.Exit(1)
 	}
-	clerkSignatureVerifier := middleware.SVIXVerifier(clerkWebhookSecret)
+	qstashClient := qstashclient.New(cfg.QStashToken, cfg.AppBaseURL+"/jobs", cfg.AppEnv)
+	qstashVerifier := middleware.QStashVerifier(cfg.QStashCurrentSigningKey, cfg.QStashNextSigningKey)
+	jobHandler := handlers.NewJobHandler(s3Client, queries)
 
-	clerkSecretKey := os.Getenv("CLERK_SECRET_KEY")
-	if clerkSecretKey == "" {
-		slog.Error("CLERK_SECRET_KEY environment variable is not set")
-		os.Exit(1)
-	}
-	clerkSDK.SetKey(clerkSecretKey)
-
-	fileRepo := files.NewSQLCRepository(queries)
+	fileRepo := files.NewSQLCRepository(connPool, queries)
 	fileService := files.NewService(fileRepo)
-	fileHandler := handlers.NewFileHandler(fileService)
+	fileHandler := handlers.NewFileHandler(fileService, qstashClient)
 
 	clerkAuth := middleware.ClerkAuth(userService)
 
@@ -83,6 +84,11 @@ func main() {
 
 	r.Route("/webhooks", func(r chi.Router) {
 		r.With(clerkSignatureVerifier).Post("/clerk", clerkWebhookHandler.Webhook)
+	})
+
+	r.Route("/jobs", func(r chi.Router) {
+		r.With(qstashVerifier).Post("/delete-file", jobHandler.DeleteFileJob)
+		r.With(qstashVerifier).Post("/delete-file-failed", jobHandler.DeleteFileFailedJob)
 	})
 
 	swagger, err := api.GetSwagger()
@@ -105,11 +111,7 @@ func main() {
 		})
 	})
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	addr := ":" + port
+	addr := ":" + cfg.Port
 	slog.Info("Server starting", "addr", addr)
 	if err := http.ListenAndServe(addr, r); err != nil {
 		slog.Error("Server failed to start", "error", err)

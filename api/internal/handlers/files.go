@@ -17,19 +17,45 @@ import (
 type FileService interface {
 	GetFile(ctx context.Context, params files.GetFileParams) (files.File, error)
 	ListFiles(ctx context.Context, params files.ListFilesParams) ([]files.File, *string, error)
+	DeleteFile(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher) error
 }
 
 // FileHandler manages incoming HTTP requests relating to File operations.
 type FileHandler struct {
-	service FileService
+	service   FileService
+	publisher files.QStashPublisher
 }
 
 // NewFileHandler creates a new FileHandler backed by the given FileService.
-func NewFileHandler(service FileService) *FileHandler {
-	return &FileHandler{service: service}
+func NewFileHandler(service FileService, publisher files.QStashPublisher) *FileHandler {
+	return &FileHandler{service: service, publisher: publisher}
 }
 
 // GetFile handles requests to retrieve a single file by its unique identifier.
+func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	params := files.DeleteFileParams{
+		FileID:  uuid.UUID(fileId),
+		OwnerID: viewerID,
+	}
+
+	if err := h.service.DeleteFile(r.Context(), params, h.publisher); err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("DeleteFile failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
 	viewerID, appErr := viewerIDFromContext(r)
 	if appErr != nil {
