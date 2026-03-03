@@ -3,10 +3,12 @@ package files
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
+	qstashclient "github.com/Ask-Atlas/AskAtlas/api/internal/qstash"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/google/uuid"
@@ -15,7 +17,13 @@ import (
 
 // Repository defines the data-access interface required by the files Service.
 type Repository interface {
+	InTx(ctx context.Context, fn func(Repository) error) error
+
 	GetFileIfViewable(ctx context.Context, arg db.GetFileIfViewableParams) (db.File, error)
+	GetFileByOwner(ctx context.Context, arg db.GetFileByOwnerParams) (db.GetFileByOwnerRow, error)
+	SoftDeleteFile(ctx context.Context, arg db.SoftDeleteFileParams) (int64, error)
+	SetFileDeletionJobID(ctx context.Context, arg db.SetFileDeletionJobIDParams) error
+	MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
 
 	ListOwnedFilesUpdatedDesc(ctx context.Context, arg db.ListOwnedFilesUpdatedDescParams) ([]db.ListOwnedFilesUpdatedDescRow, error)
 	ListOwnedFilesUpdatedAsc(ctx context.Context, arg db.ListOwnedFilesUpdatedAscParams) ([]db.ListOwnedFilesUpdatedAscRow, error)
@@ -99,6 +107,69 @@ func (s *Service) ListFiles(ctx context.Context, p ListFilesParams) ([]File, *st
 	}
 
 	return files, nextCursor, nil
+}
+
+// DeleteFileParams holds the inputs required to initiate file deletion.
+type DeleteFileParams struct {
+	FileID  uuid.UUID
+	OwnerID uuid.UUID
+}
+
+// QStashPublisher is the interface the service uses to publish async jobs.
+// Allows the concrete qstashclient.Client to be swapped for a test double.
+type QStashPublisher interface {
+	PublishDeleteFile(ctx context.Context, msg qstashclient.DeleteFileMessage) (string, error)
+}
+
+// DeleteFile soft-deletes the file within a transaction, then publishes an async
+// S3 cleanup job via QStash. Returns apperrors.ErrNotFound if the file does not
+// belong to the caller or is already in a deletion state.
+func (s *Service) DeleteFile(ctx context.Context, p DeleteFileParams, publisher QStashPublisher) error {
+	var file db.GetFileByOwnerRow
+	if err := s.repo.InTx(ctx, func(txRepo Repository) error {
+		var err error
+		file, err = txRepo.GetFileByOwner(ctx, db.GetFileByOwnerParams{
+			FileID:  utils.UUID(p.FileID),
+			OwnerID: utils.UUID(p.OwnerID),
+		})
+		if err != nil {
+			return err
+		}
+
+		rows, err := txRepo.SoftDeleteFile(ctx, db.SoftDeleteFileParams{
+			FileID:  utils.UUID(p.FileID),
+			OwnerID: utils.UUID(p.OwnerID),
+		})
+		if err != nil {
+			return fmt.Errorf("DeleteFile: soft delete: %w", err)
+		}
+		if rows == 0 {
+			return fmt.Errorf("DeleteFile: %w", apperrors.ErrNotFound)
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	jobID, err := publisher.PublishDeleteFile(ctx, qstashclient.DeleteFileMessage{
+		FileID:      p.FileID.String(),
+		S3Key:       file.S3Key,
+		UserID:      p.OwnerID.String(),
+		RequestedAt: time.Now().UTC().Format(time.RFC3339),
+	})
+	if err != nil {
+		return fmt.Errorf("DeleteFile: publish delete job: %w", err)
+	}
+
+	if err := s.repo.SetFileDeletionJobID(ctx, db.SetFileDeletionJobIDParams{
+		FileID: utils.UUID(p.FileID),
+		JobID:  utils.Text(&jobID),
+	}); err != nil {
+		slog.Error("DeleteFile: failed to set deletion_job_id", "file_id", p.FileID, "error", err)
+	}
+
+	return nil
 }
 
 type sortKey struct {

@@ -8,6 +8,9 @@ import (
 	"context"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/files"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -36,6 +39,72 @@ type MockRepository_Expecter struct {
 
 func (_m *MockRepository) EXPECT() *MockRepository_Expecter {
 	return &MockRepository_Expecter{mock: &_m.Mock}
+}
+
+// GetFileByOwner provides a mock function for the type MockRepository
+func (_mock *MockRepository) GetFileByOwner(ctx context.Context, arg db.GetFileByOwnerParams) (db.GetFileByOwnerRow, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetFileByOwner")
+	}
+
+	var r0 db.GetFileByOwnerRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.GetFileByOwnerParams) (db.GetFileByOwnerRow, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.GetFileByOwnerParams) db.GetFileByOwnerRow); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(db.GetFileByOwnerRow)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.GetFileByOwnerParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_GetFileByOwner_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFileByOwner'
+type MockRepository_GetFileByOwner_Call struct {
+	*mock.Call
+}
+
+// GetFileByOwner is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.GetFileByOwnerParams
+func (_e *MockRepository_Expecter) GetFileByOwner(ctx interface{}, arg interface{}) *MockRepository_GetFileByOwner_Call {
+	return &MockRepository_GetFileByOwner_Call{Call: _e.mock.On("GetFileByOwner", ctx, arg)}
+}
+
+func (_c *MockRepository_GetFileByOwner_Call) Run(run func(ctx context.Context, arg db.GetFileByOwnerParams)) *MockRepository_GetFileByOwner_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.GetFileByOwnerParams
+		if args[1] != nil {
+			arg1 = args[1].(db.GetFileByOwnerParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_GetFileByOwner_Call) Return(getFileByOwnerRow db.GetFileByOwnerRow, err error) *MockRepository_GetFileByOwner_Call {
+	_c.Call.Return(getFileByOwnerRow, err)
+	return _c
+}
+
+func (_c *MockRepository_GetFileByOwner_Call) RunAndReturn(run func(ctx context.Context, arg db.GetFileByOwnerParams) (db.GetFileByOwnerRow, error)) *MockRepository_GetFileByOwner_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // GetFileIfViewable provides a mock function for the type MockRepository
@@ -916,6 +985,296 @@ func (_c *MockRepository_ListOwnedFilesUpdatedDesc_Call) Return(listOwnedFilesUp
 }
 
 func (_c *MockRepository_ListOwnedFilesUpdatedDesc_Call) RunAndReturn(run func(ctx context.Context, arg db.ListOwnedFilesUpdatedDescParams) ([]db.ListOwnedFilesUpdatedDescRow, error)) *MockRepository_ListOwnedFilesUpdatedDesc_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// MarkFileDeleted provides a mock function for the type MockRepository
+func (_mock *MockRepository) MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error {
+	ret := _mock.Called(ctx, fileID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MarkFileDeleted")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) error); ok {
+		r0 = returnFunc(ctx, fileID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_MarkFileDeleted_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkFileDeleted'
+type MockRepository_MarkFileDeleted_Call struct {
+	*mock.Call
+}
+
+// MarkFileDeleted is a helper method to define mock.On call
+//   - ctx context.Context
+//   - fileID pgtype.UUID
+func (_e *MockRepository_Expecter) MarkFileDeleted(ctx interface{}, fileID interface{}) *MockRepository_MarkFileDeleted_Call {
+	return &MockRepository_MarkFileDeleted_Call{Call: _e.mock.On("MarkFileDeleted", ctx, fileID)}
+}
+
+func (_c *MockRepository_MarkFileDeleted_Call) Run(run func(ctx context.Context, fileID pgtype.UUID)) *MockRepository_MarkFileDeleted_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_MarkFileDeleted_Call) Return(err error) *MockRepository_MarkFileDeleted_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_MarkFileDeleted_Call) RunAndReturn(run func(ctx context.Context, fileID pgtype.UUID) error) *MockRepository_MarkFileDeleted_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetFileDeletionJobID provides a mock function for the type MockRepository
+func (_mock *MockRepository) SetFileDeletionJobID(ctx context.Context, arg db.SetFileDeletionJobIDParams) error {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetFileDeletionJobID")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.SetFileDeletionJobIDParams) error); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_SetFileDeletionJobID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetFileDeletionJobID'
+type MockRepository_SetFileDeletionJobID_Call struct {
+	*mock.Call
+}
+
+// SetFileDeletionJobID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.SetFileDeletionJobIDParams
+func (_e *MockRepository_Expecter) SetFileDeletionJobID(ctx interface{}, arg interface{}) *MockRepository_SetFileDeletionJobID_Call {
+	return &MockRepository_SetFileDeletionJobID_Call{Call: _e.mock.On("SetFileDeletionJobID", ctx, arg)}
+}
+
+func (_c *MockRepository_SetFileDeletionJobID_Call) Run(run func(ctx context.Context, arg db.SetFileDeletionJobIDParams)) *MockRepository_SetFileDeletionJobID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.SetFileDeletionJobIDParams
+		if args[1] != nil {
+			arg1 = args[1].(db.SetFileDeletionJobIDParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_SetFileDeletionJobID_Call) Return(err error) *MockRepository_SetFileDeletionJobID_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_SetFileDeletionJobID_Call) RunAndReturn(run func(ctx context.Context, arg db.SetFileDeletionJobIDParams) error) *MockRepository_SetFileDeletionJobID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SoftDeleteFile provides a mock function for the type MockRepository
+func (_mock *MockRepository) SoftDeleteFile(ctx context.Context, arg db.SoftDeleteFileParams) (int64, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SoftDeleteFile")
+	}
+
+	var r0 int64
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.SoftDeleteFileParams) (int64, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.SoftDeleteFileParams) int64); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.SoftDeleteFileParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_SoftDeleteFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SoftDeleteFile'
+type MockRepository_SoftDeleteFile_Call struct {
+	*mock.Call
+}
+
+// SoftDeleteFile is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.SoftDeleteFileParams
+func (_e *MockRepository_Expecter) SoftDeleteFile(ctx interface{}, arg interface{}) *MockRepository_SoftDeleteFile_Call {
+	return &MockRepository_SoftDeleteFile_Call{Call: _e.mock.On("SoftDeleteFile", ctx, arg)}
+}
+
+func (_c *MockRepository_SoftDeleteFile_Call) Run(run func(ctx context.Context, arg db.SoftDeleteFileParams)) *MockRepository_SoftDeleteFile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.SoftDeleteFileParams
+		if args[1] != nil {
+			arg1 = args[1].(db.SoftDeleteFileParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_SoftDeleteFile_Call) Return(n int64, err error) *MockRepository_SoftDeleteFile_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockRepository_SoftDeleteFile_Call) RunAndReturn(run func(ctx context.Context, arg db.SoftDeleteFileParams) (int64, error)) *MockRepository_SoftDeleteFile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// InTx provides a mock function for the type MockRepository
+func (_mock *MockRepository) InTx(ctx context.Context, fn func(files.Repository) error) error {
+	ret := _mock.Called(ctx, fn)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InTx")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(files.Repository) error) error); ok {
+		r0 = returnFunc(ctx, fn)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_InTx_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InTx'
+type MockRepository_InTx_Call struct {
+	*mock.Call
+}
+
+// InTx is a helper method to define mock.On call
+//   - ctx context.Context
+//   - fn func(files.Repository) error
+func (_e *MockRepository_Expecter) InTx(ctx interface{}, fn interface{}) *MockRepository_InTx_Call {
+	return &MockRepository_InTx_Call{Call: _e.mock.On("InTx", ctx, fn)}
+}
+
+func (_c *MockRepository_InTx_Call) Run(run func(ctx context.Context, fn func(files.Repository) error)) *MockRepository_InTx_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(files.Repository) error
+		if args[1] != nil {
+			arg1 = args[1].(func(files.Repository) error)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_InTx_Call) Return(err error) *MockRepository_InTx_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_InTx_Call) RunAndReturn(run func(ctx context.Context, fn func(files.Repository) error) error) *MockRepository_InTx_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// WithTx provides a mock function for the type MockRepository
+func (_mock *MockRepository) WithTx(tx pgx.Tx) files.Repository {
+	ret := _mock.Called(tx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for WithTx")
+	}
+
+	var r0 files.Repository
+	if returnFunc, ok := ret.Get(0).(func(pgx.Tx) files.Repository); ok {
+		r0 = returnFunc(tx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(files.Repository)
+		}
+	}
+	return r0
+}
+
+// MockRepository_WithTx_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WithTx'
+type MockRepository_WithTx_Call struct {
+	*mock.Call
+}
+
+// WithTx is a helper method to define mock.On call
+//   - tx pgx.Tx
+func (_e *MockRepository_Expecter) WithTx(tx interface{}) *MockRepository_WithTx_Call {
+	return &MockRepository_WithTx_Call{Call: _e.mock.On("WithTx", tx)}
+}
+
+func (_c *MockRepository_WithTx_Call) Run(run func(tx pgx.Tx)) *MockRepository_WithTx_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 pgx.Tx
+		if args[0] != nil {
+			arg0 = args[0].(pgx.Tx)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_WithTx_Call) Return(repository files.Repository) *MockRepository_WithTx_Call {
+	_c.Call.Return(repository)
+	return _c
+}
+
+func (_c *MockRepository_WithTx_Call) RunAndReturn(run func(tx pgx.Tx) files.Repository) *MockRepository_WithTx_Call {
 	_c.Call.Return(run)
 	return _c
 }

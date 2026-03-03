@@ -21,7 +21,7 @@ import (
 
 func TestFileHandler_ListFiles_Success(t *testing.T) {
 	mockSvc := mock_handlers.NewMockFileService(t)
-	h := handlers.NewFileHandler(mockSvc)
+	h := handlers.NewFileHandler(mockSvc, nil)
 
 	userID := uuid.New()
 	req := httptest.NewRequest(http.MethodGet, "/me/files?page_limit=10", nil)
@@ -57,7 +57,7 @@ func TestFileHandler_ListFiles_Success(t *testing.T) {
 
 func TestFileHandler_ListFiles_InvalidParams(t *testing.T) {
 	mockSvc := mock_handlers.NewMockFileService(t)
-	h := handlers.NewFileHandler(mockSvc)
+	h := handlers.NewFileHandler(mockSvc, nil)
 
 	userID := uuid.New()
 	req := httptest.NewRequest(http.MethodGet, "/me/files?page_limit=abc", nil)
@@ -74,7 +74,7 @@ func TestFileHandler_ListFiles_InvalidParams(t *testing.T) {
 
 func TestFileHandler_ListFiles_ServiceError(t *testing.T) {
 	mockSvc := mock_handlers.NewMockFileService(t)
-	h := handlers.NewFileHandler(mockSvc)
+	h := handlers.NewFileHandler(mockSvc, nil)
 
 	userID := uuid.New()
 	req := httptest.NewRequest(http.MethodGet, "/me/files", nil)

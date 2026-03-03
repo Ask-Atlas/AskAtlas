@@ -38,6 +38,69 @@ func (_m *MockFileService) EXPECT() *MockFileService_Expecter {
 	return &MockFileService_Expecter{mock: &_m.Mock}
 }
 
+// DeleteFile provides a mock function for the type MockFileService
+func (_mock *MockFileService) DeleteFile(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher) error {
+	ret := _mock.Called(ctx, params, publisher)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteFile")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, files.DeleteFileParams, files.QStashPublisher) error); ok {
+		r0 = returnFunc(ctx, params, publisher)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockFileService_DeleteFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteFile'
+type MockFileService_DeleteFile_Call struct {
+	*mock.Call
+}
+
+// DeleteFile is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params files.DeleteFileParams
+//   - publisher files.QStashPublisher
+func (_e *MockFileService_Expecter) DeleteFile(ctx interface{}, params interface{}, publisher interface{}) *MockFileService_DeleteFile_Call {
+	return &MockFileService_DeleteFile_Call{Call: _e.mock.On("DeleteFile", ctx, params, publisher)}
+}
+
+func (_c *MockFileService_DeleteFile_Call) Run(run func(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher)) *MockFileService_DeleteFile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 files.DeleteFileParams
+		if args[1] != nil {
+			arg1 = args[1].(files.DeleteFileParams)
+		}
+		var arg2 files.QStashPublisher
+		if args[2] != nil {
+			arg2 = args[2].(files.QStashPublisher)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockFileService_DeleteFile_Call) Return(err error) *MockFileService_DeleteFile_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockFileService_DeleteFile_Call) RunAndReturn(run func(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher) error) *MockFileService_DeleteFile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetFile provides a mock function for the type MockFileService
 func (_mock *MockFileService) GetFile(ctx context.Context, params files.GetFileParams) (files.File, error) {
 	ret := _mock.Called(ctx, params)
