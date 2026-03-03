@@ -159,8 +159,7 @@ func (s *Service) DeleteFile(ctx context.Context, p DeleteFileParams, publisher 
 		RequestedAt: time.Now().UTC().Format(time.RFC3339),
 	})
 	if err != nil {
-		slog.Error("DeleteFile: failed to publish QStash job", "file_id", p.FileID, "error", err)
-		return nil
+		return fmt.Errorf("DeleteFile: publish delete job: %w", err)
 	}
 
 	if err := s.repo.SetFileDeletionJobID(ctx, db.SetFileDeletionJobIDParams{

@@ -25,7 +25,7 @@ func ClerkAuth(resolver authctx.UserIDResolver) func(http.Handler) http.Handler
 ClerkAuth creates an HTTP middleware that extracts the Clerk user session, validates it, and resolves the database user ID injecting it into the context.
 
 <a name="QStashVerifier"></a>
-## func [QStashVerifier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/middleware/qstash_verifier.go#L15>)
+## func [QStashVerifier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/middleware/qstash_verifier.go#L18>)
 
 ```go
 func QStashVerifier(currentSigningKey, nextSigningKey string) func(next http.Handler) http.Handler

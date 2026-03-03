@@ -1103,12 +1103,14 @@ func (e *Permission) Scan(src interface{}) error
 
 
 <a name="Querier"></a>
-## type [Querier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/querier.go#L13-L34>)
+## type [Querier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/querier.go#L13-L40>)
 
 
 
 ```go
 type Querier interface {
+    // Fetches a file only if it belongs to the given user and has not been soft-deleted.
+    // Returns sql.ErrNoRows if not found or already in a deletion state.
     GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) (GetFileByOwnerRow, error)
     GetFileIfViewable(ctx context.Context, arg GetFileIfViewableParams) (File, error)
     GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtype.UUID, error)
@@ -1124,8 +1126,12 @@ type Querier interface {
     ListOwnedFilesStatusDesc(ctx context.Context, arg ListOwnedFilesStatusDescParams) ([]ListOwnedFilesStatusDescRow, error)
     ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFilesUpdatedAscParams) ([]ListOwnedFilesUpdatedAscRow, error)
     ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFilesUpdatedDescParams) ([]ListOwnedFilesUpdatedDescRow, error)
+    // Called by the cleanup job handler once S3 deletion is confirmed.
     MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
+    // Records the QStash message ID after publishing the async cleanup job.
     SetFileDeletionJobID(ctx context.Context, arg SetFileDeletionJobIDParams) error
+    // Marks a file as pending deletion. Only applies if the file is owned by the caller
+    // and has not already entered a deletion state (idempotency-safe).
     SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)
     SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
     UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
@@ -1297,7 +1303,7 @@ func (q *Queries) MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
 Called by the cleanup job handler once S3 deletion is confirmed.
 
 <a name="Queries.SetFileDeletionJobID"></a>
-### func \(\*Queries\) [SetFileDeletionJobID](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1589>)
+### func \(\*Queries\) [SetFileDeletionJobID](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1590>)
 
 ```go
 func (q *Queries) SetFileDeletionJobID(ctx context.Context, arg SetFileDeletionJobIDParams) error
@@ -1306,7 +1312,7 @@ func (q *Queries) SetFileDeletionJobID(ctx context.Context, arg SetFileDeletionJ
 Records the QStash message ID after publishing the async cleanup job.
 
 <a name="Queries.SoftDeleteFile"></a>
-### func \(\*Queries\) [SoftDeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1612>)
+### func \(\*Queries\) [SoftDeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1613>)
 
 ```go
 func (q *Queries) SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)
@@ -1342,7 +1348,7 @@ func (q *Queries) WithTx(tx pgx.Tx) *Queries
 
 
 <a name="SetFileDeletionJobIDParams"></a>
-## type [SetFileDeletionJobIDParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1583-L1586>)
+## type [SetFileDeletionJobIDParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1584-L1587>)
 
 
 
@@ -1354,7 +1360,7 @@ type SetFileDeletionJobIDParams struct {
 ```
 
 <a name="SoftDeleteFileParams"></a>
-## type [SoftDeleteFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1605-L1608>)
+## type [SoftDeleteFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1606-L1609>)
 
 
 

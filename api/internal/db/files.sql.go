@@ -1578,6 +1578,7 @@ SET
     deletion_job_id = $1,
     updated_at      = NOW()
 WHERE id = $2::uuid
+  AND deletion_status = 'pending_deletion'
 `
 
 type SetFileDeletionJobIDParams struct {

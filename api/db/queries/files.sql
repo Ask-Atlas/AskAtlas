@@ -363,7 +363,8 @@ UPDATE files
 SET
     deletion_job_id = sqlc.arg(job_id),
     updated_at      = NOW()
-WHERE id = sqlc.arg(file_id)::uuid;
+WHERE id = sqlc.arg(file_id)::uuid
+  AND deletion_status = 'pending_deletion';
 
 -- name: MarkFileDeleted :exec
 -- Called by the cleanup job handler once S3 deletion is confirmed.

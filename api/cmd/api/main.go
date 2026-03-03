@@ -7,6 +7,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -67,7 +68,12 @@ func main() {
 		slog.Error("failed to create S3 client", "error", err)
 		os.Exit(1)
 	}
-	qstashClient := qstashclient.New(cfg.QStashToken, cfg.AppBaseURL+"/jobs", cfg.AppEnv)
+	jobBaseURL, err := url.JoinPath(cfg.AppBaseURL, "jobs")
+	if err != nil {
+		slog.Error("failed to construct job base URL", "error", err)
+		os.Exit(1)
+	}
+	qstashClient := qstashclient.New(cfg.QStashToken, jobBaseURL, cfg.AppEnv)
 	qstashVerifier := middleware.QStashVerifier(cfg.QStashCurrentSigningKey, cfg.QStashNextSigningKey)
 	jobHandler := handlers.NewJobHandler(s3Client, queries)
 

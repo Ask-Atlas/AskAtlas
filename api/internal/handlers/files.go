@@ -31,7 +31,7 @@ func NewFileHandler(service FileService, publisher files.QStashPublisher) *FileH
 	return &FileHandler{service: service, publisher: publisher}
 }
 
-// GetFile handles requests to retrieve a single file by its unique identifier.
+// DeleteFile handles requests to delete a single file by its unique identifier.
 func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
 	viewerID, appErr := viewerIDFromContext(r)
 	if appErr != nil {
@@ -56,6 +56,7 @@ func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request, fileId 
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// GetFile handles requests to retrieve a single file by its unique identifier.
 func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
 	viewerID, appErr := viewerIDFromContext(r)
 	if appErr != nil {

@@ -93,19 +93,19 @@ NewFileHandler creates a new FileHandler backed by the given FileService.
 func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
 ```
 
-GetFile handles requests to retrieve a single file by its unique identifier.
+DeleteFile handles requests to delete a single file by its unique identifier.
 
 <a name="FileHandler.GetFile"></a>
-### func \(\*FileHandler\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L59>)
+### func \(\*FileHandler\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L60>)
 
 ```go
 func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
 ```
 
-
+GetFile handles requests to retrieve a single file by its unique identifier.
 
 <a name="FileHandler.ListFiles"></a>
-### func \(\*FileHandler\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L85>)
+### func \(\*FileHandler\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L86>)
 
 ```go
 func (h *FileHandler) ListFiles(w http.ResponseWriter, r *http.Request, params api.ListFilesParams)
