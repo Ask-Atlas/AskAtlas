@@ -376,6 +376,18 @@ SET
 WHERE id = sqlc.arg(file_id)::uuid
   AND deletion_status = 'pending_deletion';
 
+-- name: UpdateFile :one
+-- Renames a file. Only applies if owned by the caller and not in a deletion state.
+-- Returns sql.ErrNoRows when file is not found, not owned, or in deletion.
+UPDATE files
+SET
+    name       = sqlc.arg(name),
+    updated_at = NOW()
+WHERE id      = sqlc.arg(file_id)::uuid
+  AND user_id = sqlc.arg(owner_id)::uuid
+  AND deletion_status IS NULL
+RETURNING id, user_id, name, size, mime_type, status, created_at, updated_at;
+
 -- name: GetFileIfViewable :one
 SELECT f.*
 FROM files f

@@ -222,6 +222,18 @@ func (r *sqlcRepository) SetFileDeletionJobID(ctx context.Context, arg db.SetFil
 	return nil
 }
 
+func (r *sqlcRepository) UpdateFile(ctx context.Context, arg db.UpdateFileParams) (db.UpdateFileRow, error) {
+	slog.Debug("updating file", "file_id", arg.FileID, "owner_id", arg.OwnerID)
+	row, err := r.queries.UpdateFile(ctx, arg)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return db.UpdateFileRow{}, fmt.Errorf("UpdateFile: %w", apperrors.ErrNotFound)
+		}
+		return db.UpdateFileRow{}, fmt.Errorf("UpdateFile: %w", err)
+	}
+	return row, nil
+}
+
 func (r *sqlcRepository) MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error {
 	slog.Debug("marking file deleted", "file_id", fileID)
 	if err := r.queries.MarkFileDeleted(ctx, fileID); err != nil {

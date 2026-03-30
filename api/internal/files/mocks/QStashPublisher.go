@@ -7,7 +7,7 @@ package mock_files
 import (
 	"context"
 
-	qstashclient "github.com/Ask-Atlas/AskAtlas/api/internal/qstash"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/qstash"
 	mock "github.com/stretchr/testify/mock"
 )
 

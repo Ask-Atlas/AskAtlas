@@ -172,6 +172,11 @@ type ListFilesResponse struct {
 	NextCursor *string        `json:"next_cursor,omitempty"`
 }
 
+// UpdateFileRequest Request body for updating file metadata
+type UpdateFileRequest struct {
+	Name string `json:"name"`
+}
+
 // BadRequest Standardized error response structure matching application error domains
 type BadRequest = AppError
 
@@ -247,6 +252,9 @@ type ListFilesParamsSortBy string
 // ListFilesParamsSortDir defines parameters for ListFiles.
 type ListFilesParamsSortDir string
 
+// UpdateFileJSONRequestBody defines body for UpdateFile for application/json ContentType.
+type UpdateFileJSONRequestBody = UpdateFileRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Delete a file by ID
@@ -255,6 +263,9 @@ type ServerInterface interface {
 	// Get a file by ID
 	// (GET /files/{file_id})
 	GetFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+	// Update a file's metadata
+	// (PATCH /files/{file_id})
+	UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
 	// List files for the current user
 	// (GET /me/files)
 	ListFiles(w http.ResponseWriter, r *http.Request, params ListFilesParams)
@@ -273,6 +284,12 @@ func (_ Unimplemented) DeleteFile(w http.ResponseWriter, r *http.Request, fileId
 // Get a file by ID
 // (GET /files/{file_id})
 func (_ Unimplemented) GetFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update a file's metadata
+// (PATCH /files/{file_id})
+func (_ Unimplemented) UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -344,6 +361,37 @@ func (siw *ServerInterfaceWrapper) GetFile(w http.ResponseWriter, r *http.Reques
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetFile(w, r, fileId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateFile operation middleware
+func (siw *ServerInterfaceWrapper) UpdateFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "file_id" -------------
+	var fileId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file_id", chi.URLParam(r, "file_id"), &fileId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateFile(w, r, fileId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -610,6 +658,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/files/{file_id}", wrapper.GetFile)
 	})
 	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/files/{file_id}", wrapper.UpdateFile)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/files", wrapper.ListFiles)
 	})
 
@@ -735,6 +786,62 @@ func (response GetFile500JSONResponse) VisitGetFileResponse(w http.ResponseWrite
 	return json.NewEncoder(w).Encode(response)
 }
 
+type UpdateFileRequestObject struct {
+	FileId openapi_types.UUID `json:"file_id"`
+	Body   *UpdateFileJSONRequestBody
+}
+
+type UpdateFileResponseObject interface {
+	VisitUpdateFileResponse(w http.ResponseWriter) error
+}
+
+type UpdateFile200JSONResponse FileResponse
+
+func (response UpdateFile200JSONResponse) VisitUpdateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateFile400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateFile400JSONResponse) VisitUpdateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateFile401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateFile401JSONResponse) VisitUpdateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateFile404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateFile404JSONResponse) VisitUpdateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateFile500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response UpdateFile500JSONResponse) VisitUpdateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListFilesRequestObject struct {
 	Params ListFilesParams
 }
@@ -789,6 +896,9 @@ type StrictServerInterface interface {
 	// Get a file by ID
 	// (GET /files/{file_id})
 	GetFile(ctx context.Context, request GetFileRequestObject) (GetFileResponseObject, error)
+	// Update a file's metadata
+	// (PATCH /files/{file_id})
+	UpdateFile(ctx context.Context, request UpdateFileRequestObject) (UpdateFileResponseObject, error)
 	// List files for the current user
 	// (GET /me/files)
 	ListFiles(ctx context.Context, request ListFilesRequestObject) (ListFilesResponseObject, error)
@@ -875,6 +985,39 @@ func (sh *strictHandler) GetFile(w http.ResponseWriter, r *http.Request, fileId 
 	}
 }
 
+// UpdateFile operation middleware
+func (sh *strictHandler) UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	var request UpdateFileRequestObject
+
+	request.FileId = fileId
+
+	var body UpdateFileJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateFile(ctx, request.(UpdateFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateFileResponseObject); ok {
+		if err := validResponse.VisitUpdateFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListFiles operation middleware
 func (sh *strictHandler) ListFiles(w http.ResponseWriter, r *http.Request, params ListFilesParams) {
 	var request ListFilesRequestObject
@@ -904,31 +1047,33 @@ func (sh *strictHandler) ListFiles(w http.ResponseWriter, r *http.Request, param
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

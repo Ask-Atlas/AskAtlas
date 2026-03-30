@@ -100,3 +100,10 @@ type GetFileParams struct {
 	CourseIDs     []uuid.UUID
 	StudyGuideIDs []uuid.UUID
 }
+
+// UpdateFileParams contains the required inputs for renaming a file.
+type UpdateFileParams struct {
+	FileID  uuid.UUID
+	OwnerID uuid.UUID
+	Name    string
+}
