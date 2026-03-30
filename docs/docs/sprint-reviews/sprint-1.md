@@ -4,6 +4,8 @@ sidebar_position: 1
 
 # Sprint 1 Report (01/26/26 – 03/01/26)
 
+[**Sprint demo video**](https://youtu.be/3PZzi8RMt3c)
+
 ## What's New (User Facing)
 
 - **User Authentication System** — Users can now sign up, log in, and manage their accounts securely through Clerk authentication

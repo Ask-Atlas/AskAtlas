@@ -9,6 +9,7 @@ LEFT JOIN file_favorites fav
 LEFT JOIN file_last_viewed lv
   ON lv.user_id = sqlc.arg(viewer_id) AND lv.file_id = f.id
 WHERE f.user_id = sqlc.arg(owner_id)
+  AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
   AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
@@ -36,6 +37,7 @@ LEFT JOIN file_favorites fav
 LEFT JOIN file_last_viewed lv
   ON lv.user_id = sqlc.arg(viewer_id) AND lv.file_id = f.id
 WHERE f.user_id = sqlc.arg(owner_id)
+  AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
   AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
@@ -63,6 +65,7 @@ LEFT JOIN file_favorites fav
 LEFT JOIN file_last_viewed lv
   ON lv.user_id = sqlc.arg(viewer_id) AND lv.file_id = f.id
 WHERE f.user_id = sqlc.arg(owner_id)
+  AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
   AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
@@ -90,6 +93,7 @@ LEFT JOIN file_favorites fav
 LEFT JOIN file_last_viewed lv
   ON lv.user_id = sqlc.arg(viewer_id) AND lv.file_id = f.id
 WHERE f.user_id = sqlc.arg(owner_id)
+  AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
   AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
@@ -117,6 +121,7 @@ LEFT JOIN file_favorites fav
 LEFT JOIN file_last_viewed lv
   ON lv.user_id = sqlc.arg(viewer_id) AND lv.file_id = f.id
 WHERE f.user_id = sqlc.arg(owner_id)
+  AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
   AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
@@ -144,6 +149,7 @@ LEFT JOIN file_favorites fav
 LEFT JOIN file_last_viewed lv
   ON lv.user_id = sqlc.arg(viewer_id) AND lv.file_id = f.id
 WHERE f.user_id = sqlc.arg(owner_id)
+  AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
   AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
@@ -171,6 +177,7 @@ LEFT JOIN file_favorites fav
 LEFT JOIN file_last_viewed lv
   ON lv.user_id = sqlc.arg(viewer_id) AND lv.file_id = f.id
 WHERE f.user_id = sqlc.arg(owner_id)
+  AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
   AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
@@ -198,6 +205,7 @@ LEFT JOIN file_favorites fav
 LEFT JOIN file_last_viewed lv
   ON lv.user_id = sqlc.arg(viewer_id) AND lv.file_id = f.id
 WHERE f.user_id = sqlc.arg(owner_id)
+  AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
   AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
@@ -225,6 +233,7 @@ LEFT JOIN file_favorites fav
 LEFT JOIN file_last_viewed lv
   ON lv.user_id = sqlc.arg(viewer_id) AND lv.file_id = f.id
 WHERE f.user_id = sqlc.arg(owner_id)
+  AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
   AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
@@ -252,6 +261,7 @@ LEFT JOIN file_favorites fav
 LEFT JOIN file_last_viewed lv
   ON lv.user_id = sqlc.arg(viewer_id) AND lv.file_id = f.id
 WHERE f.user_id = sqlc.arg(owner_id)
+  AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
   AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
@@ -279,6 +289,7 @@ LEFT JOIN file_favorites fav
 LEFT JOIN file_last_viewed lv
   ON lv.user_id = sqlc.arg(viewer_id) AND lv.file_id = f.id
 WHERE f.user_id = sqlc.arg(owner_id)
+  AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
   AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
@@ -306,6 +317,7 @@ LEFT JOIN file_favorites fav
 LEFT JOIN file_last_viewed lv
   ON lv.user_id = sqlc.arg(viewer_id) AND lv.file_id = f.id
 WHERE f.user_id = sqlc.arg(owner_id)
+  AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
   AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
@@ -322,10 +334,53 @@ WHERE f.user_id = sqlc.arg(owner_id)
 ORDER BY f.mime_type DESC, f.id DESC
 LIMIT sqlc.arg(page_limit);
 
+-- name: GetFileByOwner :one
+-- Fetches a file only if it belongs to the given user and has not been soft-deleted.
+-- Returns sql.ErrNoRows if not found or already in a deletion state.
+SELECT id, user_id, s3_key, name, mime_type, size, checksum,
+       status, deletion_status, deleted_at, s3_deleted_at, deletion_job_id,
+       created_at, updated_at
+FROM files
+WHERE id = sqlc.arg(file_id)::uuid
+  AND user_id = sqlc.arg(owner_id)::uuid
+  AND deletion_status IS NULL;
+
+-- name: SoftDeleteFile :execrows
+-- Marks a file as pending deletion. Only applies if the file is owned by the caller
+-- and has not already entered a deletion state (idempotency-safe).
+UPDATE files
+SET
+    deletion_status = 'pending_deletion',
+    deleted_at      = NOW(),
+    updated_at      = NOW()
+WHERE id      = sqlc.arg(file_id)::uuid
+  AND user_id = sqlc.arg(owner_id)::uuid
+  AND deletion_status IS NULL;
+
+-- name: SetFileDeletionJobID :exec
+-- Records the QStash message ID after publishing the async cleanup job.
+UPDATE files
+SET
+    deletion_job_id = sqlc.arg(job_id),
+    updated_at      = NOW()
+WHERE id = sqlc.arg(file_id)::uuid
+  AND deletion_status = 'pending_deletion';
+
+-- name: MarkFileDeleted :exec
+-- Called by the cleanup job handler once S3 deletion is confirmed.
+UPDATE files
+SET
+    deletion_status = 'deleted',
+    s3_deleted_at   = NOW(),
+    updated_at      = NOW()
+WHERE id = sqlc.arg(file_id)::uuid
+  AND deletion_status = 'pending_deletion';
+
 -- name: GetFileIfViewable :one
 SELECT f.*
 FROM files f
 WHERE f.id = sqlc.arg(file_id)
+  AND f.deletion_status IS NULL
   AND (
     -- owner always can view
     f.user_id = sqlc.arg(viewer_id)

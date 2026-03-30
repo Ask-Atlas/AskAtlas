@@ -10,10 +10,14 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
 
 - [type DBTX](<#DBTX>)
 - [type File](<#File>)
+- [type FileDeletionStatus](<#FileDeletionStatus>)
+  - [func \(e \*FileDeletionStatus\) Scan\(src interface\{\}\) error](<#FileDeletionStatus.Scan>)
 - [type FileFavorite](<#FileFavorite>)
 - [type FileGrant](<#FileGrant>)
 - [type FileLastViewed](<#FileLastViewed>)
 - [type FileView](<#FileView>)
+- [type GetFileByOwnerParams](<#GetFileByOwnerParams>)
+- [type GetFileByOwnerRow](<#GetFileByOwnerRow>)
 - [type GetFileIfViewableParams](<#GetFileIfViewableParams>)
 - [type GranteeType](<#GranteeType>)
   - [func \(e \*GranteeType\) Scan\(src interface\{\}\) error](<#GranteeType.Scan>)
@@ -43,6 +47,9 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
 - [type ListOwnedFilesUpdatedDescRow](<#ListOwnedFilesUpdatedDescRow>)
 - [type MimeType](<#MimeType>)
   - [func \(e \*MimeType\) Scan\(src interface\{\}\) error](<#MimeType.Scan>)
+- [type NullFileDeletionStatus](<#NullFileDeletionStatus>)
+  - [func \(ns \*NullFileDeletionStatus\) Scan\(value interface\{\}\) error](<#NullFileDeletionStatus.Scan>)
+  - [func \(ns NullFileDeletionStatus\) Value\(\) \(driver.Value, error\)](<#NullFileDeletionStatus.Value>)
 - [type NullGranteeType](<#NullGranteeType>)
   - [func \(ns \*NullGranteeType\) Scan\(value interface\{\}\) error](<#NullGranteeType.Scan>)
   - [func \(ns NullGranteeType\) Value\(\) \(driver.Value, error\)](<#NullGranteeType.Value>)
@@ -60,6 +67,7 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
 - [type Querier](<#Querier>)
 - [type Queries](<#Queries>)
   - [func New\(db DBTX\) \*Queries](<#New>)
+  - [func \(q \*Queries\) GetFileByOwner\(ctx context.Context, arg GetFileByOwnerParams\) \(GetFileByOwnerRow, error\)](<#Queries.GetFileByOwner>)
   - [func \(q \*Queries\) GetFileIfViewable\(ctx context.Context, arg GetFileIfViewableParams\) \(File, error\)](<#Queries.GetFileIfViewable>)
   - [func \(q \*Queries\) GetUserIDByClerkID\(ctx context.Context, clerkID string\) \(pgtype.UUID, error\)](<#Queries.GetUserIDByClerkID>)
   - [func \(q \*Queries\) ListOwnedFilesCreatedAsc\(ctx context.Context, arg ListOwnedFilesCreatedAscParams\) \(\[\]ListOwnedFilesCreatedAscRow, error\)](<#Queries.ListOwnedFilesCreatedAsc>)
@@ -74,9 +82,14 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
   - [func \(q \*Queries\) ListOwnedFilesStatusDesc\(ctx context.Context, arg ListOwnedFilesStatusDescParams\) \(\[\]ListOwnedFilesStatusDescRow, error\)](<#Queries.ListOwnedFilesStatusDesc>)
   - [func \(q \*Queries\) ListOwnedFilesUpdatedAsc\(ctx context.Context, arg ListOwnedFilesUpdatedAscParams\) \(\[\]ListOwnedFilesUpdatedAscRow, error\)](<#Queries.ListOwnedFilesUpdatedAsc>)
   - [func \(q \*Queries\) ListOwnedFilesUpdatedDesc\(ctx context.Context, arg ListOwnedFilesUpdatedDescParams\) \(\[\]ListOwnedFilesUpdatedDescRow, error\)](<#Queries.ListOwnedFilesUpdatedDesc>)
+  - [func \(q \*Queries\) MarkFileDeleted\(ctx context.Context, fileID pgtype.UUID\) error](<#Queries.MarkFileDeleted>)
+  - [func \(q \*Queries\) SetFileDeletionJobID\(ctx context.Context, arg SetFileDeletionJobIDParams\) error](<#Queries.SetFileDeletionJobID>)
+  - [func \(q \*Queries\) SoftDeleteFile\(ctx context.Context, arg SoftDeleteFileParams\) \(int64, error\)](<#Queries.SoftDeleteFile>)
   - [func \(q \*Queries\) SoftDeleteUserByClerkID\(ctx context.Context, clerkID string\) \(int64, error\)](<#Queries.SoftDeleteUserByClerkID>)
   - [func \(q \*Queries\) UpsertClerkUser\(ctx context.Context, arg UpsertClerkUserParams\) \(User, error\)](<#Queries.UpsertClerkUser>)
   - [func \(q \*Queries\) WithTx\(tx pgx.Tx\) \*Queries](<#Queries.WithTx>)
+- [type SetFileDeletionJobIDParams](<#SetFileDeletionJobIDParams>)
+- [type SoftDeleteFileParams](<#SoftDeleteFileParams>)
 - [type UploadStatus](<#UploadStatus>)
   - [func \(e \*UploadStatus\) Scan\(src interface\{\}\) error](<#UploadStatus.Scan>)
 - [type UpsertClerkUserParams](<#UpsertClerkUserParams>)
@@ -97,27 +110,58 @@ type DBTX interface {
 ```
 
 <a name="File"></a>
-## type [File](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L187-L198>)
+## type [File](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L229-L244>)
 
 
 
 ```go
 type File struct {
-    ID        pgtype.UUID        `json:"id"`
-    UserID    pgtype.UUID        `json:"user_id"`
-    S3Key     string             `json:"s3_key"`
-    Name      string             `json:"name"`
-    MimeType  MimeType           `json:"mime_type"`
-    Size      int64              `json:"size"`
-    Checksum  pgtype.Text        `json:"checksum"`
-    Status    UploadStatus       `json:"status"`
-    CreatedAt pgtype.Timestamptz `json:"created_at"`
-    UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+    ID             pgtype.UUID            `json:"id"`
+    UserID         pgtype.UUID            `json:"user_id"`
+    S3Key          string                 `json:"s3_key"`
+    Name           string                 `json:"name"`
+    MimeType       MimeType               `json:"mime_type"`
+    Size           int64                  `json:"size"`
+    Checksum       pgtype.Text            `json:"checksum"`
+    Status         UploadStatus           `json:"status"`
+    CreatedAt      pgtype.Timestamptz     `json:"created_at"`
+    UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+    DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+    DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+    S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
+    DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
 }
 ```
 
+<a name="FileDeletionStatus"></a>
+## type [FileDeletionStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L14>)
+
+
+
+```go
+type FileDeletionStatus string
+```
+
+<a name="FileDeletionStatusPendingDeletion"></a>
+
+```go
+const (
+    FileDeletionStatusPendingDeletion FileDeletionStatus = "pending_deletion"
+    FileDeletionStatusDeleted         FileDeletionStatus = "deleted"
+)
+```
+
+<a name="FileDeletionStatus.Scan"></a>
+### func \(\*FileDeletionStatus\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L21>)
+
+```go
+func (e *FileDeletionStatus) Scan(src interface{}) error
+```
+
+
+
 <a name="FileFavorite"></a>
-## type [FileFavorite](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L200-L204>)
+## type [FileFavorite](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L246-L250>)
 
 
 
@@ -130,7 +174,7 @@ type FileFavorite struct {
 ```
 
 <a name="FileGrant"></a>
-## type [FileGrant](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L206-L214>)
+## type [FileGrant](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L252-L260>)
 
 
 
@@ -147,7 +191,7 @@ type FileGrant struct {
 ```
 
 <a name="FileLastViewed"></a>
-## type [FileLastViewed](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L216-L220>)
+## type [FileLastViewed](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L262-L266>)
 
 
 
@@ -160,7 +204,7 @@ type FileLastViewed struct {
 ```
 
 <a name="FileView"></a>
-## type [FileView](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L222-L227>)
+## type [FileView](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L268-L273>)
 
 
 
@@ -173,8 +217,44 @@ type FileView struct {
 }
 ```
 
+<a name="GetFileByOwnerParams"></a>
+## type [GetFileByOwnerParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L24-L27>)
+
+
+
+```go
+type GetFileByOwnerParams struct {
+    FileID  pgtype.UUID `json:"file_id"`
+    OwnerID pgtype.UUID `json:"owner_id"`
+}
+```
+
+<a name="GetFileByOwnerRow"></a>
+## type [GetFileByOwnerRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L29-L44>)
+
+
+
+```go
+type GetFileByOwnerRow struct {
+    ID             pgtype.UUID            `json:"id"`
+    UserID         pgtype.UUID            `json:"user_id"`
+    S3Key          string                 `json:"s3_key"`
+    Name           string                 `json:"name"`
+    MimeType       MimeType               `json:"mime_type"`
+    Size           int64                  `json:"size"`
+    Checksum       pgtype.Text            `json:"checksum"`
+    Status         UploadStatus           `json:"status"`
+    DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+    DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+    S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
+    DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
+    CreatedAt      pgtype.Timestamptz     `json:"created_at"`
+    UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+}
+```
+
 <a name="GetFileIfViewableParams"></a>
-## type [GetFileIfViewableParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L64-L69>)
+## type [GetFileIfViewableParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L121-L126>)
 
 
 
@@ -188,7 +268,7 @@ type GetFileIfViewableParams struct {
 ```
 
 <a name="GranteeType"></a>
-## type [GranteeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L14>)
+## type [GranteeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L56>)
 
 
 
@@ -207,7 +287,7 @@ const (
 ```
 
 <a name="GranteeType.Scan"></a>
-### func \(\*GranteeType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L22>)
+### func \(\*GranteeType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L64>)
 
 ```go
 func (e *GranteeType) Scan(src interface{}) error
@@ -216,7 +296,7 @@ func (e *GranteeType) Scan(src interface{}) error
 
 
 <a name="ListOwnedFilesCreatedAscParams"></a>
-## type [ListOwnedFilesCreatedAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L122-L137>)
+## type [ListOwnedFilesCreatedAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L184-L199>)
 
 
 
@@ -240,29 +320,33 @@ type ListOwnedFilesCreatedAscParams struct {
 ```
 
 <a name="ListOwnedFilesCreatedAscRow"></a>
-## type [ListOwnedFilesCreatedAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L139-L152>)
+## type [ListOwnedFilesCreatedAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L201-L218>)
 
 
 
 ```go
 type ListOwnedFilesCreatedAscRow struct {
-    ID           pgtype.UUID        `json:"id"`
-    UserID       pgtype.UUID        `json:"user_id"`
-    S3Key        string             `json:"s3_key"`
-    Name         string             `json:"name"`
-    MimeType     MimeType           `json:"mime_type"`
-    Size         int64              `json:"size"`
-    Checksum     pgtype.Text        `json:"checksum"`
-    Status       UploadStatus       `json:"status"`
-    CreatedAt    pgtype.Timestamptz `json:"created_at"`
-    UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-    FavoritedAt  pgtype.Timestamptz `json:"favorited_at"`
-    LastViewedAt pgtype.Timestamptz `json:"last_viewed_at"`
+    ID             pgtype.UUID            `json:"id"`
+    UserID         pgtype.UUID            `json:"user_id"`
+    S3Key          string                 `json:"s3_key"`
+    Name           string                 `json:"name"`
+    MimeType       MimeType               `json:"mime_type"`
+    Size           int64                  `json:"size"`
+    Checksum       pgtype.Text            `json:"checksum"`
+    Status         UploadStatus           `json:"status"`
+    CreatedAt      pgtype.Timestamptz     `json:"created_at"`
+    UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+    DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+    DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+    S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
+    DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
+    FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
+    LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 ```
 
 <a name="ListOwnedFilesCreatedDescParams"></a>
-## type [ListOwnedFilesCreatedDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L230-L245>)
+## type [ListOwnedFilesCreatedDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L301-L316>)
 
 
 
@@ -286,29 +370,33 @@ type ListOwnedFilesCreatedDescParams struct {
 ```
 
 <a name="ListOwnedFilesCreatedDescRow"></a>
-## type [ListOwnedFilesCreatedDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L247-L260>)
+## type [ListOwnedFilesCreatedDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L318-L335>)
 
 
 
 ```go
 type ListOwnedFilesCreatedDescRow struct {
-    ID           pgtype.UUID        `json:"id"`
-    UserID       pgtype.UUID        `json:"user_id"`
-    S3Key        string             `json:"s3_key"`
-    Name         string             `json:"name"`
-    MimeType     MimeType           `json:"mime_type"`
-    Size         int64              `json:"size"`
-    Checksum     pgtype.Text        `json:"checksum"`
-    Status       UploadStatus       `json:"status"`
-    CreatedAt    pgtype.Timestamptz `json:"created_at"`
-    UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-    FavoritedAt  pgtype.Timestamptz `json:"favorited_at"`
-    LastViewedAt pgtype.Timestamptz `json:"last_viewed_at"`
+    ID             pgtype.UUID            `json:"id"`
+    UserID         pgtype.UUID            `json:"user_id"`
+    S3Key          string                 `json:"s3_key"`
+    Name           string                 `json:"name"`
+    MimeType       MimeType               `json:"mime_type"`
+    Size           int64                  `json:"size"`
+    Checksum       pgtype.Text            `json:"checksum"`
+    Status         UploadStatus           `json:"status"`
+    CreatedAt      pgtype.Timestamptz     `json:"created_at"`
+    UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+    DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+    DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+    S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
+    DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
+    FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
+    LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 ```
 
 <a name="ListOwnedFilesMimeAscParams"></a>
-## type [ListOwnedFilesMimeAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L338-L353>)
+## type [ListOwnedFilesMimeAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L418-L433>)
 
 
 
@@ -332,29 +420,33 @@ type ListOwnedFilesMimeAscParams struct {
 ```
 
 <a name="ListOwnedFilesMimeAscRow"></a>
-## type [ListOwnedFilesMimeAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L355-L368>)
+## type [ListOwnedFilesMimeAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L435-L452>)
 
 
 
 ```go
 type ListOwnedFilesMimeAscRow struct {
-    ID           pgtype.UUID        `json:"id"`
-    UserID       pgtype.UUID        `json:"user_id"`
-    S3Key        string             `json:"s3_key"`
-    Name         string             `json:"name"`
-    MimeType     MimeType           `json:"mime_type"`
-    Size         int64              `json:"size"`
-    Checksum     pgtype.Text        `json:"checksum"`
-    Status       UploadStatus       `json:"status"`
-    CreatedAt    pgtype.Timestamptz `json:"created_at"`
-    UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-    FavoritedAt  pgtype.Timestamptz `json:"favorited_at"`
-    LastViewedAt pgtype.Timestamptz `json:"last_viewed_at"`
+    ID             pgtype.UUID            `json:"id"`
+    UserID         pgtype.UUID            `json:"user_id"`
+    S3Key          string                 `json:"s3_key"`
+    Name           string                 `json:"name"`
+    MimeType       MimeType               `json:"mime_type"`
+    Size           int64                  `json:"size"`
+    Checksum       pgtype.Text            `json:"checksum"`
+    Status         UploadStatus           `json:"status"`
+    CreatedAt      pgtype.Timestamptz     `json:"created_at"`
+    UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+    DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+    DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+    S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
+    DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
+    FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
+    LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 ```
 
 <a name="ListOwnedFilesMimeDescParams"></a>
-## type [ListOwnedFilesMimeDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L446-L461>)
+## type [ListOwnedFilesMimeDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L535-L550>)
 
 
 
@@ -378,29 +470,33 @@ type ListOwnedFilesMimeDescParams struct {
 ```
 
 <a name="ListOwnedFilesMimeDescRow"></a>
-## type [ListOwnedFilesMimeDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L463-L476>)
+## type [ListOwnedFilesMimeDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L552-L569>)
 
 
 
 ```go
 type ListOwnedFilesMimeDescRow struct {
-    ID           pgtype.UUID        `json:"id"`
-    UserID       pgtype.UUID        `json:"user_id"`
-    S3Key        string             `json:"s3_key"`
-    Name         string             `json:"name"`
-    MimeType     MimeType           `json:"mime_type"`
-    Size         int64              `json:"size"`
-    Checksum     pgtype.Text        `json:"checksum"`
-    Status       UploadStatus       `json:"status"`
-    CreatedAt    pgtype.Timestamptz `json:"created_at"`
-    UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-    FavoritedAt  pgtype.Timestamptz `json:"favorited_at"`
-    LastViewedAt pgtype.Timestamptz `json:"last_viewed_at"`
+    ID             pgtype.UUID            `json:"id"`
+    UserID         pgtype.UUID            `json:"user_id"`
+    S3Key          string                 `json:"s3_key"`
+    Name           string                 `json:"name"`
+    MimeType       MimeType               `json:"mime_type"`
+    Size           int64                  `json:"size"`
+    Checksum       pgtype.Text            `json:"checksum"`
+    Status         UploadStatus           `json:"status"`
+    CreatedAt      pgtype.Timestamptz     `json:"created_at"`
+    UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+    DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+    DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+    S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
+    DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
+    FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
+    LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 ```
 
 <a name="ListOwnedFilesNameAscParams"></a>
-## type [ListOwnedFilesNameAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L554-L569>)
+## type [ListOwnedFilesNameAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L652-L667>)
 
 
 
@@ -424,29 +520,33 @@ type ListOwnedFilesNameAscParams struct {
 ```
 
 <a name="ListOwnedFilesNameAscRow"></a>
-## type [ListOwnedFilesNameAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L571-L584>)
+## type [ListOwnedFilesNameAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L669-L686>)
 
 
 
 ```go
 type ListOwnedFilesNameAscRow struct {
-    ID           pgtype.UUID        `json:"id"`
-    UserID       pgtype.UUID        `json:"user_id"`
-    S3Key        string             `json:"s3_key"`
-    Name         string             `json:"name"`
-    MimeType     MimeType           `json:"mime_type"`
-    Size         int64              `json:"size"`
-    Checksum     pgtype.Text        `json:"checksum"`
-    Status       UploadStatus       `json:"status"`
-    CreatedAt    pgtype.Timestamptz `json:"created_at"`
-    UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-    FavoritedAt  pgtype.Timestamptz `json:"favorited_at"`
-    LastViewedAt pgtype.Timestamptz `json:"last_viewed_at"`
+    ID             pgtype.UUID            `json:"id"`
+    UserID         pgtype.UUID            `json:"user_id"`
+    S3Key          string                 `json:"s3_key"`
+    Name           string                 `json:"name"`
+    MimeType       MimeType               `json:"mime_type"`
+    Size           int64                  `json:"size"`
+    Checksum       pgtype.Text            `json:"checksum"`
+    Status         UploadStatus           `json:"status"`
+    CreatedAt      pgtype.Timestamptz     `json:"created_at"`
+    UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+    DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+    DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+    S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
+    DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
+    FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
+    LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 ```
 
 <a name="ListOwnedFilesNameDescParams"></a>
-## type [ListOwnedFilesNameDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L662-L677>)
+## type [ListOwnedFilesNameDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L769-L784>)
 
 
 
@@ -470,29 +570,33 @@ type ListOwnedFilesNameDescParams struct {
 ```
 
 <a name="ListOwnedFilesNameDescRow"></a>
-## type [ListOwnedFilesNameDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L679-L692>)
+## type [ListOwnedFilesNameDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L786-L803>)
 
 
 
 ```go
 type ListOwnedFilesNameDescRow struct {
-    ID           pgtype.UUID        `json:"id"`
-    UserID       pgtype.UUID        `json:"user_id"`
-    S3Key        string             `json:"s3_key"`
-    Name         string             `json:"name"`
-    MimeType     MimeType           `json:"mime_type"`
-    Size         int64              `json:"size"`
-    Checksum     pgtype.Text        `json:"checksum"`
-    Status       UploadStatus       `json:"status"`
-    CreatedAt    pgtype.Timestamptz `json:"created_at"`
-    UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-    FavoritedAt  pgtype.Timestamptz `json:"favorited_at"`
-    LastViewedAt pgtype.Timestamptz `json:"last_viewed_at"`
+    ID             pgtype.UUID            `json:"id"`
+    UserID         pgtype.UUID            `json:"user_id"`
+    S3Key          string                 `json:"s3_key"`
+    Name           string                 `json:"name"`
+    MimeType       MimeType               `json:"mime_type"`
+    Size           int64                  `json:"size"`
+    Checksum       pgtype.Text            `json:"checksum"`
+    Status         UploadStatus           `json:"status"`
+    CreatedAt      pgtype.Timestamptz     `json:"created_at"`
+    UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+    DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+    DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+    S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
+    DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
+    FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
+    LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 ```
 
 <a name="ListOwnedFilesSizeAscParams"></a>
-## type [ListOwnedFilesSizeAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L770-L785>)
+## type [ListOwnedFilesSizeAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L886-L901>)
 
 
 
@@ -516,29 +620,33 @@ type ListOwnedFilesSizeAscParams struct {
 ```
 
 <a name="ListOwnedFilesSizeAscRow"></a>
-## type [ListOwnedFilesSizeAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L787-L800>)
+## type [ListOwnedFilesSizeAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L903-L920>)
 
 
 
 ```go
 type ListOwnedFilesSizeAscRow struct {
-    ID           pgtype.UUID        `json:"id"`
-    UserID       pgtype.UUID        `json:"user_id"`
-    S3Key        string             `json:"s3_key"`
-    Name         string             `json:"name"`
-    MimeType     MimeType           `json:"mime_type"`
-    Size         int64              `json:"size"`
-    Checksum     pgtype.Text        `json:"checksum"`
-    Status       UploadStatus       `json:"status"`
-    CreatedAt    pgtype.Timestamptz `json:"created_at"`
-    UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-    FavoritedAt  pgtype.Timestamptz `json:"favorited_at"`
-    LastViewedAt pgtype.Timestamptz `json:"last_viewed_at"`
+    ID             pgtype.UUID            `json:"id"`
+    UserID         pgtype.UUID            `json:"user_id"`
+    S3Key          string                 `json:"s3_key"`
+    Name           string                 `json:"name"`
+    MimeType       MimeType               `json:"mime_type"`
+    Size           int64                  `json:"size"`
+    Checksum       pgtype.Text            `json:"checksum"`
+    Status         UploadStatus           `json:"status"`
+    CreatedAt      pgtype.Timestamptz     `json:"created_at"`
+    UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+    DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+    DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+    S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
+    DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
+    FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
+    LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 ```
 
 <a name="ListOwnedFilesSizeDescParams"></a>
-## type [ListOwnedFilesSizeDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L878-L893>)
+## type [ListOwnedFilesSizeDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1003-L1018>)
 
 
 
@@ -562,29 +670,33 @@ type ListOwnedFilesSizeDescParams struct {
 ```
 
 <a name="ListOwnedFilesSizeDescRow"></a>
-## type [ListOwnedFilesSizeDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L895-L908>)
+## type [ListOwnedFilesSizeDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1020-L1037>)
 
 
 
 ```go
 type ListOwnedFilesSizeDescRow struct {
-    ID           pgtype.UUID        `json:"id"`
-    UserID       pgtype.UUID        `json:"user_id"`
-    S3Key        string             `json:"s3_key"`
-    Name         string             `json:"name"`
-    MimeType     MimeType           `json:"mime_type"`
-    Size         int64              `json:"size"`
-    Checksum     pgtype.Text        `json:"checksum"`
-    Status       UploadStatus       `json:"status"`
-    CreatedAt    pgtype.Timestamptz `json:"created_at"`
-    UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-    FavoritedAt  pgtype.Timestamptz `json:"favorited_at"`
-    LastViewedAt pgtype.Timestamptz `json:"last_viewed_at"`
+    ID             pgtype.UUID            `json:"id"`
+    UserID         pgtype.UUID            `json:"user_id"`
+    S3Key          string                 `json:"s3_key"`
+    Name           string                 `json:"name"`
+    MimeType       MimeType               `json:"mime_type"`
+    Size           int64                  `json:"size"`
+    Checksum       pgtype.Text            `json:"checksum"`
+    Status         UploadStatus           `json:"status"`
+    CreatedAt      pgtype.Timestamptz     `json:"created_at"`
+    UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+    DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+    DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+    S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
+    DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
+    FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
+    LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 ```
 
 <a name="ListOwnedFilesStatusAscParams"></a>
-## type [ListOwnedFilesStatusAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L986-L1001>)
+## type [ListOwnedFilesStatusAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1120-L1135>)
 
 
 
@@ -608,29 +720,33 @@ type ListOwnedFilesStatusAscParams struct {
 ```
 
 <a name="ListOwnedFilesStatusAscRow"></a>
-## type [ListOwnedFilesStatusAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1003-L1016>)
+## type [ListOwnedFilesStatusAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1137-L1154>)
 
 
 
 ```go
 type ListOwnedFilesStatusAscRow struct {
-    ID           pgtype.UUID        `json:"id"`
-    UserID       pgtype.UUID        `json:"user_id"`
-    S3Key        string             `json:"s3_key"`
-    Name         string             `json:"name"`
-    MimeType     MimeType           `json:"mime_type"`
-    Size         int64              `json:"size"`
-    Checksum     pgtype.Text        `json:"checksum"`
-    Status       UploadStatus       `json:"status"`
-    CreatedAt    pgtype.Timestamptz `json:"created_at"`
-    UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-    FavoritedAt  pgtype.Timestamptz `json:"favorited_at"`
-    LastViewedAt pgtype.Timestamptz `json:"last_viewed_at"`
+    ID             pgtype.UUID            `json:"id"`
+    UserID         pgtype.UUID            `json:"user_id"`
+    S3Key          string                 `json:"s3_key"`
+    Name           string                 `json:"name"`
+    MimeType       MimeType               `json:"mime_type"`
+    Size           int64                  `json:"size"`
+    Checksum       pgtype.Text            `json:"checksum"`
+    Status         UploadStatus           `json:"status"`
+    CreatedAt      pgtype.Timestamptz     `json:"created_at"`
+    UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+    DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+    DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+    S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
+    DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
+    FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
+    LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 ```
 
 <a name="ListOwnedFilesStatusDescParams"></a>
-## type [ListOwnedFilesStatusDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1094-L1109>)
+## type [ListOwnedFilesStatusDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1237-L1252>)
 
 
 
@@ -654,29 +770,33 @@ type ListOwnedFilesStatusDescParams struct {
 ```
 
 <a name="ListOwnedFilesStatusDescRow"></a>
-## type [ListOwnedFilesStatusDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1111-L1124>)
+## type [ListOwnedFilesStatusDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1254-L1271>)
 
 
 
 ```go
 type ListOwnedFilesStatusDescRow struct {
-    ID           pgtype.UUID        `json:"id"`
-    UserID       pgtype.UUID        `json:"user_id"`
-    S3Key        string             `json:"s3_key"`
-    Name         string             `json:"name"`
-    MimeType     MimeType           `json:"mime_type"`
-    Size         int64              `json:"size"`
-    Checksum     pgtype.Text        `json:"checksum"`
-    Status       UploadStatus       `json:"status"`
-    CreatedAt    pgtype.Timestamptz `json:"created_at"`
-    UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-    FavoritedAt  pgtype.Timestamptz `json:"favorited_at"`
-    LastViewedAt pgtype.Timestamptz `json:"last_viewed_at"`
+    ID             pgtype.UUID            `json:"id"`
+    UserID         pgtype.UUID            `json:"user_id"`
+    S3Key          string                 `json:"s3_key"`
+    Name           string                 `json:"name"`
+    MimeType       MimeType               `json:"mime_type"`
+    Size           int64                  `json:"size"`
+    Checksum       pgtype.Text            `json:"checksum"`
+    Status         UploadStatus           `json:"status"`
+    CreatedAt      pgtype.Timestamptz     `json:"created_at"`
+    UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+    DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+    DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+    S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
+    DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
+    FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
+    LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 ```
 
 <a name="ListOwnedFilesUpdatedAscParams"></a>
-## type [ListOwnedFilesUpdatedAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1202-L1217>)
+## type [ListOwnedFilesUpdatedAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1354-L1369>)
 
 
 
@@ -700,29 +820,33 @@ type ListOwnedFilesUpdatedAscParams struct {
 ```
 
 <a name="ListOwnedFilesUpdatedAscRow"></a>
-## type [ListOwnedFilesUpdatedAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1219-L1232>)
+## type [ListOwnedFilesUpdatedAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1371-L1388>)
 
 
 
 ```go
 type ListOwnedFilesUpdatedAscRow struct {
-    ID           pgtype.UUID        `json:"id"`
-    UserID       pgtype.UUID        `json:"user_id"`
-    S3Key        string             `json:"s3_key"`
-    Name         string             `json:"name"`
-    MimeType     MimeType           `json:"mime_type"`
-    Size         int64              `json:"size"`
-    Checksum     pgtype.Text        `json:"checksum"`
-    Status       UploadStatus       `json:"status"`
-    CreatedAt    pgtype.Timestamptz `json:"created_at"`
-    UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-    FavoritedAt  pgtype.Timestamptz `json:"favorited_at"`
-    LastViewedAt pgtype.Timestamptz `json:"last_viewed_at"`
+    ID             pgtype.UUID            `json:"id"`
+    UserID         pgtype.UUID            `json:"user_id"`
+    S3Key          string                 `json:"s3_key"`
+    Name           string                 `json:"name"`
+    MimeType       MimeType               `json:"mime_type"`
+    Size           int64                  `json:"size"`
+    Checksum       pgtype.Text            `json:"checksum"`
+    Status         UploadStatus           `json:"status"`
+    CreatedAt      pgtype.Timestamptz     `json:"created_at"`
+    UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+    DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+    DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+    S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
+    DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
+    FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
+    LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 ```
 
 <a name="ListOwnedFilesUpdatedDescParams"></a>
-## type [ListOwnedFilesUpdatedDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1310-L1325>)
+## type [ListOwnedFilesUpdatedDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1471-L1486>)
 
 
 
@@ -746,29 +870,33 @@ type ListOwnedFilesUpdatedDescParams struct {
 ```
 
 <a name="ListOwnedFilesUpdatedDescRow"></a>
-## type [ListOwnedFilesUpdatedDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1327-L1340>)
+## type [ListOwnedFilesUpdatedDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1488-L1505>)
 
 
 
 ```go
 type ListOwnedFilesUpdatedDescRow struct {
-    ID           pgtype.UUID        `json:"id"`
-    UserID       pgtype.UUID        `json:"user_id"`
-    S3Key        string             `json:"s3_key"`
-    Name         string             `json:"name"`
-    MimeType     MimeType           `json:"mime_type"`
-    Size         int64              `json:"size"`
-    Checksum     pgtype.Text        `json:"checksum"`
-    Status       UploadStatus       `json:"status"`
-    CreatedAt    pgtype.Timestamptz `json:"created_at"`
-    UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
-    FavoritedAt  pgtype.Timestamptz `json:"favorited_at"`
-    LastViewedAt pgtype.Timestamptz `json:"last_viewed_at"`
+    ID             pgtype.UUID            `json:"id"`
+    UserID         pgtype.UUID            `json:"user_id"`
+    S3Key          string                 `json:"s3_key"`
+    Name           string                 `json:"name"`
+    MimeType       MimeType               `json:"mime_type"`
+    Size           int64                  `json:"size"`
+    Checksum       pgtype.Text            `json:"checksum"`
+    Status         UploadStatus           `json:"status"`
+    CreatedAt      pgtype.Timestamptz     `json:"created_at"`
+    UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+    DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+    DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+    S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
+    DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
+    FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
+    LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 ```
 
 <a name="MimeType"></a>
-## type [MimeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L57>)
+## type [MimeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L99>)
 
 
 
@@ -788,7 +916,7 @@ const (
 ```
 
 <a name="MimeType.Scan"></a>
-### func \(\*MimeType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L66>)
+### func \(\*MimeType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L108>)
 
 ```go
 func (e *MimeType) Scan(src interface{}) error
@@ -796,8 +924,38 @@ func (e *MimeType) Scan(src interface{}) error
 
 
 
+<a name="NullFileDeletionStatus"></a>
+## type [NullFileDeletionStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L33-L36>)
+
+
+
+```go
+type NullFileDeletionStatus struct {
+    FileDeletionStatus FileDeletionStatus `json:"file_deletion_status"`
+    Valid              bool               `json:"valid"` // Valid is true if FileDeletionStatus is not NULL
+}
+```
+
+<a name="NullFileDeletionStatus.Scan"></a>
+### func \(\*NullFileDeletionStatus\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L39>)
+
+```go
+func (ns *NullFileDeletionStatus) Scan(value interface{}) error
+```
+
+Scan implements the Scanner interface.
+
+<a name="NullFileDeletionStatus.Value"></a>
+### func \(NullFileDeletionStatus\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L49>)
+
+```go
+func (ns NullFileDeletionStatus) Value() (driver.Value, error)
+```
+
+Value implements the driver Valuer interface.
+
 <a name="NullGranteeType"></a>
-## type [NullGranteeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L34-L37>)
+## type [NullGranteeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L76-L79>)
 
 
 
@@ -809,7 +967,7 @@ type NullGranteeType struct {
 ```
 
 <a name="NullGranteeType.Scan"></a>
-### func \(\*NullGranteeType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L40>)
+### func \(\*NullGranteeType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L82>)
 
 ```go
 func (ns *NullGranteeType) Scan(value interface{}) error
@@ -818,7 +976,7 @@ func (ns *NullGranteeType) Scan(value interface{}) error
 Scan implements the Scanner interface.
 
 <a name="NullGranteeType.Value"></a>
-### func \(NullGranteeType\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L50>)
+### func \(NullGranteeType\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L92>)
 
 ```go
 func (ns NullGranteeType) Value() (driver.Value, error)
@@ -827,7 +985,7 @@ func (ns NullGranteeType) Value() (driver.Value, error)
 Value implements the driver Valuer interface.
 
 <a name="NullMimeType"></a>
-## type [NullMimeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L78-L81>)
+## type [NullMimeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L120-L123>)
 
 
 
@@ -839,7 +997,7 @@ type NullMimeType struct {
 ```
 
 <a name="NullMimeType.Scan"></a>
-### func \(\*NullMimeType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L84>)
+### func \(\*NullMimeType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L126>)
 
 ```go
 func (ns *NullMimeType) Scan(value interface{}) error
@@ -848,7 +1006,7 @@ func (ns *NullMimeType) Scan(value interface{}) error
 Scan implements the Scanner interface.
 
 <a name="NullMimeType.Value"></a>
-### func \(NullMimeType\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L94>)
+### func \(NullMimeType\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L136>)
 
 ```go
 func (ns NullMimeType) Value() (driver.Value, error)
@@ -857,7 +1015,7 @@ func (ns NullMimeType) Value() (driver.Value, error)
 Value implements the driver Valuer interface.
 
 <a name="NullPermission"></a>
-## type [NullPermission](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L121-L124>)
+## type [NullPermission](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L163-L166>)
 
 
 
@@ -869,7 +1027,7 @@ type NullPermission struct {
 ```
 
 <a name="NullPermission.Scan"></a>
-### func \(\*NullPermission\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L127>)
+### func \(\*NullPermission\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L169>)
 
 ```go
 func (ns *NullPermission) Scan(value interface{}) error
@@ -878,7 +1036,7 @@ func (ns *NullPermission) Scan(value interface{}) error
 Scan implements the Scanner interface.
 
 <a name="NullPermission.Value"></a>
-### func \(NullPermission\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L137>)
+### func \(NullPermission\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L179>)
 
 ```go
 func (ns NullPermission) Value() (driver.Value, error)
@@ -887,7 +1045,7 @@ func (ns NullPermission) Value() (driver.Value, error)
 Value implements the driver Valuer interface.
 
 <a name="NullUploadStatus"></a>
-## type [NullUploadStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L164-L167>)
+## type [NullUploadStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L206-L209>)
 
 
 
@@ -899,7 +1057,7 @@ type NullUploadStatus struct {
 ```
 
 <a name="NullUploadStatus.Scan"></a>
-### func \(\*NullUploadStatus\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L170>)
+### func \(\*NullUploadStatus\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L212>)
 
 ```go
 func (ns *NullUploadStatus) Scan(value interface{}) error
@@ -908,7 +1066,7 @@ func (ns *NullUploadStatus) Scan(value interface{}) error
 Scan implements the Scanner interface.
 
 <a name="NullUploadStatus.Value"></a>
-### func \(NullUploadStatus\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L180>)
+### func \(NullUploadStatus\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L222>)
 
 ```go
 func (ns NullUploadStatus) Value() (driver.Value, error)
@@ -917,7 +1075,7 @@ func (ns NullUploadStatus) Value() (driver.Value, error)
 Value implements the driver Valuer interface.
 
 <a name="Permission"></a>
-## type [Permission](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L101>)
+## type [Permission](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L143>)
 
 
 
@@ -936,7 +1094,7 @@ const (
 ```
 
 <a name="Permission.Scan"></a>
-### func \(\*Permission\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L109>)
+### func \(\*Permission\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L151>)
 
 ```go
 func (e *Permission) Scan(src interface{}) error
@@ -945,12 +1103,15 @@ func (e *Permission) Scan(src interface{}) error
 
 
 <a name="Querier"></a>
-## type [Querier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/querier.go#L13-L30>)
+## type [Querier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/querier.go#L13-L40>)
 
 
 
 ```go
 type Querier interface {
+    // Fetches a file only if it belongs to the given user and has not been soft-deleted.
+    // Returns sql.ErrNoRows if not found or already in a deletion state.
+    GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) (GetFileByOwnerRow, error)
     GetFileIfViewable(ctx context.Context, arg GetFileIfViewableParams) (File, error)
     GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtype.UUID, error)
     ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFilesCreatedAscParams) ([]ListOwnedFilesCreatedAscRow, error)
@@ -965,6 +1126,13 @@ type Querier interface {
     ListOwnedFilesStatusDesc(ctx context.Context, arg ListOwnedFilesStatusDescParams) ([]ListOwnedFilesStatusDescRow, error)
     ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFilesUpdatedAscParams) ([]ListOwnedFilesUpdatedAscRow, error)
     ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFilesUpdatedDescParams) ([]ListOwnedFilesUpdatedDescRow, error)
+    // Called by the cleanup job handler once S3 deletion is confirmed.
+    MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
+    // Records the QStash message ID after publishing the async cleanup job.
+    SetFileDeletionJobID(ctx context.Context, arg SetFileDeletionJobIDParams) error
+    // Marks a file as pending deletion. Only applies if the file is owned by the caller
+    // and has not already entered a deletion state (idempotency-safe).
+    SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)
     SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
     UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
 }
@@ -990,8 +1158,17 @@ func New(db DBTX) *Queries
 
 
 
+<a name="Queries.GetFileByOwner"></a>
+### func \(\*Queries\) [GetFileByOwner](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L48>)
+
+```go
+func (q *Queries) GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) (GetFileByOwnerRow, error)
+```
+
+Fetches a file only if it belongs to the given user and has not been soft\-deleted. Returns sql.ErrNoRows if not found or already in a deletion state.
+
 <a name="Queries.GetFileIfViewable"></a>
-### func \(\*Queries\) [GetFileIfViewable](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L71>)
+### func \(\*Queries\) [GetFileIfViewable](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L128>)
 
 ```go
 func (q *Queries) GetFileIfViewable(ctx context.Context, arg GetFileIfViewableParams) (File, error)
@@ -1009,7 +1186,7 @@ func (q *Queries) GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtyp
 
 
 <a name="Queries.ListOwnedFilesCreatedAsc"></a>
-### func \(\*Queries\) [ListOwnedFilesCreatedAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L154>)
+### func \(\*Queries\) [ListOwnedFilesCreatedAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L220>)
 
 ```go
 func (q *Queries) ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFilesCreatedAscParams) ([]ListOwnedFilesCreatedAscRow, error)
@@ -1018,7 +1195,7 @@ func (q *Queries) ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFil
 
 
 <a name="Queries.ListOwnedFilesCreatedDesc"></a>
-### func \(\*Queries\) [ListOwnedFilesCreatedDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L262>)
+### func \(\*Queries\) [ListOwnedFilesCreatedDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L337>)
 
 ```go
 func (q *Queries) ListOwnedFilesCreatedDesc(ctx context.Context, arg ListOwnedFilesCreatedDescParams) ([]ListOwnedFilesCreatedDescRow, error)
@@ -1027,7 +1204,7 @@ func (q *Queries) ListOwnedFilesCreatedDesc(ctx context.Context, arg ListOwnedFi
 
 
 <a name="Queries.ListOwnedFilesMimeAsc"></a>
-### func \(\*Queries\) [ListOwnedFilesMimeAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L370>)
+### func \(\*Queries\) [ListOwnedFilesMimeAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L454>)
 
 ```go
 func (q *Queries) ListOwnedFilesMimeAsc(ctx context.Context, arg ListOwnedFilesMimeAscParams) ([]ListOwnedFilesMimeAscRow, error)
@@ -1036,7 +1213,7 @@ func (q *Queries) ListOwnedFilesMimeAsc(ctx context.Context, arg ListOwnedFilesM
 
 
 <a name="Queries.ListOwnedFilesMimeDesc"></a>
-### func \(\*Queries\) [ListOwnedFilesMimeDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L478>)
+### func \(\*Queries\) [ListOwnedFilesMimeDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L571>)
 
 ```go
 func (q *Queries) ListOwnedFilesMimeDesc(ctx context.Context, arg ListOwnedFilesMimeDescParams) ([]ListOwnedFilesMimeDescRow, error)
@@ -1045,7 +1222,7 @@ func (q *Queries) ListOwnedFilesMimeDesc(ctx context.Context, arg ListOwnedFiles
 
 
 <a name="Queries.ListOwnedFilesNameAsc"></a>
-### func \(\*Queries\) [ListOwnedFilesNameAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L586>)
+### func \(\*Queries\) [ListOwnedFilesNameAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L688>)
 
 ```go
 func (q *Queries) ListOwnedFilesNameAsc(ctx context.Context, arg ListOwnedFilesNameAscParams) ([]ListOwnedFilesNameAscRow, error)
@@ -1054,7 +1231,7 @@ func (q *Queries) ListOwnedFilesNameAsc(ctx context.Context, arg ListOwnedFilesN
 
 
 <a name="Queries.ListOwnedFilesNameDesc"></a>
-### func \(\*Queries\) [ListOwnedFilesNameDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L694>)
+### func \(\*Queries\) [ListOwnedFilesNameDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L805>)
 
 ```go
 func (q *Queries) ListOwnedFilesNameDesc(ctx context.Context, arg ListOwnedFilesNameDescParams) ([]ListOwnedFilesNameDescRow, error)
@@ -1063,7 +1240,7 @@ func (q *Queries) ListOwnedFilesNameDesc(ctx context.Context, arg ListOwnedFiles
 
 
 <a name="Queries.ListOwnedFilesSizeAsc"></a>
-### func \(\*Queries\) [ListOwnedFilesSizeAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L802>)
+### func \(\*Queries\) [ListOwnedFilesSizeAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L922>)
 
 ```go
 func (q *Queries) ListOwnedFilesSizeAsc(ctx context.Context, arg ListOwnedFilesSizeAscParams) ([]ListOwnedFilesSizeAscRow, error)
@@ -1072,7 +1249,7 @@ func (q *Queries) ListOwnedFilesSizeAsc(ctx context.Context, arg ListOwnedFilesS
 
 
 <a name="Queries.ListOwnedFilesSizeDesc"></a>
-### func \(\*Queries\) [ListOwnedFilesSizeDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L910>)
+### func \(\*Queries\) [ListOwnedFilesSizeDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1039>)
 
 ```go
 func (q *Queries) ListOwnedFilesSizeDesc(ctx context.Context, arg ListOwnedFilesSizeDescParams) ([]ListOwnedFilesSizeDescRow, error)
@@ -1081,7 +1258,7 @@ func (q *Queries) ListOwnedFilesSizeDesc(ctx context.Context, arg ListOwnedFiles
 
 
 <a name="Queries.ListOwnedFilesStatusAsc"></a>
-### func \(\*Queries\) [ListOwnedFilesStatusAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1018>)
+### func \(\*Queries\) [ListOwnedFilesStatusAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1156>)
 
 ```go
 func (q *Queries) ListOwnedFilesStatusAsc(ctx context.Context, arg ListOwnedFilesStatusAscParams) ([]ListOwnedFilesStatusAscRow, error)
@@ -1090,7 +1267,7 @@ func (q *Queries) ListOwnedFilesStatusAsc(ctx context.Context, arg ListOwnedFile
 
 
 <a name="Queries.ListOwnedFilesStatusDesc"></a>
-### func \(\*Queries\) [ListOwnedFilesStatusDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1126>)
+### func \(\*Queries\) [ListOwnedFilesStatusDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1273>)
 
 ```go
 func (q *Queries) ListOwnedFilesStatusDesc(ctx context.Context, arg ListOwnedFilesStatusDescParams) ([]ListOwnedFilesStatusDescRow, error)
@@ -1099,7 +1276,7 @@ func (q *Queries) ListOwnedFilesStatusDesc(ctx context.Context, arg ListOwnedFil
 
 
 <a name="Queries.ListOwnedFilesUpdatedAsc"></a>
-### func \(\*Queries\) [ListOwnedFilesUpdatedAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1234>)
+### func \(\*Queries\) [ListOwnedFilesUpdatedAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1390>)
 
 ```go
 func (q *Queries) ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFilesUpdatedAscParams) ([]ListOwnedFilesUpdatedAscRow, error)
@@ -1108,13 +1285,40 @@ func (q *Queries) ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFil
 
 
 <a name="Queries.ListOwnedFilesUpdatedDesc"></a>
-### func \(\*Queries\) [ListOwnedFilesUpdatedDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1342>)
+### func \(\*Queries\) [ListOwnedFilesUpdatedDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1507>)
 
 ```go
 func (q *Queries) ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFilesUpdatedDescParams) ([]ListOwnedFilesUpdatedDescRow, error)
 ```
 
 
+
+<a name="Queries.MarkFileDeleted"></a>
+### func \(\*Queries\) [MarkFileDeleted](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1570>)
+
+```go
+func (q *Queries) MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
+```
+
+Called by the cleanup job handler once S3 deletion is confirmed.
+
+<a name="Queries.SetFileDeletionJobID"></a>
+### func \(\*Queries\) [SetFileDeletionJobID](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1590>)
+
+```go
+func (q *Queries) SetFileDeletionJobID(ctx context.Context, arg SetFileDeletionJobIDParams) error
+```
+
+Records the QStash message ID after publishing the async cleanup job.
+
+<a name="Queries.SoftDeleteFile"></a>
+### func \(\*Queries\) [SoftDeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1613>)
+
+```go
+func (q *Queries) SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)
+```
+
+Marks a file as pending deletion. Only applies if the file is owned by the caller and has not already entered a deletion state \(idempotency\-safe\).
 
 <a name="Queries.SoftDeleteUserByClerkID"></a>
 ### func \(\*Queries\) [SoftDeleteUserByClerkID](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/users.sql.go#L35>)
@@ -1143,8 +1347,32 @@ func (q *Queries) WithTx(tx pgx.Tx) *Queries
 
 
 
+<a name="SetFileDeletionJobIDParams"></a>
+## type [SetFileDeletionJobIDParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1584-L1587>)
+
+
+
+```go
+type SetFileDeletionJobIDParams struct {
+    JobID  pgtype.Text `json:"job_id"`
+    FileID pgtype.UUID `json:"file_id"`
+}
+```
+
+<a name="SoftDeleteFileParams"></a>
+## type [SoftDeleteFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1606-L1609>)
+
+
+
+```go
+type SoftDeleteFileParams struct {
+    FileID  pgtype.UUID `json:"file_id"`
+    OwnerID pgtype.UUID `json:"owner_id"`
+}
+```
+
 <a name="UploadStatus"></a>
-## type [UploadStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L144>)
+## type [UploadStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L186>)
 
 
 
@@ -1163,7 +1391,7 @@ const (
 ```
 
 <a name="UploadStatus.Scan"></a>
-### func \(\*UploadStatus\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L152>)
+### func \(\*UploadStatus\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L194>)
 
 ```go
 func (e *UploadStatus) Scan(src interface{}) error
@@ -1188,7 +1416,7 @@ type UpsertClerkUserParams struct {
 ```
 
 <a name="User"></a>
-## type [User](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L229-L240>)
+## type [User](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L275-L286>)
 
 
 

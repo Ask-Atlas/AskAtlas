@@ -11,6 +11,7 @@ Package middleware provides reusable HTTP interceptors for routing and authentic
 ## Index
 
 - [func ClerkAuth\(resolver authctx.UserIDResolver\) func\(http.Handler\) http.Handler](<#ClerkAuth>)
+- [func QStashVerifier\(currentSigningKey, nextSigningKey string\) func\(next http.Handler\) http.Handler](<#QStashVerifier>)
 - [func SVIXVerifier\(secret string\) func\(next http.Handler\) http.Handler](<#SVIXVerifier>)
 
 
@@ -22,6 +23,15 @@ func ClerkAuth(resolver authctx.UserIDResolver) func(http.Handler) http.Handler
 ```
 
 ClerkAuth creates an HTTP middleware that extracts the Clerk user session, validates it, and resolves the database user ID injecting it into the context.
+
+<a name="QStashVerifier"></a>
+## func [QStashVerifier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/middleware/qstash_verifier.go#L18>)
+
+```go
+func QStashVerifier(currentSigningKey, nextSigningKey string) func(next http.Handler) http.Handler
+```
+
+QStashVerifier creates an HTTP middleware that validates QStash webhook signatures. currentSigningKey and nextSigningKey are the Upstash signing keys \(injected from main\).
 
 <a name="SVIXVerifier"></a>
 ## func [SVIXVerifier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/middleware/svix_verifier.go#L15>)
