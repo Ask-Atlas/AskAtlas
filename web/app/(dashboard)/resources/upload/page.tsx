@@ -135,7 +135,9 @@ export default function UploadResourcePage() {
   const [isDragging, setIsDragging] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [selectedCourse, setSelectedCourse] = useState<string | "all">("all");
-  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(
+    null,
+  );
 
   // Derive courses available for filtering
   const uniqueCourses = React.useMemo(() => {
@@ -148,7 +150,9 @@ export default function UploadResourcePage() {
 
   const filteredDocuments = React.useMemo(() => {
     return documents.filter(
-      (doc) => selectedCourse === "all" || doc.courses?.some((c) => c.name === selectedCourse)
+      (doc) =>
+        selectedCourse === "all" ||
+        doc.courses?.some((c) => c.name === selectedCourse),
     );
   }, [documents, selectedCourse]);
 
@@ -168,10 +172,12 @@ export default function UploadResourcePage() {
     const diffDays = Math.floor(diffHours / 24);
 
     if (diffHours < 1) return "Just now";
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    if (diffHours < 24)
+      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
     if (diffDays === 1) return "Yesterday";
     if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? "s" : ""} ago`;
+    if (diffDays < 30)
+      return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? "s" : ""} ago`;
     return date.toLocaleDateString();
   };
 
@@ -182,7 +188,7 @@ export default function UploadResourcePage() {
       progress: 0,
       status: "uploading" as const,
     }));
-    
+
     setUploadQueue((prev) => [...prev, ...newTasks]);
 
     // Simulate upload progress
@@ -194,9 +200,11 @@ export default function UploadResourcePage() {
           currentProgress = 100;
           clearInterval(interval);
           setUploadQueue((prev) =>
-            prev.map((t) => (t.id === task.id ? { ...t, progress: 100, status: "success" } : t))
+            prev.map((t) =>
+              t.id === task.id ? { ...t, progress: 100, status: "success" } : t,
+            ),
           );
-          
+
           // Add to documents list on success
           setTimeout(() => {
             const newDoc: Document = {
@@ -205,7 +213,7 @@ export default function UploadResourcePage() {
               size: task.file.size,
               mime_type: task.file.type || "application/octet-stream",
               status: "complete",
-              s3_key: `uploads/${task.file.name.replace(/\s+/g, '-').toLowerCase()}`,
+              s3_key: `uploads/${task.file.name.replace(/\s+/g, "-").toLowerCase()}`,
               created_at: new Date().toISOString(),
               user_id: "current-user-id",
               courses: [],
@@ -213,8 +221,10 @@ export default function UploadResourcePage() {
             };
             setDocuments((prev) => [newDoc, ...prev]);
             setTotalDocuments((prev) => prev + 1);
-            setTotalStorage((prev) => prev + Math.round(task.file.size / (1024 * 1024)));
-            
+            setTotalStorage(
+              (prev) => prev + Math.round(task.file.size / (1024 * 1024)),
+            );
+
             // Remove from queue 2s after success
             setTimeout(() => {
               setUploadQueue((prev) => prev.filter((t) => t.id !== task.id));
@@ -222,7 +232,9 @@ export default function UploadResourcePage() {
           }, 300);
         } else {
           setUploadQueue((prev) =>
-            prev.map((t) => (t.id === task.id ? { ...t, progress: currentProgress } : t))
+            prev.map((t) =>
+              t.id === task.id ? { ...t, progress: currentProgress } : t,
+            ),
           );
         }
       }, 300);
@@ -239,20 +251,26 @@ export default function UploadResourcePage() {
     }
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      processFiles(Array.from(e.dataTransfer.files));
-    }
-  }, [processFiles]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        processFiles(Array.from(e.dataTransfer.files));
+      }
+    },
+    [processFiles],
+  );
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      processFiles(Array.from(e.target.files));
-    }
-  }, [processFiles]);
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files.length > 0) {
+        processFiles(Array.from(e.target.files));
+      }
+    },
+    [processFiles],
+  );
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-[#1a1a1a] p-6 text-zinc-900 dark:text-zinc-100 font-sans relative transition-colors duration-200">
@@ -284,7 +302,7 @@ export default function UploadResourcePage() {
         </div>
 
         {/* Upload Zone (Inline) */}
-        <div 
+        <div
           className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-200 flex flex-col items-center justify-center min-h-[300px] ${
             isDragging
               ? "border-orange-500 bg-orange-500/5 shadow-[0_0_30px_rgba(249,115,22,0.1)]"
@@ -302,7 +320,8 @@ export default function UploadResourcePage() {
             Click or drag files to upload
           </h3>
           <p className="text-zinc-500 dark:text-zinc-400 text-sm max-w-md mx-auto mb-8">
-            Support for PDF, DOCX, PPT, PPTX, TXT, EPUB, JPEG, PNG, and WEBP. Maximum file size 50MB per file.
+            Support for PDF, DOCX, PPT, PPTX, TXT, EPUB, JPEG, PNG, and WEBP.
+            Maximum file size 50MB per file.
           </p>
 
           <label className="relative cursor-pointer bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-xl font-medium transition-all shadow-lg shadow-orange-500/20 active:scale-95">
@@ -321,28 +340,44 @@ export default function UploadResourcePage() {
         {uploadQueue.length > 0 && (
           <div className="bg-white dark:bg-zinc-900/40 rounded-2xl border border-zinc-200 dark:border-zinc-800/50 p-6 space-y-4 shadow-sm dark:shadow-none">
             <h3 className="text-lg font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
-              <Upload className="w-5 h-5 text-zinc-500 dark:text-zinc-400" /> Active Uploads
+              <Upload className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />{" "}
+              Active Uploads
             </h3>
             <div className="space-y-3">
               {uploadQueue.map((task) => (
-                <div key={task.id} className="p-4 rounded-xl bg-zinc-50 dark:bg-[#252525] border border-zinc-200 dark:border-zinc-800/50">
+                <div
+                  key={task.id}
+                  className="p-4 rounded-xl bg-zinc-50 dark:bg-[#252525] border border-zinc-200 dark:border-zinc-800/50"
+                >
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       <FileIcon className="w-5 h-5 text-zinc-500 dark:text-zinc-400" />
                       <div>
-                        <p className="text-sm font-medium text-zinc-900 dark:text-white">{task.file.name}</p>
-                        <p className="text-xs text-zinc-500">{formatFileSize(task.file.size)}</p>
+                        <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                          {task.file.name}
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          {formatFileSize(task.file.size)}
+                        </p>
                       </div>
                     </div>
-                    {task.status === "uploading" && <span className="text-sm font-medium text-orange-500">{task.progress}%</span>}
-                    {task.status === "success" && <CheckCircle2 className="w-5 h-5 text-green-500" />}
-                    {task.status === "error" && <AlertCircle className="w-5 h-5 text-red-500" />}
+                    {task.status === "uploading" && (
+                      <span className="text-sm font-medium text-orange-500">
+                        {task.progress}%
+                      </span>
+                    )}
+                    {task.status === "success" && (
+                      <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    )}
+                    {task.status === "error" && (
+                      <AlertCircle className="w-5 h-5 text-red-500" />
+                    )}
                   </div>
                   {task.status === "uploading" && (
                     <div className="h-1.5 w-full bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-orange-500 transition-all duration-300 ease-out" 
-                        style={{ width: `${task.progress}%` }} 
+                      <div
+                        className="h-full bg-orange-500 transition-all duration-300 ease-out"
+                        style={{ width: `${task.progress}%` }}
                       />
                     </div>
                   )}
@@ -358,8 +393,8 @@ export default function UploadResourcePage() {
             <button
               onClick={() => setSelectedCourse("all")}
               className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
-                selectedCourse === "all" 
-                  ? "bg-zinc-900 text-white dark:bg-white dark:text-black border-transparent" 
+                selectedCourse === "all"
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-black border-transparent"
                   : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 dark:border-zinc-700"
               }`}
             >
@@ -370,8 +405,8 @@ export default function UploadResourcePage() {
                 key={course}
                 onClick={() => setSelectedCourse(course)}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors border ${
-                  selectedCourse === course 
-                    ? "bg-purple-500 text-white border-transparent" 
+                  selectedCourse === course
+                    ? "bg-purple-500 text-white border-transparent"
                     : "bg-white text-zinc-600 border-zinc-200 hover:bg-zinc-50 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 dark:border-zinc-700"
                 }`}
               >
@@ -402,8 +437,12 @@ export default function UploadResourcePage() {
         {filteredDocuments.length === 0 ? (
           <div className="text-center py-16 bg-white dark:bg-zinc-900/20 rounded-2xl border border-zinc-200 dark:border-zinc-800/50 shadow-sm dark:shadow-none">
             <FileText className="w-12 h-12 text-zinc-300 dark:text-zinc-700 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-zinc-900 dark:text-white mb-2">No documents found</h3>
-            <p className="text-zinc-500 text-sm">Upload a document or change your course filter.</p>
+            <h3 className="text-lg font-medium text-zinc-900 dark:text-white mb-2">
+              No documents found
+            </h3>
+            <p className="text-zinc-500 text-sm">
+              Upload a document or change your course filter.
+            </p>
           </div>
         ) : viewMode === "list" ? (
           <div className="bg-white dark:bg-zinc-900/40 rounded-2xl border border-zinc-200 dark:border-zinc-800/50 shadow-sm dark:shadow-xl overflow-hidden">
@@ -423,19 +462,26 @@ export default function UploadResourcePage() {
                         {doc.name}
                       </h3>
                       <p className="text-sm text-zinc-500 mt-0.5">
-                        {formatFileSize(doc.size)} • {getRelativeTime(doc.created_at)}
+                        {formatFileSize(doc.size)} •{" "}
+                        {getRelativeTime(doc.created_at)}
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="hidden md:flex gap-2">
                     {doc.courses?.map((course) => (
-                      <span key={course.id} className="px-2.5 py-1 text-xs rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                      <span
+                        key={course.id}
+                        className="px-2.5 py-1 text-xs rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20"
+                      >
                         {course.name}
                       </span>
                     ))}
                     {doc.study_guides?.map((sg) => (
-                      <span key={sg.id} className="px-2.5 py-1 text-xs rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                      <span
+                        key={sg.id}
+                        className="px-2.5 py-1 text-xs rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+                      >
                         {sg.name}
                       </span>
                     ))}
@@ -458,22 +504,25 @@ export default function UploadResourcePage() {
                   </div>
                   <Download className="w-5 h-5 text-zinc-400 dark:text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
-                
+
                 <h3 className="font-medium text-zinc-900 dark:text-white group-hover:text-orange-500 dark:group-hover:text-orange-300 transition-colors line-clamp-2 mb-2 flex-grow">
                   {doc.name}
                 </h3>
-                
+
                 <p className="text-xs text-zinc-500 mb-3 block">
                   {formatFileSize(doc.size)} • {getRelativeTime(doc.created_at)}
                 </p>
 
                 <div className="flex flex-wrap gap-1 mt-auto">
                   {doc.courses?.slice(0, 2).map((course) => (
-                    <span key={course.id} className="inline-block px-2 py-0.5 text-[10px] rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 truncate max-w-full">
+                    <span
+                      key={course.id}
+                      className="inline-block px-2 py-0.5 text-[10px] rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 truncate max-w-full"
+                    >
                       {course.name}
                     </span>
                   ))}
-                  {((doc.courses?.length || 0) > 2) && (
+                  {(doc.courses?.length || 0) > 2 && (
                     <span className="inline-block px-2 py-0.5 text-[10px] rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
                       +{(doc.courses?.length || 0) - 2}
                     </span>
@@ -483,20 +532,24 @@ export default function UploadResourcePage() {
             ))}
           </div>
         )}
-
       </div>
 
       {/* Document Details Drawer/Modal Overlay */}
       {selectedDocument && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/40 dark:bg-black/60 backdrop-blur-sm transition-opacity">
           {/* Dismiss background */}
-          <div className="absolute inset-0 cursor-pointer" onClick={() => setSelectedDocument(null)} />
-          
+          <div
+            className="absolute inset-0 cursor-pointer"
+            onClick={() => setSelectedDocument(null)}
+          />
+
           {/* Side Panel */}
           <div className="relative w-full max-w-md h-full bg-white dark:bg-[#1a1a1a] border-l border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col transform transition-transform animate-in slide-in-from-right">
             <div className="flex items-center justify-between p-6 border-b border-zinc-100 dark:border-zinc-800/50">
-              <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Document Details</h2>
-              <button 
+              <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">
+                Document Details
+              </h2>
+              <button
                 onClick={() => setSelectedDocument(null)}
                 className="p-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               >
@@ -515,15 +568,25 @@ export default function UploadResourcePage() {
                     {selectedDocument.name}
                   </h3>
                   <div className="text-sm text-zinc-500 dark:text-zinc-400 flex flex-col gap-1">
-                    <span>{formatFileSize(selectedDocument.size)} • {selectedDocument.mime_type.split("/").pop()?.toUpperCase() || "FILE"}</span>
-                    <span>Uploaded {getRelativeTime(selectedDocument.created_at)}</span>
+                    <span>
+                      {formatFileSize(selectedDocument.size)} •{" "}
+                      {selectedDocument.mime_type
+                        .split("/")
+                        .pop()
+                        ?.toUpperCase() || "FILE"}
+                    </span>
+                    <span>
+                      Uploaded {getRelativeTime(selectedDocument.created_at)}
+                    </span>
                   </div>
                 </div>
               </div>
 
               {/* Action */}
-              <button 
-                onClick={() => alert(`Mock downloading: ${selectedDocument.name}`)}
+              <button
+                onClick={() =>
+                  alert(`Mock downloading: ${selectedDocument.name}`)
+                }
                 className="w-full py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-semibold flex items-center justify-center gap-2 transition-colors active:scale-[0.98] shadow-lg shadow-orange-500/20"
               >
                 <Download className="w-5 h-5" /> Download File
@@ -532,23 +595,30 @@ export default function UploadResourcePage() {
               <hr className="border-zinc-100 dark:border-zinc-800/50" />
 
               {/* Render User AttachToResource */}
-              <AttachToResource 
-                fileId={selectedDocument.id} 
-                fileName={selectedDocument.name} 
-                currentAttachments={[...(selectedDocument.courses?.map(c => ({...c, type: 'course' as const})) || []), ...(selectedDocument.study_guides?.map(s => ({...s, type: 'study_guide' as const})) || [])]}
+              <AttachToResource
+                fileId={selectedDocument.id}
+                fileName={selectedDocument.name}
+                currentAttachments={[
+                  ...(selectedDocument.courses?.map((c) => ({
+                    ...c,
+                    type: "course" as const,
+                  })) || []),
+                  ...(selectedDocument.study_guides?.map((s) => ({
+                    ...s,
+                    type: "study_guide" as const,
+                  })) || []),
+                ]}
               />
 
               {/* Render User FilePermissions */}
-              <FilePermissions 
+              <FilePermissions
                 fileId={selectedDocument.id}
                 fileName={selectedDocument.name}
               />
-
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }

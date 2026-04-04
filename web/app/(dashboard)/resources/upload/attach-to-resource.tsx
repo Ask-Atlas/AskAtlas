@@ -36,14 +36,25 @@ export function AttachToResource({
   currentAttachments = [],
   onClose,
 }: AttachToResourceProps) {
-  const [attachments, setAttachments] = useState<Resource[]>(currentAttachments);
+  const [attachments, setAttachments] =
+    useState<Resource[]>(currentAttachments);
   const [isAdding, setIsAdding] = useState(false);
-  const [resourceType, setResourceType] = useState<"study_guide" | "course">("study_guide");
+  const [resourceType, setResourceType] = useState<"study_guide" | "course">(
+    "study_guide",
+  );
 
   // Mock available resources - in production, fetch from API
   const availableStudyGuides = [
-    { id: "sg-1", name: "Introduction to Biology", type: "study_guide" as const },
-    { id: "sg-2", name: "World History: WWI & WWII", type: "study_guide" as const },
+    {
+      id: "sg-1",
+      name: "Introduction to Biology",
+      type: "study_guide" as const,
+    },
+    {
+      id: "sg-2",
+      name: "World History: WWI & WWII",
+      type: "study_guide" as const,
+    },
     { id: "sg-3", name: "Algebra Fundamentals", type: "study_guide" as const },
   ];
 
@@ -66,7 +77,10 @@ export function AttachToResource({
     console.log("Attaching file", fileId, "to", resource.type, resource.id);
   };
 
-  const handleDetach = async (resourceId: string, resourceType: "study_guide" | "course") => {
+  const handleDetach = async (
+    resourceId: string,
+    resourceType: "study_guide" | "course",
+  ) => {
     // TODO: Implement detachment
     // For study guides:
     // DELETE /api/v1/study-guides/{resourceId}/files/{fileId}
@@ -81,14 +95,16 @@ export function AttachToResource({
   const availableResources =
     resourceType === "study_guide" ? availableStudyGuides : availableCourses;
   const unattachedResources = availableResources.filter(
-    (r) => !attachments.find((a) => a.id === r.id)
+    (r) => !attachments.find((a) => a.id === r.id),
   );
 
   return (
     <div className="bg-zinc-900/40 rounded-2xl border border-zinc-800/50 p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h3 className="text-lg font-semibold text-white">Attach to Study Materials</h3>
+          <h3 className="text-lg font-semibold text-white">
+            Attach to Study Materials
+          </h3>
           <p className="text-sm text-zinc-400 mt-1">{fileName}</p>
         </div>
         {onClose && (
@@ -107,7 +123,9 @@ export function AttachToResource({
           Currently Attached ({attachments.length})
         </h4>
         {attachments.length === 0 ? (
-          <p className="text-sm text-zinc-500 py-4">Not attached to any resources yet.</p>
+          <p className="text-sm text-zinc-500 py-4">
+            Not attached to any resources yet.
+          </p>
         ) : (
           <div className="space-y-2">
             {attachments.map((resource) => (
@@ -124,7 +142,9 @@ export function AttachToResource({
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-white">{resource.name}</p>
+                    <p className="text-sm font-medium text-white">
+                      {resource.name}
+                    </p>
                     <p className="text-xs text-zinc-500 capitalize">
                       {resource.type.replace("_", " ")}
                     </p>
@@ -159,7 +179,9 @@ export function AttachToResource({
             </label>
             <select
               value={resourceType}
-              onChange={(e) => setResourceType(e.target.value as "study_guide" | "course")}
+              onChange={(e) =>
+                setResourceType(e.target.value as "study_guide" | "course")
+              }
               className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white"
             >
               <option value="study_guide">Study Guide</option>
@@ -191,7 +213,9 @@ export function AttachToResource({
                           <GraduationCap className="w-4 h-4" />
                         )}
                       </div>
-                      <span className="text-sm text-white">{resource.name}</span>
+                      <span className="text-sm text-white">
+                        {resource.name}
+                      </span>
                     </div>
                   </button>
                 ))}
@@ -211,8 +235,9 @@ export function AttachToResource({
       {/* Info */}
       <div className="mt-6 p-3 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
         <p className="text-xs text-yellow-300">
-          <strong>Note:</strong> These features require the <code>course_files</code> and{" "}
-          <code>study_guide_files</code> junction tables to be implemented.
+          <strong>Note:</strong> These features require the{" "}
+          <code>course_files</code> and <code>study_guide_files</code> junction
+          tables to be implemented.
         </p>
       </div>
     </div>

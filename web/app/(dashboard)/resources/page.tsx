@@ -15,7 +15,12 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Matches the API FileResponse schema
 interface Document {
@@ -41,20 +46,20 @@ function DocumentViewer({ document, onClose }: DocumentViewerProps) {
 
   if (!document) return null;
 
-  const isImage = document.mime_type.startsWith('image/');
-  const isPDF = document.mime_type === 'application/pdf';
+  const isImage = document.mime_type.startsWith("image/");
+  const isPDF = document.mime_type === "application/pdf";
   const fileUrl = `/api/files/${document.id}`; // Assuming this serves the file content
 
-  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.25, 3));
-  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.25, 0.5));
+  const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 3));
+  const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.25, 0.5));
   const handleReset = () => {
     setZoom(1);
     setRotation(0);
   };
-  const handleRotate = () => setRotation(prev => (prev + 90) % 360);
+  const handleRotate = () => setRotation((prev) => (prev + 90) % 360);
 
   const handleDownload = () => {
-    const link = window.document.createElement('a');
+    const link = window.document.createElement("a");
     link.href = fileUrl;
     link.download = document.name;
     link.click();
@@ -67,7 +72,9 @@ function DocumentViewer({ document, onClose }: DocumentViewerProps) {
         <div className="flex items-center gap-3">
           <FileText className="w-5 h-5 text-zinc-500" />
           <div>
-            <h2 className="font-medium text-zinc-900 dark:text-white">{document.name}</h2>
+            <h2 className="font-medium text-zinc-900 dark:text-white">
+              {document.name}
+            </h2>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               {new Date(document.created_at).toLocaleDateString()}
             </p>
@@ -76,13 +83,23 @@ function DocumentViewer({ document, onClose }: DocumentViewerProps) {
 
         <div className="flex items-center gap-2">
           {/* Zoom Controls */}
-          <Button variant="ghost" size="sm" onClick={handleZoomOut} disabled={zoom <= 0.5}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleZoomOut}
+            disabled={zoom <= 0.5}
+          >
             <ZoomOut className="w-4 h-4" />
           </Button>
           <span className="text-sm text-zinc-600 dark:text-zinc-400 min-w-[3rem] text-center">
             {Math.round(zoom * 100)}%
           </span>
-          <Button variant="ghost" size="sm" onClick={handleZoomIn} disabled={zoom >= 3}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleZoomIn}
+            disabled={zoom >= 3}
+          >
             <ZoomIn className="w-4 h-4" />
           </Button>
           <Button variant="ghost" size="sm" onClick={handleRotate}>
@@ -107,8 +124,8 @@ function DocumentViewer({ document, onClose }: DocumentViewerProps) {
             className="inline-block bg-white dark:bg-zinc-900 shadow-lg rounded-lg overflow-hidden"
             style={{
               transform: `scale(${zoom}) rotate(${rotation}deg)`,
-              transformOrigin: 'top center',
-              transition: 'transform 0.2s ease',
+              transformOrigin: "top center",
+              transition: "transform 0.2s ease",
             }}
           >
             {isImage && (
@@ -118,7 +135,7 @@ function DocumentViewer({ document, onClose }: DocumentViewerProps) {
                 width={800}
                 height={600}
                 className="max-w-full h-auto select-text"
-                style={{ userSelect: 'text' }}
+                style={{ userSelect: "text" }}
                 unoptimized
               />
             )}
@@ -152,19 +169,21 @@ export default function ResourcesPage() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
-  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(
+    null,
+  );
 
   useEffect(() => {
     // Fetch user's documents
     const fetchDocuments = async () => {
       try {
-        const response = await fetch('/api/me/files');
+        const response = await fetch("/api/me/files");
         if (response.ok) {
           const data = await response.json();
           setDocuments(data.files || []);
         }
       } catch (error) {
-        console.error('Failed to fetch documents:', error);
+        console.error("Failed to fetch documents:", error);
       } finally {
         setLoading(false);
       }
@@ -189,15 +208,17 @@ export default function ResourcesPage() {
     const diffDays = Math.floor(diffHours / 24);
 
     if (diffHours < 1) return "Just now";
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+    if (diffHours < 24)
+      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
     if (diffDays === 1) return "Yesterday";
     if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? "s" : ""} ago`;
+    if (diffDays < 30)
+      return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? "s" : ""} ago`;
     return date.toLocaleDateString();
   };
 
   const handleDownload = (doc: Document) => {
-    const link = window.document.createElement('a');
+    const link = window.document.createElement("a");
     link.href = `/api/files/${doc.id}`;
     link.download = doc.name;
     link.click();
@@ -207,7 +228,9 @@ export default function ResourcesPage() {
     return (
       <section className="space-y-4">
         <header>
-          <h1 className="text-2xl font-semibold tracking-tight">My resources</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            My resources
+          </h1>
         </header>
         <div className="bg-muted/50 min-h-[60vh] rounded-xl animate-pulse" />
       </section>
@@ -218,7 +241,9 @@ export default function ResourcesPage() {
     <>
       <section className="space-y-4">
         <header>
-          <h1 className="text-2xl font-semibold tracking-tight">My resources</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            My resources
+          </h1>
           <p className="text-muted-foreground text-sm">
             View and manage your uploaded documents.
           </p>
@@ -249,7 +274,9 @@ export default function ResourcesPage() {
           <div className="text-center py-16 bg-muted/50 rounded-xl">
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">No resources found</h3>
-            <p className="text-muted-foreground text-sm">Upload some documents to get started.</p>
+            <p className="text-muted-foreground text-sm">
+              Upload some documents to get started.
+            </p>
           </div>
         ) : viewMode === "list" ? (
           <div className="space-y-2">
@@ -270,14 +297,19 @@ export default function ResourcesPage() {
                       {doc.name}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {formatFileSize(doc.size)} • Uploaded {getRelativeTime(doc.created_at)}
+                      {formatFileSize(doc.size)} • Uploaded{" "}
+                      {getRelativeTime(doc.created_at)}
                     </p>
                   </div>
                 </button>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
                       <MoreVertical className="w-4 h-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -308,7 +340,11 @@ export default function ResourcesPage() {
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
                           <MoreVertical className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>

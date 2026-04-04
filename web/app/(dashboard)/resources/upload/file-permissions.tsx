@@ -32,7 +32,11 @@ interface FilePermissionsProps {
   onClose?: () => void;
 }
 
-export function FilePermissions({ fileId, fileName, onClose }: FilePermissionsProps) {
+export function FilePermissions({
+  fileId,
+  fileName,
+  onClose,
+}: FilePermissionsProps) {
   // In production, fetch with: GET /api/files/{fileId}/grants (you'll need to create this endpoint)
   const [grants, setGrants] = useState<FileGrant[]>([
     {
@@ -58,8 +62,12 @@ export function FilePermissions({ fileId, fileName, onClose }: FilePermissionsPr
   ]);
 
   const [isAddingGrant, setIsAddingGrant] = useState(false);
-  const [newGrantType, setNewGrantType] = useState<"user" | "course" | "study_guide">("user");
-  const [newGrantPermission, setNewGrantPermission] = useState<"view" | "share" | "delete">("view");
+  const [newGrantType, setNewGrantType] = useState<
+    "user" | "course" | "study_guide"
+  >("user");
+  const [newGrantPermission, setNewGrantPermission] = useState<
+    "view" | "share" | "delete"
+  >("view");
 
   const handleAddGrant = async () => {
     // TODO: Implement grant creation
@@ -134,7 +142,9 @@ export function FilePermissions({ fileId, fileName, onClose }: FilePermissionsPr
           Current Grants ({grants.length})
         </h4>
         {grants.length === 0 ? (
-          <p className="text-sm text-zinc-500 py-4">No permissions granted yet.</p>
+          <p className="text-sm text-zinc-500 py-4">
+            No permissions granted yet.
+          </p>
         ) : (
           <div className="space-y-2">
             {grants.map((grant) => (
@@ -143,18 +153,22 @@ export function FilePermissions({ fileId, fileName, onClose }: FilePermissionsPr
                 className="flex items-center justify-between p-3 rounded-lg bg-[#252525] border border-zinc-800/50"
               >
                 <div className="flex items-center gap-3">
-                  <div className="text-zinc-400">{getGrantIcon(grant.grantee_type)}</div>
+                  <div className="text-zinc-400">
+                    {getGrantIcon(grant.grantee_type)}
+                  </div>
                   <div>
                     <p className="text-sm font-medium text-white">
                       {grant.grantee_name || grant.grantee_id}
                     </p>
-                    <p className="text-xs text-zinc-500 capitalize">{grant.grantee_type}</p>
+                    <p className="text-xs text-zinc-500 capitalize">
+                      {grant.grantee_type}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <span
                     className={`px-2 py-1 text-xs rounded-full border ${getPermissionColor(
-                      grant.permission
+                      grant.permission,
                     )}`}
                   >
                     {grant.permission}
@@ -188,7 +202,11 @@ export function FilePermissions({ fileId, fileName, onClose }: FilePermissionsPr
             </label>
             <select
               value={newGrantType}
-              onChange={(e) => setNewGrantType(e.target.value as "user" | "course" | "study_guide")}
+              onChange={(e) =>
+                setNewGrantType(
+                  e.target.value as "user" | "course" | "study_guide",
+                )
+              }
               className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white"
             >
               <option value="user">User</option>
@@ -202,7 +220,11 @@ export function FilePermissions({ fileId, fileName, onClose }: FilePermissionsPr
             </label>
             <select
               value={newGrantPermission}
-              onChange={(e) => setNewGrantPermission(e.target.value as "view" | "share" | "delete")}
+              onChange={(e) =>
+                setNewGrantPermission(
+                  e.target.value as "view" | "share" | "delete",
+                )
+              }
               className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white"
             >
               <option value="view">View</option>
@@ -231,7 +253,9 @@ export function FilePermissions({ fileId, fileName, onClose }: FilePermissionsPr
       <div className="mt-6 p-3 rounded-lg bg-blue-500/5 border border-blue-500/20">
         <p className="text-xs text-blue-300">
           <strong>Note:</strong> For public access, use grantee_id:{" "}
-          <code className="text-blue-400">00000000-0000-0000-0000-000000000000</code>
+          <code className="text-blue-400">
+            00000000-0000-0000-0000-000000000000
+          </code>
         </p>
       </div>
     </div>

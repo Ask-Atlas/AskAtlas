@@ -1,9 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "./card";
+import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { LucideIcon } from "lucide-react";
 
 interface StatCardProps {
@@ -39,9 +34,7 @@ export function StatCard({
         {secondaryValue !== undefined && secondaryLabel ? (
           <div className="flex items-center gap-6">
             <div className="flex flex-col items-center">
-              <div className="text-2xl font-bold text-amber-400">
-                {value}
-              </div>
+              <div className="text-2xl font-bold text-amber-400">{value}</div>
               {description && (
                 <p className="text-xs text-gray-400 text-center mt-0.5">
                   {description}
@@ -60,9 +53,7 @@ export function StatCard({
           </div>
         ) : (
           <>
-            <div className="text-2xl font-bold text-amber-400">
-              {value}
-            </div>
+            <div className="text-2xl font-bold text-amber-400">{value}</div>
             {description && (
               <p className="text-xs text-gray-400 text-center mt-0.5">
                 {description}
