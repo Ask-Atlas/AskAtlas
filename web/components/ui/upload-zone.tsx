@@ -21,27 +21,34 @@ export function UploadZone({ onFilesAdded }: UploadZoneProps) {
     }
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      onFilesAdded(Array.from(e.dataTransfer.files));
-    }
-  }, [onFilesAdded]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        onFilesAdded(Array.from(e.dataTransfer.files));
+      }
+    },
+    [onFilesAdded],
+  );
 
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      onFilesAdded(Array.from(e.target.files));
-    }
-  }, [onFilesAdded]);
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files.length > 0) {
+        onFilesAdded(Array.from(e.target.files));
+      }
+    },
+    [onFilesAdded],
+  );
 
   return (
     <div
-      className={`border-2 border-dashed rounded-2xl p-12 text-center transition-colors flex flex-col items-center justify-center min-h-[400px] ${isDragging
+      className={`border-2 border-dashed rounded-2xl p-12 text-center transition-colors flex flex-col items-center justify-center min-h-[400px] ${
+        isDragging
           ? "border-orange-500 bg-orange-500/5"
           : "border-zinc-800 bg-zinc-900/20 hover:border-zinc-700 hover:bg-zinc-900/40"
-        }`}
+      }`}
       onDragEnter={handleDrag}
       onDragLeave={handleDrag}
       onDragOver={handleDrag}
