@@ -13,6 +13,7 @@ import {
   LayoutGrid,
   List as ListIcon,
 } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -53,7 +54,7 @@ function DocumentViewer({ document, onClose }: DocumentViewerProps) {
   const handleRotate = () => setRotation(prev => (prev + 90) % 360);
 
   const handleDownload = () => {
-    const link = document.createElement('a');
+    const link = window.document.createElement('a');
     link.href = fileUrl;
     link.download = document.name;
     link.click();
@@ -111,11 +112,14 @@ function DocumentViewer({ document, onClose }: DocumentViewerProps) {
             }}
           >
             {isImage && (
-              <img
+              <Image
                 src={fileUrl}
                 alt={document.name}
+                width={800}
+                height={600}
                 className="max-w-full h-auto select-text"
                 style={{ userSelect: 'text' }}
+                unoptimized
               />
             )}
             {isPDF && (
@@ -192,10 +196,10 @@ export default function ResourcesPage() {
     return date.toLocaleDateString();
   };
 
-  const handleDownload = (document: Document) => {
-    const link = document.createElement('a');
-    link.href = `/api/files/${document.id}`;
-    link.download = document.name;
+  const handleDownload = (doc: Document) => {
+    const link = window.document.createElement('a');
+    link.href = `/api/files/${doc.id}`;
+    link.download = doc.name;
     link.click();
   };
 

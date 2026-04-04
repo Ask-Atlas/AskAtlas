@@ -24,7 +24,6 @@ export function StatCard({
   value,
   icon: Icon,
   description,
-  trend,
   secondaryValue,
   secondaryLabel,
 }: StatCardProps) {

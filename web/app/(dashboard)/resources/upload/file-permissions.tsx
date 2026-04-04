@@ -188,7 +188,7 @@ export function FilePermissions({ fileId, fileName, onClose }: FilePermissionsPr
             </label>
             <select
               value={newGrantType}
-              onChange={(e) => setNewGrantType(e.target.value as any)}
+              onChange={(e) => setNewGrantType(e.target.value as "user" | "course" | "study_guide")}
               className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white"
             >
               <option value="user">User</option>
@@ -202,7 +202,7 @@ export function FilePermissions({ fileId, fileName, onClose }: FilePermissionsPr
             </label>
             <select
               value={newGrantPermission}
-              onChange={(e) => setNewGrantPermission(e.target.value as any)}
+              onChange={(e) => setNewGrantPermission(e.target.value as "view" | "share" | "delete")}
               className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white"
             >
               <option value="view">View</option>

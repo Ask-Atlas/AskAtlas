@@ -159,7 +159,7 @@ export function AttachToResource({
             </label>
             <select
               value={resourceType}
-              onChange={(e) => setResourceType(e.target.value as any)}
+              onChange={(e) => setResourceType(e.target.value as "study_guide" | "course")}
               className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white"
             >
               <option value="study_guide">Study Guide</option>
