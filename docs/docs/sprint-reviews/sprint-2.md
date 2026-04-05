@@ -75,7 +75,3 @@ Please review the following code files, which were actively developed during thi
 - Address code review feedback on open PRs before opening new ones
 - Run linters and formatters locally as a habit before pushing to cut down on avoidable CI failures
 - Begin tackling CRUD backlog issues now that UI foundations are in place
-
-## Sprint Demo Video
-
-[Link TBD]
