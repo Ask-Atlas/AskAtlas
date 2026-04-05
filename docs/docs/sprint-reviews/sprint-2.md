@@ -4,6 +4,8 @@ sidebar_position: 2
 
 # Sprint 2 Report (03/01/26 – 04/04/26)
 
+[**Sprint demo video**](https://youtu.be/VIqZRLF_-vU)
+
 ## What's New (User Facing)
 
 - **Dashboard Redesign** — Dashboard redesign with metrics cards, recent study guides list, and activity history sidebar
