@@ -1617,3 +1617,63 @@ func (q *Queries) SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) 
 	}
 	return result.RowsAffected(), nil
 }
+
+const updateFile = `-- name: UpdateFile :one
+UPDATE files
+SET
+    name       = $1,
+    updated_at = NOW()
+WHERE id      = $2::uuid
+  AND user_id = $3::uuid
+  AND deletion_status IS NULL
+RETURNING id, user_id, s3_key, name, mime_type, size, checksum,
+          status, deletion_status, deleted_at, s3_deleted_at, deletion_job_id,
+          created_at, updated_at
+`
+
+type UpdateFileParams struct {
+	Name    string      `json:"name"`
+	FileID  pgtype.UUID `json:"file_id"`
+	OwnerID pgtype.UUID `json:"owner_id"`
+}
+
+type UpdateFileRow struct {
+	ID             pgtype.UUID            `json:"id"`
+	UserID         pgtype.UUID            `json:"user_id"`
+	S3Key          string                 `json:"s3_key"`
+	Name           string                 `json:"name"`
+	MimeType       MimeType               `json:"mime_type"`
+	Size           int64                  `json:"size"`
+	Checksum       pgtype.Text            `json:"checksum"`
+	Status         UploadStatus           `json:"status"`
+	DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+	DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+	S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
+	DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
+	CreatedAt      pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+}
+
+// Renames a file owned by the caller. Only applies if the file has not entered
+// a deletion state. Returns the updated row with favorited_at and last_viewed_at.
+func (q *Queries) UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateFileRow, error) {
+	row := q.db.QueryRow(ctx, updateFile, arg.Name, arg.FileID, arg.OwnerID)
+	var i UpdateFileRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.S3Key,
+		&i.Name,
+		&i.MimeType,
+		&i.Size,
+		&i.Checksum,
+		&i.Status,
+		&i.DeletionStatus,
+		&i.DeletedAt,
+		&i.S3DeletedAt,
+		&i.DeletionJobID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

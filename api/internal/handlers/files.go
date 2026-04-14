@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -17,6 +18,7 @@ import (
 type FileService interface {
 	GetFile(ctx context.Context, params files.GetFileParams) (files.File, error)
 	ListFiles(ctx context.Context, params files.ListFilesParams) ([]files.File, *string, error)
+	UpdateFile(ctx context.Context, params files.UpdateFileParams) (files.File, error)
 	DeleteFile(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher) error
 }
 
@@ -74,6 +76,49 @@ func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request, fileId ope
 		sysErr := apperrors.ToHTTPError(err)
 		if sysErr.Code >= 500 {
 			slog.Error("GetFile failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, toDTOFileResponse(file))
+}
+
+// UpdateFile handles requests to rename a file by its unique identifier.
+func (h *FileHandler) UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	var body api.UpdateFileRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"body": "unable to parse JSON",
+		}))
+		return
+	}
+
+	name := strings.TrimSpace(body.Name)
+	if name == "" || len(name) > 255 {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"name": "must be between 1 and 255 characters",
+		}))
+		return
+	}
+
+	params := files.UpdateFileParams{
+		FileID:  uuid.UUID(fileId),
+		OwnerID: viewerID,
+		Name:    name,
+	}
+
+	file, err := h.service.UpdateFile(r.Context(), params)
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("UpdateFile failed", "error", err)
 		}
 		apperrors.RespondWithError(w, sysErr)
 		return

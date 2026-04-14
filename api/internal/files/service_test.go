@@ -3,6 +3,7 @@ package files_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/files"
 	mock_files "github.com/Ask-Atlas/AskAtlas/api/internal/files/mocks"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
+	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
@@ -128,4 +130,83 @@ func TestService_GetFile(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, fid, f.ID)
 	assert.Equal(t, "test.txt", f.Name)
+}
+
+func TestService_UpdateFile_Success(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+
+	fid := uuid.New()
+	ownerID := uuid.New()
+	now := time.Now()
+
+	repo.EXPECT().
+		UpdateFile(mock.Anything, mock.MatchedBy(func(arg db.UpdateFileParams) bool {
+			return arg.FileID == utils.UUID(fid) &&
+				arg.OwnerID == utils.UUID(ownerID) &&
+				arg.Name == "renamed.pdf"
+		})).
+		Return(db.UpdateFileRow{
+			ID:        utils.UUID(fid),
+			UserID:    utils.UUID(ownerID),
+			Name:      "renamed.pdf",
+			Size:      1024,
+			MimeType:  "application/pdf",
+			Status:    "complete",
+			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+		}, nil)
+
+	f, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID:  fid,
+		OwnerID: ownerID,
+		Name:    "renamed.pdf",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, fid, f.ID)
+	assert.Equal(t, "renamed.pdf", f.Name)
+	assert.Equal(t, int64(1024), f.Size)
+}
+
+func TestService_UpdateFile_EmptyName(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID:  uuid.New(),
+		OwnerID: uuid.New(),
+		Name:    "",
+	})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, apperrors.ErrInvalidInput)
+}
+
+func TestService_UpdateFile_NameTooLong(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID:  uuid.New(),
+		OwnerID: uuid.New(),
+		Name:    strings.Repeat("a", 256),
+	})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, apperrors.ErrInvalidInput)
+}
+
+func TestService_UpdateFile_NotFound(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+
+	repo.EXPECT().
+		UpdateFile(mock.Anything, mock.Anything).
+		Return(db.UpdateFileRow{}, fmt.Errorf("UpdateFile: %w", apperrors.ErrNotFound))
+
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID:  uuid.New(),
+		OwnerID: uuid.New(),
+		Name:    "valid-name.pdf",
+	})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, apperrors.ErrNotFound)
 }

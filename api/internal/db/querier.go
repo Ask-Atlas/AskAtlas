@@ -36,6 +36,9 @@ type Querier interface {
 	// and has not already entered a deletion state (idempotency-safe).
 	SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)
 	SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
+	// Renames a file owned by the caller. Only applies if the file has not entered
+	// a deletion state. Returns the updated row with favorited_at and last_viewed_at.
+	UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateFileRow, error)
 	UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
 }
 

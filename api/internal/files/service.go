@@ -21,6 +21,7 @@ type Repository interface {
 
 	GetFileIfViewable(ctx context.Context, arg db.GetFileIfViewableParams) (db.File, error)
 	GetFileByOwner(ctx context.Context, arg db.GetFileByOwnerParams) (db.GetFileByOwnerRow, error)
+	UpdateFile(ctx context.Context, arg db.UpdateFileParams) (db.UpdateFileRow, error)
 	SoftDeleteFile(ctx context.Context, arg db.SoftDeleteFileParams) (int64, error)
 	SetFileDeletionJobID(ctx context.Context, arg db.SetFileDeletionJobIDParams) error
 	MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
@@ -107,6 +108,26 @@ func (s *Service) ListFiles(ctx context.Context, p ListFilesParams) ([]File, *st
 	}
 
 	return files, nextCursor, nil
+}
+
+// UpdateFile renames a file owned by the caller.
+// Returns apperrors.ErrNotFound if the file does not belong to the caller or is in deletion.
+// Returns apperrors.ErrInvalidInput if the name is empty or exceeds 255 characters.
+func (s *Service) UpdateFile(ctx context.Context, p UpdateFileParams) (File, error) {
+	if p.Name == "" || len(p.Name) > 255 {
+		return File{}, fmt.Errorf("UpdateFile: %w: name must be between 1 and 255 characters", apperrors.ErrInvalidInput)
+	}
+
+	row, err := s.repo.UpdateFile(ctx, db.UpdateFileParams{
+		FileID:  utils.UUID(p.FileID),
+		OwnerID: utils.UUID(p.OwnerID),
+		Name:    p.Name,
+	})
+	if err != nil {
+		return File{}, err
+	}
+
+	return mapUpdateFileRow(row)
 }
 
 // DeleteFileParams holds the inputs required to initiate file deletion.

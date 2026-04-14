@@ -376,6 +376,20 @@ SET
 WHERE id = sqlc.arg(file_id)::uuid
   AND deletion_status = 'pending_deletion';
 
+-- name: UpdateFile :one
+-- Renames a file owned by the caller. Only applies if the file has not entered
+-- a deletion state. Returns the updated row with favorited_at and last_viewed_at.
+UPDATE files
+SET
+    name       = sqlc.arg(name),
+    updated_at = NOW()
+WHERE id      = sqlc.arg(file_id)::uuid
+  AND user_id = sqlc.arg(owner_id)::uuid
+  AND deletion_status IS NULL
+RETURNING id, user_id, s3_key, name, mime_type, size, checksum,
+          status, deletion_status, deleted_at, s3_deleted_at, deletion_job_id,
+          created_at, updated_at;
+
 -- name: GetFileIfViewable :one
 SELECT f.*
 FROM files f
