@@ -41,7 +41,7 @@ func TestService_CreateGrant_Success(t *testing.T) {
 				arg.Permission == db.PermissionView &&
 				arg.GrantedBy == utils.UUID(ownerID)
 		})).
-		Return(db.UpsertFileGrantRow{
+		Return(db.FileGrant{
 			ID:          utils.UUID(grantID),
 			FileID:      utils.UUID(fileID),
 			GranteeType: db.GranteeTypeUser,
@@ -84,6 +84,32 @@ func TestService_CreateGrant_FileNotOwned(t *testing.T) {
 		Permission:  "view",
 	})
 	assert.ErrorIs(t, err, apperrors.ErrNotFound)
+}
+
+func TestService_CreateGrant_UpsertError(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+
+	fileID := uuid.New()
+	ownerID := uuid.New()
+
+	repo.EXPECT().
+		GetFileByOwner(mock.Anything, mock.Anything).
+		Return(db.GetFileByOwnerRow{ID: utils.UUID(fileID)}, nil)
+
+	repo.EXPECT().
+		UpsertFileGrant(mock.Anything, mock.Anything).
+		Return(db.FileGrant{}, assert.AnError)
+
+	_, err := svc.CreateGrant(context.Background(), files.CreateGrantParams{
+		FileID:      fileID,
+		OwnerID:     ownerID,
+		GranteeType: "user",
+		GranteeID:   uuid.New(),
+		Permission:  "view",
+	})
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, assert.AnError)
 }
 
 func TestService_RevokeGrant_Success(t *testing.T) {

@@ -41,8 +41,10 @@ type Querier interface {
 	SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
 	UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
 	// Inserts a new file grant, returning the row. If the grant already exists
-	// (same file_id, grantee_type, grantee_id, permission), returns the existing row.
-	UpsertFileGrant(ctx context.Context, arg UpsertFileGrantParams) (UpsertFileGrantRow, error)
+	// (same file_id, grantee_type, grantee_id, permission), updates granted_by
+	// and returns the row. Using DO UPDATE SET avoids a race window where
+	// concurrent inserts could cause both INSERT and fallback SELECT to miss.
+	UpsertFileGrant(ctx context.Context, arg UpsertFileGrantParams) (FileGrant, error)
 }
 
 var _ Querier = (*Queries)(nil)

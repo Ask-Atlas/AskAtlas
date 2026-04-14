@@ -193,11 +193,11 @@ func (r *sqlcRepository) ListOwnedFilesMimeDesc(ctx context.Context, arg db.List
 	return files, nil
 }
 
-func (r *sqlcRepository) UpsertFileGrant(ctx context.Context, arg db.UpsertFileGrantParams) (db.UpsertFileGrantRow, error) {
+func (r *sqlcRepository) UpsertFileGrant(ctx context.Context, arg db.UpsertFileGrantParams) (db.FileGrant, error) {
 	slog.Debug("upserting file grant", "file_id", arg.FileID, "grantee_type", arg.GranteeType, "grantee_id", arg.GranteeID, "permission", arg.Permission)
 	row, err := r.queries.UpsertFileGrant(ctx, arg)
 	if err != nil {
-		return db.UpsertFileGrantRow{}, fmt.Errorf("UpsertFileGrant: %w", err)
+		return db.FileGrant{}, fmt.Errorf("UpsertFileGrant: %w", err)
 	}
 	return row, nil
 }

@@ -1283,22 +1283,22 @@ func (_c *MockRepository_SoftDeleteFile_Call) RunAndReturn(run func(ctx context.
 }
 
 // UpsertFileGrant provides a mock function for the type MockRepository
-func (_mock *MockRepository) UpsertFileGrant(ctx context.Context, arg db.UpsertFileGrantParams) (db.UpsertFileGrantRow, error) {
+func (_mock *MockRepository) UpsertFileGrant(ctx context.Context, arg db.UpsertFileGrantParams) (db.FileGrant, error) {
 	ret := _mock.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpsertFileGrant")
 	}
 
-	var r0 db.UpsertFileGrantRow
+	var r0 db.FileGrant
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, db.UpsertFileGrantParams) (db.UpsertFileGrantRow, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.UpsertFileGrantParams) (db.FileGrant, error)); ok {
 		return returnFunc(ctx, arg)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, db.UpsertFileGrantParams) db.UpsertFileGrantRow); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.UpsertFileGrantParams) db.FileGrant); ok {
 		r0 = returnFunc(ctx, arg)
 	} else {
-		r0 = ret.Get(0).(db.UpsertFileGrantRow)
+		r0 = ret.Get(0).(db.FileGrant)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, db.UpsertFileGrantParams) error); ok {
 		r1 = returnFunc(ctx, arg)
@@ -1338,12 +1338,12 @@ func (_c *MockRepository_UpsertFileGrant_Call) Run(run func(ctx context.Context,
 	return _c
 }
 
-func (_c *MockRepository_UpsertFileGrant_Call) Return(upsertFileGrantRow db.UpsertFileGrantRow, err error) *MockRepository_UpsertFileGrant_Call {
-	_c.Call.Return(upsertFileGrantRow, err)
+func (_c *MockRepository_UpsertFileGrant_Call) Return(fileGrant db.FileGrant, err error) *MockRepository_UpsertFileGrant_Call {
+	_c.Call.Return(fileGrant, err)
 	return _c
 }
 
-func (_c *MockRepository_UpsertFileGrant_Call) RunAndReturn(run func(ctx context.Context, arg db.UpsertFileGrantParams) (db.UpsertFileGrantRow, error)) *MockRepository_UpsertFileGrant_Call {
+func (_c *MockRepository_UpsertFileGrant_Call) RunAndReturn(run func(ctx context.Context, arg db.UpsertFileGrantParams) (db.FileGrant, error)) *MockRepository_UpsertFileGrant_Call {
 	_c.Call.Return(run)
 	return _c
 }

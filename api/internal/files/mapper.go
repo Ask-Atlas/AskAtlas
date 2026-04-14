@@ -112,8 +112,8 @@ func sharedFromMimeDesc(r db.ListOwnedFilesMimeDescRow) sharedRow {
 	return sharedRow{r.ID, r.UserID, r.Name, r.Size, r.MimeType, r.Status, r.CreatedAt, r.UpdatedAt, r.FavoritedAt, r.LastViewedAt}
 }
 
-// mapGrantRow converts a database UpsertFileGrantRow into the domain Grant model.
-func mapGrantRow(r db.UpsertFileGrantRow) (Grant, error) {
+// mapGrantRow converts a database FileGrant into the domain Grant model.
+func mapGrantRow(r db.FileGrant) (Grant, error) {
 	id, err := utils.PgxToGoogleUUID(r.ID)
 	if err != nil {
 		return Grant{}, fmt.Errorf("mapGrantRow: ID: %w", err)

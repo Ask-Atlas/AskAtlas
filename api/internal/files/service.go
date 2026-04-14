@@ -25,7 +25,7 @@ type Repository interface {
 	SetFileDeletionJobID(ctx context.Context, arg db.SetFileDeletionJobIDParams) error
 	MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
 
-	UpsertFileGrant(ctx context.Context, arg db.UpsertFileGrantParams) (db.UpsertFileGrantRow, error)
+	UpsertFileGrant(ctx context.Context, arg db.UpsertFileGrantParams) (db.FileGrant, error)
 	RevokeFileGrant(ctx context.Context, arg db.RevokeFileGrantParams) error
 
 	ListOwnedFilesUpdatedDesc(ctx context.Context, arg db.ListOwnedFilesUpdatedDescParams) ([]db.ListOwnedFilesUpdatedDescRow, error)
