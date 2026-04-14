@@ -124,14 +124,16 @@ func mapUpdateFileRow(r db.UpdateFileRow) (File, error) {
 	}
 
 	return File{
-		ID:        id,
-		UserID:    userID,
-		Name:      r.Name,
-		Size:      r.Size,
-		MimeType:  string(r.MimeType),
-		Status:    string(r.Status),
-		CreatedAt: r.CreatedAt.Time,
-		UpdatedAt: r.UpdatedAt.Time,
+		ID:           id,
+		UserID:       userID,
+		Name:         r.Name,
+		Size:         r.Size,
+		MimeType:     string(r.MimeType),
+		Status:       string(r.Status),
+		CreatedAt:    r.CreatedAt.Time,
+		UpdatedAt:    r.UpdatedAt.Time,
+		FavoritedAt:  utils.TimestamptzPtr(r.FavoritedAt),
+		LastViewedAt: utils.TimestamptzPtr(r.LastViewedAt),
 	}, nil
 }
 

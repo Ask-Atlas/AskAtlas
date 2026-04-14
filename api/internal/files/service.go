@@ -114,6 +114,8 @@ func (s *Service) ListFiles(ctx context.Context, p ListFilesParams) ([]File, *st
 // Returns apperrors.ErrNotFound if the file does not belong to the caller or is in deletion.
 // Returns apperrors.ErrInvalidInput if the name is empty or exceeds 255 characters.
 func (s *Service) UpdateFile(ctx context.Context, p UpdateFileParams) (File, error) {
+	p.Name = strings.TrimSpace(p.Name)
+
 	if p.Name == "" || len(p.Name) > 255 {
 		return File{}, fmt.Errorf("UpdateFile: %w: name must be between 1 and 255 characters", apperrors.ErrInvalidInput)
 	}
@@ -124,7 +126,7 @@ func (s *Service) UpdateFile(ctx context.Context, p UpdateFileParams) (File, err
 		Name:    p.Name,
 	})
 	if err != nil {
-		return File{}, err
+		return File{}, fmt.Errorf("UpdateFile: %w", err)
 	}
 
 	return mapUpdateFileRow(row)

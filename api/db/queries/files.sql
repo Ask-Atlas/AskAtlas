@@ -379,16 +379,26 @@ WHERE id = sqlc.arg(file_id)::uuid
 -- name: UpdateFile :one
 -- Renames a file owned by the caller. Only applies if the file has not entered
 -- a deletion state. Returns the updated row with favorited_at and last_viewed_at.
-UPDATE files
-SET
-    name       = sqlc.arg(name),
-    updated_at = NOW()
-WHERE id      = sqlc.arg(file_id)::uuid
-  AND user_id = sqlc.arg(owner_id)::uuid
-  AND deletion_status IS NULL
-RETURNING id, user_id, s3_key, name, mime_type, size, checksum,
-          status, deletion_status, deleted_at, s3_deleted_at, deletion_job_id,
-          created_at, updated_at;
+WITH updated AS (
+    UPDATE files
+    SET
+        name       = sqlc.arg(name),
+        updated_at = NOW()
+    WHERE id      = sqlc.arg(file_id)::uuid
+      AND user_id = sqlc.arg(owner_id)::uuid
+      AND deletion_status IS NULL
+    RETURNING *
+)
+SELECT u.id, u.user_id, u.s3_key, u.name, u.mime_type, u.size, u.checksum,
+       u.status, u.deletion_status, u.deleted_at, u.s3_deleted_at, u.deletion_job_id,
+       u.created_at, u.updated_at,
+       fav.created_at AS favorited_at,
+       lv.viewed_at   AS last_viewed_at
+FROM updated u
+LEFT JOIN file_favorites fav
+  ON fav.user_id = u.user_id AND fav.file_id = u.id
+LEFT JOIN file_last_viewed lv
+  ON lv.user_id = u.user_id AND lv.file_id = u.id;
 
 -- name: GetFileIfViewable :one
 SELECT f.*

@@ -1619,16 +1619,26 @@ func (q *Queries) SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) 
 }
 
 const updateFile = `-- name: UpdateFile :one
-UPDATE files
-SET
-    name       = $1,
-    updated_at = NOW()
-WHERE id      = $2::uuid
-  AND user_id = $3::uuid
-  AND deletion_status IS NULL
-RETURNING id, user_id, s3_key, name, mime_type, size, checksum,
-          status, deletion_status, deleted_at, s3_deleted_at, deletion_job_id,
-          created_at, updated_at
+WITH updated AS (
+    UPDATE files
+    SET
+        name       = $1,
+        updated_at = NOW()
+    WHERE id      = $2::uuid
+      AND user_id = $3::uuid
+      AND deletion_status IS NULL
+    RETURNING id, user_id, s3_key, name, mime_type, size, checksum, status, created_at, updated_at, deletion_status, deleted_at, s3_deleted_at, deletion_job_id
+)
+SELECT u.id, u.user_id, u.s3_key, u.name, u.mime_type, u.size, u.checksum,
+       u.status, u.deletion_status, u.deleted_at, u.s3_deleted_at, u.deletion_job_id,
+       u.created_at, u.updated_at,
+       fav.created_at AS favorited_at,
+       lv.viewed_at   AS last_viewed_at
+FROM updated u
+LEFT JOIN file_favorites fav
+  ON fav.user_id = u.user_id AND fav.file_id = u.id
+LEFT JOIN file_last_viewed lv
+  ON lv.user_id = u.user_id AND lv.file_id = u.id
 `
 
 type UpdateFileParams struct {
@@ -1652,6 +1662,8 @@ type UpdateFileRow struct {
 	DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
 	CreatedAt      pgtype.Timestamptz     `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+	FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
+	LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 
 // Renames a file owned by the caller. Only applies if the file has not entered
@@ -1674,6 +1686,8 @@ func (q *Queries) UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateF
 		&i.DeletionJobID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.FavoritedAt,
+		&i.LastViewedAt,
 	)
 	return i, err
 }

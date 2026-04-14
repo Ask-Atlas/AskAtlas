@@ -139,6 +139,8 @@ func TestService_UpdateFile_Success(t *testing.T) {
 	fid := uuid.New()
 	ownerID := uuid.New()
 	now := time.Now()
+	favTime := now.Add(-24 * time.Hour)
+	viewTime := now.Add(-1 * time.Hour)
 
 	repo.EXPECT().
 		UpdateFile(mock.Anything, mock.MatchedBy(func(arg db.UpdateFileParams) bool {
@@ -147,14 +149,16 @@ func TestService_UpdateFile_Success(t *testing.T) {
 				arg.Name == "renamed.pdf"
 		})).
 		Return(db.UpdateFileRow{
-			ID:        utils.UUID(fid),
-			UserID:    utils.UUID(ownerID),
-			Name:      "renamed.pdf",
-			Size:      1024,
-			MimeType:  "application/pdf",
-			Status:    "complete",
-			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
-			UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			ID:           utils.UUID(fid),
+			UserID:       utils.UUID(ownerID),
+			Name:         "renamed.pdf",
+			Size:         1024,
+			MimeType:     "application/pdf",
+			Status:       "complete",
+			CreatedAt:    pgtype.Timestamptz{Time: now, Valid: true},
+			UpdatedAt:    pgtype.Timestamptz{Time: now, Valid: true},
+			FavoritedAt:  pgtype.Timestamptz{Time: favTime, Valid: true},
+			LastViewedAt: pgtype.Timestamptz{Time: viewTime, Valid: true},
 		}, nil)
 
 	f, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
@@ -166,6 +170,86 @@ func TestService_UpdateFile_Success(t *testing.T) {
 	assert.Equal(t, fid, f.ID)
 	assert.Equal(t, "renamed.pdf", f.Name)
 	assert.Equal(t, int64(1024), f.Size)
+	require.NotNil(t, f.FavoritedAt, "expected favorited_at to be populated")
+	assert.WithinDuration(t, favTime, *f.FavoritedAt, time.Second)
+	require.NotNil(t, f.LastViewedAt, "expected last_viewed_at to be populated")
+	assert.WithinDuration(t, viewTime, *f.LastViewedAt, time.Second)
+}
+
+func TestService_UpdateFile_NilFavoritedAndViewed(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+
+	fid := uuid.New()
+	ownerID := uuid.New()
+	now := time.Now()
+
+	repo.EXPECT().
+		UpdateFile(mock.Anything, mock.Anything).
+		Return(db.UpdateFileRow{
+			ID:        utils.UUID(fid),
+			UserID:    utils.UUID(ownerID),
+			Name:      "test.pdf",
+			Size:      512,
+			MimeType:  "application/pdf",
+			Status:    "complete",
+			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+		}, nil)
+
+	f, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID:  fid,
+		OwnerID: ownerID,
+		Name:    "test.pdf",
+	})
+	require.NoError(t, err)
+	assert.Nil(t, f.FavoritedAt, "expected favorited_at to be nil when not favorited")
+	assert.Nil(t, f.LastViewedAt, "expected last_viewed_at to be nil when not viewed")
+}
+
+func TestService_UpdateFile_WhitespaceOnlyName(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID:  uuid.New(),
+		OwnerID: uuid.New(),
+		Name:    "   \t  ",
+	})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, apperrors.ErrInvalidInput)
+}
+
+func TestService_UpdateFile_TrimsWhitespace(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+
+	fid := uuid.New()
+	ownerID := uuid.New()
+	now := time.Now()
+
+	repo.EXPECT().
+		UpdateFile(mock.Anything, mock.MatchedBy(func(arg db.UpdateFileParams) bool {
+			return arg.Name == "trimmed.pdf"
+		})).
+		Return(db.UpdateFileRow{
+			ID:        utils.UUID(fid),
+			UserID:    utils.UUID(ownerID),
+			Name:      "trimmed.pdf",
+			Size:      256,
+			MimeType:  "application/pdf",
+			Status:    "complete",
+			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+		}, nil)
+
+	f, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID:  fid,
+		OwnerID: ownerID,
+		Name:    "  trimmed.pdf  ",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "trimmed.pdf", f.Name)
 }
 
 func TestService_UpdateFile_EmptyName(t *testing.T) {
