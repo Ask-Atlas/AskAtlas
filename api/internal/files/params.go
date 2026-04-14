@@ -100,3 +100,17 @@ type GetFileParams struct {
 	CourseIDs     []uuid.UUID
 	StudyGuideIDs []uuid.UUID
 }
+
+// CreateFileParams contains the validated inputs for creating a new file reference.
+type CreateFileParams struct {
+	UserID   uuid.UUID
+	Name     string
+	MimeType string
+	Size     int64
+}
+
+// CreateFileResult holds the created file record and the presigned upload URL.
+type CreateFileResult struct {
+	File      File
+	UploadURL string
+}

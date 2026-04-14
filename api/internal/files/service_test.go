@@ -19,7 +19,7 @@ import (
 
 func TestService_ListFiles_Scope(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo)
+	svc := files.NewService(repo, nil)
 
 	params := files.ListFilesParams{
 		Scope: files.ScopeCourse, // Unsupported
@@ -32,7 +32,7 @@ func TestService_ListFiles_Scope(t *testing.T) {
 
 func TestService_ListFiles_Pagination_HasNextPage(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo)
+	svc := files.NewService(repo, nil)
 
 	viewerID := uuid.New()
 	params := files.ListFilesParams{
@@ -67,7 +67,7 @@ func TestService_ListFiles_Pagination_HasNextPage(t *testing.T) {
 
 func TestService_ListFiles_Pagination_NoNextPage(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo)
+	svc := files.NewService(repo, nil)
 
 	viewerID := uuid.New()
 	params := files.ListFilesParams{
@@ -99,9 +99,123 @@ func TestService_ListFiles_Pagination_NoNextPage(t *testing.T) {
 	assert.Nil(t, nextCursor, "expected nextCursor to be nil")
 }
 
+func TestService_CreateFile_Success(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	s3Mock := mock_files.NewMockS3Uploader(t)
+	svc := files.NewService(repo, s3Mock)
+
+	userID := uuid.New()
+	fileID := uuid.New()
+	now := time.Now()
+
+	params := files.CreateFileParams{
+		UserID:   userID,
+		Name:     "lecture-notes.pdf",
+		MimeType: "application/pdf",
+		Size:     1048576,
+	}
+
+	insertedFile := db.File{
+		ID:        utils.UUID(fileID),
+		UserID:    utils.UUID(userID),
+		S3Key:     "users/" + userID.String() + "/files",
+		Name:      "lecture-notes.pdf",
+		MimeType:  db.MimeTypeApplicationPdf,
+		Size:      1048576,
+		Status:    db.UploadStatusPending,
+		CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+		UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+	}
+
+	repo.EXPECT().
+		InsertFile(mock.Anything, mock.MatchedBy(func(arg db.InsertFileParams) bool {
+			return arg.UserID == utils.UUID(userID) &&
+				arg.Name == "lecture-notes.pdf" &&
+				arg.MimeType == db.MimeTypeApplicationPdf &&
+				arg.Size == int64(1048576)
+		})).
+		Return(insertedFile, nil)
+
+	expectedKey := fmt.Sprintf("users/%s/files/%s/lecture-notes.pdf", userID.String(), fileID.String())
+	s3Mock.EXPECT().
+		GeneratePresignedPutURL(mock.Anything, expectedKey, "application/pdf", int64(1048576)).
+		Return("https://s3.example.com/presigned-url", nil)
+
+	result, err := svc.CreateFile(context.Background(), params)
+	require.NoError(t, err)
+	assert.Equal(t, fileID, result.File.ID)
+	assert.Equal(t, "lecture-notes.pdf", result.File.Name)
+	assert.Equal(t, int64(1048576), result.File.Size)
+	assert.Equal(t, "application/pdf", result.File.MimeType)
+	assert.Equal(t, "pending", result.File.Status)
+	assert.Equal(t, "https://s3.example.com/presigned-url", result.UploadURL)
+}
+
+func TestService_CreateFile_InsertError(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	s3Mock := mock_files.NewMockS3Uploader(t)
+	svc := files.NewService(repo, s3Mock)
+
+	params := files.CreateFileParams{
+		UserID:   uuid.New(),
+		Name:     "file.pdf",
+		MimeType: "application/pdf",
+		Size:     100,
+	}
+
+	repo.EXPECT().
+		InsertFile(mock.Anything, mock.Anything).
+		Return(db.File{}, fmt.Errorf("db error"))
+
+	_, err := svc.CreateFile(context.Background(), params)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "CreateFile: insert")
+}
+
+func TestService_CreateFile_PresignError(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	s3Mock := mock_files.NewMockS3Uploader(t)
+	svc := files.NewService(repo, s3Mock)
+
+	userID := uuid.New()
+	fileID := uuid.New()
+	now := time.Now()
+
+	params := files.CreateFileParams{
+		UserID:   userID,
+		Name:     "file.pdf",
+		MimeType: "application/pdf",
+		Size:     100,
+	}
+
+	insertedFile := db.File{
+		ID:        utils.UUID(fileID),
+		UserID:    utils.UUID(userID),
+		S3Key:     "users/" + userID.String() + "/files",
+		Name:      "file.pdf",
+		MimeType:  db.MimeTypeApplicationPdf,
+		Size:      100,
+		Status:    db.UploadStatusPending,
+		CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+		UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+	}
+
+	repo.EXPECT().
+		InsertFile(mock.Anything, mock.Anything).
+		Return(insertedFile, nil)
+
+	s3Mock.EXPECT().
+		GeneratePresignedPutURL(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return("", fmt.Errorf("s3 error"))
+
+	_, err := svc.CreateFile(context.Background(), params)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "CreateFile: presign")
+}
+
 func TestService_GetFile(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo)
+	svc := files.NewService(repo, nil)
 
 	fid := uuid.New()
 	vid := uuid.New()

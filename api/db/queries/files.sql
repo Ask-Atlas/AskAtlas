@@ -376,6 +376,19 @@ SET
 WHERE id = sqlc.arg(file_id)::uuid
   AND deletion_status = 'pending_deletion';
 
+-- name: InsertFile :one
+INSERT INTO files (user_id, s3_key, name, mime_type, size, status)
+VALUES ($1, $2, $3, $4, $5, 'pending')
+RETURNING *;
+
+-- name: UpdateFileStatus :exec
+UPDATE files
+SET
+    status     = sqlc.arg(status)::upload_status,
+    updated_at = NOW()
+WHERE id = sqlc.arg(file_id)::uuid
+  AND user_id = sqlc.arg(owner_id)::uuid;
+
 -- name: GetFileIfViewable :one
 SELECT f.*
 FROM files f
