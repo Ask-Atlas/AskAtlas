@@ -377,8 +377,8 @@ WHERE id = sqlc.arg(file_id)::uuid
   AND deletion_status = 'pending_deletion';
 
 -- name: InsertFile :one
-INSERT INTO files (user_id, s3_key, name, mime_type, size, status)
-VALUES ($1, $2, $3, $4, $5, 'pending')
+INSERT INTO files (id, user_id, s3_key, name, mime_type, size, status)
+VALUES ($1, $2, $3, $4, $5, $6, 'pending')
 RETURNING *;
 
 -- name: UpdateFileStatus :exec

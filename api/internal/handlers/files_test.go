@@ -68,6 +68,41 @@ func TestFileHandler_CreateFile_Success(t *testing.T) {
 	assert.Equal(t, "https://s3.example.com/presigned-url", resp.UploadUrl)
 }
 
+func TestFileHandler_CreateFile_ValidationErrors(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+	}{
+		{"empty name", `{"name":"","mime_type":"application/pdf","size":100}`},
+		{"whitespace-only name", `{"name":"   ","mime_type":"application/pdf","size":100}`},
+		{"name exceeds 255 chars", `{"name":"` + strings.Repeat("a", 256) + `","mime_type":"application/pdf","size":100}`},
+		{"invalid mime type", `{"name":"file.pdf","mime_type":"text/plain","size":100}`},
+		{"zero size", `{"name":"file.pdf","mime_type":"application/pdf","size":0}`},
+		{"negative size", `{"name":"file.pdf","mime_type":"application/pdf","size":-1}`},
+		{"size exceeds max", `{"name":"file.pdf","mime_type":"application/pdf","size":104857601}`},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockSvc := mock_handlers.NewMockFileService(t)
+			h := handlers.NewFileHandler(mockSvc, nil)
+
+			userID := uuid.New()
+			req := httptest.NewRequest(http.MethodPost, "/files", strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			ctx := authctx.WithUserID(req.Context(), userID)
+			req = req.WithContext(ctx)
+			w := httptest.NewRecorder()
+
+			r := chi.NewRouter()
+			api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+			r.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusBadRequest, w.Code)
+		})
+	}
+}
+
 func TestFileHandler_CreateFile_Unauthorized(t *testing.T) {
 	mockSvc := mock_handlers.NewMockFileService(t)
 	h := handlers.NewFileHandler(mockSvc, nil)

@@ -153,12 +153,13 @@ func (q *Queries) GetFileIfViewable(ctx context.Context, arg GetFileIfViewablePa
 }
 
 const insertFile = `-- name: InsertFile :one
-INSERT INTO files (user_id, s3_key, name, mime_type, size, status)
-VALUES ($1, $2, $3, $4, $5, 'pending')
+INSERT INTO files (id, user_id, s3_key, name, mime_type, size, status)
+VALUES ($1, $2, $3, $4, $5, $6, 'pending')
 RETURNING id, user_id, s3_key, name, mime_type, size, checksum, status, created_at, updated_at, deletion_status, deleted_at, s3_deleted_at, deletion_job_id
 `
 
 type InsertFileParams struct {
+	ID       pgtype.UUID `json:"id"`
 	UserID   pgtype.UUID `json:"user_id"`
 	S3Key    string      `json:"s3_key"`
 	Name     string      `json:"name"`
@@ -168,6 +169,7 @@ type InsertFileParams struct {
 
 func (q *Queries) InsertFile(ctx context.Context, arg InsertFileParams) (File, error) {
 	row := q.db.QueryRow(ctx, insertFile,
+		arg.ID,
 		arg.UserID,
 		arg.S3Key,
 		arg.Name,

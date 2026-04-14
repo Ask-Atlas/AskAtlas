@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -90,11 +91,18 @@ func (s *Service) GetFile(ctx context.Context, p GetFileParams) (File, error) {
 // CreateFile inserts a pending file record in the database, generates a presigned S3 PUT URL,
 // and returns both the file reference and the upload URL.
 func (s *Service) CreateFile(ctx context.Context, p CreateFileParams) (CreateFileResult, error) {
-	s3Key := fmt.Sprintf("users/%s/files", p.UserID.String())
+	safeName := filepath.Base(p.Name)
+	if safeName == "." || safeName == "/" || safeName == "" || strings.ContainsRune(safeName, 0) {
+		return CreateFileResult{}, fmt.Errorf("CreateFile: %w", apperrors.ErrInvalidInput)
+	}
+
+	fileID := uuid.New()
+	s3Key := fmt.Sprintf("users/%s/files/%s/%s", p.UserID.String(), fileID.String(), safeName)
 
 	row, err := s.repo.InsertFile(ctx, db.InsertFileParams{
+		ID:       utils.UUID(fileID),
 		UserID:   utils.UUID(p.UserID),
-		S3Key:    s3Key, // placeholder, updated below
+		S3Key:    s3Key,
 		Name:     p.Name,
 		MimeType: db.MimeType(p.MimeType),
 		Size:     p.Size,
@@ -102,13 +110,6 @@ func (s *Service) CreateFile(ctx context.Context, p CreateFileParams) (CreateFil
 	if err != nil {
 		return CreateFileResult{}, fmt.Errorf("CreateFile: insert: %w", err)
 	}
-
-	fileID, err := utils.PgxToGoogleUUID(row.ID)
-	if err != nil {
-		return CreateFileResult{}, fmt.Errorf("CreateFile: parse file id: %w", err)
-	}
-
-	s3Key = fmt.Sprintf("users/%s/files/%s/%s", p.UserID.String(), fileID.String(), p.Name)
 
 	uploadURL, err := s.s3.GeneratePresignedPutURL(ctx, s3Key, p.MimeType, p.Size)
 	if err != nil {

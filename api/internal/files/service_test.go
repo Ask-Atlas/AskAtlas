@@ -105,7 +105,6 @@ func TestService_CreateFile_Success(t *testing.T) {
 	svc := files.NewService(repo, s3Mock)
 
 	userID := uuid.New()
-	fileID := uuid.New()
 	now := time.Now()
 
 	params := files.CreateFileParams{
@@ -115,34 +114,48 @@ func TestService_CreateFile_Success(t *testing.T) {
 		Size:     1048576,
 	}
 
-	insertedFile := db.File{
-		ID:        utils.UUID(fileID),
-		UserID:    utils.UUID(userID),
-		S3Key:     "users/" + userID.String() + "/files",
-		Name:      "lecture-notes.pdf",
-		MimeType:  db.MimeTypeApplicationPdf,
-		Size:      1048576,
-		Status:    db.UploadStatusPending,
-		CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
-		UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
-	}
+	// Capture the generated file ID and s3_key from the insert call.
+	var capturedID pgtype.UUID
+	var capturedS3Key string
 
 	repo.EXPECT().
 		InsertFile(mock.Anything, mock.MatchedBy(func(arg db.InsertFileParams) bool {
-			return arg.UserID == utils.UUID(userID) &&
+			capturedID = arg.ID
+			capturedS3Key = arg.S3Key
+			return arg.ID.Valid &&
+				arg.UserID == utils.UUID(userID) &&
 				arg.Name == "lecture-notes.pdf" &&
 				arg.MimeType == db.MimeTypeApplicationPdf &&
-				arg.Size == int64(1048576)
+				arg.Size == int64(1048576) &&
+				arg.S3Key != ""
 		})).
-		Return(insertedFile, nil)
+		RunAndReturn(func(_ context.Context, arg db.InsertFileParams) (db.File, error) {
+			return db.File{
+				ID:        arg.ID,
+				UserID:    arg.UserID,
+				S3Key:     arg.S3Key,
+				Name:      arg.Name,
+				MimeType:  arg.MimeType,
+				Size:      arg.Size,
+				Status:    db.UploadStatusPending,
+				CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+				UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			}, nil
+		})
 
-	expectedKey := fmt.Sprintf("users/%s/files/%s/lecture-notes.pdf", userID.String(), fileID.String())
 	s3Mock.EXPECT().
-		GeneratePresignedPutURL(mock.Anything, expectedKey, "application/pdf", int64(1048576)).
+		GeneratePresignedPutURL(mock.Anything, mock.AnythingOfType("string"), "application/pdf", int64(1048576)).
 		Return("https://s3.example.com/presigned-url", nil)
 
 	result, err := svc.CreateFile(context.Background(), params)
 	require.NoError(t, err)
+
+	fileID, err := utils.PgxToGoogleUUID(capturedID)
+	require.NoError(t, err)
+
+	expectedKey := fmt.Sprintf("users/%s/files/%s/lecture-notes.pdf", userID.String(), fileID.String())
+	assert.Equal(t, expectedKey, capturedS3Key, "S3 key stored in DB must include file ID and name")
+
 	assert.Equal(t, fileID, result.File.ID)
 	assert.Equal(t, "lecture-notes.pdf", result.File.Name)
 	assert.Equal(t, int64(1048576), result.File.Size)
@@ -178,7 +191,6 @@ func TestService_CreateFile_PresignError(t *testing.T) {
 	svc := files.NewService(repo, s3Mock)
 
 	userID := uuid.New()
-	fileID := uuid.New()
 	now := time.Now()
 
 	params := files.CreateFileParams{
@@ -188,21 +200,21 @@ func TestService_CreateFile_PresignError(t *testing.T) {
 		Size:     100,
 	}
 
-	insertedFile := db.File{
-		ID:        utils.UUID(fileID),
-		UserID:    utils.UUID(userID),
-		S3Key:     "users/" + userID.String() + "/files",
-		Name:      "file.pdf",
-		MimeType:  db.MimeTypeApplicationPdf,
-		Size:      100,
-		Status:    db.UploadStatusPending,
-		CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
-		UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
-	}
-
 	repo.EXPECT().
 		InsertFile(mock.Anything, mock.Anything).
-		Return(insertedFile, nil)
+		RunAndReturn(func(_ context.Context, arg db.InsertFileParams) (db.File, error) {
+			return db.File{
+				ID:        arg.ID,
+				UserID:    arg.UserID,
+				S3Key:     arg.S3Key,
+				Name:      arg.Name,
+				MimeType:  arg.MimeType,
+				Size:      arg.Size,
+				Status:    db.UploadStatusPending,
+				CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+				UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			}, nil
+		})
 
 	s3Mock.EXPECT().
 		GeneratePresignedPutURL(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -211,6 +223,81 @@ func TestService_CreateFile_PresignError(t *testing.T) {
 	_, err := svc.CreateFile(context.Background(), params)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "CreateFile: presign")
+}
+
+func TestService_CreateFile_PathTraversal_Rejected(t *testing.T) {
+	tests := []struct {
+		name     string
+		fileName string
+	}{
+		{"empty name", ""},
+		{"dot only", "."},
+		{"slash only", "/"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := mock_files.NewMockRepository(t)
+			s3Mock := mock_files.NewMockS3Uploader(t)
+			svc := files.NewService(repo, s3Mock)
+
+			params := files.CreateFileParams{
+				UserID:   uuid.New(),
+				Name:     tc.fileName,
+				MimeType: "application/pdf",
+				Size:     100,
+			}
+
+			_, err := svc.CreateFile(context.Background(), params)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "invalid input")
+		})
+	}
+}
+
+func TestService_CreateFile_PathTraversal_Sanitized(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	s3Mock := mock_files.NewMockS3Uploader(t)
+	svc := files.NewService(repo, s3Mock)
+
+	userID := uuid.New()
+	now := time.Now()
+
+	params := files.CreateFileParams{
+		UserID:   userID,
+		Name:     "../../admin/secrets.pdf",
+		MimeType: "application/pdf",
+		Size:     100,
+	}
+
+	var capturedS3Key string
+
+	repo.EXPECT().
+		InsertFile(mock.Anything, mock.MatchedBy(func(arg db.InsertFileParams) bool {
+			capturedS3Key = arg.S3Key
+			return true
+		})).
+		RunAndReturn(func(_ context.Context, arg db.InsertFileParams) (db.File, error) {
+			return db.File{
+				ID:        arg.ID,
+				UserID:    arg.UserID,
+				S3Key:     arg.S3Key,
+				Name:      arg.Name,
+				MimeType:  arg.MimeType,
+				Size:      arg.Size,
+				Status:    db.UploadStatusPending,
+				CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+				UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			}, nil
+		})
+
+	s3Mock.EXPECT().
+		GeneratePresignedPutURL(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return("https://s3.example.com/presigned-url", nil)
+
+	_, err := svc.CreateFile(context.Background(), params)
+	require.NoError(t, err)
+	assert.Contains(t, capturedS3Key, "/secrets.pdf", "path traversal should be stripped to base name")
+	assert.NotContains(t, capturedS3Key, "..", "S3 key must not contain directory traversal")
 }
 
 func TestService_GetFile(t *testing.T) {

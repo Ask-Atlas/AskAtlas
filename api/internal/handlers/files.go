@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -13,6 +14,9 @@ import (
 	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// maxFileSizeBytes is the upper bound on file size that a client may declare (100 MB).
+const maxFileSizeBytes int64 = 100 * 1024 * 1024
 
 // FileService defines the application logic required by the FileHandler.
 type FileService interface {
@@ -53,8 +57,8 @@ func (h *FileHandler) CreateFile(w http.ResponseWriter, r *http.Request) {
 	} else if len(body.Name) > 255 {
 		errDetails["name"] = "must not exceed 255 characters"
 	}
-	if body.Size < 1 {
-		errDetails["size"] = "must be greater than 0"
+	if body.Size < 1 || body.Size > maxFileSizeBytes {
+		errDetails["size"] = fmt.Sprintf("must be between 1 and %d bytes", maxFileSizeBytes)
 	}
 	if !body.MimeType.Valid() {
 		errDetails["mime_type"] = "unsupported mime type"
