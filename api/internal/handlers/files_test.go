@@ -19,6 +19,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func fileTestRouter(t *testing.T, fh *handlers.FileHandler) chi.Router {
+	gh := handlers.NewGrantHandler(mock_handlers.NewMockGrantService(t))
+	composite := handlers.NewCompositeHandler(fh, gh)
+	r := chi.NewRouter()
+	api.HandlerWithOptions(composite, api.ChiServerOptions{BaseRouter: r})
+	return r
+}
+
 func TestFileHandler_ListFiles_Success(t *testing.T) {
 	mockSvc := mock_handlers.NewMockFileService(t)
 	h := handlers.NewFileHandler(mockSvc, nil)
@@ -29,8 +37,7 @@ func TestFileHandler_ListFiles_Success(t *testing.T) {
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
-	r := chi.NewRouter()
-	api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+	r := fileTestRouter(t, h)
 
 	returnedFiles := []files.File{
 		{ID: uuid.New(), Name: "file1.txt", Status: "complete"},
@@ -65,8 +72,7 @@ func TestFileHandler_ListFiles_InvalidParams(t *testing.T) {
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
-	r := chi.NewRouter()
-	api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+	r := fileTestRouter(t, h)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -86,8 +92,7 @@ func TestFileHandler_ListFiles_ServiceError(t *testing.T) {
 		ListFiles(mock.Anything, mock.Anything).
 		Return(nil, nil, errors.New("svc error"))
 
-	r := chi.NewRouter()
-	api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+	r := fileTestRouter(t, h)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)

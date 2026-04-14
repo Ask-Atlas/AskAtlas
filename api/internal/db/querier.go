@@ -30,6 +30,9 @@ type Querier interface {
 	ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFilesUpdatedDescParams) ([]ListOwnedFilesUpdatedDescRow, error)
 	// Called by the cleanup job handler once S3 deletion is confirmed.
 	MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
+	// Deletes a file grant matching the exact composite key. No-op if the grant
+	// does not exist (idempotent).
+	RevokeFileGrant(ctx context.Context, arg RevokeFileGrantParams) error
 	// Records the QStash message ID after publishing the async cleanup job.
 	SetFileDeletionJobID(ctx context.Context, arg SetFileDeletionJobIDParams) error
 	// Marks a file as pending deletion. Only applies if the file is owned by the caller
@@ -37,6 +40,9 @@ type Querier interface {
 	SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)
 	SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
 	UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
+	// Inserts a new file grant, returning the row. If the grant already exists
+	// (same file_id, grantee_type, grantee_id, permission), returns the existing row.
+	UpsertFileGrant(ctx context.Context, arg UpsertFileGrantParams) (UpsertFileGrantRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

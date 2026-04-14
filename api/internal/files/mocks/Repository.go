@@ -9,7 +9,6 @@ import (
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/files"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -169,6 +168,63 @@ func (_c *MockRepository_GetFileIfViewable_Call) Return(file db.File, err error)
 }
 
 func (_c *MockRepository_GetFileIfViewable_Call) RunAndReturn(run func(ctx context.Context, arg db.GetFileIfViewableParams) (db.File, error)) *MockRepository_GetFileIfViewable_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// InTx provides a mock function for the type MockRepository
+func (_mock *MockRepository) InTx(ctx context.Context, fn func(files.Repository) error) error {
+	ret := _mock.Called(ctx, fn)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InTx")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(files.Repository) error) error); ok {
+		r0 = returnFunc(ctx, fn)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_InTx_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InTx'
+type MockRepository_InTx_Call struct {
+	*mock.Call
+}
+
+// InTx is a helper method to define mock.On call
+//   - ctx context.Context
+//   - fn func(files.Repository) error
+func (_e *MockRepository_Expecter) InTx(ctx interface{}, fn interface{}) *MockRepository_InTx_Call {
+	return &MockRepository_InTx_Call{Call: _e.mock.On("InTx", ctx, fn)}
+}
+
+func (_c *MockRepository_InTx_Call) Run(run func(ctx context.Context, fn func(files.Repository) error)) *MockRepository_InTx_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(files.Repository) error
+		if args[1] != nil {
+			arg1 = args[1].(func(files.Repository) error)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_InTx_Call) Return(err error) *MockRepository_InTx_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_InTx_Call) RunAndReturn(run func(ctx context.Context, fn func(files.Repository) error) error) *MockRepository_InTx_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1046,6 +1102,63 @@ func (_c *MockRepository_MarkFileDeleted_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// RevokeFileGrant provides a mock function for the type MockRepository
+func (_mock *MockRepository) RevokeFileGrant(ctx context.Context, arg db.RevokeFileGrantParams) error {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RevokeFileGrant")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.RevokeFileGrantParams) error); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_RevokeFileGrant_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RevokeFileGrant'
+type MockRepository_RevokeFileGrant_Call struct {
+	*mock.Call
+}
+
+// RevokeFileGrant is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.RevokeFileGrantParams
+func (_e *MockRepository_Expecter) RevokeFileGrant(ctx interface{}, arg interface{}) *MockRepository_RevokeFileGrant_Call {
+	return &MockRepository_RevokeFileGrant_Call{Call: _e.mock.On("RevokeFileGrant", ctx, arg)}
+}
+
+func (_c *MockRepository_RevokeFileGrant_Call) Run(run func(ctx context.Context, arg db.RevokeFileGrantParams)) *MockRepository_RevokeFileGrant_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.RevokeFileGrantParams
+		if args[1] != nil {
+			arg1 = args[1].(db.RevokeFileGrantParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_RevokeFileGrant_Call) Return(err error) *MockRepository_RevokeFileGrant_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_RevokeFileGrant_Call) RunAndReturn(run func(ctx context.Context, arg db.RevokeFileGrantParams) error) *MockRepository_RevokeFileGrant_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetFileDeletionJobID provides a mock function for the type MockRepository
 func (_mock *MockRepository) SetFileDeletionJobID(ctx context.Context, arg db.SetFileDeletionJobIDParams) error {
 	ret := _mock.Called(ctx, arg)
@@ -1169,44 +1282,53 @@ func (_c *MockRepository_SoftDeleteFile_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
-// InTx provides a mock function for the type MockRepository
-func (_mock *MockRepository) InTx(ctx context.Context, fn func(files.Repository) error) error {
-	ret := _mock.Called(ctx, fn)
+// UpsertFileGrant provides a mock function for the type MockRepository
+func (_mock *MockRepository) UpsertFileGrant(ctx context.Context, arg db.UpsertFileGrantParams) (db.UpsertFileGrantRow, error) {
+	ret := _mock.Called(ctx, arg)
 
 	if len(ret) == 0 {
-		panic("no return value specified for InTx")
+		panic("no return value specified for UpsertFileGrant")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, func(files.Repository) error) error); ok {
-		r0 = returnFunc(ctx, fn)
-	} else {
-		r0 = ret.Error(0)
+	var r0 db.UpsertFileGrantRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.UpsertFileGrantParams) (db.UpsertFileGrantRow, error)); ok {
+		return returnFunc(ctx, arg)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.UpsertFileGrantParams) db.UpsertFileGrantRow); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(db.UpsertFileGrantRow)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.UpsertFileGrantParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
-// MockRepository_InTx_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InTx'
-type MockRepository_InTx_Call struct {
+// MockRepository_UpsertFileGrant_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpsertFileGrant'
+type MockRepository_UpsertFileGrant_Call struct {
 	*mock.Call
 }
 
-// InTx is a helper method to define mock.On call
+// UpsertFileGrant is a helper method to define mock.On call
 //   - ctx context.Context
-//   - fn func(files.Repository) error
-func (_e *MockRepository_Expecter) InTx(ctx interface{}, fn interface{}) *MockRepository_InTx_Call {
-	return &MockRepository_InTx_Call{Call: _e.mock.On("InTx", ctx, fn)}
+//   - arg db.UpsertFileGrantParams
+func (_e *MockRepository_Expecter) UpsertFileGrant(ctx interface{}, arg interface{}) *MockRepository_UpsertFileGrant_Call {
+	return &MockRepository_UpsertFileGrant_Call{Call: _e.mock.On("UpsertFileGrant", ctx, arg)}
 }
 
-func (_c *MockRepository_InTx_Call) Run(run func(ctx context.Context, fn func(files.Repository) error)) *MockRepository_InTx_Call {
+func (_c *MockRepository_UpsertFileGrant_Call) Run(run func(ctx context.Context, arg db.UpsertFileGrantParams)) *MockRepository_UpsertFileGrant_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 func(files.Repository) error
+		var arg1 db.UpsertFileGrantParams
 		if args[1] != nil {
-			arg1 = args[1].(func(files.Repository) error)
+			arg1 = args[1].(db.UpsertFileGrantParams)
 		}
 		run(
 			arg0,
@@ -1216,65 +1338,12 @@ func (_c *MockRepository_InTx_Call) Run(run func(ctx context.Context, fn func(fi
 	return _c
 }
 
-func (_c *MockRepository_InTx_Call) Return(err error) *MockRepository_InTx_Call {
-	_c.Call.Return(err)
+func (_c *MockRepository_UpsertFileGrant_Call) Return(upsertFileGrantRow db.UpsertFileGrantRow, err error) *MockRepository_UpsertFileGrant_Call {
+	_c.Call.Return(upsertFileGrantRow, err)
 	return _c
 }
 
-func (_c *MockRepository_InTx_Call) RunAndReturn(run func(ctx context.Context, fn func(files.Repository) error) error) *MockRepository_InTx_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// WithTx provides a mock function for the type MockRepository
-func (_mock *MockRepository) WithTx(tx pgx.Tx) files.Repository {
-	ret := _mock.Called(tx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for WithTx")
-	}
-
-	var r0 files.Repository
-	if returnFunc, ok := ret.Get(0).(func(pgx.Tx) files.Repository); ok {
-		r0 = returnFunc(tx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(files.Repository)
-		}
-	}
-	return r0
-}
-
-// MockRepository_WithTx_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WithTx'
-type MockRepository_WithTx_Call struct {
-	*mock.Call
-}
-
-// WithTx is a helper method to define mock.On call
-//   - tx pgx.Tx
-func (_e *MockRepository_Expecter) WithTx(tx interface{}) *MockRepository_WithTx_Call {
-	return &MockRepository_WithTx_Call{Call: _e.mock.On("WithTx", tx)}
-}
-
-func (_c *MockRepository_WithTx_Call) Run(run func(tx pgx.Tx)) *MockRepository_WithTx_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 pgx.Tx
-		if args[0] != nil {
-			arg0 = args[0].(pgx.Tx)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *MockRepository_WithTx_Call) Return(repository files.Repository) *MockRepository_WithTx_Call {
-	_c.Call.Return(repository)
-	return _c
-}
-
-func (_c *MockRepository_WithTx_Call) RunAndReturn(run func(tx pgx.Tx) files.Repository) *MockRepository_WithTx_Call {
+func (_c *MockRepository_UpsertFileGrant_Call) RunAndReturn(run func(ctx context.Context, arg db.UpsertFileGrantParams) (db.UpsertFileGrantRow, error)) *MockRepository_UpsertFileGrant_Call {
 	_c.Call.Return(run)
 	return _c
 }

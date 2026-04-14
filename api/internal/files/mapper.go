@@ -112,6 +112,36 @@ func sharedFromMimeDesc(r db.ListOwnedFilesMimeDescRow) sharedRow {
 	return sharedRow{r.ID, r.UserID, r.Name, r.Size, r.MimeType, r.Status, r.CreatedAt, r.UpdatedAt, r.FavoritedAt, r.LastViewedAt}
 }
 
+// mapGrantRow converts a database UpsertFileGrantRow into the domain Grant model.
+func mapGrantRow(r db.UpsertFileGrantRow) (Grant, error) {
+	id, err := utils.PgxToGoogleUUID(r.ID)
+	if err != nil {
+		return Grant{}, fmt.Errorf("mapGrantRow: ID: %w", err)
+	}
+	fileID, err := utils.PgxToGoogleUUID(r.FileID)
+	if err != nil {
+		return Grant{}, fmt.Errorf("mapGrantRow: FileID: %w", err)
+	}
+	granteeID, err := utils.PgxToGoogleUUID(r.GranteeID)
+	if err != nil {
+		return Grant{}, fmt.Errorf("mapGrantRow: GranteeID: %w", err)
+	}
+	grantedBy, err := utils.PgxToGoogleUUID(r.GrantedBy)
+	if err != nil {
+		return Grant{}, fmt.Errorf("mapGrantRow: GrantedBy: %w", err)
+	}
+
+	return Grant{
+		ID:          id,
+		FileID:      fileID,
+		GranteeType: string(r.GranteeType),
+		GranteeID:   granteeID,
+		Permission:  string(r.Permission),
+		GrantedBy:   grantedBy,
+		CreatedAt:   r.CreatedAt.Time,
+	}, nil
+}
+
 // mapDBFile converts a database File model into the domain File standard model.
 func mapDBFile(f db.File) (File, error) {
 	id, err := utils.PgxToGoogleUUID(f.ID)

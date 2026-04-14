@@ -80,6 +80,7 @@ func main() {
 	fileRepo := files.NewSQLCRepository(connPool, queries)
 	fileService := files.NewService(fileRepo)
 	fileHandler := handlers.NewFileHandler(fileService, qstashClient)
+	grantHandler := handlers.NewGrantHandler(fileService)
 
 	clerkAuth := middleware.ClerkAuth(userService)
 
@@ -108,10 +109,12 @@ func main() {
 		ErrorHandler: api.OAPIValidatorErrorHandler,
 	}
 
+	compositeHandler := handlers.NewCompositeHandler(fileHandler, grantHandler)
+
 	r.Route("/api", func(r chi.Router) {
 		r.Use(clerkAuth)
 		r.Use(middleware_oapi.OapiRequestValidatorWithOptions(swagger, &oapiOptions))
-		api.HandlerWithOptions(fileHandler, api.ChiServerOptions{
+		api.HandlerWithOptions(compositeHandler, api.ChiServerOptions{
 			BaseRouter:       r,
 			ErrorHandlerFunc: api.OAPIStrictErrorHandler,
 		})

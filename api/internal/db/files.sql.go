@@ -1572,6 +1572,33 @@ func (q *Queries) MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
 	return err
 }
 
+const revokeFileGrant = `-- name: RevokeFileGrant :exec
+DELETE FROM file_grants
+WHERE file_id = $1
+  AND grantee_type = $2
+  AND grantee_id = $3
+  AND permission = $4
+`
+
+type RevokeFileGrantParams struct {
+	FileID      pgtype.UUID `json:"file_id"`
+	GranteeType GranteeType `json:"grantee_type"`
+	GranteeID   pgtype.UUID `json:"grantee_id"`
+	Permission  Permission  `json:"permission"`
+}
+
+// Deletes a file grant matching the exact composite key. No-op if the grant
+// does not exist (idempotent).
+func (q *Queries) RevokeFileGrant(ctx context.Context, arg RevokeFileGrantParams) error {
+	_, err := q.db.Exec(ctx, revokeFileGrant,
+		arg.FileID,
+		arg.GranteeType,
+		arg.GranteeID,
+		arg.Permission,
+	)
+	return err
+}
+
 const setFileDeletionJobID = `-- name: SetFileDeletionJobID :exec
 UPDATE files
 SET
@@ -1616,4 +1643,63 @@ func (q *Queries) SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) 
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const upsertFileGrant = `-- name: UpsertFileGrant :one
+WITH ins AS (
+  INSERT INTO file_grants (file_id, grantee_type, grantee_id, permission, granted_by)
+  VALUES ($1, $2, $3, $4, $5)
+  ON CONFLICT (file_id, grantee_type, grantee_id, permission) DO NOTHING
+  RETURNING id, file_id, grantee_type, grantee_id, permission, granted_by, created_at
+)
+SELECT id, file_id, grantee_type, grantee_id, permission, granted_by, created_at FROM ins
+UNION ALL
+SELECT id, file_id, grantee_type, grantee_id, permission, granted_by, created_at FROM file_grants
+WHERE file_id = $1
+  AND grantee_type = $2
+  AND grantee_id = $3
+  AND permission = $4
+  AND NOT EXISTS (SELECT 1 FROM ins)
+LIMIT 1
+`
+
+type UpsertFileGrantParams struct {
+	FileID      pgtype.UUID `json:"file_id"`
+	GranteeType GranteeType `json:"grantee_type"`
+	GranteeID   pgtype.UUID `json:"grantee_id"`
+	Permission  Permission  `json:"permission"`
+	GrantedBy   pgtype.UUID `json:"granted_by"`
+}
+
+type UpsertFileGrantRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	FileID      pgtype.UUID        `json:"file_id"`
+	GranteeType GranteeType        `json:"grantee_type"`
+	GranteeID   pgtype.UUID        `json:"grantee_id"`
+	Permission  Permission         `json:"permission"`
+	GrantedBy   pgtype.UUID        `json:"granted_by"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+// Inserts a new file grant, returning the row. If the grant already exists
+// (same file_id, grantee_type, grantee_id, permission), returns the existing row.
+func (q *Queries) UpsertFileGrant(ctx context.Context, arg UpsertFileGrantParams) (UpsertFileGrantRow, error) {
+	row := q.db.QueryRow(ctx, upsertFileGrant,
+		arg.FileID,
+		arg.GranteeType,
+		arg.GranteeID,
+		arg.Permission,
+		arg.GrantedBy,
+	)
+	var i UpsertFileGrantRow
+	err := row.Scan(
+		&i.ID,
+		&i.FileID,
+		&i.GranteeType,
+		&i.GranteeID,
+		&i.Permission,
+		&i.GrantedBy,
+		&i.CreatedAt,
+	)
+	return i, err
 }

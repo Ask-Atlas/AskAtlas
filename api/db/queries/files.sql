@@ -376,6 +376,34 @@ SET
 WHERE id = sqlc.arg(file_id)::uuid
   AND deletion_status = 'pending_deletion';
 
+-- name: UpsertFileGrant :one
+-- Inserts a new file grant, returning the row. If the grant already exists
+-- (same file_id, grantee_type, grantee_id, permission), returns the existing row.
+WITH ins AS (
+  INSERT INTO file_grants (file_id, grantee_type, grantee_id, permission, granted_by)
+  VALUES (sqlc.arg(file_id), sqlc.arg(grantee_type), sqlc.arg(grantee_id), sqlc.arg(permission), sqlc.arg(granted_by))
+  ON CONFLICT (file_id, grantee_type, grantee_id, permission) DO NOTHING
+  RETURNING *
+)
+SELECT * FROM ins
+UNION ALL
+SELECT * FROM file_grants
+WHERE file_id = sqlc.arg(file_id)
+  AND grantee_type = sqlc.arg(grantee_type)
+  AND grantee_id = sqlc.arg(grantee_id)
+  AND permission = sqlc.arg(permission)
+  AND NOT EXISTS (SELECT 1 FROM ins)
+LIMIT 1;
+
+-- name: RevokeFileGrant :exec
+-- Deletes a file grant matching the exact composite key. No-op if the grant
+-- does not exist (idempotent).
+DELETE FROM file_grants
+WHERE file_id = sqlc.arg(file_id)
+  AND grantee_type = sqlc.arg(grantee_type)
+  AND grantee_id = sqlc.arg(grantee_id)
+  AND permission = sqlc.arg(permission);
+
 -- name: GetFileIfViewable :one
 SELECT f.*
 FROM files f

@@ -25,6 +25,9 @@ type Repository interface {
 	SetFileDeletionJobID(ctx context.Context, arg db.SetFileDeletionJobIDParams) error
 	MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
 
+	UpsertFileGrant(ctx context.Context, arg db.UpsertFileGrantParams) (db.UpsertFileGrantRow, error)
+	RevokeFileGrant(ctx context.Context, arg db.RevokeFileGrantParams) error
+
 	ListOwnedFilesUpdatedDesc(ctx context.Context, arg db.ListOwnedFilesUpdatedDescParams) ([]db.ListOwnedFilesUpdatedDescRow, error)
 	ListOwnedFilesUpdatedAsc(ctx context.Context, arg db.ListOwnedFilesUpdatedAscParams) ([]db.ListOwnedFilesUpdatedAscRow, error)
 	ListOwnedFilesCreatedDesc(ctx context.Context, arg db.ListOwnedFilesCreatedDescParams) ([]db.ListOwnedFilesCreatedDescRow, error)
@@ -167,6 +170,54 @@ func (s *Service) DeleteFile(ctx context.Context, p DeleteFileParams, publisher 
 		JobID:  utils.Text(&jobID),
 	}); err != nil {
 		slog.Error("DeleteFile: failed to set deletion_job_id", "file_id", p.FileID, "error", err)
+	}
+
+	return nil
+}
+
+// CreateGrant creates a file permission grant. The caller must own the file.
+// If the grant already exists the existing row is returned (idempotent).
+func (s *Service) CreateGrant(ctx context.Context, p CreateGrantParams) (Grant, error) {
+	// Verify ownership.
+	if _, err := s.repo.GetFileByOwner(ctx, db.GetFileByOwnerParams{
+		FileID:  utils.UUID(p.FileID),
+		OwnerID: utils.UUID(p.OwnerID),
+	}); err != nil {
+		return Grant{}, err
+	}
+
+	row, err := s.repo.UpsertFileGrant(ctx, db.UpsertFileGrantParams{
+		FileID:      utils.UUID(p.FileID),
+		GranteeType: db.GranteeType(p.GranteeType),
+		GranteeID:   utils.UUID(p.GranteeID),
+		Permission:  db.Permission(p.Permission),
+		GrantedBy:   utils.UUID(p.OwnerID),
+	})
+	if err != nil {
+		return Grant{}, fmt.Errorf("CreateGrant: %w", err)
+	}
+
+	return mapGrantRow(row)
+}
+
+// RevokeGrant revokes a file permission grant. The caller must own the file.
+// If the grant does not exist the call is a no-op (idempotent).
+func (s *Service) RevokeGrant(ctx context.Context, p RevokeGrantParams) error {
+	// Verify ownership.
+	if _, err := s.repo.GetFileByOwner(ctx, db.GetFileByOwnerParams{
+		FileID:  utils.UUID(p.FileID),
+		OwnerID: utils.UUID(p.OwnerID),
+	}); err != nil {
+		return err
+	}
+
+	if err := s.repo.RevokeFileGrant(ctx, db.RevokeFileGrantParams{
+		FileID:      utils.UUID(p.FileID),
+		GranteeType: db.GranteeType(p.GranteeType),
+		GranteeID:   utils.UUID(p.GranteeID),
+		Permission:  db.Permission(p.Permission),
+	}); err != nil {
+		return fmt.Errorf("RevokeGrant: %w", err)
 	}
 
 	return nil
