@@ -195,6 +195,17 @@ func validateJoinSectionBody(r *http.Request) *apperrors.AppError {
 	return nil
 }
 
+// ListSectionMembers is a temporary stub satisfying the generated
+// ServerInterface while the section-roster wiring lands in follow-up
+// commits.
+func (h *CoursesHandler) ListSectionMembers(w http.ResponseWriter, r *http.Request, _ openapi_types.UUID, _ openapi_types.UUID, _ api.ListSectionMembersParams) {
+	apperrors.RespondWithError(w, &apperrors.AppError{
+		Code:    http.StatusNotImplemented,
+		Status:  "Not Implemented",
+		Message: "Endpoint not yet implemented",
+	})
+}
+
 // ListMyEnrollments handles GET /me/courses, returning every section the
 // authenticated viewer is enrolled in. Filters on term + role come from
 // the query string; the openapi layer enforces role enum membership and

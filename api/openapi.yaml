@@ -443,6 +443,73 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
   /courses/{course_id}/sections/{section_id}/members:
+    get:
+      operationId: ListSectionMembers
+      summary: List the members of a course section
+      description: |
+        Returns the section roster with limited per-user info: user_id,
+        first_name, last_name, role, joined_at. Email and clerk_id are
+        intentionally NOT exposed -- this endpoint is reachable by any
+        authenticated user (course pages are public within the app), so
+        the payload is the privacy-floor for member identity.
+
+        Sorted by `joined_at ASC` with a `(joined_at, user_id)` keyset
+        cursor as the tiebreaker for stable pagination across pages.
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the parent course
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: section_id
+          in: path
+          description: The unique UUID of the section
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: role
+          in: query
+          description: Filter to members with a specific role
+          required: false
+          schema:
+            type: string
+            enum:
+              - student
+              - ta
+              - instructor
+        - name: limit
+          in: query
+          description: Maximum number of members to return per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          description: Opaque keyset cursor token from the previous page
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A paginated list of section members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSectionMembersResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     post:
       operationId: JoinSection
       summary: Join a section as the authenticated user
@@ -1059,6 +1126,52 @@ components:
             $ref: '#/components/schemas/EnrollmentResponse'
       required:
         - enrollments
+    SectionMemberResponse:
+      type: object
+      description: |
+        Limited per-user payload returned by ListSectionMembers. Email
+        and clerk_id are intentionally NOT exposed -- any authenticated
+        user can list members of any section, so this is the privacy
+        floor for member identity.
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        first_name:
+          type: string
+        last_name:
+          type: string
+        role:
+          type: string
+          enum:
+            - student
+            - ta
+            - instructor
+        joined_at:
+          type: string
+          format: date-time
+      required:
+        - user_id
+        - first_name
+        - last_name
+        - role
+        - joined_at
+    ListSectionMembersResponse:
+      type: object
+      description: A paginated collection of section members
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/SectionMemberResponse'
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+      required:
+        - members
+        - has_more
     MembershipCheckResponse:
       type: object
       description: |
