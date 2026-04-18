@@ -37,3 +37,91 @@ type StudyGuide struct {
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
+
+// GuideVote is the domain enum for a vote direction on a study guide.
+// Mirrors the vote_direction Postgres enum and the openapi
+// StudyGuideDetailResponse.user_vote enum.
+type GuideVote string
+
+const (
+	GuideVoteUp   GuideVote = "up"
+	GuideVoteDown GuideVote = "down"
+)
+
+// GuideCourseSummary is the compact course payload embedded in a
+// StudyGuideDetail. Parallels EnrollmentCourse in the courses
+// package but lives here so the two surfaces can evolve independently.
+type GuideCourseSummary struct {
+	ID         uuid.UUID
+	Department string
+	Number     string
+	Title      string
+}
+
+// ResourceType mirrors the resource_type Postgres enum and the
+// openapi ResourceSummary.type enum.
+type ResourceType string
+
+const (
+	ResourceTypeLink    ResourceType = "link"
+	ResourceTypeVideo   ResourceType = "video"
+	ResourceTypeArticle ResourceType = "article"
+	ResourceTypePDF     ResourceType = "pdf"
+)
+
+// Resource is the compact payload for an attached resource in the
+// study-guide detail. No creator/uploader info -- the caller doesn't
+// need to know who attached the resource.
+type Resource struct {
+	ID          uuid.UUID
+	Title       string
+	URL         string
+	Type        ResourceType
+	Description *string
+	CreatedAt   time.Time
+}
+
+// Quiz is the compact payload for a quiz attached to a study guide.
+// Only id + title + question_count -- no creator, no content, no
+// scoring config. Detailed quiz fields are exposed by the quiz detail
+// endpoint (future ticket ASK-142).
+type Quiz struct {
+	ID            uuid.UUID
+	Title         string
+	QuestionCount int64
+}
+
+// GuideFile is the compact payload for a file attached to a study
+// guide. Privacy floor: id + name + mime_type + size only. No
+// user_id, no s3_key, no checksum.
+type GuideFile struct {
+	ID       uuid.UUID
+	Name     string
+	MimeType string
+	Size     int64
+}
+
+// StudyGuideDetail is the get-by-id domain type: the full guide with
+// all embedded nested arrays + the viewer's own vote state.
+// UserVote is *GuideVote so the wire shape can emit JSON null when
+// the viewer has not voted, distinguishing "not voted" from "voted
+// with empty string".
+type StudyGuideDetail struct {
+	ID            uuid.UUID
+	Title         string
+	Description   *string
+	Content       *string
+	Tags          []string
+	Creator       Creator
+	Course        GuideCourseSummary
+	VoteScore     int64
+	UserVote      *GuideVote
+	ViewCount     int64
+	IsRecommended bool
+	RecommendedBy []Creator
+	Quizzes       []Quiz
+	Resources     []Resource
+	Files         []GuideFile
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}

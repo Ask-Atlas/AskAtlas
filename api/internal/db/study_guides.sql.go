@@ -12,11 +12,70 @@ import (
 )
 
 const courseExistsForGuides = `-- name: CourseExistsForGuides :one
-
 SELECT EXISTS (
   SELECT 1 FROM courses WHERE id = $1::uuid
 ) AS exists
 `
+
+// Single-row probe used by the list handler to disambiguate "course
+// missing" (404) from "course exists but has no guides" (200 empty
+// array). Separate from courses.CourseExists only because sqlc-generated
+// queriers are per-file; the predicate is identical.
+func (q *Queries) CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, courseExistsForGuides, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const getStudyGuideDetail = `-- name: GetStudyGuideDetail :one
+
+SELECT
+  sg.id, sg.title, sg.description, sg.content, sg.tags,
+  sg.view_count, sg.created_at, sg.updated_at,
+  c.id           AS course_id,
+  c.department   AS course_department,
+  c.number       AS course_number,
+  c.title        AS course_title,
+  u.id           AS creator_id,
+  u.first_name   AS creator_first_name,
+  u.last_name    AS creator_last_name,
+  COALESCE((
+    SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
+    FROM study_guide_votes
+    WHERE study_guide_id = sg.id
+  ), 0)::bigint AS vote_score,
+  EXISTS (
+    SELECT 1 FROM study_guide_recommendations
+    WHERE study_guide_id = sg.id
+  ) AS is_recommended
+FROM study_guides sg
+JOIN courses c ON c.id = sg.course_id
+JOIN users   u ON u.id = sg.creator_id
+WHERE sg.id = $1::uuid
+  AND sg.deleted_at IS NULL
+  AND u.deleted_at IS NULL
+`
+
+type GetStudyGuideDetailRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	Title            string             `json:"title"`
+	Description      pgtype.Text        `json:"description"`
+	Content          pgtype.Text        `json:"content"`
+	Tags             []string           `json:"tags"`
+	ViewCount        int32              `json:"view_count"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	CourseID         pgtype.UUID        `json:"course_id"`
+	CourseDepartment string             `json:"course_department"`
+	CourseNumber     string             `json:"course_number"`
+	CourseTitle      string             `json:"course_title"`
+	CreatorID        pgtype.UUID        `json:"creator_id"`
+	CreatorFirstName string             `json:"creator_first_name"`
+	CreatorLastName  string             `json:"creator_last_name"`
+	VoteScore        int64              `json:"vote_score"`
+	IsRecommended    bool               `json:"is_recommended"`
+}
 
 // Study guide list queries (ASK-104).
 //
@@ -40,15 +99,248 @@ SELECT EXISTS (
 // Privacy floor on the creator payload: only id + first_name + last_name
 // are selected. No email, no clerk_id -- same rule as
 // SectionMemberResponse in ASK-143.
-// Single-row probe used by the list handler to disambiguate "course
-// missing" (404) from "course exists but has no guides" (200 empty
-// array). Separate from courses.CourseExists only because sqlc-generated
-// queriers are per-file; the predicate is identical.
-func (q *Queries) CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error) {
-	row := q.db.QueryRow(ctx, courseExistsForGuides, id)
-	var exists bool
-	err := row.Scan(&exists)
-	return exists, err
+// The detail endpoint's main query (ASK-114). Returns the guide's own
+// columns + a compact course payload + a compact creator payload
+// + two inline aggregates as subqueries:
+//   - vote_score    -- SUM(up/down votes)
+//   - is_recommended -- EXISTS in study_guide_recommendations
+//
+// The viewer's own vote (user_vote) ships in a separate query
+// (GetUserVoteForGuide) because sqlc does not infer nullable output
+// columns from LEFT JOIN / subquery expressions on enum-typed columns
+// -- it reads the schema's NOT NULL constraint and types the output
+// non-nullable. An extra round trip is cheaper than fighting sqlc's
+// type inference; the PRD's "batching as separate queries" guidance
+// explicitly allows it.
+//
+// Soft-delete invariants:
+//   - sg.deleted_at IS NULL  -- excludes deleted guides (→ 404)
+//   - u.deleted_at IS NULL   -- creator must be live (ASK-143 convention)
+//
+// Privacy floor: no email, no clerk_id. Creator exposes only
+// id/first_name/last_name.
+func (q *Queries) GetStudyGuideDetail(ctx context.Context, id pgtype.UUID) (GetStudyGuideDetailRow, error) {
+	row := q.db.QueryRow(ctx, getStudyGuideDetail, id)
+	var i GetStudyGuideDetailRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Description,
+		&i.Content,
+		&i.Tags,
+		&i.ViewCount,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CourseID,
+		&i.CourseDepartment,
+		&i.CourseNumber,
+		&i.CourseTitle,
+		&i.CreatorID,
+		&i.CreatorFirstName,
+		&i.CreatorLastName,
+		&i.VoteScore,
+		&i.IsRecommended,
+	)
+	return i, err
+}
+
+const getUserVoteForGuide = `-- name: GetUserVoteForGuide :one
+SELECT vote
+FROM study_guide_votes
+WHERE study_guide_id = $1::uuid
+  AND user_id = $2::uuid
+`
+
+type GetUserVoteForGuideParams struct {
+	StudyGuideID pgtype.UUID `json:"study_guide_id"`
+	ViewerID     pgtype.UUID `json:"viewer_id"`
+}
+
+// Returns the viewer's own vote on the guide, or sql.ErrNoRows when
+// the viewer has not voted. The service maps ErrNoRows to a nil
+// user_vote in the response (JSON null, not omitted).
+func (q *Queries) GetUserVoteForGuide(ctx context.Context, arg GetUserVoteForGuideParams) (VoteDirection, error) {
+	row := q.db.QueryRow(ctx, getUserVoteForGuide, arg.StudyGuideID, arg.ViewerID)
+	var vote VoteDirection
+	err := row.Scan(&vote)
+	return vote, err
+}
+
+const listGuideFiles = `-- name: ListGuideFiles :many
+SELECT f.id, f.name, f.mime_type, f.size
+FROM study_guide_files sgf
+JOIN files f ON f.id = sgf.file_id
+WHERE sgf.study_guide_id = $1::uuid
+  AND f.status = 'complete'
+ORDER BY sgf.created_at ASC, f.id ASC
+`
+
+type ListGuideFilesRow struct {
+	ID       pgtype.UUID `json:"id"`
+	Name     string      `json:"name"`
+	MimeType string      `json:"mime_type"`
+	Size     int64       `json:"size"`
+}
+
+// Attached files for the guide detail payload. Privacy floor: no
+// user_id, no s3_key, no checksum. The file list shows only what a
+// viewer needs to see: what's attached, what type, and how big.
+//
+// Filters f.status = 'complete' so files mid-upload (pending) or
+// failed don't surface in the guide detail -- a frontend that tried
+// to download such a file would get a broken link. Only successfully
+// uploaded files are visible to non-owners; the upload author's own
+// file list (via the files endpoints) shows all statuses so they can
+// retry or remove.
+func (q *Queries) ListGuideFiles(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideFilesRow, error) {
+	rows, err := q.db.Query(ctx, listGuideFiles, studyGuideID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListGuideFilesRow
+	for rows.Next() {
+		var i ListGuideFilesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.MimeType,
+			&i.Size,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGuideQuizzesWithQuestionCount = `-- name: ListGuideQuizzesWithQuestionCount :many
+SELECT
+  q.id, q.title,
+  COUNT(qq.id)::bigint AS question_count
+FROM quizzes q
+LEFT JOIN quiz_questions qq ON qq.quiz_id = q.id
+WHERE q.study_guide_id = $1::uuid
+  AND q.deleted_at IS NULL
+GROUP BY q.id
+ORDER BY q.created_at ASC, q.id ASC
+`
+
+type ListGuideQuizzesWithQuestionCountRow struct {
+	ID            pgtype.UUID `json:"id"`
+	Title         string      `json:"title"`
+	QuestionCount int64       `json:"question_count"`
+}
+
+// Non-deleted quizzes for the guide + question_count per quiz. The
+// LEFT JOIN ensures quizzes with zero questions still appear with
+// question_count = 0.
+func (q *Queries) ListGuideQuizzesWithQuestionCount(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideQuizzesWithQuestionCountRow, error) {
+	rows, err := q.db.Query(ctx, listGuideQuizzesWithQuestionCount, studyGuideID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListGuideQuizzesWithQuestionCountRow
+	for rows.Next() {
+		var i ListGuideQuizzesWithQuestionCountRow
+		if err := rows.Scan(&i.ID, &i.Title, &i.QuestionCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGuideRecommenders = `-- name: ListGuideRecommenders :many
+SELECT u.id, u.first_name, u.last_name
+FROM study_guide_recommendations sgr
+JOIN users u ON u.id = sgr.recommended_by
+WHERE sgr.study_guide_id = $1::uuid
+  AND u.deleted_at IS NULL
+ORDER BY sgr.created_at ASC, u.id ASC
+`
+
+type ListGuideRecommendersRow struct {
+	ID        pgtype.UUID `json:"id"`
+	FirstName string      `json:"first_name"`
+	LastName  string      `json:"last_name"`
+}
+
+// Recommenders list for the guide detail payload. Same privacy floor
+// as CreatorSummary -- id + first_name + last_name only. Excludes
+// recommenders whose user record is soft-deleted.
+func (q *Queries) ListGuideRecommenders(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideRecommendersRow, error) {
+	rows, err := q.db.Query(ctx, listGuideRecommenders, studyGuideID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListGuideRecommendersRow
+	for rows.Next() {
+		var i ListGuideRecommendersRow
+		if err := rows.Scan(&i.ID, &i.FirstName, &i.LastName); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGuideResources = `-- name: ListGuideResources :many
+SELECT r.id, r.title, r.url, r.type, r.description, r.created_at
+FROM study_guide_resources sgr
+JOIN resources r ON r.id = sgr.resource_id
+WHERE sgr.study_guide_id = $1::uuid
+ORDER BY sgr.created_at ASC, r.id ASC
+`
+
+type ListGuideResourcesRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	Title       string             `json:"title"`
+	Url         string             `json:"url"`
+	Type        ResourceType       `json:"type"`
+	Description pgtype.Text        `json:"description"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+// Attached resources for the guide detail payload. No creator info
+// in the SELECT list -- the caller doesn't need to know who attached
+// the resource.
+func (q *Queries) ListGuideResources(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideResourcesRow, error) {
+	rows, err := q.db.Query(ctx, listGuideResources, studyGuideID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListGuideResourcesRow
+	for rows.Next() {
+		var i ListGuideResourcesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Url,
+			&i.Type,
+			&i.Description,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listStudyGuidesNewestAsc = `-- name: ListStudyGuidesNewestAsc :many

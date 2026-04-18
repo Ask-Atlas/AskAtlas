@@ -54,6 +54,19 @@ func TimestamptzPtr(t pgtype.Timestamptz) *time.Time {
 	return &t.Time
 }
 
+// TextPtr converts a pgtype.Text into a *string pointer, returning nil
+// for SQL NULL. Use this in mappers when the column is nullable and
+// the wire shape wants JSON null (not empty string) on absence. Three
+// domain packages were each carrying their own local textPtr; this
+// shared helper is the single source of truth.
+func TextPtr(t pgtype.Text) *string {
+	if !t.Valid {
+		return nil
+	}
+	s := t.String
+	return &s
+}
+
 // PgxToGoogleUUID converts a pgtype.UUID to a standard Google UUID.
 func PgxToGoogleUUID(u pgtype.UUID) (uuid.UUID, error) {
 	if !u.Valid {

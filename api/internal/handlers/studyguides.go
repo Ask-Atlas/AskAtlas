@@ -18,6 +18,7 @@ import (
 type StudyGuideService interface {
 	ListStudyGuides(ctx context.Context, params studyguides.ListStudyGuidesParams) (studyguides.ListStudyGuidesResult, error)
 	AssertCourseExists(ctx context.Context, courseID uuid.UUID) error
+	GetStudyGuide(ctx context.Context, params studyguides.GetStudyGuideParams) (studyguides.StudyGuideDetail, error)
 }
 
 // StudyGuideHandler manages incoming HTTP requests for the study-guide
@@ -94,6 +95,33 @@ func (h *StudyGuideHandler) ListStudyGuides(w http.ResponseWriter, r *http.Reque
 	respondJSON(w, http.StatusOK, mapListStudyGuidesResponse(result))
 }
 
+// GetStudyGuide handles GET /study-guides/{study_guide_id}. Pure read
+// per the design decision to keep GET idempotent + safe (HTTP
+// semantics); view tracking is intentionally absent and will ship as
+// a separate POST endpoint in a future ticket.
+func (h *StudyGuideHandler) GetStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	detail, err := h.service.GetStudyGuide(r.Context(), studyguides.GetStudyGuideParams{
+		StudyGuideID: uuid.UUID(studyGuideId),
+		ViewerID:     viewerID,
+	})
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("GetStudyGuide failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, mapStudyGuideDetailResponse(detail))
+}
+
 // mapCreatorSummary projects the compact Creator domain type onto the
 // wire shape.
 func mapCreatorSummary(c studyguides.Creator) api.CreatorSummary {
@@ -138,4 +166,96 @@ func mapListStudyGuidesResponse(r studyguides.ListStudyGuidesResult) api.ListStu
 		HasMore:     r.HasMore,
 		NextCursor:  r.NextCursor,
 	}
+}
+
+// mapGuideCourseSummaryResponse projects the compact
+// GuideCourseSummary domain type onto the wire shape.
+func mapGuideCourseSummaryResponse(c studyguides.GuideCourseSummary) api.GuideCourseSummary {
+	return api.GuideCourseSummary{
+		Id:         openapi_types.UUID(c.ID),
+		Department: c.Department,
+		Number:     c.Number,
+		Title:      c.Title,
+	}
+}
+
+// mapQuizSummaryResponse projects a domain Quiz onto the wire shape.
+func mapQuizSummaryResponse(q studyguides.Quiz) api.QuizSummary {
+	return api.QuizSummary{
+		Id:            openapi_types.UUID(q.ID),
+		Title:         q.Title,
+		QuestionCount: q.QuestionCount,
+	}
+}
+
+// mapResourceSummaryResponse projects a domain Resource onto the wire
+// shape.
+func mapResourceSummaryResponse(r studyguides.Resource) api.ResourceSummary {
+	return api.ResourceSummary{
+		Id:          openapi_types.UUID(r.ID),
+		Title:       r.Title,
+		Url:         r.URL,
+		Type:        api.ResourceSummaryType(r.Type),
+		Description: r.Description,
+		CreatedAt:   r.CreatedAt,
+	}
+}
+
+// mapStudyGuideFileSummaryResponse projects a domain GuideFile onto
+// the wire shape.
+func mapStudyGuideFileSummaryResponse(f studyguides.GuideFile) api.StudyGuideFileSummary {
+	return api.StudyGuideFileSummary{
+		Id:       openapi_types.UUID(f.ID),
+		Name:     f.Name,
+		MimeType: f.MimeType,
+		Size:     f.Size,
+	}
+}
+
+// mapStudyGuideDetailResponse projects the full StudyGuideDetail
+// domain type onto the get-by-id wire response. Every nested array
+// (recommended_by, quizzes, resources, files) is emitted non-nil so
+// the JSON output is '[]' rather than null when empty. user_vote is
+// emitted as explicit JSON null when the viewer has not voted.
+func mapStudyGuideDetailResponse(d studyguides.StudyGuideDetail) api.StudyGuideDetailResponse {
+	recs := make([]api.CreatorSummary, 0, len(d.RecommendedBy))
+	for _, r := range d.RecommendedBy {
+		recs = append(recs, mapCreatorSummary(r))
+	}
+	quizzes := make([]api.QuizSummary, 0, len(d.Quizzes))
+	for _, q := range d.Quizzes {
+		quizzes = append(quizzes, mapQuizSummaryResponse(q))
+	}
+	resources := make([]api.ResourceSummary, 0, len(d.Resources))
+	for _, r := range d.Resources {
+		resources = append(resources, mapResourceSummaryResponse(r))
+	}
+	files := make([]api.StudyGuideFileSummary, 0, len(d.Files))
+	for _, f := range d.Files {
+		files = append(files, mapStudyGuideFileSummaryResponse(f))
+	}
+
+	resp := api.StudyGuideDetailResponse{
+		Id:            openapi_types.UUID(d.ID),
+		Title:         d.Title,
+		Description:   d.Description,
+		Content:       d.Content,
+		Tags:          append([]string(nil), d.Tags...),
+		Creator:       mapCreatorSummary(d.Creator),
+		Course:        mapGuideCourseSummaryResponse(d.Course),
+		VoteScore:     d.VoteScore,
+		ViewCount:     d.ViewCount,
+		IsRecommended: d.IsRecommended,
+		RecommendedBy: recs,
+		Quizzes:       quizzes,
+		Resources:     resources,
+		Files:         files,
+		CreatedAt:     d.CreatedAt,
+		UpdatedAt:     d.UpdatedAt,
+	}
+	if d.UserVote != nil {
+		uv := api.StudyGuideDetailResponseUserVote(*d.UserVote)
+		resp.UserVote = &uv
+	}
+	return resp
 }

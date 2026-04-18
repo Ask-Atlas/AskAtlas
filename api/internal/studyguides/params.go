@@ -93,3 +93,11 @@ type ListStudyGuidesResult struct {
 	HasMore     bool
 	NextCursor  *string
 }
+
+// GetStudyGuideParams is the input to Service.GetStudyGuide. ViewerID
+// is used to fetch the user's own vote on the guide (user_vote in the
+// response). A missing viewer vote ships as nil on StudyGuideDetail.
+type GetStudyGuideParams struct {
+	StudyGuideID uuid.UUID
+	ViewerID     uuid.UUID
+}
