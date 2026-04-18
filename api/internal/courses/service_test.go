@@ -906,6 +906,76 @@ func TestService_CheckMembership_NotEnrolledIs200(t *testing.T) {
 	assert.Nil(t, got.JoinedAt)
 }
 
+// Cascade race: section is deleted between the preflight (which still
+// sees the section) and the GetMembership lookup (where the membership
+// row has cascade-vanished). The service must re-probe and return 404
+// "Section not found" -- not 200 enrolled=false -- per the ASK-148
+// spec table. Cannot use expectAssertOK here because we need the second
+// SectionInCourseExists call to return a different value than the first.
+func TestService_CheckMembership_SectionCascadedDuringRequest(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	courseID := uuid.New()
+	sectionID := uuid.New()
+
+	repo.EXPECT().
+		CourseExists(mock.Anything, utils.UUID(courseID)).
+		Return(true, nil).Once()
+	// First probe (in assertCourseAndSection): section still there.
+	repo.EXPECT().
+		SectionInCourseExists(mock.Anything, db.SectionInCourseExistsParams{
+			SectionID: utils.UUID(sectionID),
+			CourseID:  utils.UUID(courseID),
+		}).
+		Return(true, nil).Once()
+	repo.EXPECT().
+		GetMembership(mock.Anything, mock.Anything).
+		Return(db.GetMembershipRow{}, sql.ErrNoRows).Once()
+	// Re-probe (after ErrNoRows): section is gone.
+	repo.EXPECT().
+		SectionInCourseExists(mock.Anything, db.SectionInCourseExistsParams{
+			SectionID: utils.UUID(sectionID),
+			CourseID:  utils.UUID(courseID),
+		}).
+		Return(false, nil).Once()
+
+	svc := courses.NewService(repo)
+	_, err := svc.CheckMembership(context.Background(), courses.CheckMembershipParams{
+		CourseID:  courseID,
+		SectionID: sectionID,
+		UserID:    uuid.New(),
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Section not found", appErr.Message)
+}
+
+// If the cascade re-probe itself errors, the error must propagate as a
+// 500 (wrapped, not turned into a misleading 404 or 200). Pins the
+// branch where the re-probe is the failure source rather than the
+// original GetMembership.
+func TestService_CheckMembership_CascadeReprobeErrorPropagates(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(true, nil).Once()
+	repo.EXPECT().SectionInCourseExists(mock.Anything, mock.Anything).Return(true, nil).Once()
+	repo.EXPECT().GetMembership(mock.Anything, mock.Anything).Return(db.GetMembershipRow{}, sql.ErrNoRows).Once()
+	repo.EXPECT().SectionInCourseExists(mock.Anything, mock.Anything).Return(false, errors.New("db gone")).Once()
+
+	svc := courses.NewService(repo)
+	_, err := svc.CheckMembership(context.Background(), courses.CheckMembershipParams{
+		CourseID:  uuid.New(),
+		SectionID: uuid.New(),
+		UserID:    uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cascade re-probe")
+	assert.Contains(t, err.Error(), "db gone")
+}
+
 func TestService_CheckMembership_CourseNotFound(t *testing.T) {
 	repo := mock_courses.NewMockRepository(t)
 	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(false, nil)
