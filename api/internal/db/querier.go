@@ -31,28 +31,13 @@ type Querier interface {
 	// {enrolled:false} response, NOT a 404.
 	GetMembership(ctx context.Context, arg GetMembershipParams) (GetMembershipRow, error)
 	GetSchool(ctx context.Context, id pgtype.UUID) (School, error)
-	// Study guide list queries (ASK-104).
-	//
-	// Every ListStudyGuides* variant uses the same CTE structure so the
-	// per-row aggregates (vote_score, is_recommended, quiz_count) are
-	// computed once and can be referenced from the outer WHERE clause
-	// (e.g. for the score-sorted cursor predicate). The CTE pattern also
-	// keeps the 8 named variants near-identical apart from ORDER BY + the
-	// cursor predicate, which makes future maintenance (e.g. adding a new
-	// sort field) a mechanical edit.
-	//
-	// Soft-delete invariants enforced everywhere:
-	//   * sg.deleted_at IS NULL       — excludes guides marked for deletion
-	//   * u.deleted_at IS NULL        — excludes guides authored by a
-	//                                   soft-deleted user; matches the
-	//                                   convention established by ASK-143's
-	//                                   section roster (a soft-deleted user
-	//                                   disappears from public surfaces)
-	//   * quizzes.deleted_at IS NULL  — quiz_count excludes deleted quizzes
-	//
-	// Privacy floor on the creator payload: only id + first_name + last_name
-	// are selected. No email, no clerk_id -- same rule as
-	// SectionMemberResponse in ASK-143.
+	// Locked SELECT used at the start of DeleteStudyGuide. SELECT FOR
+	// UPDATE prevents concurrent deletes from racing on the same guide
+	// (one wins with 204, the other sees the row already-deleted in its
+	// transaction's snapshot and returns 404). Filters NOTHING -- the
+	// service inspects deleted_at + creator_id to choose 404 vs 403 vs
+	// proceed.
+	GetStudyGuideByIDForUpdate(ctx context.Context, id pgtype.UUID) (GetStudyGuideByIDForUpdateRow, error)
 	// The detail endpoint's main query (ASK-114). Returns the guide's own
 	// columns + a compact course payload + a compact creator payload
 	// + two inline aggregates as subqueries:
@@ -80,6 +65,34 @@ type Querier interface {
 	// user_vote in the response (JSON null, not omitted).
 	GetUserVoteForGuide(ctx context.Context, arg GetUserVoteForGuideParams) (VoteDirection, error)
 	InsertFile(ctx context.Context, arg InsertFileParams) (File, error)
+	// Study guide list queries (ASK-104).
+	//
+	// Every ListStudyGuides* variant uses the same CTE structure so the
+	// per-row aggregates (vote_score, is_recommended, quiz_count) are
+	// computed once and can be referenced from the outer WHERE clause
+	// (e.g. for the score-sorted cursor predicate). The CTE pattern also
+	// keeps the 8 named variants near-identical apart from ORDER BY + the
+	// cursor predicate, which makes future maintenance (e.g. adding a new
+	// sort field) a mechanical edit.
+	//
+	// Soft-delete invariants enforced everywhere:
+	//   * sg.deleted_at IS NULL       — excludes guides marked for deletion
+	//   * u.deleted_at IS NULL        — excludes guides authored by a
+	//                                   soft-deleted user; matches the
+	//                                   convention established by ASK-143's
+	//                                   section roster (a soft-deleted user
+	//                                   disappears from public surfaces)
+	//   * quizzes.deleted_at IS NULL  — quiz_count excludes deleted quizzes
+	//
+	// Privacy floor on the creator payload: only id + first_name + last_name
+	// are selected. No email, no clerk_id -- same rule as
+	// SectionMemberResponse in ASK-143.
+	// Insert a new guide and return all the columns the service needs to
+	// construct the StudyGuideDetail response without an extra round trip.
+	// The course preflight (in service.go) gates on AssertCourseExists so
+	// the FK violation is unreachable in normal flow; the FK still acts
+	// as a backstop if a course is hard-deleted between preflight + insert.
+	InsertStudyGuide(ctx context.Context, arg InsertStudyGuideParams) (InsertStudyGuideRow, error)
 	// Adds the user to the section as a 'student'. ON CONFLICT DO NOTHING
 	// keeps duplicate joins atomic (no PK violation surfacing) and concurrency
 	// safe; the service layer treats an empty result as the 409 "Already a
@@ -200,6 +213,17 @@ type Querier interface {
 	// Marks a file as pending deletion. Only applies if the file is owned by the caller
 	// and has not already entered a deletion state (idempotency-safe).
 	SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)
+	// Application-level cascade: soft-delete every non-deleted quiz on
+	// the guide. WHERE deleted_at IS NULL preserves the deleted_at
+	// timestamp on quizzes that were already soft-deleted before the
+	// guide was -- the spec explicitly requires that an already-deleted
+	// quiz's deleted_at is NOT updated by this cascade.
+	SoftDeleteQuizzesForGuide(ctx context.Context, studyGuideID pgtype.UUID) error
+	// Set deleted_at = now() on the guide. The service has already
+	// verified the row exists, isn't already deleted, and the viewer is
+	// the creator -- so this is a blind UPDATE. The DeleteStudyGuide
+	// transaction wraps this + SoftDeleteQuizzesForGuide.
+	SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUID) error
 	SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
 	// Renames a file. Only applies if owned by the caller and not in a deletion state.
 	// Returns sql.ErrNoRows when file is not found, not owned, or in deletion.
