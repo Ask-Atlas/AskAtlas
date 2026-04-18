@@ -78,6 +78,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/list-study-guides",
+          label: "List study guides for a course",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "api/list-section-members",
           label: "List the members of a course section",
           className: "api-method get",
