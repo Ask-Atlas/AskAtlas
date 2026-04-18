@@ -336,7 +336,7 @@ func TestCoursesHandler_JoinSection_Success(t *testing.T) {
 	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
 	assert.Equal(t, userID, uuid.UUID(resp.UserId))
 	assert.Equal(t, sectionID, uuid.UUID(resp.SectionId))
-	assert.Equal(t, api.Student, resp.Role)
+	assert.Equal(t, api.CourseMemberResponseRoleStudent, resp.Role)
 	assert.True(t, resp.JoinedAt.Equal(joinedAt))
 }
 
@@ -375,7 +375,7 @@ func TestCoursesHandler_JoinSection_IgnoresUnexpectedBodyFields(t *testing.T) {
 
 	var resp api.CourseMemberResponse
 	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
-	assert.Equal(t, api.Student, resp.Role)
+	assert.Equal(t, api.CourseMemberResponseRoleStudent, resp.Role)
 }
 
 // Per ASK-132 input-validation table: malformed JSON in the body must
@@ -639,6 +639,316 @@ func TestCoursesHandler_LeaveSection_InternalError(t *testing.T) {
 
 	url := fmt.Sprintf("/courses/%s/sections/%s/members/me", uuid.NewString(), uuid.NewString())
 	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// ------------------------------------------------------------------------
+// ListMyEnrollments (ASK-154)
+// ------------------------------------------------------------------------
+
+func TestCoursesHandler_ListMyEnrollments_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	req := httptest.NewRequest(http.MethodGet, "/me/courses", nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestCoursesHandler_ListMyEnrollments_Empty(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		ListMyEnrollments(mock.Anything, mock.Anything).
+		Return(nil, nil)
+
+	req := authedRequestMethod(t, http.MethodGet, "/me/courses", nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	// Envelope must emit [] not null when empty.
+	var resp api.ListMyEnrollmentsResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.NotNil(t, resp.Enrollments)
+	assert.Empty(t, resp.Enrollments)
+}
+
+func TestCoursesHandler_ListMyEnrollments_Success(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	sectionID := uuid.New()
+	courseID := uuid.New()
+	schoolID := uuid.New()
+	code := "01"
+	instr := "Dr. Test"
+	joinedAt := time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC)
+
+	mockSvc.EXPECT().
+		ListMyEnrollments(mock.Anything, mock.Anything).
+		Return([]courses.Enrollment{{
+			Section:  courses.EnrollmentSection{ID: sectionID, Term: "Spring 2026", SectionCode: &code, InstructorName: &instr},
+			Course:   courses.EnrollmentCourse{ID: courseID, Department: "CPTS", Number: "322", Title: "SE I"},
+			School:   courses.EnrollmentSchool{ID: schoolID, Acronym: "WSU"},
+			Role:     courses.MemberRoleStudent,
+			JoinedAt: joinedAt,
+		}}, nil)
+
+	req := authedRequestMethod(t, http.MethodGet, "/me/courses", nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var resp api.ListMyEnrollmentsResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	require.Len(t, resp.Enrollments, 1)
+	e := resp.Enrollments[0]
+	assert.Equal(t, sectionID, uuid.UUID(e.Section.Id))
+	assert.Equal(t, "Spring 2026", e.Section.Term)
+	require.NotNil(t, e.Section.SectionCode)
+	assert.Equal(t, "01", *e.Section.SectionCode)
+	assert.Equal(t, courseID, uuid.UUID(e.Course.Id))
+	assert.Equal(t, "CPTS", e.Course.Department)
+	assert.Equal(t, schoolID, uuid.UUID(e.School.Id))
+	assert.Equal(t, "WSU", e.School.Acronym)
+	assert.Equal(t, api.EnrollmentResponseRoleStudent, e.Role)
+	assert.True(t, e.JoinedAt.Equal(joinedAt))
+}
+
+func TestCoursesHandler_ListMyEnrollments_FiltersForwarded(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		ListMyEnrollments(mock.Anything, mock.MatchedBy(func(p courses.ListMyEnrollmentsParams) bool {
+			return p.Term != nil && *p.Term == "Spring 2026" &&
+				p.Role != nil && *p.Role == courses.MemberRoleInstructor
+		})).
+		Return(nil, nil)
+
+	req := authedRequestMethod(t, http.MethodGet, "/me/courses?term=Spring%202026&role=instructor", nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+// Empty role= surfaces the same way as role=admin: oapi-codegen passes
+// the empty string through, dbRoleFor("") returns false, service emits
+// 400. Pinning this so a future reader knows the empty case is handled
+// deliberately (and isn't accidentally treated as "no filter" the way
+// term="" is).
+func TestCoursesHandler_ListMyEnrollments_EmptyRoleRejected(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		ListMyEnrollments(mock.Anything, mock.MatchedBy(func(p courses.ListMyEnrollmentsParams) bool {
+			return p.Role != nil && *p.Role == courses.MemberRole("")
+		})).
+		Return(nil, apperrors.NewBadRequest("Invalid query parameters", map[string]string{
+			"role": "must be one of: student, instructor, ta",
+		}))
+
+	req := authedRequestMethod(t, http.MethodGet, "/me/courses?role=", nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// Per ASK-154 input-validation table, role=admin must surface as 400.
+// oapi-codegen passes query-string enums through unvalidated (only path
+// UUIDs get pre-handler validation), so the service is the layer that
+// enforces the enum. The mock here returns the same AppError the real
+// service would, asserting the handler propagates it as a 400 with the
+// 'role: must be one of...' detail.
+func TestCoursesHandler_ListMyEnrollments_BadRoleRejected(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		ListMyEnrollments(mock.Anything, mock.MatchedBy(func(p courses.ListMyEnrollmentsParams) bool {
+			return p.Role != nil && *p.Role == courses.MemberRole("admin")
+		})).
+		Return(nil, apperrors.NewBadRequest("Invalid query parameters", map[string]string{
+			"role": "must be one of: student, instructor, ta",
+		}))
+
+	req := authedRequestMethod(t, http.MethodGet, "/me/courses?role=admin", nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "must be one of")
+}
+
+func TestCoursesHandler_ListMyEnrollments_InternalError(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		ListMyEnrollments(mock.Anything, mock.Anything).
+		Return(nil, errors.New("db down"))
+
+	req := authedRequestMethod(t, http.MethodGet, "/me/courses", nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// ------------------------------------------------------------------------
+// CheckMembership (ASK-148)
+// ------------------------------------------------------------------------
+
+func TestCoursesHandler_CheckMembership_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	url := fmt.Sprintf("/courses/%s/sections/%s/members/me", uuid.NewString(), uuid.NewString())
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestCoursesHandler_CheckMembership_Enrolled(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	role := courses.MemberRoleStudent
+	joinedAt := time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC)
+
+	mockSvc.EXPECT().
+		CheckMembership(mock.Anything, mock.Anything).
+		Return(courses.MembershipCheck{Enrolled: true, Role: &role, JoinedAt: &joinedAt}, nil)
+
+	url := fmt.Sprintf("/courses/%s/sections/%s/members/me", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var resp api.MembershipCheckResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.True(t, resp.Enrolled)
+	require.NotNil(t, resp.Role)
+	assert.Equal(t, api.MembershipCheckResponseRoleStudent, *resp.Role)
+	require.NotNil(t, resp.JoinedAt)
+	assert.True(t, resp.JoinedAt.Equal(joinedAt))
+}
+
+// Critical contract test: not-enrolled must be 200 with explicit JSON
+// nulls (not omitted). Verifies both the status code AND the wire
+// shape so the frontend can safely destructure { enrolled, role,
+// joined_at } without optional-chaining gymnastics.
+func TestCoursesHandler_CheckMembership_NotEnrolledIs200WithNulls(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		CheckMembership(mock.Anything, mock.Anything).
+		Return(courses.MembershipCheck{Enrolled: false}, nil)
+
+	url := fmt.Sprintf("/courses/%s/sections/%s/members/me", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	// Substring assertions pin the literal wire shape (proves the nulls
+	// are emitted, not omitted -- "role": null vs missing key entirely).
+	body := w.Body.String()
+	assert.Contains(t, body, `"enrolled":false`)
+	assert.Contains(t, body, `"role":null`)
+	assert.Contains(t, body, `"joined_at":null`)
+	// Typed decode + nil assertions guard against encoder drift -- if
+	// the generated struct ever moved to a non-pointer field with
+	// omitempty, the substring checks above would still pass on a body
+	// that omits the keys, but this would catch it.
+	var resp api.MembershipCheckResponse
+	require.NoError(t, json.NewDecoder(strings.NewReader(body)).Decode(&resp))
+	assert.False(t, resp.Enrolled)
+	assert.Nil(t, resp.Role)
+	assert.Nil(t, resp.JoinedAt)
+}
+
+func TestCoursesHandler_CheckMembership_CourseNotFound(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		CheckMembership(mock.Anything, mock.Anything).
+		Return(courses.MembershipCheck{}, apperrors.NewNotFound("Course not found"))
+
+	url := fmt.Sprintf("/courses/%s/sections/%s/members/me", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Contains(t, w.Body.String(), "Course not found")
+}
+
+func TestCoursesHandler_CheckMembership_BadCourseUUID(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	url := fmt.Sprintf("/courses/not-a-uuid/sections/%s/members/me", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestCoursesHandler_CheckMembership_InternalError(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		CheckMembership(mock.Anything, mock.Anything).
+		Return(courses.MembershipCheck{}, errors.New("db down"))
+
+	url := fmt.Sprintf("/courses/%s/sections/%s/members/me", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
 	w := httptest.NewRecorder()
 
 	r := coursesTestRouter(t, h)

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -710,6 +711,296 @@ func TestService_LeaveSection_SectionNotFound(t *testing.T) {
 
 	svc := courses.NewService(repo)
 	err := svc.LeaveSection(context.Background(), courses.LeaveSectionParams{
+		CourseID:  uuid.New(),
+		SectionID: uuid.New(),
+		UserID:    uuid.New(),
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Section not found", appErr.Message)
+}
+
+// =====================================================================
+// ListMyEnrollments / CheckMembership (ASK-154 / ASK-148)
+// =====================================================================
+
+func enrollmentRow(t *testing.T, term, dept, num, role string) db.ListMyEnrollmentsRow {
+	t.Helper()
+	return db.ListMyEnrollmentsRow{
+		SectionID:             utils.UUID(uuid.New()),
+		SectionTerm:           term,
+		SectionSectionCode:    pgtype.Text{String: "01", Valid: true},
+		SectionInstructorName: pgtype.Text{String: "Dr. Test", Valid: true},
+		CourseID:              utils.UUID(uuid.New()),
+		CourseDepartment:      dept,
+		CourseNumber:          num,
+		CourseTitle:           "Some Title",
+		SchoolID:              utils.UUID(uuid.New()),
+		SchoolAcronym:         "WSU",
+		MemberRole:            db.CourseRole(role),
+		MemberJoinedAt:        pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+	}
+}
+
+func TestService_ListMyEnrollments_Empty(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	repo.EXPECT().
+		ListMyEnrollments(mock.Anything, mock.MatchedBy(func(arg db.ListMyEnrollmentsParams) bool {
+			return !arg.Term.Valid && !arg.Role.Valid
+		})).
+		Return(nil, nil)
+
+	svc := courses.NewService(repo)
+	got, err := svc.ListMyEnrollments(context.Background(), courses.ListMyEnrollmentsParams{UserID: uuid.New()})
+	require.NoError(t, err)
+	assert.Empty(t, got)
+}
+
+func TestService_ListMyEnrollments_Success(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	repo.EXPECT().
+		ListMyEnrollments(mock.Anything, mock.Anything).
+		Return([]db.ListMyEnrollmentsRow{
+			enrollmentRow(t, "Spring 2026", "CPTS", "322", "student"),
+			enrollmentRow(t, "Spring 2026", "CPTS", "355", "ta"),
+		}, nil)
+
+	svc := courses.NewService(repo)
+	got, err := svc.ListMyEnrollments(context.Background(), courses.ListMyEnrollmentsParams{UserID: uuid.New()})
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+	assert.Equal(t, "Spring 2026", got[0].Section.Term)
+	assert.Equal(t, "CPTS", got[0].Course.Department)
+	assert.Equal(t, "WSU", got[0].School.Acronym)
+	assert.Equal(t, courses.MemberRoleStudent, got[0].Role)
+	assert.Equal(t, courses.MemberRoleTA, got[1].Role)
+}
+
+func TestService_ListMyEnrollments_FiltersForwarded(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	term := "Spring 2026"
+	role := courses.MemberRoleInstructor
+
+	repo.EXPECT().
+		ListMyEnrollments(mock.Anything, mock.MatchedBy(func(arg db.ListMyEnrollmentsParams) bool {
+			return arg.Term.Valid && arg.Term.String == "Spring 2026" &&
+				arg.Role.Valid && arg.Role.CourseRole == db.CourseRoleInstructor
+		})).
+		Return(nil, nil)
+
+	svc := courses.NewService(repo)
+	_, err := svc.ListMyEnrollments(context.Background(), courses.ListMyEnrollmentsParams{
+		UserID: uuid.New(),
+		Term:   &term,
+		Role:   &role,
+	})
+	require.NoError(t, err)
+}
+
+func TestService_ListMyEnrollments_RejectsBadRole(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	bad := courses.MemberRole("admin")
+
+	svc := courses.NewService(repo)
+	_, err := svc.ListMyEnrollments(context.Background(), courses.ListMyEnrollmentsParams{
+		UserID: uuid.New(),
+		Role:   &bad,
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+}
+
+func TestService_ListMyEnrollments_RejectsTermTooLong(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	tooLong := strings.Repeat("a", courses.MaxTermLength+1)
+
+	svc := courses.NewService(repo)
+	_, err := svc.ListMyEnrollments(context.Background(), courses.ListMyEnrollmentsParams{
+		UserID: uuid.New(),
+		Term:   &tooLong,
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+}
+
+func TestService_ListMyEnrollments_EmptyTermTreatedAsNoFilter(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	empty := "   "
+
+	repo.EXPECT().
+		ListMyEnrollments(mock.Anything, mock.MatchedBy(func(arg db.ListMyEnrollmentsParams) bool {
+			return !arg.Term.Valid
+		})).
+		Return(nil, nil)
+
+	svc := courses.NewService(repo)
+	_, err := svc.ListMyEnrollments(context.Background(), courses.ListMyEnrollmentsParams{
+		UserID: uuid.New(),
+		Term:   &empty,
+	})
+	require.NoError(t, err)
+}
+
+func TestService_CheckMembership_Enrolled(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	courseID := uuid.New()
+	sectionID := uuid.New()
+	userID := uuid.New()
+	joinedAt := time.Now().UTC()
+
+	expectAssertOK(repo, courseID, sectionID)
+	repo.EXPECT().
+		GetMembership(mock.Anything, db.GetMembershipParams{
+			UserID:    utils.UUID(userID),
+			SectionID: utils.UUID(sectionID),
+		}).
+		Return(db.GetMembershipRow{
+			Role:     db.CourseRoleStudent,
+			JoinedAt: pgtype.Timestamptz{Time: joinedAt, Valid: true},
+		}, nil)
+
+	svc := courses.NewService(repo)
+	got, err := svc.CheckMembership(context.Background(), courses.CheckMembershipParams{
+		CourseID:  courseID,
+		SectionID: sectionID,
+		UserID:    userID,
+	})
+	require.NoError(t, err)
+	assert.True(t, got.Enrolled)
+	require.NotNil(t, got.Role)
+	assert.Equal(t, courses.MemberRoleStudent, *got.Role)
+	require.NotNil(t, got.JoinedAt)
+	assert.True(t, got.JoinedAt.Equal(joinedAt))
+}
+
+func TestService_CheckMembership_NotEnrolledIs200(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	courseID := uuid.New()
+	sectionID := uuid.New()
+
+	expectAssertOK(repo, courseID, sectionID)
+	repo.EXPECT().
+		GetMembership(mock.Anything, mock.Anything).
+		Return(db.GetMembershipRow{}, sql.ErrNoRows)
+
+	svc := courses.NewService(repo)
+	got, err := svc.CheckMembership(context.Background(), courses.CheckMembershipParams{
+		CourseID:  courseID,
+		SectionID: sectionID,
+		UserID:    uuid.New(),
+	})
+	require.NoError(t, err)
+	assert.False(t, got.Enrolled)
+	assert.Nil(t, got.Role)
+	assert.Nil(t, got.JoinedAt)
+}
+
+// Cascade race: section is deleted between the preflight (which still
+// sees the section) and the GetMembership lookup (where the membership
+// row has cascade-vanished). The service must re-probe and return 404
+// "Section not found" -- not 200 enrolled=false -- per the ASK-148
+// spec table. Cannot use expectAssertOK here because we need the second
+// SectionInCourseExists call to return a different value than the first.
+func TestService_CheckMembership_SectionCascadedDuringRequest(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	courseID := uuid.New()
+	sectionID := uuid.New()
+
+	repo.EXPECT().
+		CourseExists(mock.Anything, utils.UUID(courseID)).
+		Return(true, nil).Once()
+	// First probe (in assertCourseAndSection): section still there.
+	repo.EXPECT().
+		SectionInCourseExists(mock.Anything, db.SectionInCourseExistsParams{
+			SectionID: utils.UUID(sectionID),
+			CourseID:  utils.UUID(courseID),
+		}).
+		Return(true, nil).Once()
+	repo.EXPECT().
+		GetMembership(mock.Anything, mock.Anything).
+		Return(db.GetMembershipRow{}, sql.ErrNoRows).Once()
+	// Re-probe (after ErrNoRows): section is gone.
+	repo.EXPECT().
+		SectionInCourseExists(mock.Anything, db.SectionInCourseExistsParams{
+			SectionID: utils.UUID(sectionID),
+			CourseID:  utils.UUID(courseID),
+		}).
+		Return(false, nil).Once()
+
+	svc := courses.NewService(repo)
+	_, err := svc.CheckMembership(context.Background(), courses.CheckMembershipParams{
+		CourseID:  courseID,
+		SectionID: sectionID,
+		UserID:    uuid.New(),
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Section not found", appErr.Message)
+}
+
+// If the cascade re-probe itself errors, the error must propagate as a
+// 500 (wrapped, not turned into a misleading 404 or 200). Pins the
+// branch where the re-probe is the failure source rather than the
+// original GetMembership.
+func TestService_CheckMembership_CascadeReprobeErrorPropagates(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(true, nil).Once()
+	repo.EXPECT().SectionInCourseExists(mock.Anything, mock.Anything).Return(true, nil).Once()
+	repo.EXPECT().GetMembership(mock.Anything, mock.Anything).Return(db.GetMembershipRow{}, sql.ErrNoRows).Once()
+	repo.EXPECT().SectionInCourseExists(mock.Anything, mock.Anything).Return(false, errors.New("db gone")).Once()
+
+	svc := courses.NewService(repo)
+	_, err := svc.CheckMembership(context.Background(), courses.CheckMembershipParams{
+		CourseID:  uuid.New(),
+		SectionID: uuid.New(),
+		UserID:    uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cascade re-probe")
+	assert.Contains(t, err.Error(), "db gone")
+}
+
+func TestService_CheckMembership_CourseNotFound(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(false, nil)
+
+	svc := courses.NewService(repo)
+	_, err := svc.CheckMembership(context.Background(), courses.CheckMembershipParams{
+		CourseID:  uuid.New(),
+		SectionID: uuid.New(),
+		UserID:    uuid.New(),
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Course not found", appErr.Message)
+}
+
+func TestService_CheckMembership_SectionNotFound(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().SectionInCourseExists(mock.Anything, mock.Anything).Return(false, nil)
+
+	svc := courses.NewService(repo)
+	_, err := svc.CheckMembership(context.Background(), courses.CheckMembershipParams{
 		CourseID:  uuid.New(),
 		SectionID: uuid.New(),
 		UserID:    uuid.New(),

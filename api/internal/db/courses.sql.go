@@ -77,6 +77,34 @@ func (q *Queries) GetCourse(ctx context.Context, id pgtype.UUID) (GetCourseRow, 
 	return i, err
 }
 
+const getMembership = `-- name: GetMembership :one
+SELECT role, joined_at
+FROM course_members
+WHERE user_id = $1::uuid
+  AND section_id = $2::uuid
+`
+
+type GetMembershipParams struct {
+	UserID    pgtype.UUID `json:"user_id"`
+	SectionID pgtype.UUID `json:"section_id"`
+}
+
+type GetMembershipRow struct {
+	Role     CourseRole         `json:"role"`
+	JoinedAt pgtype.Timestamptz `json:"joined_at"`
+}
+
+// Single-row membership lookup powering the per-section
+// enrolled/not-enrolled probe (ASK-148). Returns sql.ErrNoRows when the
+// viewer is not a member; the service translates that into the 200
+// {enrolled:false} response, NOT a 404.
+func (q *Queries) GetMembership(ctx context.Context, arg GetMembershipParams) (GetMembershipRow, error) {
+	row := q.db.QueryRow(ctx, getMembership, arg.UserID, arg.SectionID)
+	var i GetMembershipRow
+	err := row.Scan(&i.Role, &i.JoinedAt)
+	return i, err
+}
+
 const joinSection = `-- name: JoinSection :one
 INSERT INTO course_members (user_id, section_id, role)
 VALUES ($1::uuid, $2::uuid, 'student')
@@ -934,6 +962,90 @@ func (q *Queries) ListCoursesTitleDesc(ctx context.Context, arg ListCoursesTitle
 			&i.SCity,
 			&i.SState,
 			&i.SCountry,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMyEnrollments = `-- name: ListMyEnrollments :many
+SELECT
+  cs.id          AS section_id,
+  cs.term        AS section_term,
+  cs.section_code AS section_section_code,
+  cs.instructor_name AS section_instructor_name,
+  c.id           AS course_id,
+  c.department   AS course_department,
+  c.number       AS course_number,
+  c.title        AS course_title,
+  s.id           AS school_id,
+  s.acronym      AS school_acronym,
+  cm.role        AS member_role,
+  cm.joined_at   AS member_joined_at
+FROM course_members cm
+JOIN course_sections cs ON cs.id = cm.section_id
+JOIN courses c          ON c.id = cs.course_id
+JOIN schools s          ON s.id = c.school_id
+WHERE cm.user_id = $1::uuid
+  AND ($2::text IS NULL OR cs.term = $2::text)
+  AND ($3::course_role IS NULL OR cm.role = $3::course_role)
+ORDER BY cs.term DESC, c.department ASC, c.number ASC
+`
+
+type ListMyEnrollmentsParams struct {
+	UserID pgtype.UUID    `json:"user_id"`
+	Term   pgtype.Text    `json:"term"`
+	Role   NullCourseRole `json:"role"`
+}
+
+type ListMyEnrollmentsRow struct {
+	SectionID             pgtype.UUID        `json:"section_id"`
+	SectionTerm           string             `json:"section_term"`
+	SectionSectionCode    pgtype.Text        `json:"section_section_code"`
+	SectionInstructorName pgtype.Text        `json:"section_instructor_name"`
+	CourseID              pgtype.UUID        `json:"course_id"`
+	CourseDepartment      string             `json:"course_department"`
+	CourseNumber          string             `json:"course_number"`
+	CourseTitle           string             `json:"course_title"`
+	SchoolID              pgtype.UUID        `json:"school_id"`
+	SchoolAcronym         string             `json:"school_acronym"`
+	MemberRole            CourseRole         `json:"member_role"`
+	MemberJoinedAt        pgtype.Timestamptz `json:"member_joined_at"`
+}
+
+// Returns every section a user is enrolled in with the compact
+// course + school payload the dashboard renders. Optional term + role
+// filters use sqlc.narg so the WHERE branch short-circuits when
+// they're absent. Sort is fixed: most-recent term first (lexicographic
+// "Spring 2026" > "Fall 2025" is acceptable for MVP per the spec),
+// then department + number for stable in-term ordering.
+func (q *Queries) ListMyEnrollments(ctx context.Context, arg ListMyEnrollmentsParams) ([]ListMyEnrollmentsRow, error) {
+	rows, err := q.db.Query(ctx, listMyEnrollments, arg.UserID, arg.Term, arg.Role)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMyEnrollmentsRow
+	for rows.Next() {
+		var i ListMyEnrollmentsRow
+		if err := rows.Scan(
+			&i.SectionID,
+			&i.SectionTerm,
+			&i.SectionSectionCode,
+			&i.SectionInstructorName,
+			&i.CourseID,
+			&i.CourseDepartment,
+			&i.CourseNumber,
+			&i.CourseTitle,
+			&i.SchoolID,
+			&i.SchoolAcronym,
+			&i.MemberRole,
+			&i.MemberJoinedAt,
 		); err != nil {
 			return nil, err
 		}

@@ -77,6 +77,57 @@ func mapMembership(m db.CourseMember) (Membership, error) {
 	}, nil
 }
 
+// mapEnrollment converts a sqlc-generated enrollment row into the
+// domain Enrollment type used by the dashboard.
+func mapEnrollment(r db.ListMyEnrollmentsRow) (Enrollment, error) {
+	sectionID, err := utils.PgxToGoogleUUID(r.SectionID)
+	if err != nil {
+		return Enrollment{}, fmt.Errorf("mapEnrollment: section id: %w", err)
+	}
+	courseID, err := utils.PgxToGoogleUUID(r.CourseID)
+	if err != nil {
+		return Enrollment{}, fmt.Errorf("mapEnrollment: course id: %w", err)
+	}
+	schoolID, err := utils.PgxToGoogleUUID(r.SchoolID)
+	if err != nil {
+		return Enrollment{}, fmt.Errorf("mapEnrollment: school id: %w", err)
+	}
+	return Enrollment{
+		Section: EnrollmentSection{
+			ID:             sectionID,
+			Term:           r.SectionTerm,
+			SectionCode:    textPtr(r.SectionSectionCode),
+			InstructorName: textPtr(r.SectionInstructorName),
+		},
+		Course: EnrollmentCourse{
+			ID:         courseID,
+			Department: r.CourseDepartment,
+			Number:     r.CourseNumber,
+			Title:      r.CourseTitle,
+		},
+		School: EnrollmentSchool{
+			ID:      schoolID,
+			Acronym: r.SchoolAcronym,
+		},
+		Role:     MemberRole(r.MemberRole),
+		JoinedAt: r.MemberJoinedAt.Time,
+	}, nil
+}
+
+// mapMembershipCheckRow converts the GetMembership sqlc row into the
+// enrolled-true MembershipCheck. The not-enrolled case is constructed
+// directly in the service (sql.ErrNoRows branch) since there is no row
+// to map.
+func mapMembershipCheckRow(r db.GetMembershipRow) MembershipCheck {
+	role := MemberRole(r.Role)
+	joinedAt := r.JoinedAt.Time
+	return MembershipCheck{
+		Enrolled: true,
+		Role:     &role,
+		JoinedAt: &joinedAt,
+	}
+}
+
 // mapSection converts a sqlc-generated section row into the domain Section.
 func mapSection(r db.ListCourseSectionsRow) (Section, error) {
 	id, err := utils.PgxToGoogleUUID(r.ID)

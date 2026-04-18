@@ -21,6 +21,8 @@ type CourseService interface {
 	GetCourse(ctx context.Context, params courses.GetCourseParams) (courses.CourseDetail, error)
 	JoinSection(ctx context.Context, params courses.JoinSectionParams) (courses.Membership, error)
 	LeaveSection(ctx context.Context, params courses.LeaveSectionParams) error
+	ListMyEnrollments(ctx context.Context, params courses.ListMyEnrollmentsParams) ([]courses.Enrollment, error)
+	CheckMembership(ctx context.Context, params courses.CheckMembershipParams) (courses.MembershipCheck, error)
 }
 
 // CoursesHandler manages incoming HTTP requests relating to course operations.
@@ -193,6 +195,64 @@ func validateJoinSectionBody(r *http.Request) *apperrors.AppError {
 	return nil
 }
 
+// ListMyEnrollments handles GET /me/courses, returning every section the
+// authenticated viewer is enrolled in. Filters on term + role come from
+// the query string; the openapi layer enforces role enum membership and
+// term maxLength so the service path-validation is defense in depth.
+func (h *CoursesHandler) ListMyEnrollments(w http.ResponseWriter, r *http.Request, params api.ListMyEnrollmentsParams) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	svcParams := courses.ListMyEnrollmentsParams{UserID: viewerID, Term: params.Term}
+	if params.Role != nil {
+		role := courses.MemberRole(*params.Role)
+		svcParams.Role = &role
+	}
+
+	enrollments, err := h.service.ListMyEnrollments(r.Context(), svcParams)
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("ListMyEnrollments failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, mapListMyEnrollmentsResponse(enrollments))
+}
+
+// CheckMembership handles GET /courses/{course_id}/sections/{section_id}/members/me.
+// Always returns 200 -- non-membership is enrolled=false with null
+// role/joined_at, NOT 404. 404 is reserved for missing course/section
+// (so the frontend can distinguish "not enrolled" from "section deleted").
+func (h *CoursesHandler) CheckMembership(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	check, err := h.service.CheckMembership(r.Context(), courses.CheckMembershipParams{
+		CourseID:  uuid.UUID(courseId),
+		SectionID: uuid.UUID(sectionId),
+		UserID:    viewerID,
+	})
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("CheckMembership failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, mapMembershipCheckResponse(check))
+}
+
 // LeaveSection handles DELETE /courses/{course_id}/sections/{section_id}/members/me.
 // The viewer leaves the section. The /me path segment makes self-only
 // scope explicit; there is no path parameter for the user being removed.
@@ -280,6 +340,58 @@ func mapCourseMemberResponse(m courses.Membership) api.CourseMemberResponse {
 		Role:      api.CourseMemberResponseRole(m.Role),
 		JoinedAt:  m.JoinedAt,
 	}
+}
+
+// mapEnrollmentResponse projects a single Enrollment to its wire shape.
+func mapEnrollmentResponse(e courses.Enrollment) api.EnrollmentResponse {
+	return api.EnrollmentResponse{
+		Section: api.EnrollmentSectionSummary{
+			Id:             openapi_types.UUID(e.Section.ID),
+			Term:           e.Section.Term,
+			SectionCode:    e.Section.SectionCode,
+			InstructorName: e.Section.InstructorName,
+		},
+		Course: api.EnrollmentCourseSummary{
+			Id:         openapi_types.UUID(e.Course.ID),
+			Department: e.Course.Department,
+			Number:     e.Course.Number,
+			Title:      e.Course.Title,
+		},
+		School: api.EnrollmentSchoolSummary{
+			Id:      openapi_types.UUID(e.School.ID),
+			Acronym: e.School.Acronym,
+		},
+		Role:     api.EnrollmentResponseRole(e.Role),
+		JoinedAt: e.JoinedAt,
+	}
+}
+
+// mapListMyEnrollmentsResponse projects the slice of domain Enrollments
+// to the wire envelope. Always non-nil so the JSON output is
+// "enrollments": [] rather than null when the user has none.
+func mapListMyEnrollmentsResponse(enrollments []courses.Enrollment) api.ListMyEnrollmentsResponse {
+	out := make([]api.EnrollmentResponse, 0, len(enrollments))
+	for _, e := range enrollments {
+		out = append(out, mapEnrollmentResponse(e))
+	}
+	return api.ListMyEnrollmentsResponse{Enrollments: out}
+}
+
+// mapMembershipCheckResponse projects MembershipCheck onto the wire
+// shape. Role and JoinedAt are pointer types so they marshal as JSON
+// null (not omitted) when the viewer is not enrolled, matching the
+// schema's nullable: true on both fields.
+func mapMembershipCheckResponse(c courses.MembershipCheck) api.MembershipCheckResponse {
+	resp := api.MembershipCheckResponse{Enrolled: c.Enrolled}
+	if c.Role != nil {
+		role := api.MembershipCheckResponseRole(*c.Role)
+		resp.Role = &role
+	}
+	if c.JoinedAt != nil {
+		t := *c.JoinedAt
+		resp.JoinedAt = &t
+	}
+	return resp
 }
 
 // mapCourseDetailResponse projects the domain CourseDetail (course + school +

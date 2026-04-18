@@ -269,3 +269,42 @@ DELETE FROM course_members
 WHERE user_id = sqlc.arg(user_id)::uuid
   AND section_id = sqlc.arg(section_id)::uuid
 RETURNING user_id;
+
+-- name: ListMyEnrollments :many
+-- Returns every section a user is enrolled in with the compact
+-- course + school payload the dashboard renders. Optional term + role
+-- filters use sqlc.narg so the WHERE branch short-circuits when
+-- they're absent. Sort is fixed: most-recent term first (lexicographic
+-- "Spring 2026" > "Fall 2025" is acceptable for MVP per the spec),
+-- then department + number for stable in-term ordering.
+SELECT
+  cs.id          AS section_id,
+  cs.term        AS section_term,
+  cs.section_code AS section_section_code,
+  cs.instructor_name AS section_instructor_name,
+  c.id           AS course_id,
+  c.department   AS course_department,
+  c.number       AS course_number,
+  c.title        AS course_title,
+  s.id           AS school_id,
+  s.acronym      AS school_acronym,
+  cm.role        AS member_role,
+  cm.joined_at   AS member_joined_at
+FROM course_members cm
+JOIN course_sections cs ON cs.id = cm.section_id
+JOIN courses c          ON c.id = cs.course_id
+JOIN schools s          ON s.id = c.school_id
+WHERE cm.user_id = sqlc.arg(user_id)::uuid
+  AND (sqlc.narg(term)::text IS NULL OR cs.term = sqlc.narg(term)::text)
+  AND (sqlc.narg(role)::course_role IS NULL OR cm.role = sqlc.narg(role)::course_role)
+ORDER BY cs.term DESC, c.department ASC, c.number ASC;
+
+-- name: GetMembership :one
+-- Single-row membership lookup powering the per-section
+-- enrolled/not-enrolled probe (ASK-148). Returns sql.ErrNoRows when the
+-- viewer is not a member; the service translates that into the 200
+-- {enrolled:false} response, NOT a 404.
+SELECT role, joined_at
+FROM course_members
+WHERE user_id = sqlc.arg(user_id)::uuid
+  AND section_id = sqlc.arg(section_id)::uuid;

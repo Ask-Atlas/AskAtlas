@@ -483,7 +483,85 @@ paths:
           $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /me/courses:
+    get:
+      operationId: ListMyEnrollments
+      summary: List the authenticated user's section enrollments
+      description: |
+        Returns every section the authenticated user is enrolled in, with
+        compact embedded course + school summaries. Sorted by `term DESC,
+        department ASC, number ASC`. Not paginated -- a user is typically
+        in 4-8 courses, and even outliers fit comfortably in one response.
+      parameters:
+        - name: term
+          in: query
+          description: Exact-match term filter (e.g. "Spring 2026")
+          required: false
+          schema:
+            type: string
+            maxLength: 30
+        - name: role
+          in: query
+          description: Filter to a specific course-member role
+          required: false
+          schema:
+            type: string
+            enum:
+              - student
+              - ta
+              - instructor
+      responses:
+        '200':
+          description: All enrollments matching the supplied filters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListMyEnrollmentsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /courses/{course_id}/sections/{section_id}/members/me:
+    get:
+      operationId: CheckMembership
+      summary: Check the authenticated user's membership in a section
+      description: |
+        Powers the per-section Join/Leave button on the course detail
+        page. Always returns 200 -- non-membership is `enrolled: false`
+        with null role/joined_at, NOT 404, so the frontend can
+        distinguish "not enrolled" from "section does not exist".
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the parent course
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: section_id
+          in: path
+          description: The unique UUID of the section to check
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Membership status for the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MembershipCheckResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     delete:
       operationId: LeaveSection
       summary: Leave a section as the authenticated user
@@ -893,6 +971,117 @@ components:
       required:
         - user_id
         - section_id
+        - role
+        - joined_at
+    EnrollmentSectionSummary:
+      type: object
+      description: Compact section payload embedded in an EnrollmentResponse
+      properties:
+        id:
+          type: string
+          format: uuid
+        term:
+          type: string
+        section_code:
+          type: string
+          nullable: true
+        instructor_name:
+          type: string
+          nullable: true
+      required:
+        - id
+        - term
+    EnrollmentCourseSummary:
+      type: object
+      description: Compact course payload embedded in an EnrollmentResponse
+      properties:
+        id:
+          type: string
+          format: uuid
+        department:
+          type: string
+        number:
+          type: string
+        title:
+          type: string
+      required:
+        - id
+        - department
+        - number
+        - title
+    EnrollmentSchoolSummary:
+      type: object
+      description: |
+        Compact school payload embedded in an EnrollmentResponse. Only id +
+        acronym -- the full school summary is available via the course
+        detail endpoint and would bloat the dashboard payload.
+      properties:
+        id:
+          type: string
+          format: uuid
+        acronym:
+          type: string
+      required:
+        - id
+        - acronym
+    EnrollmentResponse:
+      type: object
+      description: A single enrollment with embedded section, course, and school
+      properties:
+        section:
+          $ref: '#/components/schemas/EnrollmentSectionSummary'
+        course:
+          $ref: '#/components/schemas/EnrollmentCourseSummary'
+        school:
+          $ref: '#/components/schemas/EnrollmentSchoolSummary'
+        role:
+          type: string
+          enum:
+            - student
+            - ta
+            - instructor
+        joined_at:
+          type: string
+          format: date-time
+      required:
+        - section
+        - course
+        - school
+        - role
+        - joined_at
+    ListMyEnrollmentsResponse:
+      type: object
+      description: All enrollments for the authenticated user
+      properties:
+        enrollments:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnrollmentResponse'
+      required:
+        - enrollments
+    MembershipCheckResponse:
+      type: object
+      description: |
+        Per-section membership status for the authenticated user. `enrolled`
+        is always present; `role` and `joined_at` are non-null only when
+        `enrolled` is true. Both nullable fields are emitted as JSON null
+        (not omitted) so the frontend can safely destructure.
+      properties:
+        enrolled:
+          type: boolean
+        role:
+          type: string
+          nullable: true
+          enum:
+            - student
+            - ta
+            - instructor
+        joined_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - enrolled
         - role
         - joined_at
     AppError:

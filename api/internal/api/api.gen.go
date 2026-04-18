@@ -29,19 +29,19 @@ const (
 
 // Defines values for CourseMemberResponseRole.
 const (
-	Instructor CourseMemberResponseRole = "instructor"
-	Student    CourseMemberResponseRole = "student"
-	Ta         CourseMemberResponseRole = "ta"
+	CourseMemberResponseRoleInstructor CourseMemberResponseRole = "instructor"
+	CourseMemberResponseRoleStudent    CourseMemberResponseRole = "student"
+	CourseMemberResponseRoleTa         CourseMemberResponseRole = "ta"
 )
 
 // Valid indicates whether the value is a known member of the CourseMemberResponseRole enum.
 func (e CourseMemberResponseRole) Valid() bool {
 	switch e {
-	case Instructor:
+	case CourseMemberResponseRoleInstructor:
 		return true
-	case Student:
+	case CourseMemberResponseRoleStudent:
 		return true
-	case Ta:
+	case CourseMemberResponseRoleTa:
 		return true
 	default:
 		return false
@@ -126,6 +126,48 @@ func (e CreateGrantRequestPermission) Valid() bool {
 	}
 }
 
+// Defines values for EnrollmentResponseRole.
+const (
+	EnrollmentResponseRoleInstructor EnrollmentResponseRole = "instructor"
+	EnrollmentResponseRoleStudent    EnrollmentResponseRole = "student"
+	EnrollmentResponseRoleTa         EnrollmentResponseRole = "ta"
+)
+
+// Valid indicates whether the value is a known member of the EnrollmentResponseRole enum.
+func (e EnrollmentResponseRole) Valid() bool {
+	switch e {
+	case EnrollmentResponseRoleInstructor:
+		return true
+	case EnrollmentResponseRoleStudent:
+		return true
+	case EnrollmentResponseRoleTa:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MembershipCheckResponseRole.
+const (
+	MembershipCheckResponseRoleInstructor MembershipCheckResponseRole = "instructor"
+	MembershipCheckResponseRoleStudent    MembershipCheckResponseRole = "student"
+	MembershipCheckResponseRoleTa         MembershipCheckResponseRole = "ta"
+)
+
+// Valid indicates whether the value is a known member of the MembershipCheckResponseRole enum.
+func (e MembershipCheckResponseRole) Valid() bool {
+	switch e {
+	case MembershipCheckResponseRoleInstructor:
+		return true
+	case MembershipCheckResponseRoleStudent:
+		return true
+	case MembershipCheckResponseRoleTa:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RevokeGrantRequestGranteeType.
 const (
 	RevokeGrantRequestGranteeTypeCourse     RevokeGrantRequestGranteeType = "course"
@@ -204,6 +246,27 @@ func (e ListCoursesParamsSortDir) Valid() bool {
 	case ListCoursesParamsSortDirAsc:
 		return true
 	case ListCoursesParamsSortDirDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListMyEnrollmentsParamsRole.
+const (
+	ListMyEnrollmentsParamsRoleInstructor ListMyEnrollmentsParamsRole = "instructor"
+	ListMyEnrollmentsParamsRoleStudent    ListMyEnrollmentsParamsRole = "student"
+	ListMyEnrollmentsParamsRoleTa         ListMyEnrollmentsParamsRole = "ta"
+)
+
+// Valid indicates whether the value is a known member of the ListMyEnrollmentsParamsRole enum.
+func (e ListMyEnrollmentsParamsRole) Valid() bool {
+	switch e {
+	case ListMyEnrollmentsParamsRoleInstructor:
+		return true
+	case ListMyEnrollmentsParamsRoleStudent:
+		return true
+	case ListMyEnrollmentsParamsRoleTa:
 		return true
 	default:
 		return false
@@ -415,6 +478,49 @@ type CreateGrantRequestGranteeType string
 // CreateGrantRequestPermission defines model for CreateGrantRequest.Permission.
 type CreateGrantRequestPermission string
 
+// EnrollmentCourseSummary Compact course payload embedded in an EnrollmentResponse
+type EnrollmentCourseSummary struct {
+	Department string             `json:"department"`
+	Id         openapi_types.UUID `json:"id"`
+	Number     string             `json:"number"`
+	Title      string             `json:"title"`
+}
+
+// EnrollmentResponse A single enrollment with embedded section, course, and school
+type EnrollmentResponse struct {
+	// Course Compact course payload embedded in an EnrollmentResponse
+	Course   EnrollmentCourseSummary `json:"course"`
+	JoinedAt time.Time               `json:"joined_at"`
+	Role     EnrollmentResponseRole  `json:"role"`
+
+	// School Compact school payload embedded in an EnrollmentResponse. Only id +
+	// acronym -- the full school summary is available via the course
+	// detail endpoint and would bloat the dashboard payload.
+	School EnrollmentSchoolSummary `json:"school"`
+
+	// Section Compact section payload embedded in an EnrollmentResponse
+	Section EnrollmentSectionSummary `json:"section"`
+}
+
+// EnrollmentResponseRole defines model for EnrollmentResponse.Role.
+type EnrollmentResponseRole string
+
+// EnrollmentSchoolSummary Compact school payload embedded in an EnrollmentResponse. Only id +
+// acronym -- the full school summary is available via the course
+// detail endpoint and would bloat the dashboard payload.
+type EnrollmentSchoolSummary struct {
+	Acronym string             `json:"acronym"`
+	Id      openapi_types.UUID `json:"id"`
+}
+
+// EnrollmentSectionSummary Compact section payload embedded in an EnrollmentResponse
+type EnrollmentSectionSummary struct {
+	Id             openapi_types.UUID `json:"id"`
+	InstructorName *string            `json:"instructor_name,omitempty"`
+	SectionCode    *string            `json:"section_code,omitempty"`
+	Term           string             `json:"term"`
+}
+
 // FileResponse Complete metadata payload describing an uploaded file
 type FileResponse struct {
 	CreatedAt    time.Time          `json:"created_at"`
@@ -453,12 +559,30 @@ type ListFilesResponse struct {
 	NextCursor *string        `json:"next_cursor,omitempty"`
 }
 
+// ListMyEnrollmentsResponse All enrollments for the authenticated user
+type ListMyEnrollmentsResponse struct {
+	Enrollments []EnrollmentResponse `json:"enrollments"`
+}
+
 // ListSchoolsResponse A paginated collection of schools
 type ListSchoolsResponse struct {
 	HasMore    bool             `json:"has_more"`
 	NextCursor *string          `json:"next_cursor,omitempty"`
 	Schools    []SchoolResponse `json:"schools"`
 }
+
+// MembershipCheckResponse Per-section membership status for the authenticated user. `enrolled`
+// is always present; `role` and `joined_at` are non-null only when
+// `enrolled` is true. Both nullable fields are emitted as JSON null
+// (not omitted) so the frontend can safely destructure.
+type MembershipCheckResponse struct {
+	Enrolled bool                         `json:"enrolled"`
+	JoinedAt *time.Time                   `json:"joined_at"`
+	Role     *MembershipCheckResponseRole `json:"role"`
+}
+
+// MembershipCheckResponseRole defines model for MembershipCheckResponse.Role.
+type MembershipCheckResponseRole string
 
 // RevokeGrantRequest Request body for revoking a file grant
 type RevokeGrantRequest struct {
@@ -562,6 +686,18 @@ type ListCoursesParamsSortBy string
 // ListCoursesParamsSortDir defines parameters for ListCourses.
 type ListCoursesParamsSortDir string
 
+// ListMyEnrollmentsParams defines parameters for ListMyEnrollments.
+type ListMyEnrollmentsParams struct {
+	// Term Exact-match term filter (e.g. "Spring 2026")
+	Term *string `form:"term,omitempty" json:"term,omitempty"`
+
+	// Role Filter to a specific course-member role
+	Role *ListMyEnrollmentsParamsRole `form:"role,omitempty" json:"role,omitempty"`
+}
+
+// ListMyEnrollmentsParamsRole defines parameters for ListMyEnrollments.
+type ListMyEnrollmentsParamsRole string
+
 // ListFilesParams defines parameters for ListFiles.
 type ListFilesParams struct {
 	// Scope Filter files by ownership or access level
@@ -660,6 +796,9 @@ type ServerInterface interface {
 	// Leave a section as the authenticated user
 	// (DELETE /courses/{course_id}/sections/{section_id}/members/me)
 	LeaveSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID)
+	// Check the authenticated user's membership in a section
+	// (GET /courses/{course_id}/sections/{section_id}/members/me)
+	CheckMembership(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID)
 	// Create a file reference and get a presigned upload URL
 	// (POST /files)
 	CreateFile(w http.ResponseWriter, r *http.Request)
@@ -678,6 +817,9 @@ type ServerInterface interface {
 	// Grant a permission on a file
 	// (POST /files/{file_id}/grants)
 	CreateGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+	// List the authenticated user's section enrollments
+	// (GET /me/courses)
+	ListMyEnrollments(w http.ResponseWriter, r *http.Request, params ListMyEnrollmentsParams)
 	// List files for the current user
 	// (GET /me/files)
 	ListFiles(w http.ResponseWriter, r *http.Request, params ListFilesParams)
@@ -717,6 +859,12 @@ func (_ Unimplemented) LeaveSection(w http.ResponseWriter, r *http.Request, cour
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Check the authenticated user's membership in a section
+// (GET /courses/{course_id}/sections/{section_id}/members/me)
+func (_ Unimplemented) CheckMembership(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Create a file reference and get a presigned upload URL
 // (POST /files)
 func (_ Unimplemented) CreateFile(w http.ResponseWriter, r *http.Request) {
@@ -750,6 +898,12 @@ func (_ Unimplemented) RevokeGrant(w http.ResponseWriter, r *http.Request, fileI
 // Grant a permission on a file
 // (POST /files/{file_id}/grants)
 func (_ Unimplemented) CreateGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the authenticated user's section enrollments
+// (GET /me/courses)
+func (_ Unimplemented) ListMyEnrollments(w http.ResponseWriter, r *http.Request, params ListMyEnrollmentsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -972,6 +1126,46 @@ func (siw *ServerInterfaceWrapper) LeaveSection(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// CheckMembership operation middleware
+func (siw *ServerInterfaceWrapper) CheckMembership(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "course_id" -------------
+	var courseId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "course_id", chi.URLParam(r, "course_id"), &courseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "course_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "section_id" -------------
+	var sectionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "section_id", chi.URLParam(r, "section_id"), &sectionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "section_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CheckMembership(w, r, courseId, sectionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // CreateFile operation middleware
 func (siw *ServerInterfaceWrapper) CreateFile(w http.ResponseWriter, r *http.Request) {
 
@@ -1138,6 +1332,47 @@ func (siw *ServerInterfaceWrapper) CreateGrant(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateGrant(w, r, fileId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMyEnrollments operation middleware
+func (siw *ServerInterfaceWrapper) ListMyEnrollments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMyEnrollmentsParams
+
+	// ------------- Optional query parameter "term" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "term", r.URL.Query(), &params.Term, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "term", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "role" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "role", r.URL.Query(), &params.Role, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMyEnrollments(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1490,6 +1725,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Delete(options.BaseURL+"/courses/{course_id}/sections/{section_id}/members/me", wrapper.LeaveSection)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/courses/{course_id}/sections/{section_id}/members/me", wrapper.CheckMembership)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/files", wrapper.CreateFile)
 	})
 	r.Group(func(r chi.Router) {
@@ -1506,6 +1744,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/files/{file_id}/grants", wrapper.CreateGrant)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/courses", wrapper.ListMyEnrollments)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/files", wrapper.ListFiles)
@@ -1747,6 +1988,62 @@ type LeaveSection500JSONResponse struct {
 }
 
 func (response LeaveSection500JSONResponse) VisitLeaveSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CheckMembershipRequestObject struct {
+	CourseId  openapi_types.UUID `json:"course_id"`
+	SectionId openapi_types.UUID `json:"section_id"`
+}
+
+type CheckMembershipResponseObject interface {
+	VisitCheckMembershipResponse(w http.ResponseWriter) error
+}
+
+type CheckMembership200JSONResponse MembershipCheckResponse
+
+func (response CheckMembership200JSONResponse) VisitCheckMembershipResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CheckMembership400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CheckMembership400JSONResponse) VisitCheckMembershipResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CheckMembership401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CheckMembership401JSONResponse) VisitCheckMembershipResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CheckMembership404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CheckMembership404JSONResponse) VisitCheckMembershipResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CheckMembership500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response CheckMembership500JSONResponse) VisitCheckMembershipResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -2075,6 +2372,52 @@ func (response CreateGrant500JSONResponse) VisitCreateGrantResponse(w http.Respo
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListMyEnrollmentsRequestObject struct {
+	Params ListMyEnrollmentsParams
+}
+
+type ListMyEnrollmentsResponseObject interface {
+	VisitListMyEnrollmentsResponse(w http.ResponseWriter) error
+}
+
+type ListMyEnrollments200JSONResponse ListMyEnrollmentsResponse
+
+func (response ListMyEnrollments200JSONResponse) VisitListMyEnrollmentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListMyEnrollments400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListMyEnrollments400JSONResponse) VisitListMyEnrollmentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListMyEnrollments401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListMyEnrollments401JSONResponse) VisitListMyEnrollmentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListMyEnrollments500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListMyEnrollments500JSONResponse) VisitListMyEnrollmentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListFilesRequestObject struct {
 	Params ListFilesParams
 }
@@ -2236,6 +2579,9 @@ type StrictServerInterface interface {
 	// Leave a section as the authenticated user
 	// (DELETE /courses/{course_id}/sections/{section_id}/members/me)
 	LeaveSection(ctx context.Context, request LeaveSectionRequestObject) (LeaveSectionResponseObject, error)
+	// Check the authenticated user's membership in a section
+	// (GET /courses/{course_id}/sections/{section_id}/members/me)
+	CheckMembership(ctx context.Context, request CheckMembershipRequestObject) (CheckMembershipResponseObject, error)
 	// Create a file reference and get a presigned upload URL
 	// (POST /files)
 	CreateFile(ctx context.Context, request CreateFileRequestObject) (CreateFileResponseObject, error)
@@ -2254,6 +2600,9 @@ type StrictServerInterface interface {
 	// Grant a permission on a file
 	// (POST /files/{file_id}/grants)
 	CreateGrant(ctx context.Context, request CreateGrantRequestObject) (CreateGrantResponseObject, error)
+	// List the authenticated user's section enrollments
+	// (GET /me/courses)
+	ListMyEnrollments(ctx context.Context, request ListMyEnrollmentsRequestObject) (ListMyEnrollmentsResponseObject, error)
 	// List files for the current user
 	// (GET /me/files)
 	ListFiles(ctx context.Context, request ListFilesRequestObject) (ListFilesResponseObject, error)
@@ -2393,6 +2742,33 @@ func (sh *strictHandler) LeaveSection(w http.ResponseWriter, r *http.Request, co
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(LeaveSectionResponseObject); ok {
 		if err := validResponse.VisitLeaveSectionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CheckMembership operation middleware
+func (sh *strictHandler) CheckMembership(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID) {
+	var request CheckMembershipRequestObject
+
+	request.CourseId = courseId
+	request.SectionId = sectionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CheckMembership(ctx, request.(CheckMembershipRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CheckMembership")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CheckMembershipResponseObject); ok {
+		if err := validResponse.VisitCheckMembershipResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -2582,6 +2958,32 @@ func (sh *strictHandler) CreateGrant(w http.ResponseWriter, r *http.Request, fil
 	}
 }
 
+// ListMyEnrollments operation middleware
+func (sh *strictHandler) ListMyEnrollments(w http.ResponseWriter, r *http.Request, params ListMyEnrollmentsParams) {
+	var request ListMyEnrollmentsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMyEnrollments(ctx, request.(ListMyEnrollmentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMyEnrollments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMyEnrollmentsResponseObject); ok {
+		if err := validResponse.VisitListMyEnrollmentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListFiles operation middleware
 func (sh *strictHandler) ListFiles(w http.ResponseWriter, r *http.Request, params ListFilesParams) {
 	var request ListFilesRequestObject
@@ -2663,61 +3065,74 @@ func (sh *strictHandler) GetSchool(w http.ResponseWriter, r *http.Request, schoo
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
