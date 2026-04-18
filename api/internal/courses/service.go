@@ -2,8 +2,12 @@ package courses
 
 import (
 	"context"
+	"fmt"
+	"strings"
+	"time"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -24,12 +28,314 @@ type Repository interface {
 	ListCourseSections(ctx context.Context, courseID pgtype.UUID) ([]db.ListCourseSectionsRow, error)
 }
 
-// Service is the business-logic layer for the courses feature.
-type Service struct {
-	repo Repository
+// sortKey is the lookup key for the per-sort-variant query function table.
+type sortKey struct {
+	Field SortField
+	Dir   SortDir
 }
 
-// NewService creates a new Service backed by the given Repository.
+// queryFn is the signature shared by every per-sort-variant query method on
+// Service. It returns already-mapped domain Courses so the dispatch site
+// stays variant-agnostic.
+type queryFn func(ctx context.Context, f dbFilters, limit int32) ([]Course, error)
+
+// Service is the business-logic layer for the courses feature.
+type Service struct {
+	repo       Repository
+	queryTable map[sortKey]queryFn
+}
+
+// NewService creates a new Service backed by the given Repository. The
+// queryTable is built once at construction so ListCourses can dispatch by
+// sort key with no per-request reflection or type switching.
 func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+	s := &Service{repo: repo}
+	s.queryTable = map[sortKey]queryFn{
+		{SortFieldDepartment, SortDirAsc}:  s.queryDepartmentAsc,
+		{SortFieldDepartment, SortDirDesc}: s.queryDepartmentDesc,
+		{SortFieldNumber, SortDirAsc}:      s.queryNumberAsc,
+		{SortFieldNumber, SortDirDesc}:     s.queryNumberDesc,
+		{SortFieldTitle, SortDirAsc}:       s.queryTitleAsc,
+		{SortFieldTitle, SortDirDesc}:      s.queryTitleDesc,
+		{SortFieldCreatedAt, SortDirAsc}:   s.queryCreatedAtAsc,
+		{SortFieldCreatedAt, SortDirDesc}:  s.queryCreatedAtDesc,
+	}
+	return s
+}
+
+// dbFilters holds the resolved pgtype values shared across every list query.
+// Built once per request by toDBFilters and passed to the dispatched queryFn.
+type dbFilters struct {
+	SchoolID   pgtype.UUID
+	Department pgtype.Text
+	Q          pgtype.Text
+	Cursor     *Cursor
+}
+
+// ListCourses returns a paginated, optionally-filtered list of courses with
+// embedded school summaries. Sort is dispatched at the service layer because
+// sqlc cannot parameterize ORDER BY, so each (sort_by, sort_dir) combination
+// has its own typed query in the repository.
+//
+// The HTTP boundary is the primary validator (openapi enforces sort_by enum,
+// sort_dir enum, page_limit 1..100), but the service also clamps and
+// defaults defensively so internal Go callers can't ask Postgres for an
+// unbounded number of rows or an undefined sort.
+func (s *Service) ListCourses(ctx context.Context, p ListCoursesParams) (ListCoursesResult, error) {
+	limit := p.Limit
+	if limit <= 0 {
+		limit = DefaultPageLimit
+	}
+	if limit > MaxPageLimit {
+		limit = MaxPageLimit
+	}
+
+	sortBy := p.SortBy
+	if sortBy == "" {
+		sortBy = SortFieldDepartment
+	}
+	sortDir := p.SortDir
+	if sortDir == "" {
+		sortDir = SortDirAsc
+	}
+
+	queryFn, ok := s.queryTable[sortKey{sortBy, sortDir}]
+	if !ok {
+		return ListCoursesResult{}, fmt.Errorf("ListCourses: unsupported sort: %s/%s", sortBy, sortDir)
+	}
+
+	rows, err := queryFn(ctx, toDBFilters(p), limit+1)
+	if err != nil {
+		return ListCoursesResult{}, fmt.Errorf("ListCourses: %w", err)
+	}
+
+	hasMore := int32(len(rows)) > limit
+	if hasMore {
+		rows = rows[:limit]
+	}
+
+	var nextCursor *string
+	if hasMore {
+		// hasMore implies len(rows) == limit >= 1 by construction.
+		last := rows[len(rows)-1]
+		token, err := EncodeCursor(buildCursor(last, sortBy))
+		if err != nil {
+			return ListCoursesResult{}, fmt.Errorf("ListCourses: encode cursor: %w", err)
+		}
+		nextCursor = &token
+	}
+
+	return ListCoursesResult{
+		Courses:    rows,
+		HasMore:    hasMore,
+		NextCursor: nextCursor,
+	}, nil
+}
+
+// toDBFilters resolves the public ListCoursesParams into pgtype values
+// shared by every per-sort-variant query.
+func toDBFilters(p ListCoursesParams) dbFilters {
+	var schoolID pgtype.UUID
+	if p.SchoolID != nil {
+		schoolID = utils.UUID(*p.SchoolID)
+	}
+
+	var department pgtype.Text
+	if p.Department != nil {
+		trimmed := strings.TrimSpace(*p.Department)
+		if trimmed != "" {
+			department = pgtype.Text{String: trimmed, Valid: true}
+		}
+	}
+
+	var q pgtype.Text
+	if p.Q != nil {
+		trimmed := strings.TrimSpace(*p.Q)
+		if trimmed != "" {
+			q = pgtype.Text{String: escapeLikePattern(trimmed), Valid: true}
+		}
+	}
+
+	return dbFilters{
+		SchoolID:   schoolID,
+		Department: department,
+		Q:          q,
+		Cursor:     p.Cursor,
+	}
+}
+
+// buildCursor builds the keyset cursor for the next page from the last
+// visible course row. Department-sorted pages get a 3-field composite cursor
+// (department + number + id); other sorts get a 2-field (field, id).
+func buildCursor(c Course, sortBy SortField) Cursor {
+	cur := Cursor{ID: c.ID}
+	switch sortBy {
+	case SortFieldDepartment:
+		dept := c.Department
+		num := c.Number
+		cur.Department = &dept
+		cur.Number = &num
+	case SortFieldNumber:
+		num := c.Number
+		cur.Number = &num
+	case SortFieldTitle:
+		title := c.Title
+		cur.Title = &title
+	case SortFieldCreatedAt:
+		ts := c.CreatedAt
+		cur.CreatedAt = &ts
+	}
+	return cur
+}
+
+// escapeLikePattern escapes the SQL LIKE/ILIKE wildcards %, _, and \ so a
+// user-supplied q like "50%_off" is treated as a literal substring rather
+// than as a wildcard pattern. The SQL queries declare ESCAPE '\'.
+func escapeLikePattern(s string) string {
+	return strings.NewReplacer(
+		`\`, `\\`,
+		`%`, `\%`,
+		`_`, `\_`,
+	).Replace(s)
+}
+
+// Per-sort-variant query methods. Each builds the typed *Params struct,
+// calls the matching repository method, and projects the rows through the
+// mapper.
+
+func (s *Service) queryDepartmentAsc(ctx context.Context, f dbFilters, limit int32) ([]Course, error) {
+	rows, err := s.repo.ListCoursesDepartmentAsc(ctx, db.ListCoursesDepartmentAscParams{
+		SchoolID:         f.SchoolID,
+		Department:       f.Department,
+		Q:                f.Q,
+		PageLimit:        limit,
+		CursorDepartment: utils.CursorText(f.Cursor, func(c *Cursor) *string { return c.Department }),
+		CursorNumber:     utils.CursorText(f.Cursor, func(c *Cursor) *string { return c.Number }),
+		CursorID:         utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mapListRows(rows, fromDepartmentAscRow)
+}
+
+func (s *Service) queryDepartmentDesc(ctx context.Context, f dbFilters, limit int32) ([]Course, error) {
+	rows, err := s.repo.ListCoursesDepartmentDesc(ctx, db.ListCoursesDepartmentDescParams{
+		SchoolID:         f.SchoolID,
+		Department:       f.Department,
+		Q:                f.Q,
+		PageLimit:        limit,
+		CursorDepartment: utils.CursorText(f.Cursor, func(c *Cursor) *string { return c.Department }),
+		CursorNumber:     utils.CursorText(f.Cursor, func(c *Cursor) *string { return c.Number }),
+		CursorID:         utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mapListRows(rows, fromDepartmentDescRow)
+}
+
+func (s *Service) queryNumberAsc(ctx context.Context, f dbFilters, limit int32) ([]Course, error) {
+	rows, err := s.repo.ListCoursesNumberAsc(ctx, db.ListCoursesNumberAscParams{
+		SchoolID:     f.SchoolID,
+		Department:   f.Department,
+		Q:            f.Q,
+		PageLimit:    limit,
+		CursorNumber: utils.CursorText(f.Cursor, func(c *Cursor) *string { return c.Number }),
+		CursorID:     utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mapListRows(rows, fromNumberAscRow)
+}
+
+func (s *Service) queryNumberDesc(ctx context.Context, f dbFilters, limit int32) ([]Course, error) {
+	rows, err := s.repo.ListCoursesNumberDesc(ctx, db.ListCoursesNumberDescParams{
+		SchoolID:     f.SchoolID,
+		Department:   f.Department,
+		Q:            f.Q,
+		PageLimit:    limit,
+		CursorNumber: utils.CursorText(f.Cursor, func(c *Cursor) *string { return c.Number }),
+		CursorID:     utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mapListRows(rows, fromNumberDescRow)
+}
+
+func (s *Service) queryTitleAsc(ctx context.Context, f dbFilters, limit int32) ([]Course, error) {
+	rows, err := s.repo.ListCoursesTitleAsc(ctx, db.ListCoursesTitleAscParams{
+		SchoolID:    f.SchoolID,
+		Department:  f.Department,
+		Q:           f.Q,
+		PageLimit:   limit,
+		CursorTitle: utils.CursorText(f.Cursor, func(c *Cursor) *string { return c.Title }),
+		CursorID:    utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mapListRows(rows, fromTitleAscRow)
+}
+
+func (s *Service) queryTitleDesc(ctx context.Context, f dbFilters, limit int32) ([]Course, error) {
+	rows, err := s.repo.ListCoursesTitleDesc(ctx, db.ListCoursesTitleDescParams{
+		SchoolID:    f.SchoolID,
+		Department:  f.Department,
+		Q:           f.Q,
+		PageLimit:   limit,
+		CursorTitle: utils.CursorText(f.Cursor, func(c *Cursor) *string { return c.Title }),
+		CursorID:    utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mapListRows(rows, fromTitleDescRow)
+}
+
+func (s *Service) queryCreatedAtAsc(ctx context.Context, f dbFilters, limit int32) ([]Course, error) {
+	rows, err := s.repo.ListCoursesCreatedAtAsc(ctx, db.ListCoursesCreatedAtAscParams{
+		SchoolID:        f.SchoolID,
+		Department:      f.Department,
+		Q:               f.Q,
+		PageLimit:       limit,
+		CursorCreatedAt: utils.CursorTimestamptz(f.Cursor, func(c *Cursor) *time.Time { return c.CreatedAt }),
+		CursorID:        utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mapListRows(rows, fromCreatedAtAscRow)
+}
+
+func (s *Service) queryCreatedAtDesc(ctx context.Context, f dbFilters, limit int32) ([]Course, error) {
+	rows, err := s.repo.ListCoursesCreatedAtDesc(ctx, db.ListCoursesCreatedAtDescParams{
+		SchoolID:        f.SchoolID,
+		Department:      f.Department,
+		Q:               f.Q,
+		PageLimit:       limit,
+		CursorCreatedAt: utils.CursorTimestamptz(f.Cursor, func(c *Cursor) *time.Time { return c.CreatedAt }),
+		CursorID:        utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mapListRows(rows, fromCreatedAtDescRow)
+}
+
+// mapListRows projects a slice of typed sqlc rows into domain Courses by
+// running the variant-specific row->sharedCourseRow adapter and then the
+// shared mapper.
+func mapListRows[R any](rows []R, project func(R) sharedCourseRow) ([]Course, error) {
+	out := make([]Course, 0, len(rows))
+	for _, r := range rows {
+		c, err := mapCourse(project(r))
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, nil
 }
