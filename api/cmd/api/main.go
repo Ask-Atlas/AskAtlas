@@ -23,6 +23,7 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/middleware"
 	qstashclient "github.com/Ask-Atlas/AskAtlas/api/internal/qstash"
 	s3client "github.com/Ask-Atlas/AskAtlas/api/internal/s3"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/schools"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/user"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/go-chi/chi/v5"
@@ -83,6 +84,10 @@ func main() {
 	fileHandler := handlers.NewFileHandler(fileService, qstashClient)
 	grantHandler := handlers.NewGrantHandler(fileService)
 
+	schoolsRepo := schools.NewSQLCRepository(queries)
+	schoolsService := schools.NewService(schoolsRepo)
+	schoolsHandler := handlers.NewSchoolsHandler(schoolsService)
+
 	clerkAuth := middleware.ClerkAuth(userService)
 
 	r.Use(chiMiddleware.Timeout(60 * time.Second))
@@ -112,7 +117,7 @@ func main() {
 		},
 	}
 
-	compositeHandler := handlers.NewCompositeHandler(fileHandler, grantHandler)
+	compositeHandler := handlers.NewCompositeHandler(fileHandler, grantHandler, schoolsHandler)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(clerkAuth)

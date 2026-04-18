@@ -23,8 +23,9 @@ import (
 
 // newTestRouter builds a chi router with the composite handler wired up so
 // the oapi-codegen path parameters are resolved correctly.
-func newTestRouter(fh *handlers.FileHandler, gh *handlers.GrantHandler) chi.Router {
-	composite := handlers.NewCompositeHandler(fh, gh)
+func newTestRouter(t *testing.T, fh *handlers.FileHandler, gh *handlers.GrantHandler) chi.Router {
+	sh := handlers.NewSchoolsHandler(mock_handlers.NewMockSchoolService(t))
+	composite := handlers.NewCompositeHandler(fh, gh, sh)
 	r := chi.NewRouter()
 	api.HandlerWithOptions(composite, api.ChiServerOptions{BaseRouter: r})
 	return r
@@ -73,7 +74,7 @@ func TestGrantHandler_CreateGrant_Success(t *testing.T) {
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
-	r := newTestRouter(fh, gh)
+	r := newTestRouter(t, fh, gh)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusCreated, w.Code)
@@ -109,7 +110,7 @@ func TestGrantHandler_CreateGrant_Unauthorized(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	r := newTestRouter(fh, gh)
+	r := newTestRouter(t, fh, gh)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -141,7 +142,7 @@ func TestGrantHandler_CreateGrant_FileNotFound(t *testing.T) {
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
-	r := newTestRouter(fh, gh)
+	r := newTestRouter(t, fh, gh)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
@@ -173,7 +174,7 @@ func TestGrantHandler_CreateGrant_ServiceError(t *testing.T) {
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
-	r := newTestRouter(fh, gh)
+	r := newTestRouter(t, fh, gh)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -212,7 +213,7 @@ func TestGrantHandler_RevokeGrant_Success(t *testing.T) {
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
-	r := newTestRouter(fh, gh)
+	r := newTestRouter(t, fh, gh)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNoContent, w.Code)
@@ -237,7 +238,7 @@ func TestGrantHandler_RevokeGrant_Unauthorized(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	r := newTestRouter(fh, gh)
+	r := newTestRouter(t, fh, gh)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -269,7 +270,7 @@ func TestGrantHandler_RevokeGrant_FileNotFound(t *testing.T) {
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
-	r := newTestRouter(fh, gh)
+	r := newTestRouter(t, fh, gh)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
