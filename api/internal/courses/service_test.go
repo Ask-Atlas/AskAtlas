@@ -3,6 +3,7 @@ package courses_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	mock_courses "github.com/Ask-Atlas/AskAtlas/api/internal/courses/mocks"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
+	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
@@ -315,6 +317,149 @@ func TestService_ListCourses_UnsupportedSortReturnsError(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported sort")
+}
+
+func TestService_GetCourse_Success(t *testing.T) {
+	courseID := uuid.New()
+	schoolID := uuid.New()
+	desc := "Intro to software engineering."
+	created := time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC)
+
+	repo := mock_courses.NewMockRepository(t)
+	repo.EXPECT().
+		GetCourse(mock.Anything, mock.MatchedBy(func(id pgtype.UUID) bool {
+			return id.Valid && id.Bytes == courseID
+		})).
+		Return(db.GetCourseRow{
+			ID:          utils.UUID(courseID),
+			SchoolID:    utils.UUID(schoolID),
+			Department:  "CPTS",
+			Number:      "322",
+			Title:       "Software Engineering Principles I",
+			Description: pgtype.Text{String: desc, Valid: true},
+			CreatedAt:   pgtype.Timestamptz{Time: created, Valid: true},
+			SID:         utils.UUID(schoolID),
+			SName:       "Washington State University",
+			SAcronym:    "WSU",
+			SCity:       pgtype.Text{String: "Pullman", Valid: true},
+			SState:      pgtype.Text{String: "WA", Valid: true},
+			SCountry:    pgtype.Text{String: "US", Valid: true},
+		}, nil)
+
+	repo.EXPECT().
+		ListCourseSections(mock.Anything, mock.MatchedBy(func(id pgtype.UUID) bool {
+			return id.Valid && id.Bytes == courseID
+		})).
+		Return([]db.ListCourseSectionsRow{
+			{
+				ID:             utils.UUID(uuid.New()),
+				Term:           "Spring 2026",
+				SectionCode:    pgtype.Text{String: "01", Valid: true},
+				InstructorName: pgtype.Text{String: "Dr. Ananth Jillepalli", Valid: true},
+				MemberCount:    34,
+			},
+		}, nil)
+
+	svc := courses.NewService(repo)
+	got, err := svc.GetCourse(context.Background(), courses.GetCourseParams{CourseID: courseID})
+
+	require.NoError(t, err)
+	assert.Equal(t, courseID, got.ID)
+	assert.Equal(t, "CPTS", got.Department)
+	assert.Equal(t, "322", got.Number)
+	require.NotNil(t, got.Description)
+	assert.Equal(t, desc, *got.Description)
+	assert.Equal(t, schoolID, got.School.ID)
+	assert.Equal(t, "WSU", got.School.Acronym)
+	require.NotNil(t, got.School.City)
+	assert.Equal(t, "Pullman", *got.School.City)
+
+	require.Len(t, got.Sections, 1)
+	assert.Equal(t, "Spring 2026", got.Sections[0].Term)
+	require.NotNil(t, got.Sections[0].SectionCode)
+	assert.Equal(t, "01", *got.Sections[0].SectionCode)
+	assert.Equal(t, int64(34), got.Sections[0].MemberCount)
+}
+
+func TestService_GetCourse_NoSectionsReturnsEmptySlice(t *testing.T) {
+	courseID := uuid.New()
+	repo := mock_courses.NewMockRepository(t)
+	repo.EXPECT().
+		GetCourse(mock.Anything, mock.Anything).
+		Return(db.GetCourseRow{
+			ID:         utils.UUID(courseID),
+			SchoolID:   utils.UUID(uuid.New()),
+			Department: "CPTS", Number: "490",
+			Title:     "Special Topics",
+			CreatedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+			SID:       utils.UUID(uuid.New()),
+			SName:     "Washington State University",
+			SAcronym:  "WSU",
+		}, nil)
+	repo.EXPECT().
+		ListCourseSections(mock.Anything, mock.Anything).
+		Return(nil, nil) // no sections
+
+	svc := courses.NewService(repo)
+	got, err := svc.GetCourse(context.Background(), courses.GetCourseParams{CourseID: courseID})
+
+	require.NoError(t, err)
+	require.NotNil(t, got.Sections, "Sections must be a non-nil slice so JSON encodes as [] not null")
+	assert.Empty(t, got.Sections)
+}
+
+func TestService_GetCourse_NotFoundPropagated(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	repo.EXPECT().
+		GetCourse(mock.Anything, mock.Anything).
+		Return(db.GetCourseRow{}, fmt.Errorf("GetCourse: %w", apperrors.ErrNotFound))
+
+	svc := courses.NewService(repo)
+	_, err := svc.GetCourse(context.Background(), courses.GetCourseParams{CourseID: uuid.New()})
+
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, apperrors.ErrNotFound), "error must wrap apperrors.ErrNotFound")
+}
+
+func TestService_GetCourse_RepoErrorWrapped(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	repo.EXPECT().
+		GetCourse(mock.Anything, mock.Anything).
+		Return(db.GetCourseRow{}, errors.New("connection refused"))
+
+	svc := courses.NewService(repo)
+	_, err := svc.GetCourse(context.Background(), courses.GetCourseParams{CourseID: uuid.New()})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "GetCourse")
+	assert.Contains(t, err.Error(), "connection refused")
+}
+
+func TestService_GetCourse_SectionsErrorWrapped(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	repo.EXPECT().
+		GetCourse(mock.Anything, mock.Anything).
+		Return(db.GetCourseRow{
+			ID:         utils.UUID(uuid.New()),
+			SchoolID:   utils.UUID(uuid.New()),
+			Department: "CPTS", Number: "322",
+			Title:     "Software Engineering Principles I",
+			CreatedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+			SID:       utils.UUID(uuid.New()),
+			SName:     "WSU",
+			SAcronym:  "WSU",
+		}, nil)
+	repo.EXPECT().
+		ListCourseSections(mock.Anything, mock.Anything).
+		Return(nil, errors.New("query timeout"))
+
+	svc := courses.NewService(repo)
+	_, err := svc.GetCourse(context.Background(), courses.GetCourseParams{CourseID: uuid.New()})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "GetCourse")
+	assert.Contains(t, err.Error(), "list sections")
+	assert.Contains(t, err.Error(), "query timeout")
 }
 
 func TestCursor_RoundTrip(t *testing.T) {

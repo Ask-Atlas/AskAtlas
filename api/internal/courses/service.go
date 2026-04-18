@@ -339,3 +339,41 @@ func mapListRows[R any](rows []R, project func(R) sharedCourseRow) ([]Course, er
 	}
 	return out, nil
 }
+
+// GetCourse returns the full course detail (course + school + sections)
+// for the given UUID. Two queries: the course+school JOIN comes back in
+// one round-trip, sections + member_count in a second. Returns an error
+// wrapping apperrors.ErrNotFound when no course matches; the handler maps
+// that to a 404 with "Course not found".
+//
+// Sections is always a non-nil slice (empty when the course has none) so
+// the JSON wire format stays "sections": [] rather than null.
+func (s *Service) GetCourse(ctx context.Context, p GetCourseParams) (CourseDetail, error) {
+	row, err := s.repo.GetCourse(ctx, utils.UUID(p.CourseID))
+	if err != nil {
+		return CourseDetail{}, fmt.Errorf("GetCourse: %w", err)
+	}
+	course, err := mapCourse(fromGetRow(row))
+	if err != nil {
+		return CourseDetail{}, fmt.Errorf("GetCourse: %w", err)
+	}
+
+	sectionRows, err := s.repo.ListCourseSections(ctx, utils.UUID(p.CourseID))
+	if err != nil {
+		return CourseDetail{}, fmt.Errorf("GetCourse: list sections: %w", err)
+	}
+
+	sections := make([]Section, 0, len(sectionRows))
+	for _, r := range sectionRows {
+		sec, err := mapSection(r)
+		if err != nil {
+			return CourseDetail{}, fmt.Errorf("GetCourse: map section: %w", err)
+		}
+		sections = append(sections, sec)
+	}
+
+	return CourseDetail{
+		Course:   course,
+		Sections: sections,
+	}, nil
+}
