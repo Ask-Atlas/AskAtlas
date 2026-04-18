@@ -1,0 +1,1 @@
+{"parameters":[{"name":"school_id","in":"path","description":"The unique UUID of the school","required":true,"schema":{"type":"string","format":"uuid"}}]}
