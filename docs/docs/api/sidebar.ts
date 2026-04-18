@@ -76,6 +76,18 @@ const sidebar: SidebarsConfig = {
           label: "Get a course detail with embedded sections",
           className: "api-method get",
         },
+        {
+          type: "doc",
+          id: "api/join-section",
+          label: "Join a section as the authenticated user",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "api/leave-section",
+          label: "Leave a section as the authenticated user",
+          className: "api-method delete",
+        },
       ],
     },
   ],

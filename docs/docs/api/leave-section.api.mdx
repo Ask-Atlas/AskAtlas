@@ -1,0 +1,72 @@
+---
+id: leave-section
+title: "Leave a section as the authenticated user"
+description: "Removes the authenticated user's membership from the given section."
+sidebar_label: "Leave a section as the authenticated user"
+hide_title: true
+hide_table_of_contents: true
+api: eJztVk1v20YQ/SuLuTQBWEkp0ot6UhAXcJEWQWwjB1moRtyRuAm5S8/OqlUJ/vdiSFqmI7Uo0gJGAZ/4NbP7Zt5bzmsg1MQoLvhLC3N4R7inK8r1BWRgKebs6u5pDh+oCnuKRgoymKQgLy5HIWtSJP4mmoqqDXEsXG22HKoucOf25E3sl5zc+uuCxnEcfjMumgLZfmupJCE7MQt/MBxKMi/WUZIlL+vMrAXX2a1fOx+FUy6B1y9Njt6Uinlyq3hrZKxIiCPMlw14rAjmkIfEkX51FjJwWkiNUpxUp8CSd3eJzM3N5VsTth3+Gpm8mH4NyIDpLjkmC3PhRBnEvKAKYd6AHGrdLQo7v4MMtoErFJhDSs5C22ZHQEM3vhLRkG0k9KX/K1ArTY518JGixn83e62Xx0B+HvHVacD+YHww94lmE+wB2gxez2anyW/QGsVHUSCDPHghLxqGdV2qflzw009RY5tT4GHziXI5ac2VoLfI1v1B1hBz4Ac0vTwSk6lQ8sL5nRltNUTbUKHzUTXDegTE9fXnwdJoe+eFdsRaXBSUFE972mZQUYy4o7PfLAm6Mp4rCa11CgnL948wfLFG244JXvYQj3gedl9lIE5KTV3U9YWWqckdL69OebnxeoYDawufiXkqYs6ctl+CmG1I/pmVJ2Ll+3O/sUsvxB5LE4n3xH1fnhl6CoY6gFIENSy9Z+hGvxQwh2k/qOO0OU79djpMzDhtHiZvOx1cyLTqNu9Y7W1D4lJXwtqBzsdIeWInh+7bG0ImXiTdbLkaf75Spvt6x0HH6guRGobRrM+bLgiy4ebH+8H808drNQvg/DZ06fctiJ8XUmI0i/eXkIGi7aXzajKbzJSZOkSpsJPdYDQ6O2fwaBnwr8zbl3psHnT9P7B9Q4eFfpdpXaLz2o2OxWbQxXIwgSqv+dgP3ktD3z+yZQPY7k6VWIQouk7TbDDSDZdtq6/vErEqY5XBHtnhRrlaNmBd1HsL8y2Wkf6mvS8+DEfhpfmHFvRsucNL9AcVB5ZJnyCDz3R4ZIHVhv6X4M640a/AN2p9u2ozKAgtcdfJPmCR51TLKPXkZ6tn8fhbeHvx7uL6Atr2T/VdgzA=
+sidebar_class_name: "delete api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Leave a section as the authenticated user"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"delete"}
+  path={"/courses/{course_id}/sections/{section_id}/members/me"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Removes the authenticated user's membership from the given section.
+The membership row is hard-deleted. Any role (`student`, `ta`,
+`instructor`) can leave.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./leave-section.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./leave-section.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./leave-section.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      
