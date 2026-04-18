@@ -64,6 +64,18 @@ const sidebar: SidebarsConfig = {
           label: "Get a single school by ID",
           className: "api-method get",
         },
+        {
+          type: "doc",
+          id: "api/list-courses",
+          label: "List and search courses",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "api/get-course",
+          label: "Get a course detail with embedded sections",
+          className: "api-method get",
+        },
       ],
     },
   ],

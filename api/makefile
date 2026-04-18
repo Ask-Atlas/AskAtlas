@@ -2,12 +2,15 @@ BINARY_NAME := api
 MAIN_PATH   := ./cmd/api/main.go
 SEED_PATH   := ./scripts/seed_files.go
 SEED_SCHOOLS_PATH := ./scripts/seed_schools
+SEED_COURSES_PATH := ./scripts/seed_courses
 
 ENV     ?= dev
 ACTION  ?= seed
 COUNT   ?= 50
 MAX_ROWS ?= 1000
 CSV     ?= scripts/data/schools.csv
+COURSES_CSV ?= scripts/data/courses.csv
+SECTIONS_CSV ?= scripts/data/course_sections.csv
 
 GOMARKDOC_VERSION        ?= v1.1.0
 GOMARKDOC_CMD            := go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@$(GOMARKDOC_VERSION)
@@ -27,7 +30,7 @@ define prod-confirm
 endef
 
 .PHONY: dev stage prod build install format format-check lint test tidy tidy-check \
-	sqlc/generate docker-build docker-run mockery seed seed-schools e2e generate-docs
+	sqlc/generate docker-build docker-run mockery seed seed-schools seed-courses e2e generate-docs
 
 dev:
 	infisical run --env=dev -- go run $(MAIN_PATH)
@@ -104,6 +107,18 @@ seed:
 seed-schools:
 	$(call prod-confirm)
 	infisical run --env=$(ENV) -- go run $(SEED_SCHOOLS_PATH) -csv=$(CSV)
+
+## make seed-courses [ENV=dev|staging|prod] [COURSES_CSV=scripts/data/courses.csv] [SECTIONS_CSV=scripts/data/course_sections.csv]
+##
+## Two-phase loader for courses + course_sections. Resolves parent schools
+## by ipeds_id and parent courses by (school_ipeds_id, department, number),
+## so seed-schools must run first. Both phases run inside one transaction
+## with ON CONFLICT DO NOTHING against the natural unique keys
+## (uq_courses_school_dept_num, uq_sections_course_term_code), so re-runs
+## are safe. ENV=prod requires interactive [y] confirmation.
+seed-courses:
+	$(call prod-confirm)
+	infisical run --env=$(ENV) -- go run $(SEED_COURSES_PATH) -courses=$(COURSES_CSV) -sections=$(SECTIONS_CSV)
 
 ## make e2e E2E_TOKEN=<token> [ENV=dev|staging]
 e2e:

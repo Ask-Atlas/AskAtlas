@@ -11,6 +11,7 @@ import (
 )
 
 type Querier interface {
+	GetCourse(ctx context.Context, id pgtype.UUID) (GetCourseRow, error)
 	// Fetches a file only if it belongs to the given user and has not been soft-deleted.
 	// Returns sql.ErrNoRows if not found or already in a deletion state.
 	GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) (GetFileByOwnerRow, error)
@@ -18,6 +19,29 @@ type Querier interface {
 	GetSchool(ctx context.Context, id pgtype.UUID) (School, error)
 	GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtype.UUID, error)
 	InsertFile(ctx context.Context, arg InsertFileParams) (File, error)
+	// Returns sections with a live member_count via LEFT JOIN (so sections
+	// with zero members still appear). Ordered most-recent term first using
+	// start_date when present, falling back to section_code. NULLS LAST keeps
+	// sections without a known start_date at the bottom.
+	ListCourseSections(ctx context.Context, courseID pgtype.UUID) ([]ListCourseSectionsRow, error)
+	ListCoursesCreatedAtAsc(ctx context.Context, arg ListCoursesCreatedAtAscParams) ([]ListCoursesCreatedAtAscRow, error)
+	ListCoursesCreatedAtDesc(ctx context.Context, arg ListCoursesCreatedAtDescParams) ([]ListCoursesCreatedAtDescRow, error)
+	// All ListCourses* variants share the same WHERE template
+	// (school_id, department, q filters + sort-specific cursor) and only
+	// differ in ORDER BY direction and the cursor field shape. This mirrors
+	// the per-sort-variant pattern in files.sql -- sqlc cannot parameterize
+	// ORDER BY, so each direction gets its own named query.
+	//
+	// The default sort (by department) uses a composite (department, number, id)
+	// cursor because (department) alone is not unique; the other sort fields
+	// use a simpler (field, id) cursor since the field is paired with the
+	// primary key as a tiebreaker.
+	ListCoursesDepartmentAsc(ctx context.Context, arg ListCoursesDepartmentAscParams) ([]ListCoursesDepartmentAscRow, error)
+	ListCoursesDepartmentDesc(ctx context.Context, arg ListCoursesDepartmentDescParams) ([]ListCoursesDepartmentDescRow, error)
+	ListCoursesNumberAsc(ctx context.Context, arg ListCoursesNumberAscParams) ([]ListCoursesNumberAscRow, error)
+	ListCoursesNumberDesc(ctx context.Context, arg ListCoursesNumberDescParams) ([]ListCoursesNumberDescRow, error)
+	ListCoursesTitleAsc(ctx context.Context, arg ListCoursesTitleAscParams) ([]ListCoursesTitleAscRow, error)
+	ListCoursesTitleDesc(ctx context.Context, arg ListCoursesTitleDescParams) ([]ListCoursesTitleDescRow, error)
 	ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFilesCreatedAscParams) ([]ListOwnedFilesCreatedAscRow, error)
 	ListOwnedFilesCreatedDesc(ctx context.Context, arg ListOwnedFilesCreatedDescParams) ([]ListOwnedFilesCreatedDescRow, error)
 	ListOwnedFilesMimeAsc(ctx context.Context, arg ListOwnedFilesMimeAscParams) ([]ListOwnedFilesMimeAscRow, error)

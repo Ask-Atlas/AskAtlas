@@ -147,6 +147,48 @@ func (e RevokeGrantRequestPermission) Valid() bool {
 	}
 }
 
+// Defines values for ListCoursesParamsSortBy.
+const (
+	ListCoursesParamsSortByCreatedAt  ListCoursesParamsSortBy = "created_at"
+	ListCoursesParamsSortByDepartment ListCoursesParamsSortBy = "department"
+	ListCoursesParamsSortByNumber     ListCoursesParamsSortBy = "number"
+	ListCoursesParamsSortByTitle      ListCoursesParamsSortBy = "title"
+)
+
+// Valid indicates whether the value is a known member of the ListCoursesParamsSortBy enum.
+func (e ListCoursesParamsSortBy) Valid() bool {
+	switch e {
+	case ListCoursesParamsSortByCreatedAt:
+		return true
+	case ListCoursesParamsSortByDepartment:
+		return true
+	case ListCoursesParamsSortByNumber:
+		return true
+	case ListCoursesParamsSortByTitle:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListCoursesParamsSortDir.
+const (
+	ListCoursesParamsSortDirAsc  ListCoursesParamsSortDir = "asc"
+	ListCoursesParamsSortDirDesc ListCoursesParamsSortDir = "desc"
+)
+
+// Valid indicates whether the value is a known member of the ListCoursesParamsSortDir enum.
+func (e ListCoursesParamsSortDir) Valid() bool {
+	switch e {
+	case ListCoursesParamsSortDirAsc:
+		return true
+	case ListCoursesParamsSortDirDesc:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListFilesParamsScope.
 const (
 	Accessible ListFilesParamsScope = "accessible"
@@ -230,28 +272,28 @@ func (e ListFilesParamsMimeType) Valid() bool {
 
 // Defines values for ListFilesParamsSortBy.
 const (
-	CreatedAt ListFilesParamsSortBy = "created_at"
-	MimeType  ListFilesParamsSortBy = "mime_type"
-	Name      ListFilesParamsSortBy = "name"
-	Size      ListFilesParamsSortBy = "size"
-	Status    ListFilesParamsSortBy = "status"
-	UpdatedAt ListFilesParamsSortBy = "updated_at"
+	ListFilesParamsSortByCreatedAt ListFilesParamsSortBy = "created_at"
+	ListFilesParamsSortByMimeType  ListFilesParamsSortBy = "mime_type"
+	ListFilesParamsSortByName      ListFilesParamsSortBy = "name"
+	ListFilesParamsSortBySize      ListFilesParamsSortBy = "size"
+	ListFilesParamsSortByStatus    ListFilesParamsSortBy = "status"
+	ListFilesParamsSortByUpdatedAt ListFilesParamsSortBy = "updated_at"
 )
 
 // Valid indicates whether the value is a known member of the ListFilesParamsSortBy enum.
 func (e ListFilesParamsSortBy) Valid() bool {
 	switch e {
-	case CreatedAt:
+	case ListFilesParamsSortByCreatedAt:
 		return true
-	case MimeType:
+	case ListFilesParamsSortByMimeType:
 		return true
-	case Name:
+	case ListFilesParamsSortByName:
 		return true
-	case Size:
+	case ListFilesParamsSortBySize:
 		return true
-	case Status:
+	case ListFilesParamsSortByStatus:
 		return true
-	case UpdatedAt:
+	case ListFilesParamsSortByUpdatedAt:
 		return true
 	default:
 		return false
@@ -260,16 +302,16 @@ func (e ListFilesParamsSortBy) Valid() bool {
 
 // Defines values for ListFilesParamsSortDir.
 const (
-	Asc  ListFilesParamsSortDir = "asc"
-	Desc ListFilesParamsSortDir = "desc"
+	ListFilesParamsSortDirAsc  ListFilesParamsSortDir = "asc"
+	ListFilesParamsSortDirDesc ListFilesParamsSortDir = "desc"
 )
 
 // Valid indicates whether the value is a known member of the ListFilesParamsSortDir enum.
 func (e ListFilesParamsSortDir) Valid() bool {
 	switch e {
-	case Asc:
+	case ListFilesParamsSortDirAsc:
 		return true
-	case Desc:
+	case ListFilesParamsSortDirDesc:
 		return true
 	default:
 		return false
@@ -282,6 +324,33 @@ type AppError struct {
 	Details *map[string]string `json:"details,omitempty"`
 	Message string             `json:"message"`
 	Status  string             `json:"status"`
+}
+
+// CourseDetailResponse A course with its school summary and the full list of sections
+type CourseDetailResponse struct {
+	CreatedAt   time.Time          `json:"created_at"`
+	Department  string             `json:"department"`
+	Description *string            `json:"description,omitempty"`
+	Id          openapi_types.UUID `json:"id"`
+	Number      string             `json:"number"`
+
+	// School Compact school payload embedded inside other resources (courses, study guides)
+	School   SchoolSummary    `json:"school"`
+	Sections []SectionSummary `json:"sections"`
+	Title    string           `json:"title"`
+}
+
+// CourseResponse A course (e.g. CPTS 322) with its school summary embedded
+type CourseResponse struct {
+	CreatedAt   time.Time          `json:"created_at"`
+	Department  string             `json:"department"`
+	Description *string            `json:"description,omitempty"`
+	Id          openapi_types.UUID `json:"id"`
+	Number      string             `json:"number"`
+
+	// School Compact school payload embedded inside other resources (courses, study guides)
+	School SchoolSummary `json:"school"`
+	Title  string        `json:"title"`
 }
 
 // CreateFileRequest Payload to create a new file reference
@@ -338,6 +407,13 @@ type GrantResponse struct {
 	Permission  string             `json:"permission"`
 }
 
+// ListCoursesResponse A paginated collection of courses
+type ListCoursesResponse struct {
+	Courses    []CourseResponse `json:"courses"`
+	HasMore    bool             `json:"has_more"`
+	NextCursor *string          `json:"next_cursor,omitempty"`
+}
+
 // ListFilesResponse A paginated collection of files
 type ListFilesResponse struct {
 	Files      []FileResponse `json:"files"`
@@ -380,6 +456,27 @@ type SchoolResponse struct {
 	Url       *string            `json:"url,omitempty"`
 }
 
+// SchoolSummary Compact school payload embedded inside other resources (courses, study guides)
+type SchoolSummary struct {
+	Acronym string  `json:"acronym"`
+	City    *string `json:"city,omitempty"`
+
+	// Country ISO 3166-1 alpha-2 country code
+	Country *string            `json:"country,omitempty"`
+	Id      openapi_types.UUID `json:"id"`
+	Name    string             `json:"name"`
+	State   *string            `json:"state,omitempty"`
+}
+
+// SectionSummary A section of a course (term + instructor + roster size)
+type SectionSummary struct {
+	Id             openapi_types.UUID `json:"id"`
+	InstructorName *string            `json:"instructor_name,omitempty"`
+	MemberCount    int64              `json:"member_count"`
+	SectionCode    *string            `json:"section_code,omitempty"`
+	Term           string             `json:"term"`
+}
+
 // UpdateFileRequest Request body for updating file metadata
 type UpdateFileRequest struct {
 	Name string `json:"name"`
@@ -399,6 +496,36 @@ type NotFound = AppError
 
 // Unauthorized Standardized error response structure matching application error domains
 type Unauthorized = AppError
+
+// ListCoursesParams defines parameters for ListCourses.
+type ListCoursesParams struct {
+	// SchoolId Filter by school UUID
+	SchoolId *openapi_types.UUID `form:"school_id,omitempty" json:"school_id,omitempty"`
+
+	// Department Exact department code match (case-insensitive, e.g. "CPTS")
+	Department *string `form:"department,omitempty" json:"department,omitempty"`
+
+	// Q Search term, matches against title (trigram), department, or number (case-insensitive)
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// SortBy Database column to sort the results by
+	SortBy *ListCoursesParamsSortBy `form:"sort_by,omitempty" json:"sort_by,omitempty"`
+
+	// SortDir Sorting direction (ascending or descending)
+	SortDir *ListCoursesParamsSortDir `form:"sort_dir,omitempty" json:"sort_dir,omitempty"`
+
+	// PageLimit Maximum number of courses to return per page
+	PageLimit *int `form:"page_limit,omitempty" json:"page_limit,omitempty"`
+
+	// Cursor Opaque pagination cursor token obtained from the previous response
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListCoursesParamsSortBy defines parameters for ListCourses.
+type ListCoursesParamsSortBy string
+
+// ListCoursesParamsSortDir defines parameters for ListCourses.
+type ListCoursesParamsSortDir string
 
 // ListFilesParams defines parameters for ListFiles.
 type ListFilesParams struct {
@@ -486,6 +613,12 @@ type CreateGrantJSONRequestBody = CreateGrantRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// List and search courses
+	// (GET /courses)
+	ListCourses(w http.ResponseWriter, r *http.Request, params ListCoursesParams)
+	// Get a course detail with embedded sections
+	// (GET /courses/{course_id})
+	GetCourse(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID)
 	// Create a file reference and get a presigned upload URL
 	// (POST /files)
 	CreateFile(w http.ResponseWriter, r *http.Request)
@@ -518,6 +651,18 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// List and search courses
+// (GET /courses)
+func (_ Unimplemented) ListCourses(w http.ResponseWriter, r *http.Request, params ListCoursesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a course detail with embedded sections
+// (GET /courses/{course_id})
+func (_ Unimplemented) GetCourse(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // Create a file reference and get a presigned upload URL
 // (POST /files)
@@ -581,6 +726,118 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListCourses operation middleware
+func (siw *ServerInterfaceWrapper) ListCourses(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCoursesParams
+
+	// ------------- Optional query parameter "school_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "school_id", r.URL.Query(), &params.SchoolId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "school_id", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "department" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "department", r.URL.Query(), &params.Department, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "department", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "sort_by" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort_by", r.URL.Query(), &params.SortBy, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort_by", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "sort_dir" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort_dir", r.URL.Query(), &params.SortDir, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort_dir", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "page_limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "page_limit", r.URL.Query(), &params.PageLimit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page_limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCourses(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCourse operation middleware
+func (siw *ServerInterfaceWrapper) GetCourse(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "course_id" -------------
+	var courseId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "course_id", chi.URLParam(r, "course_id"), &courseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "course_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCourse(w, r, courseId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // CreateFile operation middleware
 func (siw *ServerInterfaceWrapper) CreateFile(w http.ResponseWriter, r *http.Request) {
@@ -1088,6 +1345,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/courses", wrapper.ListCourses)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/courses/{course_id}", wrapper.GetCourse)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/files", wrapper.CreateFile)
 	})
 	r.Group(func(r chi.Router) {
@@ -1127,6 +1390,107 @@ type InternalServerErrorJSONResponse AppError
 type NotFoundJSONResponse AppError
 
 type UnauthorizedJSONResponse AppError
+
+type ListCoursesRequestObject struct {
+	Params ListCoursesParams
+}
+
+type ListCoursesResponseObject interface {
+	VisitListCoursesResponse(w http.ResponseWriter) error
+}
+
+type ListCourses200JSONResponse ListCoursesResponse
+
+func (response ListCourses200JSONResponse) VisitListCoursesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCourses400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListCourses400JSONResponse) VisitListCoursesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCourses401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListCourses401JSONResponse) VisitListCoursesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCourses500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListCourses500JSONResponse) VisitListCoursesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCourseRequestObject struct {
+	CourseId openapi_types.UUID `json:"course_id"`
+}
+
+type GetCourseResponseObject interface {
+	VisitGetCourseResponse(w http.ResponseWriter) error
+}
+
+type GetCourse200JSONResponse CourseDetailResponse
+
+func (response GetCourse200JSONResponse) VisitGetCourseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCourse400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetCourse400JSONResponse) VisitGetCourseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCourse401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetCourse401JSONResponse) VisitGetCourseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCourse404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetCourse404JSONResponse) VisitGetCourseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCourse500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response GetCourse500JSONResponse) VisitGetCourseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
 
 type CreateFileRequestObject struct {
 	Body *CreateFileJSONRequestBody
@@ -1599,6 +1963,12 @@ func (response GetSchool500JSONResponse) VisitGetSchoolResponse(w http.ResponseW
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// List and search courses
+	// (GET /courses)
+	ListCourses(ctx context.Context, request ListCoursesRequestObject) (ListCoursesResponseObject, error)
+	// Get a course detail with embedded sections
+	// (GET /courses/{course_id})
+	GetCourse(ctx context.Context, request GetCourseRequestObject) (GetCourseResponseObject, error)
 	// Create a file reference and get a presigned upload URL
 	// (POST /files)
 	CreateFile(ctx context.Context, request CreateFileRequestObject) (CreateFileResponseObject, error)
@@ -1655,6 +2025,58 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// ListCourses operation middleware
+func (sh *strictHandler) ListCourses(w http.ResponseWriter, r *http.Request, params ListCoursesParams) {
+	var request ListCoursesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCourses(ctx, request.(ListCoursesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCourses")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCoursesResponseObject); ok {
+		if err := validResponse.VisitListCoursesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCourse operation middleware
+func (sh *strictHandler) GetCourse(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID) {
+	var request GetCourseRequestObject
+
+	request.CourseId = courseId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCourse(ctx, request.(GetCourseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCourse")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCourseResponseObject); ok {
+		if err := validResponse.VisitGetCourseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // CreateFile operation middleware
@@ -1920,46 +2342,54 @@ func (sh *strictHandler) GetSchool(w http.ResponseWriter, r *http.Request, schoo
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"H4sIAAAAAAAC/+xcXXPbNtb+Kxi+74UzZSzbcbI7unOTuuOdbpuJ7dmLNqOBiCMJLQkwAGhb8ei/7+AA",
+	"kEgKlCivotSTXEUk8XFwzoPz7TwmmSxKKUAYnQwfEwW6lEIDPvxI2Qf4VIE29imTwoDAn7Qsc55Rw6UY",
+	"/KmlsO90NoOC2l//r2CSDJP/G6yWHrivenBRlj8pJVWyWCzShIHOFC/tOsnQbkeU32+RJpdSjTljIA6y",
+	"+Wq3RZpcCQNK0Pwa1B0oN+cQRIR9icaNCbiBafKrNJeyEuwgVPwqDZngbos0uRW0MjOp+Gc4zO6NDe1n",
+	"P8muuZw3fGzNujZUMKqYneXYRgKUiTaqykylgBTUZDMupqRGuh/NZEG50EmalEqWoAx3dyCTDOy/Zl5C",
+	"Mky4MDAFlAkDQ3mOgyhj3K5F8/eNyX6SNoqLqZ3jX8jxn5AhyAvQmk4hOlgbaqrYOos0sfeEKyuS3x2J",
+	"y+GrNT9G9nsrK6XhHZL+wTNonZsXJMNx5J6bGeFGE53NpMyJroqCqjmhghEzAzKp8pzkXBsiJ0RDZudH",
+	"eKiAGmAjirCZSFXYXwmjBl4aXlji1w7PoKTKFB5qkc81eh8TUeU5HeeQDI2qILIcZ42tq4qz2K6iKsag",
+	"4tJADmxD9jWOunZswmmBKcPHhBso9NYV3ITaEp4UqhR1z9zksB0WeEJPdYOfy2OGpdK6hGokdwOoB3SO",
+	"4Hh6TN6+v7kmr87OXnRCCYoxMAbsO2rqIv+iIo7KFT9f8hxqJr8p2vd0nkvKiJHELUYoEXBPJjwHomAC",
+	"CkQGa3IseAEjt99jAqIqkPKCTmHwZwnTJPUPpVj9vodxmaQNC1OySevNnWDHsgTxUORORPqlnEx4Bkxm",
+	"lWXD8b1UrFQyA625mBb5cfiy80qlAg3C4PAibzxaHsODGZQ55aK1MJTV+IfPvKyxvAYbWiBPCvrwC4ip",
+	"mSXDs9ev06TgIjyfRqZp/hkasOTCvDm3ep8+8MKy9/Tk/J+v//Hm5ATX8u/SNRPWAhOSk9bE5bfahpYu",
+	"TeDGsBY8nB6gxHKQTwUwUpWIqtsPv6xBx07ddncaRCzSxC03qlS+/f7g+o0p3Yf9WVFhOu+G/0DGks3J",
+	"RCp3Q9DVcAyY2ulrB8S3AKOeiiYMb9+mSuNVd5oXXYGKzUfTijOIIq8EVXCtvRoMq9xxuLeTZ1QBqpMc",
+	"TGx+i4kNotL6kRobxTi7BUCyKC0JpABDGTWUlF4DuXFjZK/wAPJI24sZmdA7qfiWWfuyHjnVZmR5/z9u",
+	"19CzncqmvzpZ93g7HVJ7hdiOXI6ZMq+CkKSWJgrObcNTqe0ag5e/st2uCt7MFUY7LumTEMTzHW81G43n",
+	"OymBJ+qMp8K0qTN6CDOwIO2rIRqc2Oqw/MK1cc6o3iTikk65QDuUyTx3nq0NVpyujMV77n1fd73lD0fc",
+	"9RnVo0KqOvPHUuZAMdUg4MGMskppF9VuueVrkV84xHKTLlZZVfskRlkx6qhl7s+kto0+IIsC+VsZ5Hzw",
+	"J7HIeeDrTNrnsYKfv0MgieO72d5i1OoQG1n1Ae7kX7s6Q8pO+u4MbXaGWvKK4M9HzkeV4HegNDdzYj1N",
+	"i8UpvFjjJ82UFPMiqvQzbua9UJfJShg1Xyfn6vo38ur0zZuXp4Tm5Yy+PCN+LPEJqXpc08N/eVK8j1m7",
+	"vcbynX6SoQZ67eRDj930VN3/CYLbagObeYOoA00zE3ATvOeQcSFcaM6ASDMDTJfKSmWgyZE3KynBq0Pw",
+	"6uhnj69DAaCHYKOybOb9Ytd/ZXHoMstmQBXkBytKzHJLRX4gSmoDilg3el1qPdmwWnAUOLI9ArHIUiMU",
+	"UzxDEbIRJ9Hwwp1vFFLuW/ezZ+/pjOLQFoUxKdxiRLExDbZm3TAKsdYNbVsIVtcY/6R0TyxHs063Y16l",
+	"uJlfW+vvy3dAFaiLyq78mIzx6TKI5F//uUl8bQX9Evy6AsLMmNJVZ7iYSGSyS0kmF/qvC5NTTS7eXyVp",
+	"goYI+XJ6fHJ8YnkoSxC05MkweXV8cvzKMoKaGZI0qLnXU0DmWhZhsuyKJcO6V4/zFC3AgNLJ8Pe2HC55",
+	"blE+ngf9dnt79S6xBCfD5FMFah4u3tA7N6OQL/Ulqi2XYJG2t/zpwarTVZ4VNZGrKpGjjGp4yYUGobnh",
+	"d5ASzID/kbx9f3P9R/Kig7RG1nZFWx0lJz1IuwaqshmxOE8dRaAJnVJ7jwnKjhwZxaeKFi/S2hFS60K4",
+	"ZPH6Ebpo/tRNah9a31FDx1SDdV2qQhAjiZbKYEVJga5yowmGgFFRSmVcgLiigMGEVrlpczP4ck9IjG9g",
+	"tFR42RlXXh8fUZ2BYPalVJibck8vNp2AcdVxBKqzGu3uyS7ai7p/uxxwkOgq0LVMVmAqJUgJyoYy0EGe",
+	"/TTKecFNnMCz141U89Ykc5vE30r6qYIQTFkGuiCIGPkXCCLHhnIBjEyULBASpYI7Liu9rOh2EO5jqTrR",
+	"bX59TJsdDmcnJ3srascSEpH6dj2MDJXTICPMjS/ds0ahzBqRRZqcO4JjdCwPNqj1beCU0+1TmlX3NHnd",
+	"Z59YmwTaouDDoDrHYrF26imofzsq2ILBo/sx4mzRaRd+Bs/bbVbhZgakEtwizNoDy12LoWU0iMCx9qiG",
+	"m7B9Uje2zufobyy+JLSiVfsItm5QgaLkMUmxquHHQTX3svH13gPi6/zkfPukZdfL/gD5M5iV8+w6ONoM",
+	"WnLDYnSZ5yqljsByVQfz2AFtfpRsvj/Jr5VlF02f0MJ0sQa90y9CQDfwLps1Pm9SHWejlb7np8rehpJ3",
+	"q55pb9AUURU/6BJFg0efEV84c4oJpTVEvcP3HlE7aToFviptHRFszrGEGkn8VlHdt0rS71Pzna9HTYgQ",
+	"XWUZaD2p8nxOPlVQWTOPPlMOOO65qRMnrQCK8ZxcvcPUZIcJ25tYDynM/ZmxbVrEFeQOa4ZebZ/UaA39",
+	"uoarCbPShnnrQFvlMPamQlyh9Qujbv/Wcz2b08t6Hg7xjkD2FXD/dVD8ASxoPJCjtnGAJRO9yUTWSlBP",
+	"jAYCrLEuBYSiVcKA89lBPFKP64XxiInGRTxPGDmydpkzIqQh8MC1efFtANQhot4VIsUSsOnGOGAfkET4",
+	"B0Qa+ezwGGmWO3DE0uz6iShdh/MQo1ic01wBZXOHc2DfBNIdF7qAbjVzAavwtzNZfxnaQ3qk6nE1677I",
+	"ewFKz3hJLPMd1nO4g7wzfS9dF1gkXWrXYrWEaXiO1v/TxO3Gxzn0yqe2KV91E5NlS1qU4vAxRnLmGxtr",
+	"VJcuZYx0Lz9OKM+B7UInUggZ10BC6zIpeAEv7QIky6nWfOKvVQflja67JfHf+7Y35Nxd+tupcM0/A+GC",
+	"jOcGdCeLxcj3OEb0dZ9iaXfivz8R9GHvRITbIsONCUrWKhdF6MR+NTOuye3NW2J4AdrQouzK5/vCjPfL",
+	"IlRubC/dkbgxTKSC3alDG7132nxn69MYF9pivxTjmsTtyrhA3V4YVyt7Wu+ppMpwmudzX5QNBVC8FXZ/",
+	"3aui+TUrmLWe5pV5aLxstEA3W6ZXfwO41OJ/i5om1i/3WNR0OPxe0jxASbPZOBzN2oUypvMWn2mV0kHK",
+	"KjmsF1ZKWecJm0nRG66133Y6w9erRuBN7nCjV8OrrJbC8mU6zJYs+zbsVQRsQWkO9m1lB+vfWL+Pnjnf",
+	"b+QhbmS7U71nk0EA8PPvIliepHYvB4/LHq+NXQTX4a9ln5KkWf6pbSQnU28x+3uWX9p/ELCtf8Cf9pvp",
+	"CrCxZh6EHKos9d5KBEq9q/L3j1Zg7j/rcDDC3u9kQEueLD4u/hsAAP//kBvdhV5FAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
