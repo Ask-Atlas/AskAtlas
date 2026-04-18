@@ -39,6 +39,17 @@ type Repository interface {
 	ListGuideQuizzesWithQuestionCount(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListGuideQuizzesWithQuestionCountRow, error)
 	ListGuideResources(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListGuideResourcesRow, error)
 	ListGuideFiles(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListGuideFilesRow, error)
+
+	InsertStudyGuide(ctx context.Context, arg db.InsertStudyGuideParams) (db.InsertStudyGuideRow, error)
+	GetStudyGuideByIDForUpdate(ctx context.Context, id pgtype.UUID) (db.GetStudyGuideByIDForUpdateRow, error)
+	SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUID) error
+	SoftDeleteQuizzesForGuide(ctx context.Context, studyGuideID pgtype.UUID) error
+
+	// InTx runs fn inside a single Postgres transaction. The Repository
+	// passed to fn is scoped to the tx; commits on a nil return,
+	// rolls back on any error. Used by DeleteStudyGuide for the
+	// atomic guide + child-quiz cascade.
+	InTx(ctx context.Context, fn func(Repository) error) error
 }
 
 // sortKey is the lookup key for the per-sort-variant query function

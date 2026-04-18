@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/studyguides"
 	"github.com/jackc/pgx/v5/pgtype"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -101,6 +102,72 @@ func (_c *MockRepository_CourseExistsForGuides_Call) Return(b bool, err error) *
 }
 
 func (_c *MockRepository_CourseExistsForGuides_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) (bool, error)) *MockRepository_CourseExistsForGuides_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetStudyGuideByIDForUpdate provides a mock function for the type MockRepository
+func (_mock *MockRepository) GetStudyGuideByIDForUpdate(ctx context.Context, id pgtype.UUID) (db.GetStudyGuideByIDForUpdateRow, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetStudyGuideByIDForUpdate")
+	}
+
+	var r0 db.GetStudyGuideByIDForUpdateRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) (db.GetStudyGuideByIDForUpdateRow, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) db.GetStudyGuideByIDForUpdateRow); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(db.GetStudyGuideByIDForUpdateRow)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, pgtype.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_GetStudyGuideByIDForUpdate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetStudyGuideByIDForUpdate'
+type MockRepository_GetStudyGuideByIDForUpdate_Call struct {
+	*mock.Call
+}
+
+// GetStudyGuideByIDForUpdate is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id pgtype.UUID
+func (_e *MockRepository_Expecter) GetStudyGuideByIDForUpdate(ctx interface{}, id interface{}) *MockRepository_GetStudyGuideByIDForUpdate_Call {
+	return &MockRepository_GetStudyGuideByIDForUpdate_Call{Call: _e.mock.On("GetStudyGuideByIDForUpdate", ctx, id)}
+}
+
+func (_c *MockRepository_GetStudyGuideByIDForUpdate_Call) Run(run func(ctx context.Context, id pgtype.UUID)) *MockRepository_GetStudyGuideByIDForUpdate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_GetStudyGuideByIDForUpdate_Call) Return(getStudyGuideByIDForUpdateRow db.GetStudyGuideByIDForUpdateRow, err error) *MockRepository_GetStudyGuideByIDForUpdate_Call {
+	_c.Call.Return(getStudyGuideByIDForUpdateRow, err)
+	return _c
+}
+
+func (_c *MockRepository_GetStudyGuideByIDForUpdate_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) (db.GetStudyGuideByIDForUpdateRow, error)) *MockRepository_GetStudyGuideByIDForUpdate_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -233,6 +300,129 @@ func (_c *MockRepository_GetUserVoteForGuide_Call) Return(voteDirection db.VoteD
 }
 
 func (_c *MockRepository_GetUserVoteForGuide_Call) RunAndReturn(run func(ctx context.Context, arg db.GetUserVoteForGuideParams) (db.VoteDirection, error)) *MockRepository_GetUserVoteForGuide_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// InTx provides a mock function for the type MockRepository
+func (_mock *MockRepository) InTx(ctx context.Context, fn func(studyguides.Repository) error) error {
+	ret := _mock.Called(ctx, fn)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InTx")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, func(studyguides.Repository) error) error); ok {
+		r0 = returnFunc(ctx, fn)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_InTx_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InTx'
+type MockRepository_InTx_Call struct {
+	*mock.Call
+}
+
+// InTx is a helper method to define mock.On call
+//   - ctx context.Context
+//   - fn func(studyguides.Repository) error
+func (_e *MockRepository_Expecter) InTx(ctx interface{}, fn interface{}) *MockRepository_InTx_Call {
+	return &MockRepository_InTx_Call{Call: _e.mock.On("InTx", ctx, fn)}
+}
+
+func (_c *MockRepository_InTx_Call) Run(run func(ctx context.Context, fn func(studyguides.Repository) error)) *MockRepository_InTx_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 func(studyguides.Repository) error
+		if args[1] != nil {
+			arg1 = args[1].(func(studyguides.Repository) error)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_InTx_Call) Return(err error) *MockRepository_InTx_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_InTx_Call) RunAndReturn(run func(ctx context.Context, fn func(studyguides.Repository) error) error) *MockRepository_InTx_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// InsertStudyGuide provides a mock function for the type MockRepository
+func (_mock *MockRepository) InsertStudyGuide(ctx context.Context, arg db.InsertStudyGuideParams) (db.InsertStudyGuideRow, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InsertStudyGuide")
+	}
+
+	var r0 db.InsertStudyGuideRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.InsertStudyGuideParams) (db.InsertStudyGuideRow, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.InsertStudyGuideParams) db.InsertStudyGuideRow); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(db.InsertStudyGuideRow)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.InsertStudyGuideParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_InsertStudyGuide_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InsertStudyGuide'
+type MockRepository_InsertStudyGuide_Call struct {
+	*mock.Call
+}
+
+// InsertStudyGuide is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.InsertStudyGuideParams
+func (_e *MockRepository_Expecter) InsertStudyGuide(ctx interface{}, arg interface{}) *MockRepository_InsertStudyGuide_Call {
+	return &MockRepository_InsertStudyGuide_Call{Call: _e.mock.On("InsertStudyGuide", ctx, arg)}
+}
+
+func (_c *MockRepository_InsertStudyGuide_Call) Run(run func(ctx context.Context, arg db.InsertStudyGuideParams)) *MockRepository_InsertStudyGuide_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.InsertStudyGuideParams
+		if args[1] != nil {
+			arg1 = args[1].(db.InsertStudyGuideParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_InsertStudyGuide_Call) Return(insertStudyGuideRow db.InsertStudyGuideRow, err error) *MockRepository_InsertStudyGuide_Call {
+	_c.Call.Return(insertStudyGuideRow, err)
+	return _c
+}
+
+func (_c *MockRepository_InsertStudyGuide_Call) RunAndReturn(run func(ctx context.Context, arg db.InsertStudyGuideParams) (db.InsertStudyGuideRow, error)) *MockRepository_InsertStudyGuide_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1049,6 +1239,120 @@ func (_c *MockRepository_ListStudyGuidesViewsDesc_Call) Return(listStudyGuidesVi
 }
 
 func (_c *MockRepository_ListStudyGuidesViewsDesc_Call) RunAndReturn(run func(ctx context.Context, arg db.ListStudyGuidesViewsDescParams) ([]db.ListStudyGuidesViewsDescRow, error)) *MockRepository_ListStudyGuidesViewsDesc_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SoftDeleteQuizzesForGuide provides a mock function for the type MockRepository
+func (_mock *MockRepository) SoftDeleteQuizzesForGuide(ctx context.Context, studyGuideID pgtype.UUID) error {
+	ret := _mock.Called(ctx, studyGuideID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SoftDeleteQuizzesForGuide")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) error); ok {
+		r0 = returnFunc(ctx, studyGuideID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_SoftDeleteQuizzesForGuide_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SoftDeleteQuizzesForGuide'
+type MockRepository_SoftDeleteQuizzesForGuide_Call struct {
+	*mock.Call
+}
+
+// SoftDeleteQuizzesForGuide is a helper method to define mock.On call
+//   - ctx context.Context
+//   - studyGuideID pgtype.UUID
+func (_e *MockRepository_Expecter) SoftDeleteQuizzesForGuide(ctx interface{}, studyGuideID interface{}) *MockRepository_SoftDeleteQuizzesForGuide_Call {
+	return &MockRepository_SoftDeleteQuizzesForGuide_Call{Call: _e.mock.On("SoftDeleteQuizzesForGuide", ctx, studyGuideID)}
+}
+
+func (_c *MockRepository_SoftDeleteQuizzesForGuide_Call) Run(run func(ctx context.Context, studyGuideID pgtype.UUID)) *MockRepository_SoftDeleteQuizzesForGuide_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_SoftDeleteQuizzesForGuide_Call) Return(err error) *MockRepository_SoftDeleteQuizzesForGuide_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_SoftDeleteQuizzesForGuide_Call) RunAndReturn(run func(ctx context.Context, studyGuideID pgtype.UUID) error) *MockRepository_SoftDeleteQuizzesForGuide_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SoftDeleteStudyGuide provides a mock function for the type MockRepository
+func (_mock *MockRepository) SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUID) error {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SoftDeleteStudyGuide")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) error); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_SoftDeleteStudyGuide_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SoftDeleteStudyGuide'
+type MockRepository_SoftDeleteStudyGuide_Call struct {
+	*mock.Call
+}
+
+// SoftDeleteStudyGuide is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id pgtype.UUID
+func (_e *MockRepository_Expecter) SoftDeleteStudyGuide(ctx interface{}, id interface{}) *MockRepository_SoftDeleteStudyGuide_Call {
+	return &MockRepository_SoftDeleteStudyGuide_Call{Call: _e.mock.On("SoftDeleteStudyGuide", ctx, id)}
+}
+
+func (_c *MockRepository_SoftDeleteStudyGuide_Call) Run(run func(ctx context.Context, id pgtype.UUID)) *MockRepository_SoftDeleteStudyGuide_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_SoftDeleteStudyGuide_Call) Return(err error) *MockRepository_SoftDeleteStudyGuide_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_SoftDeleteStudyGuide_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) error) *MockRepository_SoftDeleteStudyGuide_Call {
 	_c.Call.Return(run)
 	return _c
 }
