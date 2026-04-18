@@ -46,14 +46,6 @@ func NullUploadStatus(s *string) db.NullUploadStatus {
 	return db.NullUploadStatus{UploadStatus: db.UploadStatus(*s), Valid: true}
 }
 
-// NullMimeType converts a string pointer to a db.NullMimeType.
-func NullMimeType(s *string) db.NullMimeType {
-	if s == nil {
-		return db.NullMimeType{}
-	}
-	return db.NullMimeType{MimeType: db.MimeType(*s), Valid: true}
-}
-
 // TimestamptzPtr converts a pgtype.Timestamptz to a time.Time pointer.
 func TimestamptzPtr(t pgtype.Timestamptz) *time.Time {
 	if !t.Valid {

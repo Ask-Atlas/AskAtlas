@@ -110,7 +110,7 @@ func (s *Service) CreateFile(ctx context.Context, p CreateFileParams) (CreateFil
 		UserID:   utils.UUID(p.UserID),
 		S3Key:    s3Key,
 		Name:     p.Name,
-		MimeType: db.MimeType(p.MimeType),
+		MimeType: p.MimeType,
 		Size:     p.Size,
 	})
 	if err != nil {
@@ -600,7 +600,7 @@ func (s *Service) queryMimeAsc(ctx context.Context, f dbFilters, limit int32) ([
 		UpdatedTo:      f.UpdatedTo,
 		Q:              f.Q,
 		PageLimit:      limit,
-		CursorMimeType: utils.CursorNullMimeType(f.Cursor, func(c *Cursor) *string { return c.MimeType }),
+		CursorMimeType: utils.CursorText(f.Cursor, func(c *Cursor) *string { return c.MimeType }),
 		CursorID:       utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
 	})
 	if err != nil {
@@ -623,7 +623,7 @@ func (s *Service) queryMimeDesc(ctx context.Context, f dbFilters, limit int32) (
 		UpdatedTo:      f.UpdatedTo,
 		Q:              f.Q,
 		PageLimit:      limit,
-		CursorMimeType: utils.CursorNullMimeType(f.Cursor, func(c *Cursor) *string { return c.MimeType }),
+		CursorMimeType: utils.CursorText(f.Cursor, func(c *Cursor) *string { return c.MimeType }),
 		CursorID:       utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
 	})
 	if err != nil {
@@ -639,7 +639,7 @@ type dbFilters struct {
 	Cursor   *Cursor
 
 	Status      db.NullUploadStatus
-	MimeType    db.NullMimeType
+	MimeType    pgtype.Text
 	MinSize     pgtype.Int8
 	MaxSize     pgtype.Int8
 	CreatedFrom pgtype.Timestamptz
@@ -655,7 +655,7 @@ func toDBFilters(p ListFilesParams) dbFilters {
 		OwnerID:     utils.UUID(p.OwnerID),
 		Cursor:      p.Cursor,
 		Status:      utils.NullUploadStatus(p.Status),
-		MimeType:    utils.NullMimeType(p.MimeType),
+		MimeType:    utils.Text(p.MimeType),
 		MinSize:     utils.Int8(p.MinSize),
 		MaxSize:     utils.Int8(p.MaxSize),
 		CreatedFrom: utils.Timestamptz(p.CreatedFrom),

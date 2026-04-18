@@ -16,7 +16,7 @@ type sharedRow struct {
 	UserID       pgtype.UUID
 	Name         string
 	Size         int64
-	MimeType     db.MimeType
+	MimeType     string
 	Status       db.UploadStatus
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz

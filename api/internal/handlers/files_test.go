@@ -86,7 +86,7 @@ func TestFileHandler_CreateFile_ValidationErrors(t *testing.T) {
 		{"empty name", `{"name":"","mime_type":"application/pdf","size":100}`},
 		{"whitespace-only name", `{"name":"   ","mime_type":"application/pdf","size":100}`},
 		{"name exceeds 255 chars", `{"name":"` + strings.Repeat("a", 256) + `","mime_type":"application/pdf","size":100}`},
-		{"invalid mime type", `{"name":"file.pdf","mime_type":"text/plain","size":100}`},
+		{"invalid mime type", `{"name":"file.pdf","mime_type":"application/zip","size":100}`},
 		{"zero size", `{"name":"file.pdf","mime_type":"application/pdf","size":0}`},
 		{"negative size", `{"name":"file.pdf","mime_type":"application/pdf","size":-1}`},
 		{"size exceeds max", `{"name":"file.pdf","mime_type":"application/pdf","size":104857601}`},
