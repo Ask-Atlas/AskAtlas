@@ -60,19 +60,31 @@ const (
 		WHERE s.ipeds_id = $1 AND c.department = $2 AND c.number = $3
 	`
 
-	insertStudyGuideSQL = `
-		INSERT INTO study_guides (course_id, creator_id, title, description, content, tags, view_count)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		ON CONFLICT DO NOTHING
-		RETURNING id
-	`
-
-	// re-fetch path for idempotent re-runs: the INSERT above returns no
-	// row when the guide already exists, so we look it up by the
-	// natural identity (course_id + title).
+	// Idempotency by natural identity: study_guides has no unique
+	// constraint on (course_id, title), so ON CONFLICT has nothing to
+	// target and would silently duplicate on re-runs. We SELECT first
+	// and skip INSERT if a live row already exists. Same pattern for
+	// quizzes (no unique on (study_guide_id, title)).
 	selectStudyGuideIDSQL = `
 		SELECT id FROM study_guides
 		WHERE course_id = $1 AND title = $2 AND deleted_at IS NULL
+	`
+
+	insertStudyGuideSQL = `
+		INSERT INTO study_guides (course_id, creator_id, title, description, content, tags, view_count)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id
+	`
+
+	selectQuizIDSQL = `
+		SELECT id FROM quizzes
+		WHERE study_guide_id = $1 AND title = $2 AND deleted_at IS NULL
+	`
+
+	insertQuizSQL = `
+		INSERT INTO quizzes (study_guide_id, creator_id, title)
+		VALUES ($1, $2, $3)
+		RETURNING id
 	`
 
 	insertVoteSQL = `
@@ -85,12 +97,6 @@ const (
 		INSERT INTO study_guide_recommendations (study_guide_id, recommended_by)
 		VALUES ($1, $2)
 		ON CONFLICT (study_guide_id, recommended_by) DO NOTHING
-	`
-
-	insertQuizSQL = `
-		INSERT INTO quizzes (study_guide_id, creator_id, title)
-		VALUES ($1, $2, $3)
-		ON CONFLICT DO NOTHING
 	`
 )
 
@@ -169,9 +175,9 @@ func main() {
 			}
 		}
 
-		// One quiz per guide.
+		// One quiz per guide (idempotent by (study_guide_id, title)).
 		quizTitle := g.Title + " Quiz"
-		if _, err := tx.Exec(ctx, insertQuizSQL, guideID, botIDs[0], quizTitle); err != nil {
+		if _, err := insertOrFetchQuiz(ctx, tx, guideID, botIDs[0], quizTitle); err != nil {
 			log.Fatalf("quiz on %q: %v", g.Title, err)
 		}
 
@@ -215,21 +221,45 @@ func upsertBots(ctx context.Context, tx pgx.Tx) ([3]uuid.UUID, error) {
 	return ids, nil
 }
 
-// insertOrFetchGuide handles the "INSERT returns no row on conflict"
-// case the same way as upsertBots: fall through to SELECT by the
-// natural identity (course_id + title).
+// insertOrFetchGuide is SELECT-then-INSERT by (course_id, title) so
+// re-runs are idempotent. study_guides has no unique constraint on
+// that tuple, so ON CONFLICT cannot target it -- we would silently
+// duplicate rows on every re-run of the seed.
 func insertOrFetchGuide(ctx context.Context, tx pgx.Tx, courseID, creatorID uuid.UUID, g csvGuide) (uuid.UUID, error) {
 	var id uuid.UUID
+	err := tx.QueryRow(ctx, selectStudyGuideIDSQL, courseID, g.Title).Scan(&id)
+	if err == nil {
+		return id, nil // already exists
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, fmt.Errorf("select: %w", err)
+	}
+
 	row := tx.QueryRow(ctx, insertStudyGuideSQL,
 		courseID, creatorID, g.Title, g.Description, g.Content, g.Tags, g.ViewCount,
 	)
 	if err := row.Scan(&id); err != nil {
-		if !errors.Is(err, pgx.ErrNoRows) {
-			return uuid.Nil, fmt.Errorf("insert: %w", err)
-		}
-		if err := tx.QueryRow(ctx, selectStudyGuideIDSQL, courseID, g.Title).Scan(&id); err != nil {
-			return uuid.Nil, fmt.Errorf("re-fetch: %w", err)
-		}
+		return uuid.Nil, fmt.Errorf("insert: %w", err)
+	}
+	return id, nil
+}
+
+// insertOrFetchQuiz is SELECT-then-INSERT by (study_guide_id, title) so
+// re-runs are idempotent. Same rationale as insertOrFetchGuide: quizzes
+// has no unique constraint on that tuple.
+func insertOrFetchQuiz(ctx context.Context, tx pgx.Tx, guideID, creatorID uuid.UUID, title string) (uuid.UUID, error) {
+	var id uuid.UUID
+	err := tx.QueryRow(ctx, selectQuizIDSQL, guideID, title).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, fmt.Errorf("select: %w", err)
+	}
+
+	row := tx.QueryRow(ctx, insertQuizSQL, guideID, creatorID, title)
+	if err := row.Scan(&id); err != nil {
+		return uuid.Nil, fmt.Errorf("insert: %w", err)
 	}
 	return id, nil
 }
