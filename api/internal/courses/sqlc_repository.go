@@ -103,3 +103,7 @@ func (r *sqlcRepository) ListMyEnrollments(ctx context.Context, arg db.ListMyEnr
 func (r *sqlcRepository) GetMembership(ctx context.Context, arg db.GetMembershipParams) (db.GetMembershipRow, error) {
 	return r.queries.GetMembership(ctx, arg)
 }
+
+func (r *sqlcRepository) ListSectionMembers(ctx context.Context, arg db.ListSectionMembersParams) ([]db.ListSectionMembersRow, error) {
+	return r.queries.ListSectionMembers(ctx, arg)
+}

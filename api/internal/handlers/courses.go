@@ -23,6 +23,7 @@ type CourseService interface {
 	LeaveSection(ctx context.Context, params courses.LeaveSectionParams) error
 	ListMyEnrollments(ctx context.Context, params courses.ListMyEnrollmentsParams) ([]courses.Enrollment, error)
 	CheckMembership(ctx context.Context, params courses.CheckMembershipParams) (courses.MembershipCheck, error)
+	ListSectionMembers(ctx context.Context, params courses.ListSectionMembersParams) (courses.ListSectionMembersResult, error)
 }
 
 // CoursesHandler manages incoming HTTP requests relating to course operations.
@@ -195,6 +196,51 @@ func validateJoinSectionBody(r *http.Request) *apperrors.AppError {
 	return nil
 }
 
+// ListSectionMembers handles GET /courses/{course_id}/sections/{section_id}/members.
+// Any authenticated user can list -- no membership check on the caller
+// (course pages are public within the app). The response payload is the
+// privacy floor: 5 fields, no email, no clerk_id.
+func (h *CoursesHandler) ListSectionMembers(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID, params api.ListSectionMembersParams) {
+	if _, appErr := viewerIDFromContext(r); appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	svcParams := courses.ListSectionMembersParams{
+		CourseID:  uuid.UUID(courseId),
+		SectionID: uuid.UUID(sectionId),
+	}
+	if params.Role != nil {
+		role := courses.MemberRole(*params.Role)
+		svcParams.Role = &role
+	}
+	if params.Limit != nil {
+		svcParams.Limit = int32(*params.Limit)
+	}
+	if params.Cursor != nil {
+		cur, err := courses.DecodeMemberCursor(*params.Cursor)
+		if err != nil {
+			apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid query parameters", map[string]string{
+				"cursor": "invalid cursor value",
+			}))
+			return
+		}
+		svcParams.Cursor = &cur
+	}
+
+	result, err := h.service.ListSectionMembers(r.Context(), svcParams)
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("ListSectionMembers failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, mapListSectionMembersResponse(result))
+}
+
 // ListMyEnrollments handles GET /me/courses, returning every section the
 // authenticated viewer is enrolled in. Filters on term + role come from
 // the query string; the openapi layer enforces role enum membership and
@@ -339,6 +385,35 @@ func mapCourseMemberResponse(m courses.Membership) api.CourseMemberResponse {
 		SectionId: openapi_types.UUID(m.SectionID),
 		Role:      api.CourseMemberResponseRole(m.Role),
 		JoinedAt:  m.JoinedAt,
+	}
+}
+
+// mapSectionMemberResponse projects a single SectionMember to the wire
+// shape returned by ListSectionMembers. Five fields only -- the schema,
+// the SQL, the domain type, AND this mapper all enforce the privacy
+// floor (no email, no clerk_id).
+func mapSectionMemberResponse(m courses.SectionMember) api.SectionMemberResponse {
+	return api.SectionMemberResponse{
+		UserId:    openapi_types.UUID(m.UserID),
+		FirstName: m.FirstName,
+		LastName:  m.LastName,
+		Role:      api.SectionMemberResponseRole(m.Role),
+		JoinedAt:  m.JoinedAt,
+	}
+}
+
+// mapListSectionMembersResponse projects the domain result onto the
+// paginated wire envelope. members is always non-nil so the JSON output
+// is "members": [] rather than null when the section has none.
+func mapListSectionMembersResponse(r courses.ListSectionMembersResult) api.ListSectionMembersResponse {
+	out := make([]api.SectionMemberResponse, 0, len(r.Members))
+	for _, m := range r.Members {
+		out = append(out, mapSectionMemberResponse(m))
+	}
+	return api.ListSectionMembersResponse{
+		Members:    out,
+		HasMore:    r.HasMore,
+		NextCursor: r.NextCursor,
 	}
 }
 

@@ -1057,6 +1057,96 @@ func (q *Queries) ListMyEnrollments(ctx context.Context, arg ListMyEnrollmentsPa
 	return items, nil
 }
 
+const listSectionMembers = `-- name: ListSectionMembers :many
+SELECT
+  cm.user_id,
+  u.first_name,
+  u.last_name,
+  cm.role,
+  cm.joined_at
+FROM course_members cm
+JOIN users u ON u.id = cm.user_id
+WHERE cm.section_id = $1::uuid
+  AND u.deleted_at IS NULL
+  AND ($2::course_role IS NULL OR cm.role = $2::course_role)
+  AND (
+    $3::timestamptz IS NULL
+    OR (cm.joined_at, cm.user_id) > (
+      $3::timestamptz,
+      $4::uuid
+    )
+  )
+ORDER BY cm.joined_at ASC, cm.user_id ASC
+LIMIT $5
+`
+
+type ListSectionMembersParams struct {
+	SectionID      pgtype.UUID        `json:"section_id"`
+	Role           NullCourseRole     `json:"role"`
+	CursorJoinedAt pgtype.Timestamptz `json:"cursor_joined_at"`
+	CursorUserID   pgtype.UUID        `json:"cursor_user_id"`
+	PageLimit      int32              `json:"page_limit"`
+}
+
+type ListSectionMembersRow struct {
+	UserID    pgtype.UUID        `json:"user_id"`
+	FirstName string             `json:"first_name"`
+	LastName  string             `json:"last_name"`
+	Role      CourseRole         `json:"role"`
+	JoinedAt  pgtype.Timestamptz `json:"joined_at"`
+}
+
+// Returns the section roster joined against users for first/last name.
+// Privacy floor: SELECT lists ONLY the five fields exposed in the
+// SectionMemberResponse schema (user_id, first_name, last_name, role,
+// joined_at). DO NOT add email, clerk_id, or any other user column to
+// this list -- the endpoint is reachable by any authenticated user.
+//
+// Soft-deleted users (users.deleted_at IS NOT NULL) are excluded -- the
+// codebase's soft-delete convention is enforced by the partial indexes
+// idx_users_deleted_at and idx_users_active_email. A user's soft-delete
+// is the signal that they want to disappear from the product, so they
+// must not surface in a public-by-design roster. The cursor still
+// advances past them in the (joined_at, user_id) keyset, so removing
+// them mid-iteration just shrinks the page rather than skipping live
+// members.
+//
+// Optional role filter via sqlc.narg short-circuits when absent. Keyset
+// pagination on (joined_at, user_id) -- joined_at alone isn't unique
+// (multiple users can join in the same second on a busy section), so
+// user_id is the tiebreaker that keeps the keyset a strict total order.
+func (q *Queries) ListSectionMembers(ctx context.Context, arg ListSectionMembersParams) ([]ListSectionMembersRow, error) {
+	rows, err := q.db.Query(ctx, listSectionMembers,
+		arg.SectionID,
+		arg.Role,
+		arg.CursorJoinedAt,
+		arg.CursorUserID,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSectionMembersRow
+	for rows.Next() {
+		var i ListSectionMembersRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.FirstName,
+			&i.LastName,
+			&i.Role,
+			&i.JoinedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const sectionInCourseExists = `-- name: SectionInCourseExists :one
 SELECT EXISTS (
   SELECT 1 FROM course_sections

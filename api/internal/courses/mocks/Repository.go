@@ -1049,6 +1049,74 @@ func (_c *MockRepository_ListMyEnrollments_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
+// ListSectionMembers provides a mock function for the type MockRepository
+func (_mock *MockRepository) ListSectionMembers(ctx context.Context, arg db.ListSectionMembersParams) ([]db.ListSectionMembersRow, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListSectionMembers")
+	}
+
+	var r0 []db.ListSectionMembersRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListSectionMembersParams) ([]db.ListSectionMembersRow, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListSectionMembersParams) []db.ListSectionMembersRow); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.ListSectionMembersRow)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListSectionMembersParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_ListSectionMembers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListSectionMembers'
+type MockRepository_ListSectionMembers_Call struct {
+	*mock.Call
+}
+
+// ListSectionMembers is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.ListSectionMembersParams
+func (_e *MockRepository_Expecter) ListSectionMembers(ctx interface{}, arg interface{}) *MockRepository_ListSectionMembers_Call {
+	return &MockRepository_ListSectionMembers_Call{Call: _e.mock.On("ListSectionMembers", ctx, arg)}
+}
+
+func (_c *MockRepository_ListSectionMembers_Call) Run(run func(ctx context.Context, arg db.ListSectionMembersParams)) *MockRepository_ListSectionMembers_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ListSectionMembersParams
+		if args[1] != nil {
+			arg1 = args[1].(db.ListSectionMembersParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_ListSectionMembers_Call) Return(listSectionMembersRows []db.ListSectionMembersRow, err error) *MockRepository_ListSectionMembers_Call {
+	_c.Call.Return(listSectionMembersRows, err)
+	return _c
+}
+
+func (_c *MockRepository_ListSectionMembers_Call) RunAndReturn(run func(ctx context.Context, arg db.ListSectionMembersParams) ([]db.ListSectionMembersRow, error)) *MockRepository_ListSectionMembers_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SectionInCourseExists provides a mock function for the type MockRepository
 func (_mock *MockRepository) SectionInCourseExists(ctx context.Context, arg db.SectionInCourseExistsParams) (bool, error) {
 	ret := _mock.Called(ctx, arg)

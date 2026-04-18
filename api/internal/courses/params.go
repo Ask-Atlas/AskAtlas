@@ -136,3 +136,58 @@ type CheckMembershipParams struct {
 
 // MaxTermLength matches the openapi.yaml maxLength on the term filter.
 const MaxTermLength int = 30
+
+// ListSectionMembersParams is the input to Service.ListSectionMembers.
+// Cursor is its own dedicated type rather than reusing the courses
+// Cursor because the keyset shape is different (joined_at + user_id vs
+// the per-sort polymorphic course cursor); keeping it isolated avoids
+// polluting the existing Cursor with member-roster fields.
+type ListSectionMembersParams struct {
+	CourseID  uuid.UUID
+	SectionID uuid.UUID
+	Role      *MemberRole
+	Limit     int32
+	Cursor    *MemberCursor
+}
+
+// ListSectionMembersResult is the output of Service.ListSectionMembers.
+type ListSectionMembersResult struct {
+	Members    []SectionMember
+	HasMore    bool
+	NextCursor *string
+}
+
+// MemberCursor is the keyset cursor for ListSectionMembers. The pair
+// (JoinedAt, UserID) is the strict total order matching the SQL
+// ORDER BY -- joined_at alone isn't unique under load, so user_id is
+// the tiebreaker.
+type MemberCursor struct {
+	JoinedAt time.Time `json:"joined_at"`
+	UserID   uuid.UUID `json:"user_id"`
+}
+
+// EncodeMemberCursor serializes a MemberCursor into a base64-encoded
+// string token. Mirrors EncodeCursor in shape so the wire contract
+// stays consistent for a future client library.
+func EncodeMemberCursor(c MemberCursor) (string, error) {
+	b, err := json.Marshal(c)
+	if err != nil {
+		return "", fmt.Errorf("EncodeMemberCursor: marshal: %w", err)
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
+}
+
+// DecodeMemberCursor parses a base64-encoded string token back into a
+// MemberCursor. Returns an error for malformed base64 or JSON; the
+// handler maps that to a 400 with the spec's "invalid cursor value".
+func DecodeMemberCursor(s string) (MemberCursor, error) {
+	raw, err := base64.URLEncoding.DecodeString(s)
+	if err != nil {
+		return MemberCursor{}, fmt.Errorf("DecodeMemberCursor: base64: %w", err)
+	}
+	var c MemberCursor
+	if err := json.Unmarshal(raw, &c); err != nil {
+		return MemberCursor{}, fmt.Errorf("DecodeMemberCursor: json: %w", err)
+	}
+	return c, nil
+}

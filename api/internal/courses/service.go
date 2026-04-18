@@ -41,6 +41,7 @@ type Repository interface {
 	LeaveSection(ctx context.Context, arg db.LeaveSectionParams) (pgtype.UUID, error)
 	ListMyEnrollments(ctx context.Context, arg db.ListMyEnrollmentsParams) ([]db.ListMyEnrollmentsRow, error)
 	GetMembership(ctx context.Context, arg db.GetMembershipParams) (db.GetMembershipRow, error)
+	ListSectionMembers(ctx context.Context, arg db.ListSectionMembersParams) ([]db.ListSectionMembersRow, error)
 }
 
 // sortKey is the lookup key for the per-sort-variant query function table.
@@ -597,4 +598,80 @@ func dbRoleFor(r MemberRole) (db.CourseRole, bool) {
 	default:
 		return "", false
 	}
+}
+
+// ListSectionMembers returns the section roster, paginated. Reuses the
+// assertCourseAndSection preflight so 'Course not found' / 'Section not
+// found' messaging stays identical to the join/leave/check endpoints.
+//
+// The role filter is validated defensively at the service layer (HTTP
+// boundary already enforces it via the openapi enum). Limit defaults to
+// DefaultPageLimit and is clamped to MaxPageLimit so internal Go callers
+// can't ask Postgres for an unbounded number of rows.
+func (s *Service) ListSectionMembers(ctx context.Context, p ListSectionMembersParams) (ListSectionMembersResult, error) {
+	if err := s.assertCourseAndSection(ctx, p.CourseID, p.SectionID); err != nil {
+		return ListSectionMembersResult{}, err
+	}
+
+	limit := p.Limit
+	if limit <= 0 {
+		limit = DefaultPageLimit
+	}
+	if limit > MaxPageLimit {
+		limit = MaxPageLimit
+	}
+
+	arg := db.ListSectionMembersParams{
+		SectionID: utils.UUID(p.SectionID),
+		PageLimit: limit + 1, // n+1 trick for has_more detection
+	}
+	if p.Role != nil {
+		role, ok := dbRoleFor(*p.Role)
+		if !ok {
+			return ListSectionMembersResult{}, apperrors.NewBadRequest("Invalid query parameters", map[string]string{
+				"role": "must be one of: student, instructor, ta",
+			})
+		}
+		arg.Role = db.NullCourseRole{CourseRole: role, Valid: true}
+	}
+	if p.Cursor != nil {
+		arg.CursorJoinedAt = pgtype.Timestamptz{Time: p.Cursor.JoinedAt, Valid: true}
+		arg.CursorUserID = utils.UUID(p.Cursor.UserID)
+	}
+
+	rows, err := s.repo.ListSectionMembers(ctx, arg)
+	if err != nil {
+		return ListSectionMembersResult{}, fmt.Errorf("ListSectionMembers: %w", err)
+	}
+
+	hasMore := int32(len(rows)) > limit
+	if hasMore {
+		rows = rows[:limit]
+	}
+
+	members := make([]SectionMember, 0, len(rows))
+	for _, r := range rows {
+		m, err := mapSectionMember(r)
+		if err != nil {
+			return ListSectionMembersResult{}, fmt.Errorf("ListSectionMembers: map: %w", err)
+		}
+		members = append(members, m)
+	}
+
+	var nextCursor *string
+	if hasMore {
+		// hasMore implies len(members) == limit >= 1 by construction.
+		last := members[len(members)-1]
+		token, err := EncodeMemberCursor(MemberCursor{JoinedAt: last.JoinedAt, UserID: last.UserID})
+		if err != nil {
+			return ListSectionMembersResult{}, fmt.Errorf("ListSectionMembers: encode cursor: %w", err)
+		}
+		nextCursor = &token
+	}
+
+	return ListSectionMembersResult{
+		Members:    members,
+		HasMore:    hasMore,
+		NextCursor: nextCursor,
+	}, nil
 }
