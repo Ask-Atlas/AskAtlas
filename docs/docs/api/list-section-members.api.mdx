@@ -1,0 +1,77 @@
+---
+id: list-section-members
+title: "List the members of a course section"
+description: "Returns the section roster with limited per-user info: user_id,"
+sidebar_label: "List the members of a course section"
+hide_title: true
+hide_table_of_contents: true
+api: eJztWE1v2zgQ/SsETy2gxEnRXnxzd9NFFv1C02APceCMpXHEhiIVcpiN1vB/XwwpyXLsddOgQLFATrYoivNm5s0jh0tpa3RAyprTQo7le+XpDHN+/oDVHJ2XmSzQ507VPCjH8gtScMYLKlH4NFU46wmd+FtRKbSqFGEhanQHwaMTyizsWPDfmSqyqVko52lmoMJMaOj/OqsxE9+sMljMgA7FSQVKCzCFyDW6m5kqBDicGmUIDZsFrRvx8dNXgfe19ViIgwNBpfICTVFbZUgoLxxCXsJco5g3AkwzNRCo5AVyYJgR4ovcBudR1HCNnq2IOsy1yqNHykRfoa5fZsLbqeGnGhptoWAL8dGpO8ibg4W21omFdaKK4ROqYFPUHE7N1JxZxybnjbjq/RSTs9+uUuRAXL3ox7MuYi+vxA02Hmlq8uC8dQKSTVI4dwg3mAx6il7WcK1MTKiA3Fnvk1OHUyMzWYODConTOr5YSg68HMvk/EwVMpOKU1wDlVt5/1qiCEbdBhTn56e/C7tInoNDQyKtITPp8DYoh4UckwuYSZ+XWIEcLyU1NVvz5JS5lplcWFcBybEMQRVytcp6QC2tnoio/fonYWFadihuA7pmC8Y7pZn8ZNuc+y6bvsZcLVQu2jXWcBag/V48aEIlxxfSU2ACyUwSRBSeXMjJOnk5BBlrbj/KD3CvqlAJEyIv7aJHS1a4WNNcspEtj8LKZXiNTmayUoaXluPjTFbJjBwfHx0xhAUETXL86s0QbuLxfryfauDEJuqLlvlkb9CIhbNVW3V4p2zwjwfdBni1uuTZvrbGo+f3r46O+GcTw6SrJiyEVp44ap3kVb085jYKEn8Oda1ZV5Q1o2+e11huY7Dzb5jTlsNDY7nVurWz02TtWLZJJezd+NoEOAccUkVY+e+bfv9Qsjt1S7xIkrW9NbQSPTUPNVrslWgwjdjQ4KmJRnMwKcodMe0izm3dZ+1N8r6puVOzT3S3gtWq6iNEIJPrnWoHhTLZb14738aif2JpZ7LfB/YCLYDwgFSFLFkD+l/0bm44MYScdcq2tnSZSVLEqOVGor+0hRKNGLynWVvAO6CZoDXvQ0lyV5kswc8q64ahmFurEcwW5jW/+48GkLb5N8DFS73eVcJvI4tvA3r6eaV6RmAKcIX6BwuBzlknOjERKYvBoaiA8lKZazEw1c4ubAXKbFdybgvcIbGrTHoCCn4n0Sr0nvVv17sCCZTeKQFQFCqV6OcNDA+V8kGSIsQez9r6IFOTuj5hN/u8HG/n5Twew6zjED4n5lcl5vV2Yj5aEgsbzHNWflFW3uySsVND6Axo4dHdoUtxec7Qr8hQBEil5Xb5Gil2VVTKsRylHsiPln1DtRq1hxc/Wq6bmtVovdOlfKZ2LDjNy0CtJJ9PPebBKWriu7cIDt0ksKWLy+HrM85x8nQ4qfe7JKplexSOu2+cJLP2z7vuLPHnX1/jjsztevy8c97fTEiDF5PPpzKTjDaR5vjw6PCIc1JbTxVEwrUHfN6r4xlteJRre8RBf7ZBwuWazM93DP/jO4aWdoT3NKo1KMMUidRetpVy0d44MP/Hw8uHrlh4fOMOoKuXy0yW1hMvsVzOweO506sVD6cmkiulUJ5BrpvA/2TZoxv3nS7dYLO+HrgDHXiK5C738Qh+sCnfg6O7AXgikKd023vQ9A3+Gs4lPziVeoMfStOLL61avxSPvIPaiaxrjU0zxNUj7mn4Y4H7Pri13D0B1qAKVtwWlggFuhjANGGS51gPE791DODI9xvWHycs8v8CqxC8AA==
+sidebar_class_name: "get api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"List the members of a course section"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/courses/{course_id}/sections/{section_id}/members"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Returns the section roster with limited per-user info: user_id,
+first_name, last_name, role, joined_at. Email and clerk_id are
+intentionally NOT exposed -- this endpoint is reachable by any
+authenticated user (course pages are public within the app), so
+the payload is the privacy-floor for member identity.
+
+Sorted by `joined_at ASC` with a `(joined_at, user_id)` keyset
+cursor as the tiebreaker for stable pagination across pages.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./list-section-members.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./list-section-members.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./list-section-members.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      
