@@ -80,6 +80,17 @@ type Querier interface {
 	ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFilesUpdatedAscParams) ([]ListOwnedFilesUpdatedAscRow, error)
 	ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFilesUpdatedDescParams) ([]ListOwnedFilesUpdatedDescRow, error)
 	ListSchools(ctx context.Context, arg ListSchoolsParams) ([]School, error)
+	// Returns the section roster joined against users for first/last name.
+	// Privacy floor: SELECT lists ONLY the five fields exposed in the
+	// SectionMemberResponse schema (user_id, first_name, last_name, role,
+	// joined_at). DO NOT add email, clerk_id, or any other user column to
+	// this list -- the endpoint is reachable by any authenticated user.
+	//
+	// Optional role filter via sqlc.narg short-circuits when absent. Keyset
+	// pagination on (joined_at, user_id) -- joined_at alone isn't unique
+	// (multiple users can join in the same second on a busy section), so
+	// user_id is the tiebreaker that keeps the keyset a strict total order.
+	ListSectionMembers(ctx context.Context, arg ListSectionMembersParams) ([]ListSectionMembersRow, error)
 	// Called by the cleanup job handler once S3 deletion is confirmed.
 	MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
 	// Deletes a file grant matching the exact composite key. No-op if the grant

@@ -299,6 +299,37 @@ WHERE cm.user_id = sqlc.arg(user_id)::uuid
   AND (sqlc.narg(role)::course_role IS NULL OR cm.role = sqlc.narg(role)::course_role)
 ORDER BY cs.term DESC, c.department ASC, c.number ASC;
 
+-- name: ListSectionMembers :many
+-- Returns the section roster joined against users for first/last name.
+-- Privacy floor: SELECT lists ONLY the five fields exposed in the
+-- SectionMemberResponse schema (user_id, first_name, last_name, role,
+-- joined_at). DO NOT add email, clerk_id, or any other user column to
+-- this list -- the endpoint is reachable by any authenticated user.
+--
+-- Optional role filter via sqlc.narg short-circuits when absent. Keyset
+-- pagination on (joined_at, user_id) -- joined_at alone isn't unique
+-- (multiple users can join in the same second on a busy section), so
+-- user_id is the tiebreaker that keeps the keyset a strict total order.
+SELECT
+  cm.user_id,
+  u.first_name,
+  u.last_name,
+  cm.role,
+  cm.joined_at
+FROM course_members cm
+JOIN users u ON u.id = cm.user_id
+WHERE cm.section_id = sqlc.arg(section_id)::uuid
+  AND (sqlc.narg(role)::course_role IS NULL OR cm.role = sqlc.narg(role)::course_role)
+  AND (
+    sqlc.narg(cursor_joined_at)::timestamptz IS NULL
+    OR (cm.joined_at, cm.user_id) > (
+      sqlc.narg(cursor_joined_at)::timestamptz,
+      sqlc.narg(cursor_user_id)::uuid
+    )
+  )
+ORDER BY cm.joined_at ASC, cm.user_id ASC
+LIMIT sqlc.arg(page_limit);
+
 -- name: GetMembership :one
 -- Single-row membership lookup powering the per-section
 -- enrolled/not-enrolled probe (ASK-148). Returns sql.ErrNoRows when the
