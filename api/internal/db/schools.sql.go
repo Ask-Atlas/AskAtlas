@@ -11,6 +11,31 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getSchool = `-- name: GetSchool :one
+SELECT id, name, acronym, domain, url, city, state, country, ipeds_id, created_at, updated_at
+FROM schools
+WHERE id = $1::uuid
+`
+
+func (q *Queries) GetSchool(ctx context.Context, id pgtype.UUID) (School, error) {
+	row := q.db.QueryRow(ctx, getSchool, id)
+	var i School
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Acronym,
+		&i.Domain,
+		&i.Url,
+		&i.City,
+		&i.State,
+		&i.Country,
+		&i.IpedsID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listSchools = `-- name: ListSchools :many
 SELECT id, name, acronym, domain, url, city, state, country, ipeds_id, created_at, updated_at
 FROM schools

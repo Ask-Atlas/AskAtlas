@@ -1,3 +1,8 @@
+-- name: GetSchool :one
+SELECT *
+FROM schools
+WHERE id = sqlc.arg(id)::uuid;
+
 -- name: ListSchools :many
 SELECT *
 FROM schools

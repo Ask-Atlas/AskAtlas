@@ -15,6 +15,7 @@ type Querier interface {
 	// Returns sql.ErrNoRows if not found or already in a deletion state.
 	GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) (GetFileByOwnerRow, error)
 	GetFileIfViewable(ctx context.Context, arg GetFileIfViewableParams) (File, error)
+	GetSchool(ctx context.Context, id pgtype.UUID) (School, error)
 	GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtype.UUID, error)
 	InsertFile(ctx context.Context, arg InsertFileParams) (File, error)
 	ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFilesCreatedAscParams) ([]ListOwnedFilesCreatedAscRow, error)
