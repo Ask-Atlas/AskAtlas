@@ -1,6 +1,7 @@
 package handlers_test
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -519,6 +520,281 @@ func TestStudyGuidesHandler_Get_InternalError(t *testing.T) {
 
 	url := fmt.Sprintf("/study-guides/%s", uuid.NewString())
 	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// ---------------------------------------------------------------------
+// CreateStudyGuide (ASK-120)
+// ---------------------------------------------------------------------
+
+// createBody marshals a CreateStudyGuideRequest into a JSON body
+// reader for use with httptest. Centralized so individual tests don't
+// re-derive the JSON shape.
+func createBody(t *testing.T, body api.CreateStudyGuideJSONRequestBody) *strings.Reader {
+	t.Helper()
+	raw, err := json.Marshal(body)
+	require.NoError(t, err)
+	return strings.NewReader(string(raw))
+}
+
+func TestStudyGuidesHandler_Create_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := fmt.Sprintf("/courses/%s/study-guides", uuid.NewString())
+	req := httptest.NewRequest(http.MethodPost, url, strings.NewReader(`{"title":"T"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestStudyGuidesHandler_Create_MalformedJSON_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := fmt.Sprintf("/courses/%s/study-guides", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, strings.NewReader(`{not json}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestStudyGuidesHandler_Create_Success_201(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	guideID := uuid.New()
+	courseID := uuid.New()
+	creatorID := uuid.New()
+	desc := "Cheat sheet."
+
+	captured := &studyguides.CreateStudyGuideParams{}
+	mockSvc.EXPECT().
+		CreateStudyGuide(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, p studyguides.CreateStudyGuideParams) {
+			*captured = p
+		}).
+		Return(studyguides.StudyGuideDetail{
+			ID:          guideID,
+			Title:       "Binary Trees",
+			Description: &desc,
+			Tags:        []string{"trees", "midterm"},
+			Creator:     studyguides.Creator{ID: creatorID, FirstName: "Ada", LastName: "Lovelace"},
+			Course: studyguides.GuideCourseSummary{
+				ID: courseID, Department: "CS", Number: "161", Title: "Algorithms",
+			},
+			VoteScore:     0,
+			ViewCount:     0,
+			IsRecommended: false,
+			RecommendedBy: []studyguides.Creator{},
+			Quizzes:       []studyguides.Quiz{},
+			Resources:     []studyguides.Resource{},
+			Files:         []studyguides.GuideFile{},
+			CreatedAt:     time.Now().UTC(),
+			UpdatedAt:     time.Now().UTC(),
+		}, nil)
+
+	tags := []string{"Trees", "midterm"}
+	url := fmt.Sprintf("/courses/%s/study-guides", courseID)
+	req := authedRequestMethod(t, http.MethodPost, url, createBody(t, api.CreateStudyGuideJSONRequestBody{
+		Title:       "Binary Trees",
+		Description: &desc,
+		Tags:        &tags,
+	}))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusCreated, w.Code)
+
+	var resp api.StudyGuideDetailResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, guideID, uuid.UUID(resp.Id))
+	assert.Equal(t, "Binary Trees", resp.Title)
+	require.NotNil(t, resp.Description)
+	assert.Equal(t, "Cheat sheet.", *resp.Description)
+	assert.Nil(t, resp.UserVote)
+	assert.NotNil(t, resp.RecommendedBy)
+	assert.Empty(t, resp.RecommendedBy)
+	assert.NotNil(t, resp.Quizzes)
+	assert.Empty(t, resp.Quizzes)
+	// Course id from path -> service params (mirrors how main wires the
+	// generated wrapper). Tag normalization is the service's job; here
+	// we just assert the raw input flows through to the service layer.
+	assert.Equal(t, courseID, captured.CourseID)
+	assert.Equal(t, []string{"Trees", "midterm"}, captured.Tags)
+}
+
+// Service-layer 400 (e.g. tag-too-long, title-empty) flows through the
+// generic ToHTTPError mapping. The handler must NOT swallow detail
+// fields -- they're how the frontend pinpoints the offending input.
+func TestStudyGuidesHandler_Create_ServiceBadRequest_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		CreateStudyGuide(mock.Anything, mock.Anything).
+		Return(studyguides.StudyGuideDetail{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"title": "must not be empty",
+		}))
+
+	url := fmt.Sprintf("/courses/%s/study-guides", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, createBody(t, api.CreateStudyGuideJSONRequestBody{Title: ""}))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	var errResp apperrors.AppError
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&errResp))
+	assert.Contains(t, errResp.Details, "title")
+}
+
+func TestStudyGuidesHandler_Create_CourseNotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		CreateStudyGuide(mock.Anything, mock.Anything).
+		Return(studyguides.StudyGuideDetail{}, apperrors.NewNotFound("Course not found"))
+
+	url := fmt.Sprintf("/courses/%s/study-guides", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, createBody(t, api.CreateStudyGuideJSONRequestBody{Title: "T"}))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestStudyGuidesHandler_Create_InternalError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		CreateStudyGuide(mock.Anything, mock.Anything).
+		Return(studyguides.StudyGuideDetail{}, errors.New("db down"))
+
+	url := fmt.Sprintf("/courses/%s/study-guides", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, createBody(t, api.CreateStudyGuideJSONRequestBody{Title: "T"}))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// ---------------------------------------------------------------------
+// DeleteStudyGuide (ASK-133)
+// ---------------------------------------------------------------------
+
+func TestStudyGuidesHandler_Delete_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := fmt.Sprintf("/study-guides/%s", uuid.NewString())
+	req := httptest.NewRequest(http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestStudyGuidesHandler_Delete_Success_204(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	guideID := uuid.New()
+	captured := &studyguides.DeleteStudyGuideParams{}
+	mockSvc.EXPECT().
+		DeleteStudyGuide(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, p studyguides.DeleteStudyGuideParams) {
+			*captured = p
+		}).
+		Return(nil)
+
+	url := fmt.Sprintf("/study-guides/%s", guideID)
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNoContent, w.Code)
+	assert.Empty(t, w.Body.String())
+	assert.Equal(t, guideID, captured.StudyGuideID)
+	assert.NotEqual(t, uuid.Nil, captured.ViewerID)
+}
+
+func TestStudyGuidesHandler_Delete_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		DeleteStudyGuide(mock.Anything, mock.Anything).
+		Return(apperrors.NewNotFound("Study guide not found"))
+
+	url := fmt.Sprintf("/study-guides/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestStudyGuidesHandler_Delete_Forbidden_403(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		DeleteStudyGuide(mock.Anything, mock.Anything).
+		Return(apperrors.NewForbidden())
+
+	url := fmt.Sprintf("/study-guides/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestStudyGuidesHandler_Delete_InternalError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		DeleteStudyGuide(mock.Anything, mock.Anything).
+		Return(errors.New("db down"))
+
+	url := fmt.Sprintf("/study-guides/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
 	w := httptest.NewRecorder()
 
 	r := studyGuidesTestRouter(t, h)
