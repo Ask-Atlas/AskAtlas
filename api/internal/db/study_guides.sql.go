@@ -171,6 +171,7 @@ SELECT f.id, f.name, f.mime_type, f.size
 FROM study_guide_files sgf
 JOIN files f ON f.id = sgf.file_id
 WHERE sgf.study_guide_id = $1::uuid
+  AND f.status = 'complete'
 ORDER BY sgf.created_at ASC, f.id ASC
 `
 
@@ -184,6 +185,13 @@ type ListGuideFilesRow struct {
 // Attached files for the guide detail payload. Privacy floor: no
 // user_id, no s3_key, no checksum. The file list shows only what a
 // viewer needs to see: what's attached, what type, and how big.
+//
+// Filters f.status = 'complete' so files mid-upload (pending) or
+// failed don't surface in the guide detail -- a frontend that tried
+// to download such a file would get a broken link. Only successfully
+// uploaded files are visible to non-owners; the upload author's own
+// file list (via the files endpoints) shows all statuses so they can
+// retry or remove.
 func (q *Queries) ListGuideFiles(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideFilesRow, error) {
 	rows, err := q.db.Query(ctx, listGuideFiles, studyGuideID)
 	if err != nil {

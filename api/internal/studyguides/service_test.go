@@ -621,6 +621,32 @@ func TestListGuideRecommendersSQL_ExcludesSoftDeletedUsers(t *testing.T) {
 		"ListGuideRecommenders must filter soft-deleted users")
 }
 
+// Regression guard: file list must filter files whose upload has not
+// completed. A pending or failed file exposed in the detail payload
+// would give the frontend a row it can't download. Pins f.status =
+// 'complete' in the ListGuideFiles query block.
+func TestListGuideFilesSQL_FiltersByCompleteStatus(t *testing.T) {
+	sql, err := os.ReadFile(filepath.Join("..", "..", "db", "queries", "study_guides.sql"))
+	require.NoError(t, err)
+	src := string(sql)
+
+	startMarker := "-- name: ListGuideFiles :many"
+	startIdx := strings.Index(src, startMarker)
+	require.NotEqual(t, -1, startIdx, "ListGuideFiles block missing")
+
+	rest := src[startIdx+len(startMarker):]
+	endIdx := strings.Index(rest, "-- name: ")
+	var block string
+	if endIdx == -1 {
+		block = src[startIdx:]
+	} else {
+		block = src[startIdx : startIdx+len(startMarker)+endIdx]
+	}
+
+	assert.Contains(t, block, "f.status = 'complete'",
+		"ListGuideFiles must filter files whose upload is not complete")
+}
+
 // Regression guard: quiz list must filter soft-deleted quizzes so
 // deleted quizzes don't leak back into the detail payload.
 func TestListGuideQuizzesSQL_ExcludesSoftDeleted(t *testing.T) {
