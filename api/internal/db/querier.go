@@ -29,6 +29,7 @@ type Querier interface {
 	ListOwnedFilesStatusDesc(ctx context.Context, arg ListOwnedFilesStatusDescParams) ([]ListOwnedFilesStatusDescRow, error)
 	ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFilesUpdatedAscParams) ([]ListOwnedFilesUpdatedAscRow, error)
 	ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFilesUpdatedDescParams) ([]ListOwnedFilesUpdatedDescRow, error)
+	ListSchools(ctx context.Context, arg ListSchoolsParams) ([]School, error)
 	// Called by the cleanup job handler once S3 deletion is confirmed.
 	MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
 	// Deletes a file grant matching the exact composite key. No-op if the grant
