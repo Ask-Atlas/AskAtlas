@@ -115,6 +115,29 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /files:
+    post:
+      operationId: CreateFile
+      summary: Create a file reference and get a presigned upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFileRequest'
+      responses:
+        '201':
+          description: File reference created with presigned upload URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateFileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /files/{file_id}:
     get:
       operationId: GetFile
@@ -242,6 +265,37 @@ components:
         - status
         - created_at
         - updated_at
+    CreateFileRequest:
+      type: object
+      description: Payload to create a new file reference
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        mime_type:
+          type: string
+          enum: ["image/jpeg", "image/png", "image/webp", "application/pdf"]
+        size:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 104857600
+      required:
+        - name
+        - mime_type
+        - size
+    CreateFileResponse:
+      type: object
+      description: Created file reference with a presigned upload URL
+      properties:
+        file:
+          $ref: '#/components/schemas/FileResponse'
+        upload_url:
+          type: string
+      required:
+        - file
+        - upload_url
     UpdateFileRequest:
       type: object
       description: Request body for updating file metadata

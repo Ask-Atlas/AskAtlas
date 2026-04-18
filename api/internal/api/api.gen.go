@@ -27,6 +27,30 @@ const (
 	BearerAuthScopes = "BearerAuth.Scopes"
 )
 
+// Defines values for CreateFileRequestMimeType.
+const (
+	CreateFileRequestMimeTypeApplicationpdf CreateFileRequestMimeType = "application/pdf"
+	CreateFileRequestMimeTypeImagejpeg      CreateFileRequestMimeType = "image/jpeg"
+	CreateFileRequestMimeTypeImagepng       CreateFileRequestMimeType = "image/png"
+	CreateFileRequestMimeTypeImagewebp      CreateFileRequestMimeType = "image/webp"
+)
+
+// Valid indicates whether the value is a known member of the CreateFileRequestMimeType enum.
+func (e CreateFileRequestMimeType) Valid() bool {
+	switch e {
+	case CreateFileRequestMimeTypeApplicationpdf:
+		return true
+	case CreateFileRequestMimeTypeImagejpeg:
+		return true
+	case CreateFileRequestMimeTypeImagepng:
+		return true
+	case CreateFileRequestMimeTypeImagewebp:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListFilesParamsScope.
 const (
 	Accessible ListFilesParamsScope = "accessible"
@@ -74,22 +98,22 @@ func (e ListFilesParamsStatus) Valid() bool {
 
 // Defines values for ListFilesParamsMimeType.
 const (
-	Applicationpdf ListFilesParamsMimeType = "application/pdf"
-	Imagejpeg      ListFilesParamsMimeType = "image/jpeg"
-	Imagepng       ListFilesParamsMimeType = "image/png"
-	Imagewebp      ListFilesParamsMimeType = "image/webp"
+	ListFilesParamsMimeTypeApplicationpdf ListFilesParamsMimeType = "application/pdf"
+	ListFilesParamsMimeTypeImagejpeg      ListFilesParamsMimeType = "image/jpeg"
+	ListFilesParamsMimeTypeImagepng       ListFilesParamsMimeType = "image/png"
+	ListFilesParamsMimeTypeImagewebp      ListFilesParamsMimeType = "image/webp"
 )
 
 // Valid indicates whether the value is a known member of the ListFilesParamsMimeType enum.
 func (e ListFilesParamsMimeType) Valid() bool {
 	switch e {
-	case Applicationpdf:
+	case ListFilesParamsMimeTypeApplicationpdf:
 		return true
-	case Imagejpeg:
+	case ListFilesParamsMimeTypeImagejpeg:
 		return true
-	case Imagepng:
+	case ListFilesParamsMimeTypeImagepng:
 		return true
-	case Imagewebp:
+	case ListFilesParamsMimeTypeImagewebp:
 		return true
 	default:
 		return false
@@ -150,6 +174,23 @@ type AppError struct {
 	Details *map[string]string `json:"details,omitempty"`
 	Message string             `json:"message"`
 	Status  string             `json:"status"`
+}
+
+// CreateFileRequest Payload to create a new file reference
+type CreateFileRequest struct {
+	MimeType CreateFileRequestMimeType `json:"mime_type"`
+	Name     string                    `json:"name"`
+	Size     int64                     `json:"size"`
+}
+
+// CreateFileRequestMimeType defines model for CreateFileRequest.MimeType.
+type CreateFileRequestMimeType string
+
+// CreateFileResponse Created file reference with a presigned upload URL
+type CreateFileResponse struct {
+	// File Complete metadata payload describing an uploaded file
+	File      FileResponse `json:"file"`
+	UploadUrl string       `json:"upload_url"`
 }
 
 // FileResponse Complete metadata payload describing an uploaded file
@@ -252,11 +293,17 @@ type ListFilesParamsSortBy string
 // ListFilesParamsSortDir defines parameters for ListFiles.
 type ListFilesParamsSortDir string
 
+// CreateFileJSONRequestBody defines body for CreateFile for application/json ContentType.
+type CreateFileJSONRequestBody = CreateFileRequest
+
 // UpdateFileJSONRequestBody defines body for UpdateFile for application/json ContentType.
 type UpdateFileJSONRequestBody = UpdateFileRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Create a file reference and get a presigned upload URL
+	// (POST /files)
+	CreateFile(w http.ResponseWriter, r *http.Request)
 	// Delete a file by ID
 	// (DELETE /files/{file_id})
 	DeleteFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
@@ -274,6 +321,12 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// Create a file reference and get a presigned upload URL
+// (POST /files)
+func (_ Unimplemented) CreateFile(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // Delete a file by ID
 // (DELETE /files/{file_id})
@@ -307,6 +360,26 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// CreateFile operation middleware
+func (siw *ServerInterfaceWrapper) CreateFile(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateFile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // DeleteFile operation middleware
 func (siw *ServerInterfaceWrapper) DeleteFile(w http.ResponseWriter, r *http.Request) {
@@ -652,6 +725,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/files", wrapper.CreateFile)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/files/{file_id}", wrapper.DeleteFile)
 	})
 	r.Group(func(r chi.Router) {
@@ -676,6 +752,52 @@ type InternalServerErrorJSONResponse AppError
 type NotFoundJSONResponse AppError
 
 type UnauthorizedJSONResponse AppError
+
+type CreateFileRequestObject struct {
+	Body *CreateFileJSONRequestBody
+}
+
+type CreateFileResponseObject interface {
+	VisitCreateFileResponse(w http.ResponseWriter) error
+}
+
+type CreateFile201JSONResponse CreateFileResponse
+
+func (response CreateFile201JSONResponse) VisitCreateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateFile400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateFile400JSONResponse) VisitCreateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateFile401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateFile401JSONResponse) VisitCreateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateFile500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response CreateFile500JSONResponse) VisitCreateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
 
 type DeleteFileRequestObject struct {
 	FileId openapi_types.UUID `json:"file_id"`
@@ -890,6 +1012,9 @@ func (response ListFiles500JSONResponse) VisitListFilesResponse(w http.ResponseW
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Create a file reference and get a presigned upload URL
+	// (POST /files)
+	CreateFile(ctx context.Context, request CreateFileRequestObject) (CreateFileResponseObject, error)
 	// Delete a file by ID
 	// (DELETE /files/{file_id})
 	DeleteFile(ctx context.Context, request DeleteFileRequestObject) (DeleteFileResponseObject, error)
@@ -931,6 +1056,37 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// CreateFile operation middleware
+func (sh *strictHandler) CreateFile(w http.ResponseWriter, r *http.Request) {
+	var request CreateFileRequestObject
+
+	var body CreateFileJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateFile(ctx, request.(CreateFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateFileResponseObject); ok {
+		if err := validResponse.VisitCreateFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // DeleteFile operation middleware
@@ -1047,33 +1203,36 @@ func (sh *strictHandler) ListFiles(w http.ResponseWriter, r *http.Request, param
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"f4ySQiZq5FxOwWu5vdn+LwAA//9gOSYEeRoAAA==",
+	"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",
+	"AP//142HFyAfAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

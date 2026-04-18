@@ -376,6 +376,19 @@ SET
 WHERE id = sqlc.arg(file_id)::uuid
   AND deletion_status = 'pending_deletion';
 
+-- name: InsertFile :one
+INSERT INTO files (id, user_id, s3_key, name, mime_type, size, status)
+VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+RETURNING *;
+
+-- name: UpdateFileStatus :exec
+UPDATE files
+SET
+    status     = sqlc.arg(status)::upload_status,
+    updated_at = NOW()
+WHERE id = sqlc.arg(file_id)::uuid
+  AND user_id = sqlc.arg(owner_id)::uuid;
+
 -- name: UpdateFile :one
 -- Renames a file. Only applies if owned by the caller and not in a deletion state.
 -- Returns sql.ErrNoRows when file is not found, not owned, or in deletion.

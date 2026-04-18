@@ -152,6 +152,50 @@ func (q *Queries) GetFileIfViewable(ctx context.Context, arg GetFileIfViewablePa
 	return i, err
 }
 
+const insertFile = `-- name: InsertFile :one
+INSERT INTO files (id, user_id, s3_key, name, mime_type, size, status)
+VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+RETURNING id, user_id, s3_key, name, mime_type, size, checksum, status, created_at, updated_at, deletion_status, deleted_at, s3_deleted_at, deletion_job_id
+`
+
+type InsertFileParams struct {
+	ID       pgtype.UUID `json:"id"`
+	UserID   pgtype.UUID `json:"user_id"`
+	S3Key    string      `json:"s3_key"`
+	Name     string      `json:"name"`
+	MimeType MimeType    `json:"mime_type"`
+	Size     int64       `json:"size"`
+}
+
+func (q *Queries) InsertFile(ctx context.Context, arg InsertFileParams) (File, error) {
+	row := q.db.QueryRow(ctx, insertFile,
+		arg.ID,
+		arg.UserID,
+		arg.S3Key,
+		arg.Name,
+		arg.MimeType,
+		arg.Size,
+	)
+	var i File
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.S3Key,
+		&i.Name,
+		&i.MimeType,
+		&i.Size,
+		&i.Checksum,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletionStatus,
+		&i.DeletedAt,
+		&i.S3DeletedAt,
+		&i.DeletionJobID,
+	)
+	return i, err
+}
+
 const listOwnedFilesCreatedAsc = `-- name: ListOwnedFilesCreatedAsc :many
 SELECT
   f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id,
@@ -1662,4 +1706,24 @@ func (q *Queries) UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateF
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const updateFileStatus = `-- name: UpdateFileStatus :exec
+UPDATE files
+SET
+    status     = $1::upload_status,
+    updated_at = NOW()
+WHERE id = $2::uuid
+  AND user_id = $3::uuid
+`
+
+type UpdateFileStatusParams struct {
+	Status  UploadStatus `json:"status"`
+	FileID  pgtype.UUID  `json:"file_id"`
+	OwnerID pgtype.UUID  `json:"owner_id"`
+}
+
+func (q *Queries) UpdateFileStatus(ctx context.Context, arg UpdateFileStatusParams) error {
+	_, err := q.db.Exec(ctx, updateFileStatus, arg.Status, arg.FileID, arg.OwnerID)
+	return err
 }

@@ -47,6 +47,23 @@ func (r *sqlcRepository) InTx(ctx context.Context, fn func(Repository) error) er
 	return nil
 }
 
+func (r *sqlcRepository) InsertFile(ctx context.Context, arg db.InsertFileParams) (db.File, error) {
+	slog.Debug("inserting file", "user_id", arg.UserID, "name", arg.Name)
+	file, err := r.queries.InsertFile(ctx, arg)
+	if err != nil {
+		return db.File{}, fmt.Errorf("InsertFile: %w", err)
+	}
+	return file, nil
+}
+
+func (r *sqlcRepository) UpdateFileStatus(ctx context.Context, arg db.UpdateFileStatusParams) error {
+	slog.Debug("updating file status", "file_id", arg.FileID, "status", arg.Status)
+	if err := r.queries.UpdateFileStatus(ctx, arg); err != nil {
+		return fmt.Errorf("UpdateFileStatus: %w", err)
+	}
+	return nil
+}
+
 func (r *sqlcRepository) GetFileIfViewable(ctx context.Context, arg db.GetFileIfViewableParams) (db.File, error) {
 	slog.Debug("getting file if viewable", "file_id", arg.FileID, "viewer_id", arg.ViewerID)
 
