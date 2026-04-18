@@ -670,3 +670,120 @@ func TestListGuideQuizzesSQL_ExcludesSoftDeleted(t *testing.T) {
 	assert.Contains(t, block, "q.deleted_at IS NULL",
 		"ListGuideQuizzesWithQuestionCount must filter soft-deleted quizzes")
 }
+
+// Each sibling-query error path: GetUserVoteForGuide with a non-
+// ErrNoRows error, ListGuideRecommenders, ListGuideQuizzes...,
+// ListGuideResources, ListGuideFiles. All 5 must surface as a 500
+// (wrapped error) through GetStudyGuide, not a 200 with partial data.
+//
+// These were gaps in the original serial implementation's coverage
+// (PR #137 review LOW 2). They matter more after the errgroup
+// refactor: a future maintainer who accidentally swallows an error
+// in one of the goroutines would ship a 200 with a missing/partial
+// nested array. These tests pin the error propagation contract.
+
+func TestService_GetStudyGuide_UserVoteErrorPropagates(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID := uuid.New()
+	repo.EXPECT().GetStudyGuideDetail(mock.Anything, mock.Anything).
+		Return(detailFixture(t, guideID, uuid.New(), uuid.New()), nil)
+	repo.EXPECT().GetUserVoteForGuide(mock.Anything, mock.Anything).
+		Return(db.VoteDirection(""), errors.New("boom"))
+	// Siblings MAY or MAY NOT fire depending on goroutine scheduling
+	// and errgroup ctx cancellation. .Maybe() tolerates either outcome.
+	repo.EXPECT().ListGuideRecommenders(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	repo.EXPECT().ListGuideQuizzesWithQuestionCount(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	repo.EXPECT().ListGuideResources(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	repo.EXPECT().ListGuideFiles(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.GetStudyGuide(context.Background(), studyguides.GetStudyGuideParams{
+		StudyGuideID: guideID, ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "boom")
+}
+
+func TestService_GetStudyGuide_RecommendersErrorPropagates(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID := uuid.New()
+	repo.EXPECT().GetStudyGuideDetail(mock.Anything, mock.Anything).
+		Return(detailFixture(t, guideID, uuid.New(), uuid.New()), nil)
+	repo.EXPECT().GetUserVoteForGuide(mock.Anything, mock.Anything).
+		Return(db.VoteDirection(""), sql.ErrNoRows).Maybe()
+	repo.EXPECT().ListGuideRecommenders(mock.Anything, mock.Anything).
+		Return(nil, errors.New("recommenders down"))
+	repo.EXPECT().ListGuideQuizzesWithQuestionCount(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	repo.EXPECT().ListGuideResources(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	repo.EXPECT().ListGuideFiles(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.GetStudyGuide(context.Background(), studyguides.GetStudyGuideParams{
+		StudyGuideID: guideID, ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "recommenders down")
+}
+
+func TestService_GetStudyGuide_QuizzesErrorPropagates(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID := uuid.New()
+	repo.EXPECT().GetStudyGuideDetail(mock.Anything, mock.Anything).
+		Return(detailFixture(t, guideID, uuid.New(), uuid.New()), nil)
+	repo.EXPECT().GetUserVoteForGuide(mock.Anything, mock.Anything).
+		Return(db.VoteDirection(""), sql.ErrNoRows).Maybe()
+	repo.EXPECT().ListGuideRecommenders(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	repo.EXPECT().ListGuideQuizzesWithQuestionCount(mock.Anything, mock.Anything).
+		Return(nil, errors.New("quizzes down"))
+	repo.EXPECT().ListGuideResources(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	repo.EXPECT().ListGuideFiles(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.GetStudyGuide(context.Background(), studyguides.GetStudyGuideParams{
+		StudyGuideID: guideID, ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "quizzes down")
+}
+
+func TestService_GetStudyGuide_ResourcesErrorPropagates(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID := uuid.New()
+	repo.EXPECT().GetStudyGuideDetail(mock.Anything, mock.Anything).
+		Return(detailFixture(t, guideID, uuid.New(), uuid.New()), nil)
+	repo.EXPECT().GetUserVoteForGuide(mock.Anything, mock.Anything).
+		Return(db.VoteDirection(""), sql.ErrNoRows).Maybe()
+	repo.EXPECT().ListGuideRecommenders(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	repo.EXPECT().ListGuideQuizzesWithQuestionCount(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	repo.EXPECT().ListGuideResources(mock.Anything, mock.Anything).
+		Return(nil, errors.New("resources down"))
+	repo.EXPECT().ListGuideFiles(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.GetStudyGuide(context.Background(), studyguides.GetStudyGuideParams{
+		StudyGuideID: guideID, ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "resources down")
+}
+
+func TestService_GetStudyGuide_FilesErrorPropagates(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID := uuid.New()
+	repo.EXPECT().GetStudyGuideDetail(mock.Anything, mock.Anything).
+		Return(detailFixture(t, guideID, uuid.New(), uuid.New()), nil)
+	repo.EXPECT().GetUserVoteForGuide(mock.Anything, mock.Anything).
+		Return(db.VoteDirection(""), sql.ErrNoRows).Maybe()
+	repo.EXPECT().ListGuideRecommenders(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	repo.EXPECT().ListGuideQuizzesWithQuestionCount(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	repo.EXPECT().ListGuideResources(mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	repo.EXPECT().ListGuideFiles(mock.Anything, mock.Anything).
+		Return(nil, errors.New("files down"))
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.GetStudyGuide(context.Background(), studyguides.GetStudyGuideParams{
+		StudyGuideID: guideID, ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "files down")
+}
