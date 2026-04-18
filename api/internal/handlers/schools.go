@@ -46,9 +46,17 @@ func (h *SchoolsHandler) ListSchools(w http.ResponseWriter, r *http.Request, par
 		cursor = &decoded
 	}
 
+	// Defense-in-depth: clamp before the int32 narrowing cast so a pathological
+	// value can't wrap. The openapi validator caps page_limit at 100 at the HTTP
+	// boundary and the service layer also clamps; this is the third line of
+	// defense for in-process callers and any future routes bypassing the validator.
 	var limit int32
 	if params.PageLimit != nil {
-		limit = int32(*params.PageLimit)
+		v := *params.PageLimit
+		if v > int(schools.MaxPageLimit) {
+			v = int(schools.MaxPageLimit)
+		}
+		limit = int32(v)
 	}
 
 	result, err := h.service.ListSchools(r.Context(), schools.ListSchoolsParams{

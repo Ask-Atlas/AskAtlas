@@ -144,6 +144,9 @@ func TestSchoolsHandler_ListSchools_BadCursor(t *testing.T) {
 	details, ok := body["details"].(map[string]any)
 	require.True(t, ok, "expected details object in error response")
 	assert.Equal(t, "invalid cursor value", details["cursor"])
+
+	// Cursor decode failure must short-circuit before the service is invoked.
+	mockSvc.AssertNotCalled(t, "ListSchools", mock.Anything, mock.Anything)
 }
 
 func TestSchoolsHandler_ListSchools_CursorForwardedToService(t *testing.T) {
