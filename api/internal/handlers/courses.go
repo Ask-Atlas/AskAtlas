@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 
@@ -133,12 +135,19 @@ func (h *CoursesHandler) GetCourse(w http.ResponseWriter, r *http.Request, cours
 }
 
 // JoinSection handles POST /courses/{course_id}/sections/{section_id}/members.
-// The viewer joins the section as a 'student'. Any fields in the request
-// body are intentionally ignored; the role is enforced by the service +
-// SQL layer to prevent privilege escalation via {"role": "instructor"}.
+// The viewer joins the section as a 'student'. Any *fields* in the request
+// body are intentionally ignored -- the role is enforced by the service +
+// SQL layer to prevent privilege escalation via {"role": "instructor"} --
+// but malformed JSON is still rejected with 400 per the spec, so we
+// shallow-parse the body when one is provided.
 func (h *CoursesHandler) JoinSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID) {
 	viewerID, appErr := viewerIDFromContext(r)
 	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	if appErr := validateJoinSectionBody(r); appErr != nil {
 		apperrors.RespondWithError(w, appErr)
 		return
 	}
@@ -158,6 +167,30 @@ func (h *CoursesHandler) JoinSection(w http.ResponseWriter, r *http.Request, cou
 	}
 
 	respondJSON(w, http.StatusCreated, mapCourseMemberResponse(membership))
+}
+
+// validateJoinSectionBody enforces the ASK-132 input-validation contract
+// for the POST body: empty body / missing Content-Type / `{}` / unknown
+// fields are all accepted, but a non-empty body that does not parse as
+// JSON returns 400 VALIDATION_ERROR. We decode into an empty struct so
+// any *fields* present in valid JSON are silently dropped -- the role is
+// enforced by the SQL layer regardless.
+func validateJoinSectionBody(r *http.Request) *apperrors.AppError {
+	if r.Body == nil {
+		return nil
+	}
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return apperrors.NewBadRequest("Invalid request body", nil)
+	}
+	if len(body) == 0 {
+		return nil
+	}
+	var ignored struct{}
+	if err := json.Unmarshal(body, &ignored); err != nil {
+		return apperrors.NewBadRequest("Invalid request body", nil)
+	}
+	return nil
 }
 
 // LeaveSection handles DELETE /courses/{course_id}/sections/{section_id}/members/me.
