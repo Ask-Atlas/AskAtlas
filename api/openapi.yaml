@@ -31,7 +31,15 @@ paths:
           description: Filter by precise document mime-type classification
           schema:
             type: string
-            enum: ["image/jpeg", "image/png", "image/webp", "application/pdf"]
+            enum:
+              - "image/jpeg"
+              - "image/png"
+              - "image/webp"
+              - "application/pdf"
+              - "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              - "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+              - "text/plain"
+              - "application/epub+zip"
         - name: min_size
           in: query
           description: Minimum file size in bytes
@@ -336,7 +344,15 @@ components:
           maxLength: 255
         mime_type:
           type: string
-          enum: ["image/jpeg", "image/png", "image/webp", "application/pdf"]
+          enum:
+            - "image/jpeg"
+            - "image/png"
+            - "image/webp"
+            - "application/pdf"
+            - "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            - "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            - "text/plain"
+            - "application/epub+zip"
         size:
           type: integer
           format: int64

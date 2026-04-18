@@ -29,22 +29,34 @@ const (
 
 // Defines values for CreateFileRequestMimeType.
 const (
-	CreateFileRequestMimeTypeApplicationpdf CreateFileRequestMimeType = "application/pdf"
-	CreateFileRequestMimeTypeImagejpeg      CreateFileRequestMimeType = "image/jpeg"
-	CreateFileRequestMimeTypeImagepng       CreateFileRequestMimeType = "image/png"
-	CreateFileRequestMimeTypeImagewebp      CreateFileRequestMimeType = "image/webp"
+	CreateFileRequestMimeTypeApplicationepubZip                                                   CreateFileRequestMimeType = "application/epub+zip"
+	CreateFileRequestMimeTypeApplicationpdf                                                       CreateFileRequestMimeType = "application/pdf"
+	CreateFileRequestMimeTypeApplicationvndOpenxmlformatsOfficedocumentPresentationmlPresentation CreateFileRequestMimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+	CreateFileRequestMimeTypeApplicationvndOpenxmlformatsOfficedocumentWordprocessingmlDocument   CreateFileRequestMimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	CreateFileRequestMimeTypeImagejpeg                                                            CreateFileRequestMimeType = "image/jpeg"
+	CreateFileRequestMimeTypeImagepng                                                             CreateFileRequestMimeType = "image/png"
+	CreateFileRequestMimeTypeImagewebp                                                            CreateFileRequestMimeType = "image/webp"
+	CreateFileRequestMimeTypeTextplain                                                            CreateFileRequestMimeType = "text/plain"
 )
 
 // Valid indicates whether the value is a known member of the CreateFileRequestMimeType enum.
 func (e CreateFileRequestMimeType) Valid() bool {
 	switch e {
+	case CreateFileRequestMimeTypeApplicationepubZip:
+		return true
 	case CreateFileRequestMimeTypeApplicationpdf:
+		return true
+	case CreateFileRequestMimeTypeApplicationvndOpenxmlformatsOfficedocumentPresentationmlPresentation:
+		return true
+	case CreateFileRequestMimeTypeApplicationvndOpenxmlformatsOfficedocumentWordprocessingmlDocument:
 		return true
 	case CreateFileRequestMimeTypeImagejpeg:
 		return true
 	case CreateFileRequestMimeTypeImagepng:
 		return true
 	case CreateFileRequestMimeTypeImagewebp:
+		return true
+	case CreateFileRequestMimeTypeTextplain:
 		return true
 	default:
 		return false
@@ -182,22 +194,34 @@ func (e ListFilesParamsStatus) Valid() bool {
 
 // Defines values for ListFilesParamsMimeType.
 const (
-	ListFilesParamsMimeTypeApplicationpdf ListFilesParamsMimeType = "application/pdf"
-	ListFilesParamsMimeTypeImagejpeg      ListFilesParamsMimeType = "image/jpeg"
-	ListFilesParamsMimeTypeImagepng       ListFilesParamsMimeType = "image/png"
-	ListFilesParamsMimeTypeImagewebp      ListFilesParamsMimeType = "image/webp"
+	ListFilesParamsMimeTypeApplicationepubZip                                                   ListFilesParamsMimeType = "application/epub+zip"
+	ListFilesParamsMimeTypeApplicationpdf                                                       ListFilesParamsMimeType = "application/pdf"
+	ListFilesParamsMimeTypeApplicationvndOpenxmlformatsOfficedocumentPresentationmlPresentation ListFilesParamsMimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+	ListFilesParamsMimeTypeApplicationvndOpenxmlformatsOfficedocumentWordprocessingmlDocument   ListFilesParamsMimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	ListFilesParamsMimeTypeImagejpeg                                                            ListFilesParamsMimeType = "image/jpeg"
+	ListFilesParamsMimeTypeImagepng                                                             ListFilesParamsMimeType = "image/png"
+	ListFilesParamsMimeTypeImagewebp                                                            ListFilesParamsMimeType = "image/webp"
+	ListFilesParamsMimeTypeTextplain                                                            ListFilesParamsMimeType = "text/plain"
 )
 
 // Valid indicates whether the value is a known member of the ListFilesParamsMimeType enum.
 func (e ListFilesParamsMimeType) Valid() bool {
 	switch e {
+	case ListFilesParamsMimeTypeApplicationepubZip:
+		return true
 	case ListFilesParamsMimeTypeApplicationpdf:
+		return true
+	case ListFilesParamsMimeTypeApplicationvndOpenxmlformatsOfficedocumentPresentationmlPresentation:
+		return true
+	case ListFilesParamsMimeTypeApplicationvndOpenxmlformatsOfficedocumentWordprocessingmlDocument:
 		return true
 	case ListFilesParamsMimeTypeImagejpeg:
 		return true
 	case ListFilesParamsMimeTypeImagepng:
 		return true
 	case ListFilesParamsMimeTypeImagewebp:
+		return true
+	case ListFilesParamsMimeTypeTextplain:
 		return true
 	default:
 		return false
@@ -1599,40 +1623,41 @@ func (sh *strictHandler) ListFiles(w http.ResponseWriter, r *http.Request, param
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

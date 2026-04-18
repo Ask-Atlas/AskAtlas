@@ -126,7 +126,7 @@ func TestService_CreateFile_Success(t *testing.T) {
 			return arg.ID.Valid &&
 				arg.UserID == utils.UUID(userID) &&
 				arg.Name == "lecture-notes.pdf" &&
-				arg.MimeType == db.MimeTypeApplicationPdf &&
+				arg.MimeType == "application/pdf" &&
 				arg.Size == int64(1048576) &&
 				arg.S3Key != ""
 		})).

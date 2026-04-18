@@ -11,7 +11,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = sqlc.arg(owner_id)
   AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
-  AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
+  AND (sqlc.narg(mime_type)::text IS NULL OR f.mime_type = sqlc.narg(mime_type)::text)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
   AND (sqlc.narg(max_size)::bigint IS NULL OR f.size <= sqlc.narg(max_size)::bigint)
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR f.created_at >= sqlc.narg(created_from)::timestamptz)
@@ -39,7 +39,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = sqlc.arg(owner_id)
   AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
-  AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
+  AND (sqlc.narg(mime_type)::text IS NULL OR f.mime_type = sqlc.narg(mime_type)::text)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
   AND (sqlc.narg(max_size)::bigint IS NULL OR f.size <= sqlc.narg(max_size)::bigint)
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR f.created_at >= sqlc.narg(created_from)::timestamptz)
@@ -67,7 +67,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = sqlc.arg(owner_id)
   AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
-  AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
+  AND (sqlc.narg(mime_type)::text IS NULL OR f.mime_type = sqlc.narg(mime_type)::text)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
   AND (sqlc.narg(max_size)::bigint IS NULL OR f.size <= sqlc.narg(max_size)::bigint)
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR f.created_at >= sqlc.narg(created_from)::timestamptz)
@@ -95,7 +95,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = sqlc.arg(owner_id)
   AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
-  AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
+  AND (sqlc.narg(mime_type)::text IS NULL OR f.mime_type = sqlc.narg(mime_type)::text)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
   AND (sqlc.narg(max_size)::bigint IS NULL OR f.size <= sqlc.narg(max_size)::bigint)
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR f.created_at >= sqlc.narg(created_from)::timestamptz)
@@ -123,7 +123,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = sqlc.arg(owner_id)
   AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
-  AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
+  AND (sqlc.narg(mime_type)::text IS NULL OR f.mime_type = sqlc.narg(mime_type)::text)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
   AND (sqlc.narg(max_size)::bigint IS NULL OR f.size <= sqlc.narg(max_size)::bigint)
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR f.created_at >= sqlc.narg(created_from)::timestamptz)
@@ -151,7 +151,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = sqlc.arg(owner_id)
   AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
-  AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
+  AND (sqlc.narg(mime_type)::text IS NULL OR f.mime_type = sqlc.narg(mime_type)::text)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
   AND (sqlc.narg(max_size)::bigint IS NULL OR f.size <= sqlc.narg(max_size)::bigint)
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR f.created_at >= sqlc.narg(created_from)::timestamptz)
@@ -179,7 +179,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = sqlc.arg(owner_id)
   AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
-  AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
+  AND (sqlc.narg(mime_type)::text IS NULL OR f.mime_type = sqlc.narg(mime_type)::text)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
   AND (sqlc.narg(max_size)::bigint IS NULL OR f.size <= sqlc.narg(max_size)::bigint)
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR f.created_at >= sqlc.narg(created_from)::timestamptz)
@@ -207,7 +207,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = sqlc.arg(owner_id)
   AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
-  AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
+  AND (sqlc.narg(mime_type)::text IS NULL OR f.mime_type = sqlc.narg(mime_type)::text)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
   AND (sqlc.narg(max_size)::bigint IS NULL OR f.size <= sqlc.narg(max_size)::bigint)
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR f.created_at >= sqlc.narg(created_from)::timestamptz)
@@ -235,7 +235,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = sqlc.arg(owner_id)
   AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
-  AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
+  AND (sqlc.narg(mime_type)::text IS NULL OR f.mime_type = sqlc.narg(mime_type)::text)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
   AND (sqlc.narg(max_size)::bigint IS NULL OR f.size <= sqlc.narg(max_size)::bigint)
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR f.created_at >= sqlc.narg(created_from)::timestamptz)
@@ -263,7 +263,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = sqlc.arg(owner_id)
   AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
-  AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
+  AND (sqlc.narg(mime_type)::text IS NULL OR f.mime_type = sqlc.narg(mime_type)::text)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
   AND (sqlc.narg(max_size)::bigint IS NULL OR f.size <= sqlc.narg(max_size)::bigint)
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR f.created_at >= sqlc.narg(created_from)::timestamptz)
@@ -291,7 +291,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = sqlc.arg(owner_id)
   AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
-  AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
+  AND (sqlc.narg(mime_type)::text IS NULL OR f.mime_type = sqlc.narg(mime_type)::text)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
   AND (sqlc.narg(max_size)::bigint IS NULL OR f.size <= sqlc.narg(max_size)::bigint)
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR f.created_at >= sqlc.narg(created_from)::timestamptz)
@@ -300,8 +300,8 @@ WHERE f.user_id = sqlc.arg(owner_id)
   AND (sqlc.narg(updated_to)::timestamptz   IS NULL OR f.updated_at <  sqlc.narg(updated_to)::timestamptz)
   AND (sqlc.narg(q)::text IS NULL OR f.name ILIKE '%' || sqlc.narg(q)::text || '%' ESCAPE '\')
   AND (
-    sqlc.narg(cursor_mime_type)::mime_type IS NULL
-    OR (f.mime_type, f.id) > (sqlc.narg(cursor_mime_type)::mime_type, sqlc.narg(cursor_id)::uuid)
+    sqlc.narg(cursor_mime_type)::text IS NULL
+    OR (f.mime_type, f.id) > (sqlc.narg(cursor_mime_type)::text, sqlc.narg(cursor_id)::uuid)
   )
 ORDER BY f.mime_type ASC, f.id ASC
 LIMIT sqlc.arg(page_limit);
@@ -319,7 +319,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = sqlc.arg(owner_id)
   AND f.deletion_status IS NULL
   AND (sqlc.narg(status)::upload_status IS NULL OR f.status = sqlc.narg(status)::upload_status)
-  AND (sqlc.narg(mime_type)::mime_type IS NULL OR f.mime_type = sqlc.narg(mime_type)::mime_type)
+  AND (sqlc.narg(mime_type)::text IS NULL OR f.mime_type = sqlc.narg(mime_type)::text)
   AND (sqlc.narg(min_size)::bigint IS NULL OR f.size >= sqlc.narg(min_size)::bigint)
   AND (sqlc.narg(max_size)::bigint IS NULL OR f.size <= sqlc.narg(max_size)::bigint)
   AND (sqlc.narg(created_from)::timestamptz IS NULL OR f.created_at >= sqlc.narg(created_from)::timestamptz)
@@ -328,8 +328,8 @@ WHERE f.user_id = sqlc.arg(owner_id)
   AND (sqlc.narg(updated_to)::timestamptz   IS NULL OR f.updated_at <  sqlc.narg(updated_to)::timestamptz)
   AND (sqlc.narg(q)::text IS NULL OR f.name ILIKE '%' || sqlc.narg(q)::text || '%' ESCAPE '\')
   AND (
-    sqlc.narg(cursor_mime_type)::mime_type IS NULL
-    OR (f.mime_type, f.id) < (sqlc.narg(cursor_mime_type)::mime_type, sqlc.narg(cursor_id)::uuid)
+    sqlc.narg(cursor_mime_type)::text IS NULL
+    OR (f.mime_type, f.id) < (sqlc.narg(cursor_mime_type)::text, sqlc.narg(cursor_id)::uuid)
   )
 ORDER BY f.mime_type DESC, f.id DESC
 LIMIT sqlc.arg(page_limit);
