@@ -15,6 +15,22 @@ type Querier interface {
 	// "Course not found" 404 from the "Section not found" 404 the spec
 	// requires (see ASK-132 / ASK-138).
 	CourseExists(ctx context.Context, id pgtype.UUID) (bool, error)
+	// Single-row probe used by the list handler to disambiguate "course
+	// missing" (404) from "course exists but has no guides" (200 empty
+	// array). Separate from courses.CourseExists only because sqlc-generated
+	// queriers are per-file; the predicate is identical.
+	CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error)
+	GetCourse(ctx context.Context, id pgtype.UUID) (GetCourseRow, error)
+	// Fetches a file only if it belongs to the given user and has not been soft-deleted.
+	// Returns sql.ErrNoRows if not found or already in a deletion state.
+	GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) (GetFileByOwnerRow, error)
+	GetFileIfViewable(ctx context.Context, arg GetFileIfViewableParams) (File, error)
+	// Single-row membership lookup powering the per-section
+	// enrolled/not-enrolled probe (ASK-148). Returns sql.ErrNoRows when the
+	// viewer is not a member; the service translates that into the 200
+	// {enrolled:false} response, NOT a 404.
+	GetMembership(ctx context.Context, arg GetMembershipParams) (GetMembershipRow, error)
+	GetSchool(ctx context.Context, id pgtype.UUID) (School, error)
 	// Study guide list queries (ASK-104).
 	//
 	// Every ListStudyGuides* variant uses the same CTE structure so the
@@ -37,23 +53,32 @@ type Querier interface {
 	// Privacy floor on the creator payload: only id + first_name + last_name
 	// are selected. No email, no clerk_id -- same rule as
 	// SectionMemberResponse in ASK-143.
-	// Single-row probe used by the list handler to disambiguate "course
-	// missing" (404) from "course exists but has no guides" (200 empty
-	// array). Separate from courses.CourseExists only because sqlc-generated
-	// queriers are per-file; the predicate is identical.
-	CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error)
-	GetCourse(ctx context.Context, id pgtype.UUID) (GetCourseRow, error)
-	// Fetches a file only if it belongs to the given user and has not been soft-deleted.
-	// Returns sql.ErrNoRows if not found or already in a deletion state.
-	GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) (GetFileByOwnerRow, error)
-	GetFileIfViewable(ctx context.Context, arg GetFileIfViewableParams) (File, error)
-	// Single-row membership lookup powering the per-section
-	// enrolled/not-enrolled probe (ASK-148). Returns sql.ErrNoRows when the
-	// viewer is not a member; the service translates that into the 200
-	// {enrolled:false} response, NOT a 404.
-	GetMembership(ctx context.Context, arg GetMembershipParams) (GetMembershipRow, error)
-	GetSchool(ctx context.Context, id pgtype.UUID) (School, error)
+	// The detail endpoint's main query (ASK-114). Returns the guide's own
+	// columns + a compact course payload + a compact creator payload
+	// + two inline aggregates as subqueries:
+	//   * vote_score    -- SUM(up/down votes)
+	//   * is_recommended -- EXISTS in study_guide_recommendations
+	//
+	// The viewer's own vote (user_vote) ships in a separate query
+	// (GetUserVoteForGuide) because sqlc does not infer nullable output
+	// columns from LEFT JOIN / subquery expressions on enum-typed columns
+	// -- it reads the schema's NOT NULL constraint and types the output
+	// non-nullable. An extra round trip is cheaper than fighting sqlc's
+	// type inference; the PRD's "batching as separate queries" guidance
+	// explicitly allows it.
+	//
+	// Soft-delete invariants:
+	//   * sg.deleted_at IS NULL  -- excludes deleted guides (→ 404)
+	//   * u.deleted_at IS NULL   -- creator must be live (ASK-143 convention)
+	//
+	// Privacy floor: no email, no clerk_id. Creator exposes only
+	// id/first_name/last_name.
+	GetStudyGuideDetail(ctx context.Context, id pgtype.UUID) (GetStudyGuideDetailRow, error)
 	GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtype.UUID, error)
+	// Returns the viewer's own vote on the guide, or sql.ErrNoRows when
+	// the viewer has not voted. The service maps ErrNoRows to a nil
+	// user_vote in the response (JSON null, not omitted).
+	GetUserVoteForGuide(ctx context.Context, arg GetUserVoteForGuideParams) (VoteDirection, error)
 	InsertFile(ctx context.Context, arg InsertFileParams) (File, error)
 	// Adds the user to the section as a 'student'. ON CONFLICT DO NOTHING
 	// keeps duplicate joins atomic (no PK violation surfacing) and concurrency
@@ -87,6 +112,22 @@ type Querier interface {
 	ListCoursesNumberDesc(ctx context.Context, arg ListCoursesNumberDescParams) ([]ListCoursesNumberDescRow, error)
 	ListCoursesTitleAsc(ctx context.Context, arg ListCoursesTitleAscParams) ([]ListCoursesTitleAscRow, error)
 	ListCoursesTitleDesc(ctx context.Context, arg ListCoursesTitleDescParams) ([]ListCoursesTitleDescRow, error)
+	// Attached files for the guide detail payload. Privacy floor: no
+	// user_id, no s3_key, no checksum. The file list shows only what a
+	// viewer needs to see: what's attached, what type, and how big.
+	ListGuideFiles(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideFilesRow, error)
+	// Non-deleted quizzes for the guide + question_count per quiz. The
+	// LEFT JOIN ensures quizzes with zero questions still appear with
+	// question_count = 0.
+	ListGuideQuizzesWithQuestionCount(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideQuizzesWithQuestionCountRow, error)
+	// Recommenders list for the guide detail payload. Same privacy floor
+	// as CreatorSummary -- id + first_name + last_name only. Excludes
+	// recommenders whose user record is soft-deleted.
+	ListGuideRecommenders(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideRecommendersRow, error)
+	// Attached resources for the guide detail payload. No creator info
+	// in the SELECT list -- the caller doesn't need to know who attached
+	// the resource.
+	ListGuideResources(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideResourcesRow, error)
 	// Returns every section a user is enrolled in with the compact
 	// course + school payload the dashboard renders. Optional term + role
 	// filters use sqlc.narg so the WHERE branch short-circuits when

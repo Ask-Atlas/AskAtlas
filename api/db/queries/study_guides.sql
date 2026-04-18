@@ -21,6 +21,107 @@
 -- are selected. No email, no clerk_id -- same rule as
 -- SectionMemberResponse in ASK-143.
 
+-- name: GetStudyGuideDetail :one
+-- The detail endpoint's main query (ASK-114). Returns the guide's own
+-- columns + a compact course payload + a compact creator payload
+-- + two inline aggregates as subqueries:
+--   * vote_score    -- SUM(up/down votes)
+--   * is_recommended -- EXISTS in study_guide_recommendations
+--
+-- The viewer's own vote (user_vote) ships in a separate query
+-- (GetUserVoteForGuide) because sqlc does not infer nullable output
+-- columns from LEFT JOIN / subquery expressions on enum-typed columns
+-- -- it reads the schema's NOT NULL constraint and types the output
+-- non-nullable. An extra round trip is cheaper than fighting sqlc's
+-- type inference; the PRD's "batching as separate queries" guidance
+-- explicitly allows it.
+--
+-- Soft-delete invariants:
+--   * sg.deleted_at IS NULL  -- excludes deleted guides (→ 404)
+--   * u.deleted_at IS NULL   -- creator must be live (ASK-143 convention)
+--
+-- Privacy floor: no email, no clerk_id. Creator exposes only
+-- id/first_name/last_name.
+SELECT
+  sg.id, sg.title, sg.description, sg.content, sg.tags,
+  sg.view_count, sg.created_at, sg.updated_at,
+  c.id           AS course_id,
+  c.department   AS course_department,
+  c.number       AS course_number,
+  c.title        AS course_title,
+  u.id           AS creator_id,
+  u.first_name   AS creator_first_name,
+  u.last_name    AS creator_last_name,
+  COALESCE((
+    SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
+    FROM study_guide_votes
+    WHERE study_guide_id = sg.id
+  ), 0)::bigint AS vote_score,
+  EXISTS (
+    SELECT 1 FROM study_guide_recommendations
+    WHERE study_guide_id = sg.id
+  ) AS is_recommended
+FROM study_guides sg
+JOIN courses c ON c.id = sg.course_id
+JOIN users   u ON u.id = sg.creator_id
+WHERE sg.id = sqlc.arg(id)::uuid
+  AND sg.deleted_at IS NULL
+  AND u.deleted_at IS NULL;
+
+-- name: GetUserVoteForGuide :one
+-- Returns the viewer's own vote on the guide, or sql.ErrNoRows when
+-- the viewer has not voted. The service maps ErrNoRows to a nil
+-- user_vote in the response (JSON null, not omitted).
+SELECT vote
+FROM study_guide_votes
+WHERE study_guide_id = sqlc.arg(study_guide_id)::uuid
+  AND user_id = sqlc.arg(viewer_id)::uuid;
+
+-- name: ListGuideRecommenders :many
+-- Recommenders list for the guide detail payload. Same privacy floor
+-- as CreatorSummary -- id + first_name + last_name only. Excludes
+-- recommenders whose user record is soft-deleted.
+SELECT u.id, u.first_name, u.last_name
+FROM study_guide_recommendations sgr
+JOIN users u ON u.id = sgr.recommended_by
+WHERE sgr.study_guide_id = sqlc.arg(study_guide_id)::uuid
+  AND u.deleted_at IS NULL
+ORDER BY sgr.created_at ASC, u.id ASC;
+
+-- name: ListGuideQuizzesWithQuestionCount :many
+-- Non-deleted quizzes for the guide + question_count per quiz. The
+-- LEFT JOIN ensures quizzes with zero questions still appear with
+-- question_count = 0.
+SELECT
+  q.id, q.title,
+  COUNT(qq.id)::bigint AS question_count
+FROM quizzes q
+LEFT JOIN quiz_questions qq ON qq.quiz_id = q.id
+WHERE q.study_guide_id = sqlc.arg(study_guide_id)::uuid
+  AND q.deleted_at IS NULL
+GROUP BY q.id
+ORDER BY q.created_at ASC, q.id ASC;
+
+-- name: ListGuideResources :many
+-- Attached resources for the guide detail payload. No creator info
+-- in the SELECT list -- the caller doesn't need to know who attached
+-- the resource.
+SELECT r.id, r.title, r.url, r.type, r.description, r.created_at
+FROM study_guide_resources sgr
+JOIN resources r ON r.id = sgr.resource_id
+WHERE sgr.study_guide_id = sqlc.arg(study_guide_id)::uuid
+ORDER BY sgr.created_at ASC, r.id ASC;
+
+-- name: ListGuideFiles :many
+-- Attached files for the guide detail payload. Privacy floor: no
+-- user_id, no s3_key, no checksum. The file list shows only what a
+-- viewer needs to see: what's attached, what type, and how big.
+SELECT f.id, f.name, f.mime_type, f.size
+FROM study_guide_files sgf
+JOIN files f ON f.id = sgf.file_id
+WHERE sgf.study_guide_id = sqlc.arg(study_guide_id)::uuid
+ORDER BY sgf.created_at ASC, f.id ASC;
+
 -- name: CourseExistsForGuides :one
 -- Single-row probe used by the list handler to disambiguate "course
 -- missing" (404) from "course exists but has no guides" (200 empty
