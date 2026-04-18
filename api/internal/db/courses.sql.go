@@ -11,6 +11,22 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const courseExists = `-- name: CourseExists :one
+SELECT EXISTS (
+  SELECT 1 FROM courses WHERE id = $1::uuid
+) AS exists
+`
+
+// Single-row existence probe used by join/leave to disambiguate the
+// "Course not found" 404 from the "Section not found" 404 the spec
+// requires (see ASK-132 / ASK-138).
+func (q *Queries) CourseExists(ctx context.Context, id pgtype.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, courseExists, id)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getCourse = `-- name: GetCourse :one
 SELECT
   c.id, c.school_id, c.department, c.number, c.title, c.description,
@@ -59,6 +75,56 @@ func (q *Queries) GetCourse(ctx context.Context, id pgtype.UUID) (GetCourseRow, 
 		&i.SCountry,
 	)
 	return i, err
+}
+
+const joinSection = `-- name: JoinSection :one
+INSERT INTO course_members (user_id, section_id, role)
+VALUES ($1::uuid, $2::uuid, 'student')
+ON CONFLICT (user_id, section_id) DO NOTHING
+RETURNING user_id, section_id, role, joined_at
+`
+
+type JoinSectionParams struct {
+	UserID    pgtype.UUID `json:"user_id"`
+	SectionID pgtype.UUID `json:"section_id"`
+}
+
+// Adds the user to the section as a 'student'. ON CONFLICT DO NOTHING
+// keeps duplicate joins atomic (no PK violation surfacing) and concurrency
+// safe; the service layer treats an empty result as the 409 "Already a
+// member of this section" case.
+func (q *Queries) JoinSection(ctx context.Context, arg JoinSectionParams) (CourseMember, error) {
+	row := q.db.QueryRow(ctx, joinSection, arg.UserID, arg.SectionID)
+	var i CourseMember
+	err := row.Scan(
+		&i.UserID,
+		&i.SectionID,
+		&i.Role,
+		&i.JoinedAt,
+	)
+	return i, err
+}
+
+const leaveSection = `-- name: LeaveSection :one
+DELETE FROM course_members
+WHERE user_id = $1::uuid
+  AND section_id = $2::uuid
+RETURNING user_id
+`
+
+type LeaveSectionParams struct {
+	UserID    pgtype.UUID `json:"user_id"`
+	SectionID pgtype.UUID `json:"section_id"`
+}
+
+// Hard-deletes the membership row. RETURNING lets the service detect a
+// no-op delete (sql.ErrNoRows) and map it to the 404 "Not a member of
+// this section" response.
+func (q *Queries) LeaveSection(ctx context.Context, arg LeaveSectionParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, leaveSection, arg.UserID, arg.SectionID)
+	var user_id pgtype.UUID
+	err := row.Scan(&user_id)
+	return user_id, err
 }
 
 const listCourseSections = `-- name: ListCourseSections :many
@@ -877,4 +943,27 @@ func (q *Queries) ListCoursesTitleDesc(ctx context.Context, arg ListCoursesTitle
 		return nil, err
 	}
 	return items, nil
+}
+
+const sectionInCourseExists = `-- name: SectionInCourseExists :one
+SELECT EXISTS (
+  SELECT 1 FROM course_sections
+  WHERE id = $1::uuid
+    AND course_id = $2::uuid
+) AS exists
+`
+
+type SectionInCourseExistsParams struct {
+	SectionID pgtype.UUID `json:"section_id"`
+	CourseID  pgtype.UUID `json:"course_id"`
+}
+
+// Verifies the section exists AND belongs to the supplied course. A
+// section UUID that targets a different course is treated as not found
+// to avoid leaking the existence of unrelated sections via the URL path.
+func (q *Queries) SectionInCourseExists(ctx context.Context, arg SectionInCourseExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, sectionInCourseExists, arg.SectionID, arg.CourseID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }

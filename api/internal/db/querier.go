@@ -11,6 +11,10 @@ import (
 )
 
 type Querier interface {
+	// Single-row existence probe used by join/leave to disambiguate the
+	// "Course not found" 404 from the "Section not found" 404 the spec
+	// requires (see ASK-132 / ASK-138).
+	CourseExists(ctx context.Context, id pgtype.UUID) (bool, error)
 	GetCourse(ctx context.Context, id pgtype.UUID) (GetCourseRow, error)
 	// Fetches a file only if it belongs to the given user and has not been soft-deleted.
 	// Returns sql.ErrNoRows if not found or already in a deletion state.
@@ -19,6 +23,15 @@ type Querier interface {
 	GetSchool(ctx context.Context, id pgtype.UUID) (School, error)
 	GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtype.UUID, error)
 	InsertFile(ctx context.Context, arg InsertFileParams) (File, error)
+	// Adds the user to the section as a 'student'. ON CONFLICT DO NOTHING
+	// keeps duplicate joins atomic (no PK violation surfacing) and concurrency
+	// safe; the service layer treats an empty result as the 409 "Already a
+	// member of this section" case.
+	JoinSection(ctx context.Context, arg JoinSectionParams) (CourseMember, error)
+	// Hard-deletes the membership row. RETURNING lets the service detect a
+	// no-op delete (sql.ErrNoRows) and map it to the 404 "Not a member of
+	// this section" response.
+	LeaveSection(ctx context.Context, arg LeaveSectionParams) (pgtype.UUID, error)
 	// Returns sections with a live member_count via LEFT JOIN (so sections
 	// with zero members still appear). Ordered most-recent term first using
 	// start_date when present, falling back to section_code. NULLS LAST keeps
@@ -60,6 +73,10 @@ type Querier interface {
 	// Deletes a file grant matching the exact composite key. No-op if the grant
 	// does not exist (idempotent).
 	RevokeFileGrant(ctx context.Context, arg RevokeFileGrantParams) error
+	// Verifies the section exists AND belongs to the supplied course. A
+	// section UUID that targets a different course is treated as not found
+	// to avoid leaking the existence of unrelated sections via the URL path.
+	SectionInCourseExists(ctx context.Context, arg SectionInCourseExistsParams) (bool, error)
 	// Records the QStash message ID after publishing the async cleanup job.
 	SetFileDeletionJobID(ctx context.Context, arg SetFileDeletionJobIDParams) error
 	// Marks a file as pending deletion. Only applies if the file is owned by the caller
