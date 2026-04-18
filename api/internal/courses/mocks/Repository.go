@@ -39,6 +39,72 @@ func (_m *MockRepository) EXPECT() *MockRepository_Expecter {
 	return &MockRepository_Expecter{mock: &_m.Mock}
 }
 
+// CourseExists provides a mock function for the type MockRepository
+func (_mock *MockRepository) CourseExists(ctx context.Context, id pgtype.UUID) (bool, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CourseExists")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) (bool, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) bool); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, pgtype.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_CourseExists_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CourseExists'
+type MockRepository_CourseExists_Call struct {
+	*mock.Call
+}
+
+// CourseExists is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id pgtype.UUID
+func (_e *MockRepository_Expecter) CourseExists(ctx interface{}, id interface{}) *MockRepository_CourseExists_Call {
+	return &MockRepository_CourseExists_Call{Call: _e.mock.On("CourseExists", ctx, id)}
+}
+
+func (_c *MockRepository_CourseExists_Call) Run(run func(ctx context.Context, id pgtype.UUID)) *MockRepository_CourseExists_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_CourseExists_Call) Return(b bool, err error) *MockRepository_CourseExists_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *MockRepository_CourseExists_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) (bool, error)) *MockRepository_CourseExists_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetCourse provides a mock function for the type MockRepository
 func (_mock *MockRepository) GetCourse(ctx context.Context, id pgtype.UUID) (db.GetCourseRow, error) {
 	ret := _mock.Called(ctx, id)
@@ -101,6 +167,138 @@ func (_c *MockRepository_GetCourse_Call) Return(getCourseRow db.GetCourseRow, er
 }
 
 func (_c *MockRepository_GetCourse_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) (db.GetCourseRow, error)) *MockRepository_GetCourse_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// JoinSection provides a mock function for the type MockRepository
+func (_mock *MockRepository) JoinSection(ctx context.Context, arg db.JoinSectionParams) (db.CourseMember, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for JoinSection")
+	}
+
+	var r0 db.CourseMember
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.JoinSectionParams) (db.CourseMember, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.JoinSectionParams) db.CourseMember); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(db.CourseMember)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.JoinSectionParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_JoinSection_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'JoinSection'
+type MockRepository_JoinSection_Call struct {
+	*mock.Call
+}
+
+// JoinSection is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.JoinSectionParams
+func (_e *MockRepository_Expecter) JoinSection(ctx interface{}, arg interface{}) *MockRepository_JoinSection_Call {
+	return &MockRepository_JoinSection_Call{Call: _e.mock.On("JoinSection", ctx, arg)}
+}
+
+func (_c *MockRepository_JoinSection_Call) Run(run func(ctx context.Context, arg db.JoinSectionParams)) *MockRepository_JoinSection_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.JoinSectionParams
+		if args[1] != nil {
+			arg1 = args[1].(db.JoinSectionParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_JoinSection_Call) Return(courseMember db.CourseMember, err error) *MockRepository_JoinSection_Call {
+	_c.Call.Return(courseMember, err)
+	return _c
+}
+
+func (_c *MockRepository_JoinSection_Call) RunAndReturn(run func(ctx context.Context, arg db.JoinSectionParams) (db.CourseMember, error)) *MockRepository_JoinSection_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// LeaveSection provides a mock function for the type MockRepository
+func (_mock *MockRepository) LeaveSection(ctx context.Context, arg db.LeaveSectionParams) (pgtype.UUID, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LeaveSection")
+	}
+
+	var r0 pgtype.UUID
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.LeaveSectionParams) (pgtype.UUID, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.LeaveSectionParams) pgtype.UUID); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(pgtype.UUID)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.LeaveSectionParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_LeaveSection_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LeaveSection'
+type MockRepository_LeaveSection_Call struct {
+	*mock.Call
+}
+
+// LeaveSection is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.LeaveSectionParams
+func (_e *MockRepository_Expecter) LeaveSection(ctx interface{}, arg interface{}) *MockRepository_LeaveSection_Call {
+	return &MockRepository_LeaveSection_Call{Call: _e.mock.On("LeaveSection", ctx, arg)}
+}
+
+func (_c *MockRepository_LeaveSection_Call) Run(run func(ctx context.Context, arg db.LeaveSectionParams)) *MockRepository_LeaveSection_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.LeaveSectionParams
+		if args[1] != nil {
+			arg1 = args[1].(db.LeaveSectionParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_LeaveSection_Call) Return(uUID pgtype.UUID, err error) *MockRepository_LeaveSection_Call {
+	_c.Call.Return(uUID, err)
+	return _c
+}
+
+func (_c *MockRepository_LeaveSection_Call) RunAndReturn(run func(ctx context.Context, arg db.LeaveSectionParams) (pgtype.UUID, error)) *MockRepository_LeaveSection_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -713,6 +911,72 @@ func (_c *MockRepository_ListCoursesTitleDesc_Call) Return(listCoursesTitleDescR
 }
 
 func (_c *MockRepository_ListCoursesTitleDesc_Call) RunAndReturn(run func(ctx context.Context, arg db.ListCoursesTitleDescParams) ([]db.ListCoursesTitleDescRow, error)) *MockRepository_ListCoursesTitleDesc_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SectionInCourseExists provides a mock function for the type MockRepository
+func (_mock *MockRepository) SectionInCourseExists(ctx context.Context, arg db.SectionInCourseExistsParams) (bool, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SectionInCourseExists")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.SectionInCourseExistsParams) (bool, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.SectionInCourseExistsParams) bool); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.SectionInCourseExistsParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_SectionInCourseExists_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SectionInCourseExists'
+type MockRepository_SectionInCourseExists_Call struct {
+	*mock.Call
+}
+
+// SectionInCourseExists is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.SectionInCourseExistsParams
+func (_e *MockRepository_Expecter) SectionInCourseExists(ctx interface{}, arg interface{}) *MockRepository_SectionInCourseExists_Call {
+	return &MockRepository_SectionInCourseExists_Call{Call: _e.mock.On("SectionInCourseExists", ctx, arg)}
+}
+
+func (_c *MockRepository_SectionInCourseExists_Call) Run(run func(ctx context.Context, arg db.SectionInCourseExistsParams)) *MockRepository_SectionInCourseExists_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.SectionInCourseExistsParams
+		if args[1] != nil {
+			arg1 = args[1].(db.SectionInCourseExistsParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_SectionInCourseExists_Call) Return(b bool, err error) *MockRepository_SectionInCourseExists_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *MockRepository_SectionInCourseExists_Call) RunAndReturn(run func(ctx context.Context, arg db.SectionInCourseExistsParams) (bool, error)) *MockRepository_SectionInCourseExists_Call {
 	_c.Call.Return(run)
 	return _c
 }

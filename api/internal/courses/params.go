@@ -98,3 +98,20 @@ type ListCoursesResult struct {
 type GetCourseParams struct {
 	CourseID uuid.UUID
 }
+
+// JoinSectionParams is the input to Service.JoinSection. The CourseID is
+// validated against the SectionID to avoid the cross-course path-traversal
+// case (a real section UUID under a different course's URL).
+type JoinSectionParams struct {
+	CourseID  uuid.UUID
+	SectionID uuid.UUID
+	UserID    uuid.UUID
+}
+
+// LeaveSectionParams is the input to Service.LeaveSection. Same path
+// validation invariants as JoinSectionParams.
+type LeaveSectionParams struct {
+	CourseID  uuid.UUID
+	SectionID uuid.UUID
+	UserID    uuid.UUID
+}

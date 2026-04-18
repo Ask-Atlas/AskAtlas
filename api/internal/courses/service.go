@@ -2,18 +2,26 @@ package courses
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
+	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // Repository is the data-access surface required by Service. The 8 list
 // methods correspond to the per-sort-variant sqlc queries; ListCourseSections
-// powers the inline sections array in the get-by-id response.
+// powers the inline sections array in the get-by-id response. The membership
+// methods power join/leave: existence probes return bool, mutating ops return
+// sql.ErrNoRows on the no-op case (already-joined for JoinSection,
+// not-a-member for LeaveSection) so the service can map to the right status.
 type Repository interface {
 	ListCoursesDepartmentAsc(ctx context.Context, arg db.ListCoursesDepartmentAscParams) ([]db.ListCoursesDepartmentAscRow, error)
 	ListCoursesDepartmentDesc(ctx context.Context, arg db.ListCoursesDepartmentDescParams) ([]db.ListCoursesDepartmentDescRow, error)
@@ -26,6 +34,11 @@ type Repository interface {
 
 	GetCourse(ctx context.Context, id pgtype.UUID) (db.GetCourseRow, error)
 	ListCourseSections(ctx context.Context, courseID pgtype.UUID) ([]db.ListCourseSectionsRow, error)
+
+	CourseExists(ctx context.Context, id pgtype.UUID) (bool, error)
+	SectionInCourseExists(ctx context.Context, arg db.SectionInCourseExistsParams) (bool, error)
+	JoinSection(ctx context.Context, arg db.JoinSectionParams) (db.CourseMember, error)
+	LeaveSection(ctx context.Context, arg db.LeaveSectionParams) (pgtype.UUID, error)
 }
 
 // sortKey is the lookup key for the per-sort-variant query function table.
@@ -376,4 +389,91 @@ func (s *Service) GetCourse(ctx context.Context, p GetCourseParams) (CourseDetai
 		Course:   course,
 		Sections: sections,
 	}, nil
+}
+
+// JoinSection enrolls the authenticated user in the given section as a
+// 'student'. The role is hardcoded -- callers cannot escalate to instructor
+// or ta via this entry point. Validates course existence, then section
+// existence within the course, then inserts. ON CONFLICT DO NOTHING in the
+// SQL means a duplicate join surfaces as sql.ErrNoRows; we map that to a
+// tailored 409 AppError so the handler returns "Already a member of this
+// section" verbatim.
+func (s *Service) JoinSection(ctx context.Context, p JoinSectionParams) (Membership, error) {
+	if err := s.assertCourseAndSection(ctx, p.CourseID, p.SectionID); err != nil {
+		return Membership{}, err
+	}
+
+	row, err := s.repo.JoinSection(ctx, db.JoinSectionParams{
+		UserID:    utils.UUID(p.UserID),
+		SectionID: utils.UUID(p.SectionID),
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Membership{}, &apperrors.AppError{
+				Code:    http.StatusConflict,
+				Status:  "Conflict",
+				Message: "Already a member of this section",
+			}
+		}
+		return Membership{}, fmt.Errorf("JoinSection: insert: %w", err)
+	}
+
+	m, err := mapMembership(row)
+	if err != nil {
+		return Membership{}, fmt.Errorf("JoinSection: map: %w", err)
+	}
+	return m, nil
+}
+
+// LeaveSection hard-deletes the authenticated user's membership in the
+// section. Validates course + section path, then deletes. A no-op DELETE
+// (the user was never a member, or the row is already gone after a race)
+// surfaces as sql.ErrNoRows from the RETURNING clause; we map it to a
+// tailored 404 with "Not a member of this section".
+func (s *Service) LeaveSection(ctx context.Context, p LeaveSectionParams) error {
+	if err := s.assertCourseAndSection(ctx, p.CourseID, p.SectionID); err != nil {
+		return err
+	}
+
+	_, err := s.repo.LeaveSection(ctx, db.LeaveSectionParams{
+		UserID:    utils.UUID(p.UserID),
+		SectionID: utils.UUID(p.SectionID),
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return apperrors.NewNotFound("Not a member of this section")
+		}
+		return fmt.Errorf("LeaveSection: delete: %w", err)
+	}
+	return nil
+}
+
+// assertCourseAndSection runs the two preflight existence probes shared by
+// JoinSection and LeaveSection. Each probe maps a missing row to a
+// distinct 404 message because the spec differentiates "Course not found"
+// from "Section not found"; mapping them both to a generic 404 would lose
+// the signal the frontend uses to surface the right error toast. A
+// section that exists but lives under a different course id is treated as
+// not-found to avoid leaking the existence of unrelated sections via the
+// URL path.
+func (s *Service) assertCourseAndSection(ctx context.Context, courseID, sectionID uuid.UUID) error {
+	courseExists, err := s.repo.CourseExists(ctx, utils.UUID(courseID))
+	if err != nil {
+		return fmt.Errorf("assertCourseAndSection: course probe: %w", err)
+	}
+	if !courseExists {
+		return apperrors.NewNotFound("Course not found")
+	}
+
+	sectionExists, err := s.repo.SectionInCourseExists(ctx, db.SectionInCourseExistsParams{
+		SectionID: utils.UUID(sectionID),
+		CourseID:  utils.UUID(courseID),
+	})
+	if err != nil {
+		return fmt.Errorf("assertCourseAndSection: section probe: %w", err)
+	}
+	if !sectionExists {
+		return apperrors.NewNotFound("Section not found")
+	}
+	return nil
 }

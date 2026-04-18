@@ -57,6 +57,26 @@ func mapCourse(r sharedCourseRow) (Course, error) {
 	}, nil
 }
 
+// mapMembership converts a sqlc-generated CourseMember row into the domain
+// Membership type. Returned by JoinSection so the handler can render the
+// 201 wire response without leaking pgtype.UUID into the HTTP layer.
+func mapMembership(m db.CourseMember) (Membership, error) {
+	userID, err := utils.PgxToGoogleUUID(m.UserID)
+	if err != nil {
+		return Membership{}, fmt.Errorf("mapMembership: user id: %w", err)
+	}
+	sectionID, err := utils.PgxToGoogleUUID(m.SectionID)
+	if err != nil {
+		return Membership{}, fmt.Errorf("mapMembership: section id: %w", err)
+	}
+	return Membership{
+		UserID:    userID,
+		SectionID: sectionID,
+		Role:      MemberRole(m.Role),
+		JoinedAt:  m.JoinedAt.Time,
+	}, nil
+}
+
 // mapSection converts a sqlc-generated section row into the domain Section.
 func mapSection(r db.ListCourseSectionsRow) (Section, error) {
 	id, err := utils.PgxToGoogleUUID(r.ID)

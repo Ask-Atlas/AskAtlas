@@ -45,3 +45,23 @@ type CourseDetail struct {
 	Course
 	Sections []Section
 }
+
+// MemberRole names the values stored in the course_role enum. The wire
+// schema matches; the type alias keeps callers from hand-stringing the
+// values and accidentally drifting from the DB enum.
+type MemberRole string
+
+const (
+	MemberRoleStudent    MemberRole = "student"
+	MemberRoleTA         MemberRole = "ta"
+	MemberRoleInstructor MemberRole = "instructor"
+)
+
+// Membership is the domain representation of a user's enrollment in a
+// course section. Returned by Service.JoinSection.
+type Membership struct {
+	UserID    uuid.UUID
+	SectionID uuid.UUID
+	Role      MemberRole
+	JoinedAt  time.Time
+}
