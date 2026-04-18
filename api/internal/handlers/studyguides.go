@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 
@@ -19,6 +20,8 @@ type StudyGuideService interface {
 	ListStudyGuides(ctx context.Context, params studyguides.ListStudyGuidesParams) (studyguides.ListStudyGuidesResult, error)
 	AssertCourseExists(ctx context.Context, courseID uuid.UUID) error
 	GetStudyGuide(ctx context.Context, params studyguides.GetStudyGuideParams) (studyguides.StudyGuideDetail, error)
+	CreateStudyGuide(ctx context.Context, params studyguides.CreateStudyGuideParams) (studyguides.StudyGuideDetail, error)
+	DeleteStudyGuide(ctx context.Context, params studyguides.DeleteStudyGuideParams) error
 }
 
 // StudyGuideHandler manages incoming HTTP requests for the study-guide
@@ -120,6 +123,78 @@ func (h *StudyGuideHandler) GetStudyGuide(w http.ResponseWriter, r *http.Request
 	}
 
 	respondJSON(w, http.StatusOK, mapStudyGuideDetailResponse(detail))
+}
+
+// CreateStudyGuide handles POST /courses/{course_id}/study-guides.
+// The body is decoded into the openapi-generated request type; the
+// service layer applies tag normalization (trim + lowercase + dedupe)
+// and runs the AssertCourseExists preflight so a missing course
+// surfaces as 404 instead of an FK-violation 500. The creator id is
+// always taken from the JWT -- the openapi schema explicitly forbids
+// accepting one in the request body to avoid privilege-attribution
+// forging.
+func (h *StudyGuideHandler) CreateStudyGuide(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	var body api.CreateStudyGuideJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", nil))
+		return
+	}
+
+	params := studyguides.CreateStudyGuideParams{
+		CourseID:    uuid.UUID(courseId),
+		CreatorID:   viewerID,
+		Title:       body.Title,
+		Description: body.Description,
+		Content:     body.Content,
+	}
+	if body.Tags != nil {
+		params.Tags = append([]string(nil), *body.Tags...)
+	}
+
+	detail, err := h.service.CreateStudyGuide(r.Context(), params)
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("CreateStudyGuide failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, mapStudyGuideDetailResponse(detail))
+}
+
+// DeleteStudyGuide handles DELETE /study-guides/{study_guide_id}.
+// Creator-only -- the service runs the locked SELECT + creator check
+// + soft-delete + child-quiz cascade in a single transaction. 404
+// covers both 'never existed' and 'already deleted' (idempotent
+// semantics); 403 covers viewer-is-not-creator.
+func (h *StudyGuideHandler) DeleteStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	if err := h.service.DeleteStudyGuide(r.Context(), studyguides.DeleteStudyGuideParams{
+		StudyGuideID: uuid.UUID(studyGuideId),
+		ViewerID:     viewerID,
+	}); err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("DeleteStudyGuide failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // mapCreatorSummary projects the compact Creator domain type onto the
