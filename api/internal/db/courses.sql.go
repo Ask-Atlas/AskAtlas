@@ -1067,6 +1067,7 @@ SELECT
 FROM course_members cm
 JOIN users u ON u.id = cm.user_id
 WHERE cm.section_id = $1::uuid
+  AND u.deleted_at IS NULL
   AND ($2::course_role IS NULL OR cm.role = $2::course_role)
   AND (
     $3::timestamptz IS NULL
@@ -1100,6 +1101,15 @@ type ListSectionMembersRow struct {
 // SectionMemberResponse schema (user_id, first_name, last_name, role,
 // joined_at). DO NOT add email, clerk_id, or any other user column to
 // this list -- the endpoint is reachable by any authenticated user.
+//
+// Soft-deleted users (users.deleted_at IS NOT NULL) are excluded -- the
+// codebase's soft-delete convention is enforced by the partial indexes
+// idx_users_deleted_at and idx_users_active_email. A user's soft-delete
+// is the signal that they want to disappear from the product, so they
+// must not surface in a public-by-design roster. The cursor still
+// advances past them in the (joined_at, user_id) keyset, so removing
+// them mid-iteration just shrinks the page rather than skipping live
+// members.
 //
 // Optional role filter via sqlc.narg short-circuits when absent. Keyset
 // pagination on (joined_at, user_id) -- joined_at alone isn't unique

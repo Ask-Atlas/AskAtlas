@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -1243,4 +1245,39 @@ func TestMemberCursor_RoundTrip(t *testing.T) {
 func TestDecodeMemberCursor_BadInput(t *testing.T) {
 	_, err := courses.DecodeMemberCursor("!!!not-base64!!!")
 	require.Error(t, err)
+}
+
+// Regression guard: the ListSectionMembers SQL must filter out
+// soft-deleted users (users.deleted_at IS NOT NULL). Soft-delete is the
+// codebase's convention -- partial indexes idx_users_active_email and
+// idx_users_deleted_at both treat deleted_at IS NULL as the live-user
+// filter -- and a public-by-design roster must respect it. This reads
+// the source SQL file rather than mocking, so a future maintainer who
+// removes the predicate triggers an immediate test failure they can't
+// route around with a service-layer mock change.
+func TestListSectionMembersSQL_ExcludesSoftDeletedUsers(t *testing.T) {
+	// Resolve the SQL relative to the courses test file so the test
+	// works whether go test runs from the package dir or the api root.
+	sql, err := os.ReadFile(filepath.Join("..", "..", "db", "queries", "courses.sql"))
+	require.NoError(t, err)
+
+	src := string(sql)
+	// Find the ListSectionMembers query block and verify the predicate
+	// appears within it (a global grep would let an unrelated query
+	// satisfy the test).
+	startMarker := "-- name: ListSectionMembers :many"
+	startIdx := strings.Index(src, startMarker)
+	require.NotEqual(t, -1, startIdx, "ListSectionMembers query block not found")
+
+	// Block ends at the next named query or EOF.
+	endIdx := strings.Index(src[startIdx+len(startMarker):], "-- name: ")
+	var block string
+	if endIdx == -1 {
+		block = src[startIdx:]
+	} else {
+		block = src[startIdx : startIdx+len(startMarker)+endIdx]
+	}
+
+	assert.Contains(t, block, "u.deleted_at IS NULL",
+		"ListSectionMembers must filter soft-deleted users (privacy convention)")
 }
