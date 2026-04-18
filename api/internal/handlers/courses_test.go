@@ -751,6 +751,32 @@ func TestCoursesHandler_ListMyEnrollments_FiltersForwarded(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
+// Empty role= surfaces the same way as role=admin: oapi-codegen passes
+// the empty string through, dbRoleFor("") returns false, service emits
+// 400. Pinning this so a future reader knows the empty case is handled
+// deliberately (and isn't accidentally treated as "no filter" the way
+// term="" is).
+func TestCoursesHandler_ListMyEnrollments_EmptyRoleRejected(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		ListMyEnrollments(mock.Anything, mock.MatchedBy(func(p courses.ListMyEnrollmentsParams) bool {
+			return p.Role != nil && *p.Role == courses.MemberRole("")
+		})).
+		Return(nil, apperrors.NewBadRequest("Invalid query parameters", map[string]string{
+			"role": "must be one of: student, instructor, ta",
+		}))
+
+	req := authedRequestMethod(t, http.MethodGet, "/me/courses?role=", nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
 // Per ASK-154 input-validation table, role=admin must surface as 400.
 // oapi-codegen passes query-string enums through unvalidated (only path
 // UUIDs get pre-handler validation), so the service is the layer that
@@ -863,10 +889,21 @@ func TestCoursesHandler_CheckMembership_NotEnrolledIs200WithNulls(t *testing.T) 
 	r.ServeHTTP(w, req)
 
 	require.Equal(t, http.StatusOK, w.Code)
+	// Substring assertions pin the literal wire shape (proves the nulls
+	// are emitted, not omitted -- "role": null vs missing key entirely).
 	body := w.Body.String()
 	assert.Contains(t, body, `"enrolled":false`)
 	assert.Contains(t, body, `"role":null`)
 	assert.Contains(t, body, `"joined_at":null`)
+	// Typed decode + nil assertions guard against encoder drift -- if
+	// the generated struct ever moved to a non-pointer field with
+	// omitempty, the substring checks above would still pass on a body
+	// that omits the keys, but this would catch it.
+	var resp api.MembershipCheckResponse
+	require.NoError(t, json.NewDecoder(strings.NewReader(body)).Decode(&resp))
+	assert.False(t, resp.Enrolled)
+	assert.Nil(t, resp.Role)
+	assert.Nil(t, resp.JoinedAt)
 }
 
 func TestCoursesHandler_CheckMembership_CourseNotFound(t *testing.T) {
