@@ -101,3 +101,36 @@ type GetStudyGuideParams struct {
 	StudyGuideID uuid.UUID
 	ViewerID     uuid.UUID
 }
+
+const (
+	// MaxTitleLength matches openapi.yaml CreateStudyGuideRequest.title.maxLength.
+	MaxTitleLength int = 500
+	// MaxDescriptionLength matches openapi.yaml CreateStudyGuideRequest.description.maxLength.
+	MaxDescriptionLength int = 2000
+	// MaxContentLength matches openapi.yaml CreateStudyGuideRequest.content.maxLength.
+	MaxContentLength int = 100000
+	// MaxTagsCount matches openapi.yaml CreateStudyGuideRequest.tags.maxItems.
+	MaxTagsCount int = 20
+)
+
+// CreateStudyGuideParams is the input to Service.CreateStudyGuide.
+// CreatorID is taken from the JWT in the handler -- the spec
+// explicitly forbids accepting a creator id from the request body
+// (would be a privilege-attribution forge vector).
+type CreateStudyGuideParams struct {
+	CourseID    uuid.UUID
+	CreatorID   uuid.UUID
+	Title       string
+	Description *string
+	Content     *string
+	Tags        []string
+}
+
+// DeleteStudyGuideParams is the input to Service.DeleteStudyGuide.
+// ViewerID drives the creator-only authorization check; the service
+// returns apperrors.NewForbidden if it doesn't match the row's
+// creator_id.
+type DeleteStudyGuideParams struct {
+	StudyGuideID uuid.UUID
+	ViewerID     uuid.UUID
+}
