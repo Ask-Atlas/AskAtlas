@@ -15,7 +15,9 @@ const (
 	// MaxPageLimit caps the per-page result count. Matches the openapi.yaml maximum.
 	MaxPageLimit int32 = 100
 	// MaxSearchLength caps the q parameter length. Matches the openapi.yaml maxLength.
-	MaxSearchLength = 200
+	// Typed int (not int32) because it's compared against len(string) at the
+	// HTTP-boundary validator.
+	MaxSearchLength int = 200
 )
 
 // ListSchoolsParams is the input to Service.ListSchools.

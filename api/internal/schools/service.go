@@ -26,12 +26,16 @@ func NewService(repo Repository) *Service {
 }
 
 // ListSchools returns a paginated, optionally-filtered list of schools.
-// The caller is expected to have validated p.Limit against [1, MaxPageLimit];
-// a zero or negative value falls back to DefaultPageLimit.
+// The HTTP boundary is the primary validator (openapi enforces 1..MaxPageLimit),
+// but the service also clamps defensively so internal Go callers can't ask
+// Postgres for an unbounded number of rows.
 func (s *Service) ListSchools(ctx context.Context, p ListSchoolsParams) (ListSchoolsResult, error) {
 	limit := p.Limit
 	if limit <= 0 {
 		limit = DefaultPageLimit
+	}
+	if limit > MaxPageLimit {
+		limit = MaxPageLimit
 	}
 
 	// Treat empty / whitespace-only q as no search.
@@ -77,7 +81,8 @@ func (s *Service) ListSchools(ctx context.Context, p ListSchoolsParams) (ListSch
 	}
 
 	var nextCursor *string
-	if hasMore && len(out) > 0 {
+	if hasMore {
+		// hasMore implies len(out) == limit >= 1, so out[len-1] is safe.
 		last := out[len(out)-1]
 		token, err := EncodeCursor(Cursor{Name: last.Name, ID: last.ID})
 		if err != nil {

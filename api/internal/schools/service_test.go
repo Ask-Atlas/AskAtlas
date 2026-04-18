@@ -94,6 +94,42 @@ func TestService_ListSchools_OverLimitTriggersNextCursor(t *testing.T) {
 	assert.Equal(t, got.Schools[1].ID, decoded.ID)
 }
 
+func TestService_ListSchools_ExactlyLimitRows(t *testing.T) {
+	repo := mock_schools.NewMockRepository(t)
+	limit := int32(3)
+	rows := []db.School{
+		fixtureRow(t, "Berkeley", "Cal"),
+		fixtureRow(t, "Stanford University", "Stanford"),
+		fixtureRow(t, "Washington State University", "WSU"),
+	}
+	repo.EXPECT().
+		ListSchools(mock.Anything, mock.MatchedBy(func(arg db.ListSchoolsParams) bool {
+			return arg.PageLimit == limit+1
+		})).
+		Return(rows, nil)
+
+	svc := schools.NewService(repo)
+	got, err := svc.ListSchools(context.Background(), schools.ListSchoolsParams{Limit: limit})
+
+	require.NoError(t, err)
+	assert.Len(t, got.Schools, int(limit))
+	assert.False(t, got.HasMore, "exactly limit rows should not signal more pages")
+	assert.Nil(t, got.NextCursor)
+}
+
+func TestService_ListSchools_ClampsLimitAboveMax(t *testing.T) {
+	repo := mock_schools.NewMockRepository(t)
+	repo.EXPECT().
+		ListSchools(mock.Anything, mock.MatchedBy(func(arg db.ListSchoolsParams) bool {
+			return arg.PageLimit == schools.MaxPageLimit+1
+		})).
+		Return(nil, nil)
+
+	svc := schools.NewService(repo)
+	_, err := svc.ListSchools(context.Background(), schools.ListSchoolsParams{Limit: 10_000})
+	require.NoError(t, err)
+}
+
 func TestService_ListSchools_DefaultLimitWhenZero(t *testing.T) {
 	repo := mock_schools.NewMockRepository(t)
 	repo.EXPECT().
