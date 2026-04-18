@@ -1,0 +1,73 @@
+---
+id: check-membership
+title: "Check the authenticated user's membership in a section"
+description: "Powers the per-section Join/Leave button on the course detail"
+sidebar_label: "Check the authenticated user's membership in a section"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV1Fv2zYQ/iuHe1kLKLZbZC/ak7N1Q4ItDZoEe7CDmhbPFhOJVMhTU9fQfx+Okm0l9oqtK5CH5cmyeLz77r6P1N0aXUVesXH2VGOKP+eU3f1B5Zx8yE2FCWoKmTeVWGCKF+6BfADOCSryR4EyWYAzZ+zwd1KfCOY1s7PgbDTKXO0DgSZWppjaSi1pAOPiQa0CeOLa2wBvRyM4OgLr7FG5jQwmwIysd0VBOoWFKgLNpvbBcA62LgrwrqDhrTOW9EfFCZy/v4Lj0XECwcXIC+8sk9WQKTu12gQ2dlmbkMMUrWPY+J6imJYwxU0y2lGAaPLZBJ7iYGoxwUp5VRKTD5hO1mhVSZhim99HozFBIwWqFOd7VbvKCWpr7muC6+vTX8At2goqT5a7GmGCnu5r40ljyr6mBEOWU6kwXSOvKokW2Bu7xAQXzpeKMcW6NhqbJtkC6pL4RkSbErCDTJTwn0DdyOZQORsoiP3b0Uh+HgPZaQ0CK64DLJyPWFTNOVk2mWLSUAfymGAWSWXxo6qqkEXj7PA2iLP1Pjg3v6WM92Xc0275LxAMdpqcTa0JoFopV54CWf4JZiLLGSirYbYV5wyUp6jvqFxnixU85GSndudN9C4FHsCJ6ySu5gXBwlChQ3RApWEBogKcXb4/jzZT+0qU6tql14fED0EtqFiBpsC+zrj21Cnay9ln07KzQdIr3ty5gpTFJkFJ6xDnG5wbdZCtS0wnGLjWwlOCrKIQ29jO402T4LYyX5WRVkxHbErai9M0fV1Odtg7oP0INwmyYdnZ01q85j504sSmEYfHh+R5ojRIJAr8/dR3ycpq5bX5QhrIe+dhc1BgyxGUirPc2CX0QnXW2pXK2LDHYeZ0nyVjmZbkhb9W2fvlbhIsKQS1PMBuI7jl3g6HUlJaG4GkiotHGJ74eEpVhLjFs4veo2lcVe8kzS0vb/Z5ubZyOJ2XEr4Q81zEHO8Tc+4YFq62L6w8Eys/HrrGTi2Tt6qAQP4T+bYuLww9B0MRIOdOuu0lcewsOccUh20fGIbrbVPZDLsmJQzXu8auGXYtyzB+GltK26609oV4UpVBab8CZbU3vIprJ6Q8+XEtwSY3/eVLoblNtm+0TT1nlkkgqiH2BdEIk+7h180H++zPK+lF0diFi9s3+Ye7MRcqwPjiFBMUtK1u3gxGg5HQUrnApYqa6/rY+IX+my7sh9Bv2owFtWlcnypzvVP4/3h06Whk+szDqlAmdnRRKutOfJNukBEBp/2ZZqM/ef9otOjSjU+i9dwFFj/r9VwFuvZF08jr+5q8yO8mwU/Km7aFm6xRmyDPGtNYnq/Q9upDd9hewz8cow6m271UdiUKVEUt/zDBO1o9GuNklPqe4A5MVN+Ar1f6RhronJQmHyvZGoyzjCrubd27zuXAby+e397JSf0LHByd2A==
+sidebar_class_name: "get api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Check the authenticated user's membership in a section"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/courses/{course_id}/sections/{section_id}/members/me"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Powers the per-section Join/Leave button on the course detail
+page. Always returns 200 -- non-membership is `enrolled: false`
+with null role/joined_at, NOT 404, so the frontend can
+distinguish "not enrolled" from "section does not exist".
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./check-membership.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./check-membership.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./check-membership.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

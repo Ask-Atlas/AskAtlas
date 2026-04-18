@@ -84,6 +84,18 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/list-my-enrollments",
+          label: "List the authenticated user's section enrollments",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "api/check-membership",
+          label: "Check the authenticated user's membership in a section",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "api/leave-section",
           label: "Leave a section as the authenticated user",
           className: "api-method delete",

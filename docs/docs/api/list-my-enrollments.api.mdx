@@ -1,0 +1,73 @@
+---
+id: list-my-enrollments
+title: "List the authenticated user's section enrollments"
+description: "Returns every section the authenticated user is enrolled in, with"
+sidebar_label: "List the authenticated user's section enrollments"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV99vGzcM/lcEvWxDL07adcPgNzdLhw7dWtQr9mAHKX2ibbU66SpRaW6G//eBOvl8iS+tW2zoS5/8QxT5kfxIihvpavRA2tlnSo7lcx3oj+bCemdMhZaCLKTCUHpds4wcy1dI0dsg8Bp9IwKW/L+gNQqItEZLugRCJWJAL3QQmHShEtoW4oOm9dyWrqqhJIHVApVCJUoXfUDxQIRy7ZwRIVYVeI1hJKbOs7ZFI94Q+kr8ejE9L+ZWYQ2eGKGYTM8LYWO1QM/f34zEn45EDSttE5CTEwEdGmpqXYIxzdxqKx6f/JJth0KAVeyUFS6S0eiDWGoSpauWzhMsTCO0Fc6i8BhqZwOO5lYWsgYPFRL6IMezjbRQoRxLxioLqTli7yP65iCOFzdQ0kkFVK5F8mypDaEX3+NoNRJzOa29tivx6OzRz3P5gyykx/dRe1RyvAQTsJChXGMFcryR1NRsNBBfkYWs4OY52hWt5fjHs+226GB5Z/DjsJ62KMgJEKHGUi91mWN0UmEKclbyGXjQxkqOZzJQVGhJFpIgwQjkY0nOy8vt9pJVtpENrOTR2Rl/3IY3MSYzKrFTpPhxnJiAIda10ahyKJm7pbPEFscbCXxYJqqfvg2sbXMI2S3eYkkHUblrdun8PZRnRniuKdKtG71rPTvgPXDwNWEVjrAvgrYrgz0QqZb2JZQLsci5auncltMBpCz7abPnuVB3VV5DYxyovVVtBVixbxevcgIPTGo1xIul8xWQHMsYtZLboi2bA8FtsYN8VTqFQ5psNAYWBuWYfMRtn1tXLfc/eWfbp/SMEWc8l4UkTSwn955OW0DT1KkahtgG/vig5qb3v8d03yoHI9t2zsGj7PXByVCkelY6nTsNgwE8T+734pfJejwp21lxdPxG4oXlJq7Eg7mF0jvbVDwcuI6X0Zjbw6fhaQHXoBNFxLWGJNgmjecPgeaeoGqnLaVq++CiUWJhHFCSVRDWCwde7TDmgfElScx4j0zGTnqYucnNXuBTP//Crl3It05bVFcwwK6eHwoIT0hXeAB414y6AuqYUOzG1d7EoENdgWzv6u733t7Vg0dOX8O2kI+HJs8TUIJ1Y6D/bq5MCawCr/Q/qAR673z3uhBtlKPH/ZDrmcrSylWgbTig1Z0+qS3hCn0qMwKKYbDeKwwBVkMVz7iZ8IOjCpTSDAnMy1sY7hL1TnISxA7P3novUZO6vmA3u7w8PMzLa8tD2HkO4bfEfJ3E/DRUMM8sobdgREB/jb6Ny7cMfY0MJYC0drzhrZDS1sLLgTyt8DQvQKwvJardY6I3fA61lvwyD1hGr6lJZ08QPPpJZBWzy/7xlJPXutAX6hxaE9Uybwr8e5GEZJG/PN2Ni9///isNCm2XLl3feRXeTchAEJOXz2QhGW3Lhoejs9EZB7t2gSpITMo7D3f7ex7r34XuaYv3r7ybPWW/bb93tt+cV8IbOq0NaMs5SNzZZI7NZIXdcE9jeO0C8f+bzQICvvZmu+W/232U+aV04EfXfrO8Nx2fvUQP4n2HzX5lvwYTWUTy2nw8kuP35o9AyBJ7CJf8w+t2S5nxc2uNoPi5PtvkO5OyxJp6tw6aKmvpyv+3C66sfwGBIk4A
+sidebar_class_name: "get api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"List the authenticated user's section enrollments"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/me/courses"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Returns every section the authenticated user is enrolled in, with
+compact embedded course + school summaries. Sorted by `term DESC,
+department ASC, number ASC`. Not paginated -- a user is typically
+in 4-8 courses, and even outliers fit comfortably in one response.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./list-my-enrollments.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./list-my-enrollments.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./list-my-enrollments.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      
