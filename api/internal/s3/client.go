@@ -27,7 +27,12 @@ func New(ctx context.Context, bucket string) (*Client, error) {
 		return nil, fmt.Errorf("s3client.New: load config: %w", err)
 	}
 
-	svc := s3.NewFromConfig(cfg)
+	// Use path-style addressing ({endpoint}/{bucket}/{key}) so presigned URLs
+	// stay on the endpoint hostname. Garage fronts behind a single-level
+	// wildcard TLS cert that does not cover virtual-hosted {bucket}.{endpoint}.
+	svc := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.UsePathStyle = true
+	})
 	return &Client{
 		svc:       svc,
 		presigner: s3.NewPresignClient(svc),
