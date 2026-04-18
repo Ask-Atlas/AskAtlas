@@ -20,6 +20,11 @@ type Querier interface {
 	// Returns sql.ErrNoRows if not found or already in a deletion state.
 	GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) (GetFileByOwnerRow, error)
 	GetFileIfViewable(ctx context.Context, arg GetFileIfViewableParams) (File, error)
+	// Single-row membership lookup powering the per-section
+	// enrolled/not-enrolled probe (ASK-148). Returns sql.ErrNoRows when the
+	// viewer is not a member; the service translates that into the 200
+	// {enrolled:false} response, NOT a 404.
+	GetMembership(ctx context.Context, arg GetMembershipParams) (GetMembershipRow, error)
 	GetSchool(ctx context.Context, id pgtype.UUID) (School, error)
 	GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtype.UUID, error)
 	InsertFile(ctx context.Context, arg InsertFileParams) (File, error)
@@ -55,6 +60,13 @@ type Querier interface {
 	ListCoursesNumberDesc(ctx context.Context, arg ListCoursesNumberDescParams) ([]ListCoursesNumberDescRow, error)
 	ListCoursesTitleAsc(ctx context.Context, arg ListCoursesTitleAscParams) ([]ListCoursesTitleAscRow, error)
 	ListCoursesTitleDesc(ctx context.Context, arg ListCoursesTitleDescParams) ([]ListCoursesTitleDescRow, error)
+	// Returns every section a user is enrolled in with the compact
+	// course + school payload the dashboard renders. Optional term + role
+	// filters use sqlc.narg so the WHERE branch short-circuits when
+	// they're absent. Sort is fixed: most-recent term first (lexicographic
+	// "Spring 2026" > "Fall 2025" is acceptable for MVP per the spec),
+	// then department + number for stable in-term ordering.
+	ListMyEnrollments(ctx context.Context, arg ListMyEnrollmentsParams) ([]ListMyEnrollmentsRow, error)
 	ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFilesCreatedAscParams) ([]ListOwnedFilesCreatedAscRow, error)
 	ListOwnedFilesCreatedDesc(ctx context.Context, arg ListOwnedFilesCreatedDescParams) ([]ListOwnedFilesCreatedDescRow, error)
 	ListOwnedFilesMimeAsc(ctx context.Context, arg ListOwnedFilesMimeAscParams) ([]ListOwnedFilesMimeAscRow, error)
