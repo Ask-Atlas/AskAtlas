@@ -2,6 +2,8 @@ package studyguides
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -29,6 +31,13 @@ type Repository interface {
 	ListStudyGuidesUpdatedAsc(ctx context.Context, arg db.ListStudyGuidesUpdatedAscParams) ([]db.ListStudyGuidesUpdatedAscRow, error)
 
 	CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error)
+
+	GetStudyGuideDetail(ctx context.Context, id pgtype.UUID) (db.GetStudyGuideDetailRow, error)
+	GetUserVoteForGuide(ctx context.Context, arg db.GetUserVoteForGuideParams) (db.VoteDirection, error)
+	ListGuideRecommenders(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListGuideRecommendersRow, error)
+	ListGuideQuizzesWithQuestionCount(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListGuideQuizzesWithQuestionCountRow, error)
+	ListGuideResources(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListGuideResourcesRow, error)
+	ListGuideFiles(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListGuideFilesRow, error)
 }
 
 // sortKey is the lookup key for the per-sort-variant query function
@@ -414,4 +423,108 @@ func (s *Service) queryUpdatedAsc(ctx context.Context, f dbFilters, limit int32)
 		return nil, err
 	}
 	return mapListRows(rows, fromUpdatedAscRow)
+}
+
+// GetStudyGuide fetches the full study-guide detail including nested
+// course + creator + recommenders + quizzes + resources + files + the
+// viewer's own vote state.
+//
+// This is a pure read -- no view-count increment, no last-viewed
+// upsert, no mutation. View tracking will live on its own dedicated
+// POST (future ticket mirroring ASK-134's POST /files/{id}/view).
+//
+// Runs 6 queries: GetStudyGuideDetail (404 candidate), then
+// GetUserVoteForGuide, ListGuideRecommenders, ListGuideQuizzes...,
+// ListGuideResources, ListGuideFiles. Splitting into sibling queries
+// matches the PRD's "batching as separate queries to keep each query
+// simple and cacheable" guidance.
+//
+// Soft-deleted guides return apperrors.ErrNotFound via the underlying
+// query's WHERE sg.deleted_at IS NULL. The handler maps that to a
+// 404 'Study guide not found'.
+func (s *Service) GetStudyGuide(ctx context.Context, p GetStudyGuideParams) (StudyGuideDetail, error) {
+	guidePgxID := utils.UUID(p.StudyGuideID)
+
+	row, err := s.repo.GetStudyGuideDetail(ctx, guidePgxID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return StudyGuideDetail{}, apperrors.NewNotFound("Study guide not found")
+		}
+		return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: detail: %w", err)
+	}
+
+	detail, err := mapStudyGuideDetail(row)
+	if err != nil {
+		return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: map detail: %w", err)
+	}
+
+	// user_vote -- absence (sql.ErrNoRows) is the "not voted" branch
+	// and maps to a nil pointer; the wire shape emits JSON null.
+	vote, err := s.repo.GetUserVoteForGuide(ctx, db.GetUserVoteForGuideParams{
+		StudyGuideID: guidePgxID,
+		ViewerID:     utils.UUID(p.ViewerID),
+	})
+	switch {
+	case err == nil:
+		v := GuideVote(vote)
+		detail.UserVote = &v
+	case errors.Is(err, sql.ErrNoRows):
+		detail.UserVote = nil
+	default:
+		return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: user vote: %w", err)
+	}
+
+	recRows, err := s.repo.ListGuideRecommenders(ctx, guidePgxID)
+	if err != nil {
+		return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: recommenders: %w", err)
+	}
+	detail.RecommendedBy = make([]Creator, 0, len(recRows))
+	for _, r := range recRows {
+		rec, err := mapRecommender(r)
+		if err != nil {
+			return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: map recommender: %w", err)
+		}
+		detail.RecommendedBy = append(detail.RecommendedBy, rec)
+	}
+
+	quizRows, err := s.repo.ListGuideQuizzesWithQuestionCount(ctx, guidePgxID)
+	if err != nil {
+		return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: quizzes: %w", err)
+	}
+	detail.Quizzes = make([]Quiz, 0, len(quizRows))
+	for _, q := range quizRows {
+		quiz, err := mapQuiz(q)
+		if err != nil {
+			return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: map quiz: %w", err)
+		}
+		detail.Quizzes = append(detail.Quizzes, quiz)
+	}
+
+	resRows, err := s.repo.ListGuideResources(ctx, guidePgxID)
+	if err != nil {
+		return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: resources: %w", err)
+	}
+	detail.Resources = make([]Resource, 0, len(resRows))
+	for _, r := range resRows {
+		res, err := mapResource(r)
+		if err != nil {
+			return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: map resource: %w", err)
+		}
+		detail.Resources = append(detail.Resources, res)
+	}
+
+	fileRows, err := s.repo.ListGuideFiles(ctx, guidePgxID)
+	if err != nil {
+		return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: files: %w", err)
+	}
+	detail.Files = make([]GuideFile, 0, len(fileRows))
+	for _, f := range fileRows {
+		gf, err := mapGuideFile(f)
+		if err != nil {
+			return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: map file: %w", err)
+		}
+		detail.Files = append(detail.Files, gf)
+	}
+
+	return detail, nil
 }

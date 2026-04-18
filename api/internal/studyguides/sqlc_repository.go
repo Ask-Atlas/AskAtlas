@@ -55,3 +55,27 @@ func (r *sqlcRepository) ListStudyGuidesUpdatedAsc(ctx context.Context, arg db.L
 func (r *sqlcRepository) CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error) {
 	return r.queries.CourseExistsForGuides(ctx, id)
 }
+
+func (r *sqlcRepository) GetStudyGuideDetail(ctx context.Context, id pgtype.UUID) (db.GetStudyGuideDetailRow, error) {
+	return r.queries.GetStudyGuideDetail(ctx, id)
+}
+
+func (r *sqlcRepository) GetUserVoteForGuide(ctx context.Context, arg db.GetUserVoteForGuideParams) (db.VoteDirection, error) {
+	return r.queries.GetUserVoteForGuide(ctx, arg)
+}
+
+func (r *sqlcRepository) ListGuideRecommenders(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListGuideRecommendersRow, error) {
+	return r.queries.ListGuideRecommenders(ctx, studyGuideID)
+}
+
+func (r *sqlcRepository) ListGuideQuizzesWithQuestionCount(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListGuideQuizzesWithQuestionCountRow, error) {
+	return r.queries.ListGuideQuizzesWithQuestionCount(ctx, studyGuideID)
+}
+
+func (r *sqlcRepository) ListGuideResources(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListGuideResourcesRow, error) {
+	return r.queries.ListGuideResources(ctx, studyGuideID)
+}
+
+func (r *sqlcRepository) ListGuideFiles(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListGuideFilesRow, error) {
+	return r.queries.ListGuideFiles(ctx, studyGuideID)
+}

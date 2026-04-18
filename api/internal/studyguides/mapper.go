@@ -78,6 +78,117 @@ func textPtr(t pgtype.Text) *string {
 	return &s
 }
 
+// mapStudyGuideDetail projects the main GetStudyGuideDetail row into
+// the domain StudyGuideDetail type. The nested Quizzes, Resources,
+// Files, RecommendedBy slices are fetched by separate queries and
+// attached by the caller -- this helper only handles the row that
+// comes out of GetStudyGuideDetail itself.
+//
+// Privacy floor: only copies id + first_name + last_name from creator
+// fields -- any email/clerk_id present on a wider row type would be
+// dropped here, but the SQL SELECT list is also the privacy floor so
+// these fields shouldn't exist in the row anyway.
+func mapStudyGuideDetail(r db.GetStudyGuideDetailRow) (StudyGuideDetail, error) {
+	id, err := utils.PgxToGoogleUUID(r.ID)
+	if err != nil {
+		return StudyGuideDetail{}, fmt.Errorf("mapStudyGuideDetail: id: %w", err)
+	}
+	courseID, err := utils.PgxToGoogleUUID(r.CourseID)
+	if err != nil {
+		return StudyGuideDetail{}, fmt.Errorf("mapStudyGuideDetail: course id: %w", err)
+	}
+	creatorID, err := utils.PgxToGoogleUUID(r.CreatorID)
+	if err != nil {
+		return StudyGuideDetail{}, fmt.Errorf("mapStudyGuideDetail: creator id: %w", err)
+	}
+	return StudyGuideDetail{
+		ID: id,
+		Creator: Creator{
+			ID:        creatorID,
+			FirstName: r.CreatorFirstName,
+			LastName:  r.CreatorLastName,
+		},
+		Course: GuideCourseSummary{
+			ID:         courseID,
+			Department: r.CourseDepartment,
+			Number:     r.CourseNumber,
+			Title:      r.CourseTitle,
+		},
+		Title:         r.Title,
+		Description:   textPtr(r.Description),
+		Content:       textPtr(r.Content),
+		Tags:          append([]string(nil), r.Tags...),
+		VoteScore:     r.VoteScore,
+		ViewCount:     int64(r.ViewCount),
+		IsRecommended: r.IsRecommended,
+		CreatedAt:     r.CreatedAt.Time,
+		UpdatedAt:     r.UpdatedAt.Time,
+		// UserVote + nested arrays are attached by the service after
+		// the sibling queries resolve.
+	}, nil
+}
+
+// mapRecommender projects a ListGuideRecommenders row into the domain
+// Creator type (the detail endpoint reuses the same privacy-floor
+// payload for both creator and recommenders).
+func mapRecommender(r db.ListGuideRecommendersRow) (Creator, error) {
+	id, err := utils.PgxToGoogleUUID(r.ID)
+	if err != nil {
+		return Creator{}, fmt.Errorf("mapRecommender: id: %w", err)
+	}
+	return Creator{
+		ID:        id,
+		FirstName: r.FirstName,
+		LastName:  r.LastName,
+	}, nil
+}
+
+// mapQuiz projects a ListGuideQuizzesWithQuestionCount row onto the
+// domain Quiz type.
+func mapQuiz(r db.ListGuideQuizzesWithQuestionCountRow) (Quiz, error) {
+	id, err := utils.PgxToGoogleUUID(r.ID)
+	if err != nil {
+		return Quiz{}, fmt.Errorf("mapQuiz: id: %w", err)
+	}
+	return Quiz{
+		ID:            id,
+		Title:         r.Title,
+		QuestionCount: r.QuestionCount,
+	}, nil
+}
+
+// mapResource projects a ListGuideResources row onto the domain
+// Resource type.
+func mapResource(r db.ListGuideResourcesRow) (Resource, error) {
+	id, err := utils.PgxToGoogleUUID(r.ID)
+	if err != nil {
+		return Resource{}, fmt.Errorf("mapResource: id: %w", err)
+	}
+	return Resource{
+		ID:          id,
+		Title:       r.Title,
+		URL:         r.Url,
+		Type:        ResourceType(r.Type),
+		Description: textPtr(r.Description),
+		CreatedAt:   r.CreatedAt.Time,
+	}, nil
+}
+
+// mapGuideFile projects a ListGuideFiles row onto the domain
+// GuideFile type. Privacy floor -- no user_id, no s3_key, no checksum.
+func mapGuideFile(r db.ListGuideFilesRow) (GuideFile, error) {
+	id, err := utils.PgxToGoogleUUID(r.ID)
+	if err != nil {
+		return GuideFile{}, fmt.Errorf("mapGuideFile: id: %w", err)
+	}
+	return GuideFile{
+		ID:       id,
+		Name:     r.Name,
+		MimeType: string(r.MimeType),
+		Size:     r.Size,
+	}, nil
+}
+
 // Per-sort-variant adapters. Each projects the typed db row into the
 // shared row struct so the rest of the package stays variant-agnostic.
 
