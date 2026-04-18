@@ -3,6 +3,7 @@ package schools_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/schools"
 	mock_schools "github.com/Ask-Atlas/AskAtlas/api/internal/schools/mocks"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
+	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
@@ -210,6 +212,54 @@ func TestService_ListSchools_RepoErrorWrapped(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "ListSchools")
 	assert.Contains(t, err.Error(), "boom")
+}
+
+func TestService_GetSchool_Success(t *testing.T) {
+	repo := mock_schools.NewMockRepository(t)
+	schoolID := uuid.New()
+	row := fixtureRow(t, "Stanford University", "Stanford")
+	row.ID = utils.UUID(schoolID)
+
+	repo.EXPECT().
+		GetSchool(mock.Anything, mock.MatchedBy(func(id pgtype.UUID) bool {
+			return id.Valid && id.Bytes == schoolID
+		})).
+		Return(row, nil)
+
+	svc := schools.NewService(repo)
+	got, err := svc.GetSchool(context.Background(), schools.GetSchoolParams{SchoolID: schoolID})
+
+	require.NoError(t, err)
+	assert.Equal(t, schoolID, got.ID)
+	assert.Equal(t, "Stanford University", got.Name)
+	assert.Equal(t, "Stanford", got.Acronym)
+}
+
+func TestService_GetSchool_NotFoundPropagated(t *testing.T) {
+	repo := mock_schools.NewMockRepository(t)
+	repo.EXPECT().
+		GetSchool(mock.Anything, mock.Anything).
+		Return(db.School{}, fmt.Errorf("GetSchool: %w", apperrors.ErrNotFound))
+
+	svc := schools.NewService(repo)
+	_, err := svc.GetSchool(context.Background(), schools.GetSchoolParams{SchoolID: uuid.New()})
+
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, apperrors.ErrNotFound), "expected error to wrap apperrors.ErrNotFound")
+}
+
+func TestService_GetSchool_RepoErrorWrapped(t *testing.T) {
+	repo := mock_schools.NewMockRepository(t)
+	repo.EXPECT().
+		GetSchool(mock.Anything, mock.Anything).
+		Return(db.School{}, errors.New("connection refused"))
+
+	svc := schools.NewService(repo)
+	_, err := svc.GetSchool(context.Background(), schools.GetSchoolParams{SchoolID: uuid.New()})
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "GetSchool")
+	assert.Contains(t, err.Error(), "connection refused")
 }
 
 func TestCursor_RoundTrip(t *testing.T) {

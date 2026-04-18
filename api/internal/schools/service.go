@@ -7,12 +7,14 @@ import (
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // Repository is the data-access surface required by Service.
 type Repository interface {
 	ListSchools(ctx context.Context, arg db.ListSchoolsParams) ([]db.School, error)
+	GetSchool(ctx context.Context, id pgtype.UUID) (db.School, error)
 }
 
 // Service is the business-logic layer for the schools feature.
@@ -96,6 +98,26 @@ func (s *Service) ListSchools(ctx context.Context, p ListSchoolsParams) (ListSch
 		HasMore:    hasMore,
 		NextCursor: nextCursor,
 	}, nil
+}
+
+// GetSchoolParams is the input to Service.GetSchool.
+type GetSchoolParams struct {
+	SchoolID uuid.UUID
+}
+
+// GetSchool returns a single school by its UUID. Returns an error wrapping
+// apperrors.ErrNotFound when no row matches; the handler maps that to a
+// 404 with a school-specific message.
+func (s *Service) GetSchool(ctx context.Context, p GetSchoolParams) (School, error) {
+	row, err := s.repo.GetSchool(ctx, utils.UUID(p.SchoolID))
+	if err != nil {
+		return School{}, fmt.Errorf("GetSchool: %w", err)
+	}
+	sch, err := mapSchool(row)
+	if err != nil {
+		return School{}, fmt.Errorf("GetSchool: %w", err)
+	}
+	return sch, nil
 }
 
 // escapeLikePattern escapes the SQL LIKE/ILIKE wildcard characters %, _, and \
