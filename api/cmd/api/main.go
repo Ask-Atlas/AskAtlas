@@ -94,7 +94,7 @@ func main() {
 	coursesService := courses.NewService(coursesRepo)
 	coursesHandler := handlers.NewCoursesHandler(coursesService)
 
-	studyGuidesRepo := studyguides.NewSQLCRepository(queries)
+	studyGuidesRepo := studyguides.NewSQLCRepository(connPool, queries)
 	studyGuidesService := studyguides.NewService(studyGuidesRepo)
 	studyGuidesHandler := handlers.NewStudyGuideHandler(studyGuidesService)
 

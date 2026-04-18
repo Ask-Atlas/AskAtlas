@@ -480,6 +480,43 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: DeleteStudyGuide
+      summary: Soft-delete a study guide
+      description: |
+        Soft-deletes the guide (`study_guides.deleted_at = now()`) and
+        cascades to all child quizzes (`quizzes.deleted_at = now()`)
+        atomically in a single transaction. Application-level cascade
+        (not DB CASCADE) so quizzes keep their own deleted_at lifecycle
+        for any future undelete workflow.
+
+        Creator-only: 403 if the viewer is not the guide's creator. 404
+        for missing or already-deleted guides. Order of checks:
+          1. Fetch + lock guide row.
+          2. 404 if missing or deleted_at IS NOT NULL.
+          3. 403 if creator_id != viewer_id.
+          4. UPDATE guide + child quizzes, COMMIT.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide to delete
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Guide soft-deleted; no response body
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /courses/{course_id}/study-guides:
     get:
       operationId: ListStudyGuides
@@ -564,6 +601,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListStudyGuidesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      operationId: CreateStudyGuide
+      summary: Create a study guide for a course
+      description: |
+        Creates a new study guide. Any authenticated user can create a
+        guide for any course. The `creator_id` is taken from the JWT;
+        any value supplied in the request body is ignored.
+
+        Tags are normalized server-side: each value is trimmed +
+        lowercased + deduplicated (case-insensitively). Empty tags
+        after trim are rejected with 400. Validation order on tags:
+        per-tag length cap first (50 chars), total count cap second
+        (20 tags), then normalize.
+
+        Returns the full StudyGuideDetail shape on 201 -- empty
+        recommended_by/quizzes/resources/files arrays, vote_score=0,
+        view_count=0, user_vote=null, is_recommended=false. The
+        frontend can render the freshly-created guide without a
+        follow-up GET.
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the parent course
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStudyGuideRequest'
+      responses:
+        '201':
+          description: The freshly-created study guide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGuideDetailResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1474,6 +1559,36 @@ components:
         - name
         - mime_type
         - size
+    CreateStudyGuideRequest:
+      type: object
+      description: |
+        Request body for POST /api/courses/{course_id}/study-guides.
+        Only `title` is required. Tags are normalized server-side
+        (trim + lowercase + dedupe); empty tags after trim are
+        rejected with 400. `creator_id` is set from the JWT and
+        ignored if supplied here.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+        content:
+          type: string
+          nullable: true
+          maxLength: 100000
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+            maxLength: 50
+      required:
+        - title
     StudyGuideDetailResponse:
       type: object
       description: |

@@ -39,6 +39,17 @@ type Repository interface {
 	ListGuideQuizzesWithQuestionCount(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListGuideQuizzesWithQuestionCountRow, error)
 	ListGuideResources(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListGuideResourcesRow, error)
 	ListGuideFiles(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListGuideFilesRow, error)
+
+	InsertStudyGuide(ctx context.Context, arg db.InsertStudyGuideParams) (db.InsertStudyGuideRow, error)
+	GetStudyGuideByIDForUpdate(ctx context.Context, id pgtype.UUID) (db.GetStudyGuideByIDForUpdateRow, error)
+	SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUID) error
+	SoftDeleteQuizzesForGuide(ctx context.Context, studyGuideID pgtype.UUID) error
+
+	// InTx runs fn inside a single Postgres transaction. The Repository
+	// passed to fn is scoped to the tx; commits on a nil return,
+	// rolls back on any error. Used by DeleteStudyGuide for the
+	// atomic guide + child-quiz cascade.
+	InTx(ctx context.Context, fn func(Repository) error) error
 }
 
 // sortKey is the lookup key for the per-sort-variant query function
@@ -556,4 +567,194 @@ func (s *Service) GetStudyGuide(ctx context.Context, p GetStudyGuideParams) (Stu
 	}
 
 	return detail, nil
+}
+
+// normalizeTags trims, lowercases, and dedupes a raw input tag slice.
+// Returns the cleaned slice or apperrors.NewBadRequest with a per-field
+// detail when an entry is empty after trim, exceeds MaxTagLength, or
+// the input count exceeds MaxTagsCount.
+//
+// Always returns a non-nil slice (possibly length 0) so callers can
+// rely on the result being safe to pass to the Postgres NOT NULL
+// text[] column (study_guides.tags has DEFAULT '{}').
+func normalizeTags(in []string) ([]string, error) {
+	// Cap on the RAW input count (pre-dedupe), mirroring the openapi
+	// schema's `tags.maxItems: 20`. Keep the check in this position --
+	// moving it after dedupe would diverge from the schema and let a
+	// 1000-item request waste CPU on the loop before being rejected.
+	if len(in) > MaxTagsCount {
+		return nil, apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"tags": fmt.Sprintf("must contain %d items or fewer", MaxTagsCount),
+		})
+	}
+	out := make([]string, 0, len(in))
+	seen := make(map[string]struct{}, len(in))
+	for _, raw := range in {
+		t := strings.ToLower(strings.TrimSpace(raw))
+		if t == "" {
+			return nil, apperrors.NewBadRequest("Invalid request body", map[string]string{
+				"tags": "values must not be empty",
+			})
+		}
+		if len(t) > MaxTagLength {
+			return nil, apperrors.NewBadRequest("Invalid request body", map[string]string{
+				"tags": fmt.Sprintf("each value must be %d characters or fewer", MaxTagLength),
+			})
+		}
+		if _, dup := seen[t]; dup {
+			continue
+		}
+		seen[t] = struct{}{}
+		out = append(out, t)
+	}
+	return out, nil
+}
+
+// trimmedNonEmpty returns nil if s is nil or trims to empty; otherwise
+// returns a pointer to the trimmed string. Used by CreateStudyGuide to
+// normalize the optional description + content fields so a body like
+// `{"description": "   "}` lands as SQL NULL rather than persisting a
+// whitespace-only string.
+func trimmedNonEmpty(s *string) *string {
+	if s == nil {
+		return nil
+	}
+	t := strings.TrimSpace(*s)
+	if t == "" {
+		return nil
+	}
+	return &t
+}
+
+// validateCreateParams runs the service-layer defensive re-validation
+// for CreateStudyGuide. openapi enforces these at the wrapper layer in
+// production, but Go callers (including tests) could bypass so we
+// re-check here. Mirrors validateListParams.
+func validateCreateParams(p CreateStudyGuideParams) error {
+	if strings.TrimSpace(p.Title) == "" {
+		return apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"title": "must not be empty",
+		})
+	}
+	if len(p.Title) > MaxTitleLength {
+		return apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"title": fmt.Sprintf("must be %d characters or fewer", MaxTitleLength),
+		})
+	}
+	if p.Description != nil && len(*p.Description) > MaxDescriptionLength {
+		return apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"description": fmt.Sprintf("must be %d characters or fewer", MaxDescriptionLength),
+		})
+	}
+	if p.Content != nil && len(*p.Content) > MaxContentLength {
+		return apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"content": fmt.Sprintf("must be %d characters or fewer", MaxContentLength),
+		})
+	}
+	return nil
+}
+
+// CreateStudyGuide creates a new study guide owned by the authenticated
+// user. Runs AssertCourseExists so a missing course surfaces as a
+// tailored 404 (rather than a generic FK-violation 500). After the
+// insert, hydrates the response via GetStudyGuideDetail so vote_score
+// and is_recommended come out of the same SQL projection used by GET
+// /study-guides/{id} -- the privacy floor stays in one place.
+//
+// The 5 sibling queries from GetStudyGuide (recommenders, quizzes,
+// resources, files, user_vote) are intentionally skipped: a freshly
+// inserted guide has no children, no votes, and no recommenders by
+// definition. The corresponding response slices are emitted as empty
+// (non-nil) so the JSON wire shape is `[]` and not `null`.
+func (s *Service) CreateStudyGuide(ctx context.Context, p CreateStudyGuideParams) (StudyGuideDetail, error) {
+	if err := validateCreateParams(p); err != nil {
+		return StudyGuideDetail{}, err
+	}
+
+	tags, err := normalizeTags(p.Tags)
+	if err != nil {
+		return StudyGuideDetail{}, err
+	}
+
+	if err := s.AssertCourseExists(ctx, p.CourseID); err != nil {
+		return StudyGuideDetail{}, err
+	}
+
+	// Title is required; description/content are optional. For all three,
+	// trim leading/trailing whitespace and treat the empty result as the
+	// absent value so the DB stores SQL NULL (not a whitespace-only
+	// string). Title's "absent" form is rejected upstream by
+	// validateCreateParams; description/content are dropped to nil.
+	inserted, err := s.repo.InsertStudyGuide(ctx, db.InsertStudyGuideParams{
+		CourseID:    utils.UUID(p.CourseID),
+		CreatorID:   utils.UUID(p.CreatorID),
+		Title:       strings.TrimSpace(p.Title),
+		Description: utils.Text(trimmedNonEmpty(p.Description)),
+		Content:     utils.Text(trimmedNonEmpty(p.Content)),
+		Tags:        tags,
+	})
+	if err != nil {
+		return StudyGuideDetail{}, fmt.Errorf("CreateStudyGuide: insert: %w", err)
+	}
+
+	row, err := s.repo.GetStudyGuideDetail(ctx, inserted.ID)
+	if err != nil {
+		return StudyGuideDetail{}, fmt.Errorf("CreateStudyGuide: hydrate: %w", err)
+	}
+
+	detail, err := mapStudyGuideDetail(row)
+	if err != nil {
+		return StudyGuideDetail{}, fmt.Errorf("CreateStudyGuide: map detail: %w", err)
+	}
+
+	detail.UserVote = nil
+	detail.RecommendedBy = []Creator{}
+	detail.Quizzes = []Quiz{}
+	detail.Resources = []Resource{}
+	detail.Files = []GuideFile{}
+
+	return detail, nil
+}
+
+// DeleteStudyGuide soft-deletes a study guide (creator-only). Wraps
+// the locked SELECT + soft-delete + child-quiz cascade in a single
+// transaction via repo.InTx so the cascade is atomic: either both the
+// guide and its quizzes get deleted_at set, or neither does. The
+// SELECT FOR UPDATE in GetStudyGuideByIDForUpdate prevents two
+// concurrent deletes from racing on the same guide -- one wins with
+// 204, the other sees the row already-deleted in its tx snapshot and
+// returns 404.
+//
+// 404 is returned both when the guide is missing and when it's already
+// soft-deleted (idempotent semantics -- a duplicate DELETE shouldn't
+// surface a 409 since the desired state is reached). 403 is returned
+// when the viewer is not the guide's creator.
+func (s *Service) DeleteStudyGuide(ctx context.Context, p DeleteStudyGuideParams) error {
+	guidePgxID := utils.UUID(p.StudyGuideID)
+	return s.repo.InTx(ctx, func(tx Repository) error {
+		row, err := tx.GetStudyGuideByIDForUpdate(ctx, guidePgxID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return apperrors.NewNotFound("Study guide not found")
+			}
+			return fmt.Errorf("DeleteStudyGuide: lock: %w", err)
+		}
+		if row.DeletedAt.Valid {
+			return apperrors.NewNotFound("Study guide not found")
+		}
+		creatorID, err := utils.PgxToGoogleUUID(row.CreatorID)
+		if err != nil {
+			return fmt.Errorf("DeleteStudyGuide: creator id: %w", err)
+		}
+		if creatorID != p.ViewerID {
+			return apperrors.NewForbidden()
+		}
+		if err := tx.SoftDeleteStudyGuide(ctx, guidePgxID); err != nil {
+			return fmt.Errorf("DeleteStudyGuide: soft delete guide: %w", err)
+		}
+		if err := tx.SoftDeleteQuizzesForGuide(ctx, guidePgxID); err != nil {
+			return fmt.Errorf("DeleteStudyGuide: soft delete quizzes: %w", err)
+		}
+		return nil
+	})
 }

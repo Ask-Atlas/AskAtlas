@@ -96,6 +96,129 @@ func (_c *MockStudyGuideService_AssertCourseExists_Call) RunAndReturn(run func(c
 	return _c
 }
 
+// CreateStudyGuide provides a mock function for the type MockStudyGuideService
+func (_mock *MockStudyGuideService) CreateStudyGuide(ctx context.Context, params studyguides.CreateStudyGuideParams) (studyguides.StudyGuideDetail, error) {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateStudyGuide")
+	}
+
+	var r0 studyguides.StudyGuideDetail
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, studyguides.CreateStudyGuideParams) (studyguides.StudyGuideDetail, error)); ok {
+		return returnFunc(ctx, params)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, studyguides.CreateStudyGuideParams) studyguides.StudyGuideDetail); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Get(0).(studyguides.StudyGuideDetail)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, studyguides.CreateStudyGuideParams) error); ok {
+		r1 = returnFunc(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStudyGuideService_CreateStudyGuide_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateStudyGuide'
+type MockStudyGuideService_CreateStudyGuide_Call struct {
+	*mock.Call
+}
+
+// CreateStudyGuide is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params studyguides.CreateStudyGuideParams
+func (_e *MockStudyGuideService_Expecter) CreateStudyGuide(ctx interface{}, params interface{}) *MockStudyGuideService_CreateStudyGuide_Call {
+	return &MockStudyGuideService_CreateStudyGuide_Call{Call: _e.mock.On("CreateStudyGuide", ctx, params)}
+}
+
+func (_c *MockStudyGuideService_CreateStudyGuide_Call) Run(run func(ctx context.Context, params studyguides.CreateStudyGuideParams)) *MockStudyGuideService_CreateStudyGuide_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 studyguides.CreateStudyGuideParams
+		if args[1] != nil {
+			arg1 = args[1].(studyguides.CreateStudyGuideParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStudyGuideService_CreateStudyGuide_Call) Return(studyGuideDetail studyguides.StudyGuideDetail, err error) *MockStudyGuideService_CreateStudyGuide_Call {
+	_c.Call.Return(studyGuideDetail, err)
+	return _c
+}
+
+func (_c *MockStudyGuideService_CreateStudyGuide_Call) RunAndReturn(run func(ctx context.Context, params studyguides.CreateStudyGuideParams) (studyguides.StudyGuideDetail, error)) *MockStudyGuideService_CreateStudyGuide_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteStudyGuide provides a mock function for the type MockStudyGuideService
+func (_mock *MockStudyGuideService) DeleteStudyGuide(ctx context.Context, params studyguides.DeleteStudyGuideParams) error {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteStudyGuide")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, studyguides.DeleteStudyGuideParams) error); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStudyGuideService_DeleteStudyGuide_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteStudyGuide'
+type MockStudyGuideService_DeleteStudyGuide_Call struct {
+	*mock.Call
+}
+
+// DeleteStudyGuide is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params studyguides.DeleteStudyGuideParams
+func (_e *MockStudyGuideService_Expecter) DeleteStudyGuide(ctx interface{}, params interface{}) *MockStudyGuideService_DeleteStudyGuide_Call {
+	return &MockStudyGuideService_DeleteStudyGuide_Call{Call: _e.mock.On("DeleteStudyGuide", ctx, params)}
+}
+
+func (_c *MockStudyGuideService_DeleteStudyGuide_Call) Run(run func(ctx context.Context, params studyguides.DeleteStudyGuideParams)) *MockStudyGuideService_DeleteStudyGuide_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 studyguides.DeleteStudyGuideParams
+		if args[1] != nil {
+			arg1 = args[1].(studyguides.DeleteStudyGuideParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStudyGuideService_DeleteStudyGuide_Call) Return(err error) *MockStudyGuideService_DeleteStudyGuide_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStudyGuideService_DeleteStudyGuide_Call) RunAndReturn(run func(ctx context.Context, params studyguides.DeleteStudyGuideParams) error) *MockStudyGuideService_DeleteStudyGuide_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetStudyGuide provides a mock function for the type MockStudyGuideService
 func (_mock *MockStudyGuideService) GetStudyGuide(ctx context.Context, params studyguides.GetStudyGuideParams) (studyguides.StudyGuideDetail, error) {
 	ret := _mock.Called(ctx, params)

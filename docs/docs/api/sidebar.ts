@@ -84,9 +84,21 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/delete-study-guide",
+          label: "Soft-delete a study guide",
+          className: "api-method delete",
+        },
+        {
+          type: "doc",
           id: "api/list-study-guides",
           label: "List study guides for a course",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "api/create-study-guide",
+          label: "Create a study guide for a course",
+          className: "api-method post",
         },
         {
           type: "doc",

@@ -787,3 +787,487 @@ func TestService_GetStudyGuide_FilesErrorPropagates(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "files down")
 }
+
+// ---------------------------------------------------------------------
+// CreateStudyGuide (ASK-120)
+// ---------------------------------------------------------------------
+
+// expectInsertReturning sets up the InsertStudyGuide mock to capture the
+// resolved sqlc params and return a synthetic row with the given id.
+// The capture is exposed via the returned pointer so individual tests
+// can assert the params the service ended up sending to the DB (most
+// importantly: the normalized tags).
+func expectInsertReturning(t *testing.T, repo *mock_studyguides.MockRepository, guideID uuid.UUID) *db.InsertStudyGuideParams {
+	t.Helper()
+	captured := &db.InsertStudyGuideParams{}
+	repo.EXPECT().
+		InsertStudyGuide(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, arg db.InsertStudyGuideParams) {
+			*captured = arg
+		}).
+		Return(db.InsertStudyGuideRow{
+			ID:        utils.UUID(guideID),
+			ViewCount: 0,
+			CreatedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+			UpdatedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		}, nil)
+	return captured
+}
+
+// hydrateRow returns a GetStudyGuideDetailRow shaped like a freshly
+// inserted guide: vote_score=0, is_recommended=false, view_count=0.
+func hydrateRow(t *testing.T, guideID, courseID, creatorID uuid.UUID, title string, tags []string) db.GetStudyGuideDetailRow {
+	t.Helper()
+	return db.GetStudyGuideDetailRow{
+		ID:               utils.UUID(guideID),
+		Title:            title,
+		Tags:             tags,
+		ViewCount:        0,
+		CreatedAt:        pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		UpdatedAt:        pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		CourseID:         utils.UUID(courseID),
+		CourseDepartment: "CS",
+		CourseNumber:     "161",
+		CourseTitle:      "Algorithms",
+		CreatorID:        utils.UUID(creatorID),
+		CreatorFirstName: "Ada",
+		CreatorLastName:  "Lovelace",
+		VoteScore:        0,
+		IsRecommended:    false,
+	}
+}
+
+func TestService_CreateStudyGuide_Success(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+
+	guideID := uuid.New()
+	courseID := uuid.New()
+	creatorID := uuid.New()
+	desc := "Cheat sheet."
+	content := "# Trees"
+
+	repo.EXPECT().CourseExistsForGuides(mock.Anything, mock.Anything).Return(true, nil)
+	captured := expectInsertReturning(t, repo, guideID)
+	repo.EXPECT().GetStudyGuideDetail(mock.Anything, mock.Anything).
+		Return(hydrateRow(t, guideID, courseID, creatorID, "Binary Trees", []string{"trees", "midterm"}), nil)
+
+	svc := studyguides.NewService(repo)
+	got, err := svc.CreateStudyGuide(context.Background(), studyguides.CreateStudyGuideParams{
+		CourseID:    courseID,
+		CreatorID:   creatorID,
+		Title:       "Binary Trees",
+		Description: &desc,
+		Content:     &content,
+		Tags:        []string{"Trees", "MIDTERM"},
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, guideID, got.ID)
+	assert.Equal(t, "Binary Trees", got.Title)
+	assert.Equal(t, int64(0), got.VoteScore)
+	assert.False(t, got.IsRecommended)
+	assert.Nil(t, got.UserVote)
+	require.NotNil(t, got.RecommendedBy)
+	assert.Empty(t, got.RecommendedBy)
+	require.NotNil(t, got.Quizzes)
+	assert.Empty(t, got.Quizzes)
+	require.NotNil(t, got.Resources)
+	assert.Empty(t, got.Resources)
+	require.NotNil(t, got.Files)
+	assert.Empty(t, got.Files)
+	assert.Equal(t, []string{"trees", "midterm"}, captured.Tags)
+	require.True(t, captured.Description.Valid)
+	assert.Equal(t, "Cheat sheet.", captured.Description.String)
+	require.True(t, captured.Content.Valid)
+	assert.Equal(t, "# Trees", captured.Content.String)
+}
+
+func TestService_CreateStudyGuide_NormalizesAndDedupesTags(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, courseID, creatorID := uuid.New(), uuid.New(), uuid.New()
+
+	repo.EXPECT().CourseExistsForGuides(mock.Anything, mock.Anything).Return(true, nil)
+	captured := expectInsertReturning(t, repo, guideID)
+	repo.EXPECT().GetStudyGuideDetail(mock.Anything, mock.Anything).
+		Return(hydrateRow(t, guideID, courseID, creatorID, "T", nil), nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.CreateStudyGuide(context.Background(), studyguides.CreateStudyGuideParams{
+		CourseID:  courseID,
+		CreatorID: creatorID,
+		Title:     "T",
+		Tags:      []string{"  Trees  ", "TREES", "midterm", "Midterm"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"trees", "midterm"}, captured.Tags)
+}
+
+// PR #138 review M1: description + content are trimmed and treated as
+// SQL NULL when empty after trim, mirroring how title is handled. A
+// body of `{"description": "   "}` must not persist a whitespace-only
+// string.
+func TestService_CreateStudyGuide_DescriptionAndContent_TrimmedAndDroppedWhenWhitespace(t *testing.T) {
+	cases := map[string]struct {
+		in  string
+		// expectValid: true means we expect a SQL NULL (Valid=false on
+		// pgtype.Text). false means we expect a populated value.
+		expectValid bool
+		expectVal   string
+	}{
+		"whitespace_only":        {in: "   \t\n  ", expectValid: false},
+		"empty_string":           {in: "", expectValid: false},
+		"surrounded_by_spaces":   {in: "  hello  ", expectValid: true, expectVal: "hello"},
+		"normal":                 {in: "no leading or trailing", expectValid: true, expectVal: "no leading or trailing"},
+		"newlines_inside_kept":   {in: "line one\nline two", expectValid: true, expectVal: "line one\nline two"},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			repo := mock_studyguides.NewMockRepository(t)
+			guideID, courseID, creatorID := uuid.New(), uuid.New(), uuid.New()
+
+			repo.EXPECT().CourseExistsForGuides(mock.Anything, mock.Anything).Return(true, nil)
+			captured := expectInsertReturning(t, repo, guideID)
+			repo.EXPECT().GetStudyGuideDetail(mock.Anything, mock.Anything).
+				Return(hydrateRow(t, guideID, courseID, creatorID, "T", nil), nil)
+
+			svc := studyguides.NewService(repo)
+			in := tc.in
+			_, err := svc.CreateStudyGuide(context.Background(), studyguides.CreateStudyGuideParams{
+				CourseID: courseID, CreatorID: creatorID, Title: "T",
+				Description: &in,
+				Content:     &in,
+			})
+			require.NoError(t, err)
+
+			if tc.expectValid {
+				require.True(t, captured.Description.Valid, "description should be non-NULL")
+				assert.Equal(t, tc.expectVal, captured.Description.String)
+				require.True(t, captured.Content.Valid, "content should be non-NULL")
+				assert.Equal(t, tc.expectVal, captured.Content.String)
+			} else {
+				assert.False(t, captured.Description.Valid, "description should be SQL NULL after trim")
+				assert.False(t, captured.Content.Valid, "content should be SQL NULL after trim")
+			}
+		})
+	}
+}
+
+// Tags must always land as a non-nil slice so the Postgres NOT NULL
+// DEFAULT '{}' column doesn't trip on a NULL bind value.
+func TestService_CreateStudyGuide_NilTagsLandsAsEmptySlice(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, courseID, creatorID := uuid.New(), uuid.New(), uuid.New()
+
+	repo.EXPECT().CourseExistsForGuides(mock.Anything, mock.Anything).Return(true, nil)
+	captured := expectInsertReturning(t, repo, guideID)
+	repo.EXPECT().GetStudyGuideDetail(mock.Anything, mock.Anything).
+		Return(hydrateRow(t, guideID, courseID, creatorID, "T", nil), nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.CreateStudyGuide(context.Background(), studyguides.CreateStudyGuideParams{
+		CourseID: courseID, CreatorID: creatorID, Title: "T", Tags: nil,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, captured.Tags)
+	assert.Empty(t, captured.Tags)
+}
+
+func TestService_CreateStudyGuide_TitleEmptyOrWhitespace_400(t *testing.T) {
+	cases := map[string]string{
+		"empty":      "",
+		"whitespace": "   \t\n  ",
+	}
+	for name, title := range cases {
+		t.Run(name, func(t *testing.T) {
+			repo := mock_studyguides.NewMockRepository(t)
+			svc := studyguides.NewService(repo)
+			_, err := svc.CreateStudyGuide(context.Background(), studyguides.CreateStudyGuideParams{
+				CourseID: uuid.New(), CreatorID: uuid.New(), Title: title,
+			})
+			require.Error(t, err)
+			var appErr *apperrors.AppError
+			require.ErrorAs(t, err, &appErr)
+			assert.Equal(t, http.StatusBadRequest, appErr.Code)
+			assert.Contains(t, appErr.Details, "title")
+		})
+	}
+}
+
+func TestService_CreateStudyGuide_TitleTooLong_400(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+	_, err := svc.CreateStudyGuide(context.Background(), studyguides.CreateStudyGuideParams{
+		CourseID: uuid.New(), CreatorID: uuid.New(),
+		Title: strings.Repeat("a", studyguides.MaxTitleLength+1),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+	assert.Contains(t, appErr.Details, "title")
+}
+
+func TestService_CreateStudyGuide_DescriptionTooLong_400(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+	tooLong := strings.Repeat("a", studyguides.MaxDescriptionLength+1)
+	_, err := svc.CreateStudyGuide(context.Background(), studyguides.CreateStudyGuideParams{
+		CourseID: uuid.New(), CreatorID: uuid.New(), Title: "T",
+		Description: &tooLong,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+	assert.Contains(t, appErr.Details, "description")
+}
+
+func TestService_CreateStudyGuide_ContentTooLong_400(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+	tooLong := strings.Repeat("a", studyguides.MaxContentLength+1)
+	_, err := svc.CreateStudyGuide(context.Background(), studyguides.CreateStudyGuideParams{
+		CourseID: uuid.New(), CreatorID: uuid.New(), Title: "T",
+		Content: &tooLong,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+	assert.Contains(t, appErr.Details, "content")
+}
+
+func TestService_CreateStudyGuide_TooManyTags_400(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+	tags := make([]string, studyguides.MaxTagsCount+1)
+	for i := range tags {
+		tags[i] = "t" + strings.Repeat("x", i%5)
+	}
+	_, err := svc.CreateStudyGuide(context.Background(), studyguides.CreateStudyGuideParams{
+		CourseID: uuid.New(), CreatorID: uuid.New(), Title: "T", Tags: tags,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+	assert.Contains(t, appErr.Details, "tags")
+}
+
+func TestService_CreateStudyGuide_TagEmptyAfterTrim_400(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+	_, err := svc.CreateStudyGuide(context.Background(), studyguides.CreateStudyGuideParams{
+		CourseID: uuid.New(), CreatorID: uuid.New(), Title: "T",
+		Tags: []string{"valid", "   "},
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+	assert.Contains(t, appErr.Details, "tags")
+}
+
+func TestService_CreateStudyGuide_TagTooLong_400(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+	_, err := svc.CreateStudyGuide(context.Background(), studyguides.CreateStudyGuideParams{
+		CourseID: uuid.New(), CreatorID: uuid.New(), Title: "T",
+		Tags: []string{strings.Repeat("a", studyguides.MaxTagLength+1)},
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+	assert.Contains(t, appErr.Details, "tags")
+}
+
+func TestService_CreateStudyGuide_CourseNotFound_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().CourseExistsForGuides(mock.Anything, mock.Anything).Return(false, nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.CreateStudyGuide(context.Background(), studyguides.CreateStudyGuideParams{
+		CourseID: uuid.New(), CreatorID: uuid.New(), Title: "T",
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Course not found", appErr.Message)
+	repo.AssertNotCalled(t, "InsertStudyGuide", mock.Anything, mock.Anything)
+}
+
+func TestService_CreateStudyGuide_InsertError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().CourseExistsForGuides(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().InsertStudyGuide(mock.Anything, mock.Anything).
+		Return(db.InsertStudyGuideRow{}, errors.New("insert blew up"))
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.CreateStudyGuide(context.Background(), studyguides.CreateStudyGuideParams{
+		CourseID: uuid.New(), CreatorID: uuid.New(), Title: "T",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "insert blew up")
+}
+
+func TestService_CreateStudyGuide_HydrateError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().CourseExistsForGuides(mock.Anything, mock.Anything).Return(true, nil)
+	expectInsertReturning(t, repo, uuid.New())
+	repo.EXPECT().GetStudyGuideDetail(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideDetailRow{}, errors.New("hydrate blew up"))
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.CreateStudyGuide(context.Background(), studyguides.CreateStudyGuideParams{
+		CourseID: uuid.New(), CreatorID: uuid.New(), Title: "T",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "hydrate blew up")
+}
+
+// ---------------------------------------------------------------------
+// DeleteStudyGuide (ASK-133)
+// ---------------------------------------------------------------------
+
+// inTxRunsFn wires the InTx mock to invoke the closure inline against
+// the SAME repo, so SoftDeleteStudyGuide / SoftDeleteQuizzesForGuide /
+// GetStudyGuideByIDForUpdate expectations land on the parent mock as
+// they would in production after Queries.WithTx returns the same
+// underlying connection. Returns the closure's error untouched so
+// service-layer error mapping (404, 403, 500) flows through.
+func inTxRunsFn(repo *mock_studyguides.MockRepository) {
+	repo.EXPECT().InTx(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, fn func(studyguides.Repository) error) error {
+			return fn(repo)
+		})
+}
+
+func TestService_DeleteStudyGuide_Success(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID := uuid.New()
+	creatorID := uuid.New()
+
+	inTxRunsFn(repo)
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{
+			ID:        utils.UUID(guideID),
+			CreatorID: utils.UUID(creatorID),
+		}, nil)
+	repo.EXPECT().SoftDeleteStudyGuide(mock.Anything, mock.Anything).Return(nil)
+	repo.EXPECT().SoftDeleteQuizzesForGuide(mock.Anything, mock.Anything).Return(nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DeleteStudyGuide(context.Background(), studyguides.DeleteStudyGuideParams{
+		StudyGuideID: guideID,
+		ViewerID:     creatorID,
+	})
+	require.NoError(t, err)
+}
+
+func TestService_DeleteStudyGuide_NotFound_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFn(repo)
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{}, sql.ErrNoRows)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DeleteStudyGuide(context.Background(), studyguides.DeleteStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Study guide not found", appErr.Message)
+	repo.AssertNotCalled(t, "SoftDeleteStudyGuide", mock.Anything, mock.Anything)
+	repo.AssertNotCalled(t, "SoftDeleteQuizzesForGuide", mock.Anything, mock.Anything)
+}
+
+// Idempotent semantics: re-deleting an already-soft-deleted guide
+// surfaces as 404 (desired state already reached), not 409.
+func TestService_DeleteStudyGuide_AlreadyDeleted_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFn(repo)
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{
+			ID:        utils.UUID(uuid.New()),
+			CreatorID: utils.UUID(uuid.New()),
+			DeletedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		}, nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DeleteStudyGuide(context.Background(), studyguides.DeleteStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	repo.AssertNotCalled(t, "SoftDeleteStudyGuide", mock.Anything, mock.Anything)
+}
+
+func TestService_DeleteStudyGuide_NotCreator_403(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFn(repo)
+	creatorID := uuid.New()
+	otherViewer := uuid.New()
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{
+			ID:        utils.UUID(uuid.New()),
+			CreatorID: utils.UUID(creatorID),
+		}, nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DeleteStudyGuide(context.Background(), studyguides.DeleteStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: otherViewer,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusForbidden, appErr.Code)
+	repo.AssertNotCalled(t, "SoftDeleteStudyGuide", mock.Anything, mock.Anything)
+	repo.AssertNotCalled(t, "SoftDeleteQuizzesForGuide", mock.Anything, mock.Anything)
+}
+
+func TestService_DeleteStudyGuide_LockError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFn(repo)
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{}, errors.New("lock blew up"))
+
+	svc := studyguides.NewService(repo)
+	err := svc.DeleteStudyGuide(context.Background(), studyguides.DeleteStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "lock blew up")
+}
+
+// Quiz-cascade error returns from the closure -- production InTx then
+// rolls the whole tx back. We can't observe the Postgres rollback in a
+// mock-backed test, but we CAN pin the contract that the closure's
+// error propagates to the service caller verbatim.
+func TestService_DeleteStudyGuide_QuizCascadeError_Propagates(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID := uuid.New()
+	creatorID := uuid.New()
+
+	inTxRunsFn(repo)
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{
+			ID:        utils.UUID(guideID),
+			CreatorID: utils.UUID(creatorID),
+		}, nil)
+	repo.EXPECT().SoftDeleteStudyGuide(mock.Anything, mock.Anything).Return(nil)
+	repo.EXPECT().SoftDeleteQuizzesForGuide(mock.Anything, mock.Anything).
+		Return(errors.New("quiz cascade blew up"))
+
+	svc := studyguides.NewService(repo)
+	err := svc.DeleteStudyGuide(context.Background(), studyguides.DeleteStudyGuideParams{
+		StudyGuideID: guideID, ViewerID: creatorID,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "quiz cascade blew up")
+}

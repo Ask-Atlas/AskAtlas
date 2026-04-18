@@ -21,6 +21,55 @@
 -- are selected. No email, no clerk_id -- same rule as
 -- SectionMemberResponse in ASK-143.
 
+-- name: InsertStudyGuide :one
+-- Insert a new guide and return all the columns the service needs to
+-- construct the StudyGuideDetail response without an extra round trip.
+-- The course preflight (in service.go) gates on AssertCourseExists so
+-- the FK violation is unreachable in normal flow; the FK still acts
+-- as a backstop if a course is hard-deleted between preflight + insert.
+INSERT INTO study_guides (course_id, creator_id, title, description, content, tags)
+VALUES (
+  sqlc.arg(course_id)::uuid,
+  sqlc.arg(creator_id)::uuid,
+  sqlc.arg(title)::text,
+  sqlc.narg(description)::text,
+  sqlc.narg(content)::text,
+  sqlc.arg(tags)::text[]
+)
+RETURNING id, view_count, created_at, updated_at;
+
+-- name: GetStudyGuideByIDForUpdate :one
+-- Locked SELECT used at the start of DeleteStudyGuide. SELECT FOR
+-- UPDATE prevents concurrent deletes from racing on the same guide
+-- (one wins with 204, the other sees the row already-deleted in its
+-- transaction's snapshot and returns 404). Filters NOTHING -- the
+-- service inspects deleted_at + creator_id to choose 404 vs 403 vs
+-- proceed.
+SELECT id, creator_id, deleted_at
+FROM study_guides
+WHERE id = sqlc.arg(id)::uuid
+FOR UPDATE;
+
+-- name: SoftDeleteStudyGuide :exec
+-- Set deleted_at = now() on the guide. The service has already
+-- verified the row exists, isn't already deleted, and the viewer is
+-- the creator -- so this is a blind UPDATE. The DeleteStudyGuide
+-- transaction wraps this + SoftDeleteQuizzesForGuide.
+UPDATE study_guides
+SET deleted_at = now()
+WHERE id = sqlc.arg(id)::uuid;
+
+-- name: SoftDeleteQuizzesForGuide :exec
+-- Application-level cascade: soft-delete every non-deleted quiz on
+-- the guide. WHERE deleted_at IS NULL preserves the deleted_at
+-- timestamp on quizzes that were already soft-deleted before the
+-- guide was -- the spec explicitly requires that an already-deleted
+-- quiz's deleted_at is NOT updated by this cascade.
+UPDATE quizzes
+SET deleted_at = now()
+WHERE study_guide_id = sqlc.arg(study_guide_id)::uuid
+  AND deleted_at IS NULL;
+
 -- name: GetStudyGuideDetail :one
 -- The detail endpoint's main query (ASK-114). Returns the guide's own
 -- columns + a compact course payload + a compact creator payload

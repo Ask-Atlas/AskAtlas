@@ -28,8 +28,33 @@ func (q *Queries) CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bo
 	return exists, err
 }
 
-const getStudyGuideDetail = `-- name: GetStudyGuideDetail :one
+const getStudyGuideByIDForUpdate = `-- name: GetStudyGuideByIDForUpdate :one
+SELECT id, creator_id, deleted_at
+FROM study_guides
+WHERE id = $1::uuid
+FOR UPDATE
+`
 
+type GetStudyGuideByIDForUpdateRow struct {
+	ID        pgtype.UUID        `json:"id"`
+	CreatorID pgtype.UUID        `json:"creator_id"`
+	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+}
+
+// Locked SELECT used at the start of DeleteStudyGuide. SELECT FOR
+// UPDATE prevents concurrent deletes from racing on the same guide
+// (one wins with 204, the other sees the row already-deleted in its
+// transaction's snapshot and returns 404). Filters NOTHING -- the
+// service inspects deleted_at + creator_id to choose 404 vs 403 vs
+// proceed.
+func (q *Queries) GetStudyGuideByIDForUpdate(ctx context.Context, id pgtype.UUID) (GetStudyGuideByIDForUpdateRow, error) {
+	row := q.db.QueryRow(ctx, getStudyGuideByIDForUpdate, id)
+	var i GetStudyGuideByIDForUpdateRow
+	err := row.Scan(&i.ID, &i.CreatorID, &i.DeletedAt)
+	return i, err
+}
+
+const getStudyGuideDetail = `-- name: GetStudyGuideDetail :one
 SELECT
   sg.id, sg.title, sg.description, sg.content, sg.tags,
   sg.view_count, sg.created_at, sg.updated_at,
@@ -77,28 +102,6 @@ type GetStudyGuideDetailRow struct {
 	IsRecommended    bool               `json:"is_recommended"`
 }
 
-// Study guide list queries (ASK-104).
-//
-// Every ListStudyGuides* variant uses the same CTE structure so the
-// per-row aggregates (vote_score, is_recommended, quiz_count) are
-// computed once and can be referenced from the outer WHERE clause
-// (e.g. for the score-sorted cursor predicate). The CTE pattern also
-// keeps the 8 named variants near-identical apart from ORDER BY + the
-// cursor predicate, which makes future maintenance (e.g. adding a new
-// sort field) a mechanical edit.
-//
-// Soft-delete invariants enforced everywhere:
-//   - sg.deleted_at IS NULL       — excludes guides marked for deletion
-//   - u.deleted_at IS NULL        — excludes guides authored by a
-//     soft-deleted user; matches the
-//     convention established by ASK-143's
-//     section roster (a soft-deleted user
-//     disappears from public surfaces)
-//   - quizzes.deleted_at IS NULL  — quiz_count excludes deleted quizzes
-//
-// Privacy floor on the creator payload: only id + first_name + last_name
-// are selected. No email, no clerk_id -- same rule as
-// SectionMemberResponse in ASK-143.
 // The detail endpoint's main query (ASK-114). Returns the guide's own
 // columns + a compact course payload + a compact creator payload
 // + two inline aggregates as subqueries:
@@ -164,6 +167,82 @@ func (q *Queries) GetUserVoteForGuide(ctx context.Context, arg GetUserVoteForGui
 	var vote VoteDirection
 	err := row.Scan(&vote)
 	return vote, err
+}
+
+const insertStudyGuide = `-- name: InsertStudyGuide :one
+
+INSERT INTO study_guides (course_id, creator_id, title, description, content, tags)
+VALUES (
+  $1::uuid,
+  $2::uuid,
+  $3::text,
+  $4::text,
+  $5::text,
+  $6::text[]
+)
+RETURNING id, view_count, created_at, updated_at
+`
+
+type InsertStudyGuideParams struct {
+	CourseID    pgtype.UUID `json:"course_id"`
+	CreatorID   pgtype.UUID `json:"creator_id"`
+	Title       string      `json:"title"`
+	Description pgtype.Text `json:"description"`
+	Content     pgtype.Text `json:"content"`
+	Tags        []string    `json:"tags"`
+}
+
+type InsertStudyGuideRow struct {
+	ID        pgtype.UUID        `json:"id"`
+	ViewCount int32              `json:"view_count"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// Study guide list queries (ASK-104).
+//
+// Every ListStudyGuides* variant uses the same CTE structure so the
+// per-row aggregates (vote_score, is_recommended, quiz_count) are
+// computed once and can be referenced from the outer WHERE clause
+// (e.g. for the score-sorted cursor predicate). The CTE pattern also
+// keeps the 8 named variants near-identical apart from ORDER BY + the
+// cursor predicate, which makes future maintenance (e.g. adding a new
+// sort field) a mechanical edit.
+//
+// Soft-delete invariants enforced everywhere:
+//   - sg.deleted_at IS NULL       — excludes guides marked for deletion
+//   - u.deleted_at IS NULL        — excludes guides authored by a
+//     soft-deleted user; matches the
+//     convention established by ASK-143's
+//     section roster (a soft-deleted user
+//     disappears from public surfaces)
+//   - quizzes.deleted_at IS NULL  — quiz_count excludes deleted quizzes
+//
+// Privacy floor on the creator payload: only id + first_name + last_name
+// are selected. No email, no clerk_id -- same rule as
+// SectionMemberResponse in ASK-143.
+// Insert a new guide and return all the columns the service needs to
+// construct the StudyGuideDetail response without an extra round trip.
+// The course preflight (in service.go) gates on AssertCourseExists so
+// the FK violation is unreachable in normal flow; the FK still acts
+// as a backstop if a course is hard-deleted between preflight + insert.
+func (q *Queries) InsertStudyGuide(ctx context.Context, arg InsertStudyGuideParams) (InsertStudyGuideRow, error) {
+	row := q.db.QueryRow(ctx, insertStudyGuide,
+		arg.CourseID,
+		arg.CreatorID,
+		arg.Title,
+		arg.Description,
+		arg.Content,
+		arg.Tags,
+	)
+	var i InsertStudyGuideRow
+	err := row.Scan(
+		&i.ID,
+		&i.ViewCount,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const listGuideFiles = `-- name: ListGuideFiles :many
@@ -1307,4 +1386,36 @@ func (q *Queries) ListStudyGuidesViewsDesc(ctx context.Context, arg ListStudyGui
 		return nil, err
 	}
 	return items, nil
+}
+
+const softDeleteQuizzesForGuide = `-- name: SoftDeleteQuizzesForGuide :exec
+UPDATE quizzes
+SET deleted_at = now()
+WHERE study_guide_id = $1::uuid
+  AND deleted_at IS NULL
+`
+
+// Application-level cascade: soft-delete every non-deleted quiz on
+// the guide. WHERE deleted_at IS NULL preserves the deleted_at
+// timestamp on quizzes that were already soft-deleted before the
+// guide was -- the spec explicitly requires that an already-deleted
+// quiz's deleted_at is NOT updated by this cascade.
+func (q *Queries) SoftDeleteQuizzesForGuide(ctx context.Context, studyGuideID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, softDeleteQuizzesForGuide, studyGuideID)
+	return err
+}
+
+const softDeleteStudyGuide = `-- name: SoftDeleteStudyGuide :exec
+UPDATE study_guides
+SET deleted_at = now()
+WHERE id = $1::uuid
+`
+
+// Set deleted_at = now() on the guide. The service has already
+// verified the row exists, isn't already deleted, and the viewer is
+// the creator -- so this is a blind UPDATE. The DeleteStudyGuide
+// transaction wraps this + SoftDeleteQuizzesForGuide.
+func (q *Queries) SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, softDeleteStudyGuide, id)
+	return err
 }
