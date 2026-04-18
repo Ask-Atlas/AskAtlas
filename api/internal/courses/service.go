@@ -398,6 +398,10 @@ func (s *Service) GetCourse(ctx context.Context, p GetCourseParams) (CourseDetai
 // SQL means a duplicate join surfaces as sql.ErrNoRows; we map that to a
 // tailored 409 AppError so the handler returns "Already a member of this
 // section" verbatim.
+//
+// We construct a typed *AppError instead of returning apperrors.ErrConflict
+// because the shared sentinel maps to the generic message "Resource already
+// exists" -- the spec for ASK-132 requires the more specific phrasing.
 func (s *Service) JoinSection(ctx context.Context, p JoinSectionParams) (Membership, error) {
 	if err := s.assertCourseAndSection(ctx, p.CourseID, p.SectionID); err != nil {
 		return Membership{}, err
