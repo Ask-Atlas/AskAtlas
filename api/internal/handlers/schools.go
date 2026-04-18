@@ -76,6 +76,13 @@ func (h *SchoolsHandler) ListSchools(w http.ResponseWriter, r *http.Request, par
 	respondJSON(w, http.StatusOK, mapListSchoolsResponse(result))
 }
 
+// GetSchool is a temporary stub so SchoolsHandler satisfies the widened
+// api.ServerInterface introduced by the new /schools/{school_id} operation.
+// Replaced in a follow-up commit when the service path is wired.
+func (*SchoolsHandler) GetSchool(w http.ResponseWriter, _ *http.Request, _ openapi_types.UUID) {
+	http.Error(w, "not implemented", http.StatusNotImplemented)
+}
+
 // mapListSchoolsResponse converts the domain ListSchoolsResult into the
 // generated api.ListSchoolsResponse wire type.
 func mapListSchoolsResponse(r schools.ListSchoolsResult) api.ListSchoolsResponse {
