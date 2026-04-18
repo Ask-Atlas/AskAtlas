@@ -38,6 +38,72 @@ func (_m *MockCourseService) EXPECT() *MockCourseService_Expecter {
 	return &MockCourseService_Expecter{mock: &_m.Mock}
 }
 
+// CheckMembership provides a mock function for the type MockCourseService
+func (_mock *MockCourseService) CheckMembership(ctx context.Context, params courses.CheckMembershipParams) (courses.MembershipCheck, error) {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckMembership")
+	}
+
+	var r0 courses.MembershipCheck
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, courses.CheckMembershipParams) (courses.MembershipCheck, error)); ok {
+		return returnFunc(ctx, params)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, courses.CheckMembershipParams) courses.MembershipCheck); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Get(0).(courses.MembershipCheck)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, courses.CheckMembershipParams) error); ok {
+		r1 = returnFunc(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCourseService_CheckMembership_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckMembership'
+type MockCourseService_CheckMembership_Call struct {
+	*mock.Call
+}
+
+// CheckMembership is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params courses.CheckMembershipParams
+func (_e *MockCourseService_Expecter) CheckMembership(ctx interface{}, params interface{}) *MockCourseService_CheckMembership_Call {
+	return &MockCourseService_CheckMembership_Call{Call: _e.mock.On("CheckMembership", ctx, params)}
+}
+
+func (_c *MockCourseService_CheckMembership_Call) Run(run func(ctx context.Context, params courses.CheckMembershipParams)) *MockCourseService_CheckMembership_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 courses.CheckMembershipParams
+		if args[1] != nil {
+			arg1 = args[1].(courses.CheckMembershipParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCourseService_CheckMembership_Call) Return(membershipCheck courses.MembershipCheck, err error) *MockCourseService_CheckMembership_Call {
+	_c.Call.Return(membershipCheck, err)
+	return _c
+}
+
+func (_c *MockCourseService_CheckMembership_Call) RunAndReturn(run func(ctx context.Context, params courses.CheckMembershipParams) (courses.MembershipCheck, error)) *MockCourseService_CheckMembership_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetCourse provides a mock function for the type MockCourseService
 func (_mock *MockCourseService) GetCourse(ctx context.Context, params courses.GetCourseParams) (courses.CourseDetail, error) {
 	ret := _mock.Called(ctx, params)
@@ -289,6 +355,74 @@ func (_c *MockCourseService_ListCourses_Call) Return(listCoursesResult courses.L
 }
 
 func (_c *MockCourseService_ListCourses_Call) RunAndReturn(run func(ctx context.Context, params courses.ListCoursesParams) (courses.ListCoursesResult, error)) *MockCourseService_ListCourses_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListMyEnrollments provides a mock function for the type MockCourseService
+func (_mock *MockCourseService) ListMyEnrollments(ctx context.Context, params courses.ListMyEnrollmentsParams) ([]courses.Enrollment, error) {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListMyEnrollments")
+	}
+
+	var r0 []courses.Enrollment
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, courses.ListMyEnrollmentsParams) ([]courses.Enrollment, error)); ok {
+		return returnFunc(ctx, params)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, courses.ListMyEnrollmentsParams) []courses.Enrollment); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]courses.Enrollment)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, courses.ListMyEnrollmentsParams) error); ok {
+		r1 = returnFunc(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCourseService_ListMyEnrollments_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListMyEnrollments'
+type MockCourseService_ListMyEnrollments_Call struct {
+	*mock.Call
+}
+
+// ListMyEnrollments is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params courses.ListMyEnrollmentsParams
+func (_e *MockCourseService_Expecter) ListMyEnrollments(ctx interface{}, params interface{}) *MockCourseService_ListMyEnrollments_Call {
+	return &MockCourseService_ListMyEnrollments_Call{Call: _e.mock.On("ListMyEnrollments", ctx, params)}
+}
+
+func (_c *MockCourseService_ListMyEnrollments_Call) Run(run func(ctx context.Context, params courses.ListMyEnrollmentsParams)) *MockCourseService_ListMyEnrollments_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 courses.ListMyEnrollmentsParams
+		if args[1] != nil {
+			arg1 = args[1].(courses.ListMyEnrollmentsParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCourseService_ListMyEnrollments_Call) Return(enrollments []courses.Enrollment, err error) *MockCourseService_ListMyEnrollments_Call {
+	_c.Call.Return(enrollments, err)
+	return _c
+}
+
+func (_c *MockCourseService_ListMyEnrollments_Call) RunAndReturn(run func(ctx context.Context, params courses.ListMyEnrollmentsParams) ([]courses.Enrollment, error)) *MockCourseService_ListMyEnrollments_Call {
 	_c.Call.Return(run)
 	return _c
 }
