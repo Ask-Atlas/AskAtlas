@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -18,6 +19,7 @@ type FileService interface {
 	GetFile(ctx context.Context, params files.GetFileParams) (files.File, error)
 	ListFiles(ctx context.Context, params files.ListFilesParams) ([]files.File, *string, error)
 	DeleteFile(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher) error
+	UpdateFile(ctx context.Context, params files.UpdateFileParams) (files.File, error)
 }
 
 // FileHandler manages incoming HTTP requests relating to File operations.
@@ -54,6 +56,39 @@ func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request, fileId 
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// UpdateFile handles requests to rename a file.
+func (h *FileHandler) UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	var body api.UpdateFileRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("invalid request body", nil))
+		return
+	}
+
+	params := files.UpdateFileParams{
+		FileID:  uuid.UUID(fileId),
+		OwnerID: viewerID,
+		Name:    body.Name,
+	}
+
+	file, err := h.service.UpdateFile(r.Context(), params)
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("UpdateFile failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, toDTOFileResponse(file))
 }
 
 // GetFile handles requests to retrieve a single file by its unique identifier.
