@@ -1,0 +1,73 @@
+---
+id: join-section
+title: "Join a section as the authenticated user"
+description: "Adds the authenticated user as a `student` member of the given section."
+sidebar_label: "Join a section as the authenticated user"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV8GO2zYQ/RViLm0B1XaK9FDdnLQFNkDbRTaLHrxGPBbHFjcSqSWH27qC/r0YSvbKazcN0gB76J5sScPhm/cepZkWXEMe2Th7oSGHN87YKyrkGjLQFApvmnSVw1zroLgkhZFLsmwKZNIqBvIKg0K1Chw1WV6pmuo1eeU2KX5r7smq0Ked3Nh3JSnvKlImqBK9LpwmrdiNEnjaotcVhSBJ0O7UxlClgwqxaSpDWhl7YyW5p7tIgdXa6d1ErYwN7GPBzq8UWq1WjKu0WVDoSWEIZmtJK2erneLSu7gt+0SBSBu7VY1pqDKWJjdCQYMea2LyAfJFCxZrghwKF32g90ZDBka4aZDLE8KkzmjNXSR1fX3x456OBj1ZVn0OyEAqMJ405OwjZRCKkmqEvAXeNbJbYG/sFjLYOF8jQw4xGg1dlx0ADeR+JqJhtUhw64z9T5iWsjg0zgYKEv/d7IX8HOP4JfkjlKZRhSexEWRQOMtkWaJRRC6SLae3QZa0pxDc+pYKPrVpcuRXYTBh2sRYhQPh+2JFWy/mZ9MDlVXC37/XmI3p/pRw8d+5QLKxhnwBg+0hA8ak397DsOwyEElIv0f+6F4amb5lU5P4YqTf4lBYduySBGqcfZkBGxak8DpR1av0dlATuk4yv5zNTvV8hXp/EL+ckFeMVqPX5i/Sirx3Xu2dpXqCoidVIxelnNvRVkO0djUaG06UlvfNaHtjmbbkk66MHMMpz10GNYWA2zMydoKb0VThXEmotRFIWF0eYXiU47FmCeIBz8PuI43mTfOTlHnQ5cw5u7byrnZeKHwW5qmEeXkqzK+O1cZF+6zKk6nyw6kqr53dVKZg9YfhUhXRpw+1p+CiL4RFZHoW7GkE+/7cd+fCMnmLlQrk78n3vDwr9BQKJYBcOpkiGpf6gNSC5jDtG68wbQ9tczcdWpEwbR+akm46tGypVRFB+6Y7+krSYGNA2stARfSGd+nZK0JPfh5lp8Vy/PhKRO5LHQcdCi+ZGxg6W7lepyDIhj8/7xurN7+/Sy2VsRuXlu+rDx/mXGFQ88sLyEDQ9q55MZlNZiKK0FBjctzQpst4pfDQb+M/zVOPndg+OPr/OYYNmjH9ydOmQmOF3+SLdrDZYhjKxDz5eD7bO03uHzXAe7MtMyjFsPkC2naNga591XVy+y6SF5stM7hHb3Atwi9a0CbIfw35BqtAHxHr67fDkfpGfeI0eLbS4SbanTgNqyhXkMEH2h1NozIRfklwp4PhZ8Abkd7JPFMSavKJyD5gXhTU8GjpyTtbzvXh7XL525WcyL8BGv3jBA==
+sidebar_class_name: "post api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Join a section as the authenticated user"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/courses/{course_id}/sections/{section_id}/members"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Adds the authenticated user as a `student` member of the given section.
+The role is hardcoded to `student` regardless of any fields supplied in
+the request body. `instructor` and `ta` roles are assigned only through
+the seeding pipeline.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./join-section.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./join-section.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./join-section.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

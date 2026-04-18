@@ -232,3 +232,40 @@ LEFT JOIN course_members cm ON cm.section_id = cs.id
 WHERE cs.course_id = sqlc.arg(course_id)::uuid
 GROUP BY cs.id
 ORDER BY cs.start_date DESC NULLS LAST, cs.section_code ASC NULLS LAST, cs.id ASC;
+
+-- name: CourseExists :one
+-- Single-row existence probe used by join/leave to disambiguate the
+-- "Course not found" 404 from the "Section not found" 404 the spec
+-- requires (see ASK-132 / ASK-138).
+SELECT EXISTS (
+  SELECT 1 FROM courses WHERE id = sqlc.arg(id)::uuid
+) AS exists;
+
+-- name: SectionInCourseExists :one
+-- Verifies the section exists AND belongs to the supplied course. A
+-- section UUID that targets a different course is treated as not found
+-- to avoid leaking the existence of unrelated sections via the URL path.
+SELECT EXISTS (
+  SELECT 1 FROM course_sections
+  WHERE id = sqlc.arg(section_id)::uuid
+    AND course_id = sqlc.arg(course_id)::uuid
+) AS exists;
+
+-- name: JoinSection :one
+-- Adds the user to the section as a 'student'. ON CONFLICT DO NOTHING
+-- keeps duplicate joins atomic (no PK violation surfacing) and concurrency
+-- safe; the service layer treats an empty result as the 409 "Already a
+-- member of this section" case.
+INSERT INTO course_members (user_id, section_id, role)
+VALUES (sqlc.arg(user_id)::uuid, sqlc.arg(section_id)::uuid, 'student')
+ON CONFLICT (user_id, section_id) DO NOTHING
+RETURNING user_id, section_id, role, joined_at;
+
+-- name: LeaveSection :one
+-- Hard-deletes the membership row. RETURNING lets the service detect a
+-- no-op delete (sql.ErrNoRows) and map it to the 404 "Not a member of
+-- this section" response.
+DELETE FROM course_members
+WHERE user_id = sqlc.arg(user_id)::uuid
+  AND section_id = sqlc.arg(section_id)::uuid
+RETURNING user_id;

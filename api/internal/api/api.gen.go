@@ -27,6 +27,27 @@ const (
 	BearerAuthScopes = "BearerAuth.Scopes"
 )
 
+// Defines values for CourseMemberResponseRole.
+const (
+	Instructor CourseMemberResponseRole = "instructor"
+	Student    CourseMemberResponseRole = "student"
+	Ta         CourseMemberResponseRole = "ta"
+)
+
+// Valid indicates whether the value is a known member of the CourseMemberResponseRole enum.
+func (e CourseMemberResponseRole) Valid() bool {
+	switch e {
+	case Instructor:
+		return true
+	case Student:
+		return true
+	case Ta:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CreateFileRequestMimeType.
 const (
 	CreateFileRequestMimeTypeApplicationepubZip                                                   CreateFileRequestMimeType = "application/epub+zip"
@@ -340,6 +361,17 @@ type CourseDetailResponse struct {
 	Title    string           `json:"title"`
 }
 
+// CourseMemberResponse A user's membership in a course section
+type CourseMemberResponse struct {
+	JoinedAt  time.Time                `json:"joined_at"`
+	Role      CourseMemberResponseRole `json:"role"`
+	SectionId openapi_types.UUID       `json:"section_id"`
+	UserId    openapi_types.UUID       `json:"user_id"`
+}
+
+// CourseMemberResponseRole defines model for CourseMemberResponse.Role.
+type CourseMemberResponseRole string
+
 // CourseResponse A course (e.g. CPTS 322) with its school summary embedded
 type CourseResponse struct {
 	CreatedAt   time.Time          `json:"created_at"`
@@ -485,6 +517,9 @@ type UpdateFileRequest struct {
 // BadRequest Standardized error response structure matching application error domains
 type BadRequest = AppError
 
+// Conflict Standardized error response structure matching application error domains
+type Conflict = AppError
+
 // Forbidden Standardized error response structure matching application error domains
 type Forbidden = AppError
 
@@ -619,6 +654,12 @@ type ServerInterface interface {
 	// Get a course detail with embedded sections
 	// (GET /courses/{course_id})
 	GetCourse(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID)
+	// Join a section as the authenticated user
+	// (POST /courses/{course_id}/sections/{section_id}/members)
+	JoinSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID)
+	// Leave a section as the authenticated user
+	// (DELETE /courses/{course_id}/sections/{section_id}/members/me)
+	LeaveSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID)
 	// Create a file reference and get a presigned upload URL
 	// (POST /files)
 	CreateFile(w http.ResponseWriter, r *http.Request)
@@ -661,6 +702,18 @@ func (_ Unimplemented) ListCourses(w http.ResponseWriter, r *http.Request, param
 // Get a course detail with embedded sections
 // (GET /courses/{course_id})
 func (_ Unimplemented) GetCourse(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Join a section as the authenticated user
+// (POST /courses/{course_id}/sections/{section_id}/members)
+func (_ Unimplemented) JoinSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Leave a section as the authenticated user
+// (DELETE /courses/{course_id}/sections/{section_id}/members/me)
+func (_ Unimplemented) LeaveSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -830,6 +883,86 @@ func (siw *ServerInterfaceWrapper) GetCourse(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCourse(w, r, courseId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// JoinSection operation middleware
+func (siw *ServerInterfaceWrapper) JoinSection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "course_id" -------------
+	var courseId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "course_id", chi.URLParam(r, "course_id"), &courseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "course_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "section_id" -------------
+	var sectionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "section_id", chi.URLParam(r, "section_id"), &sectionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "section_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.JoinSection(w, r, courseId, sectionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LeaveSection operation middleware
+func (siw *ServerInterfaceWrapper) LeaveSection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "course_id" -------------
+	var courseId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "course_id", chi.URLParam(r, "course_id"), &courseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "course_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "section_id" -------------
+	var sectionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "section_id", chi.URLParam(r, "section_id"), &sectionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "section_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LeaveSection(w, r, courseId, sectionId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -1351,6 +1484,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/courses/{course_id}", wrapper.GetCourse)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/courses/{course_id}/sections/{section_id}/members", wrapper.JoinSection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/courses/{course_id}/sections/{section_id}/members/me", wrapper.LeaveSection)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/files", wrapper.CreateFile)
 	})
 	r.Group(func(r chi.Router) {
@@ -1382,6 +1521,8 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 }
 
 type BadRequestJSONResponse AppError
+
+type ConflictJSONResponse AppError
 
 type ForbiddenJSONResponse AppError
 
@@ -1486,6 +1627,126 @@ type GetCourse500JSONResponse struct {
 }
 
 func (response GetCourse500JSONResponse) VisitGetCourseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type JoinSectionRequestObject struct {
+	CourseId  openapi_types.UUID `json:"course_id"`
+	SectionId openapi_types.UUID `json:"section_id"`
+}
+
+type JoinSectionResponseObject interface {
+	VisitJoinSectionResponse(w http.ResponseWriter) error
+}
+
+type JoinSection201JSONResponse CourseMemberResponse
+
+func (response JoinSection201JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type JoinSection400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response JoinSection400JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type JoinSection401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response JoinSection401JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type JoinSection404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response JoinSection404JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type JoinSection409JSONResponse struct{ ConflictJSONResponse }
+
+func (response JoinSection409JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type JoinSection500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response JoinSection500JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LeaveSectionRequestObject struct {
+	CourseId  openapi_types.UUID `json:"course_id"`
+	SectionId openapi_types.UUID `json:"section_id"`
+}
+
+type LeaveSectionResponseObject interface {
+	VisitLeaveSectionResponse(w http.ResponseWriter) error
+}
+
+type LeaveSection204Response struct {
+}
+
+func (response LeaveSection204Response) VisitLeaveSectionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type LeaveSection400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response LeaveSection400JSONResponse) VisitLeaveSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LeaveSection401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response LeaveSection401JSONResponse) VisitLeaveSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LeaveSection404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response LeaveSection404JSONResponse) VisitLeaveSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LeaveSection500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response LeaveSection500JSONResponse) VisitLeaveSectionResponse(w http.ResponseWriter) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(500)
 
@@ -1969,6 +2230,12 @@ type StrictServerInterface interface {
 	// Get a course detail with embedded sections
 	// (GET /courses/{course_id})
 	GetCourse(ctx context.Context, request GetCourseRequestObject) (GetCourseResponseObject, error)
+	// Join a section as the authenticated user
+	// (POST /courses/{course_id}/sections/{section_id}/members)
+	JoinSection(ctx context.Context, request JoinSectionRequestObject) (JoinSectionResponseObject, error)
+	// Leave a section as the authenticated user
+	// (DELETE /courses/{course_id}/sections/{section_id}/members/me)
+	LeaveSection(ctx context.Context, request LeaveSectionRequestObject) (LeaveSectionResponseObject, error)
 	// Create a file reference and get a presigned upload URL
 	// (POST /files)
 	CreateFile(ctx context.Context, request CreateFileRequestObject) (CreateFileResponseObject, error)
@@ -2072,6 +2339,60 @@ func (sh *strictHandler) GetCourse(w http.ResponseWriter, r *http.Request, cours
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetCourseResponseObject); ok {
 		if err := validResponse.VisitGetCourseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// JoinSection operation middleware
+func (sh *strictHandler) JoinSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID) {
+	var request JoinSectionRequestObject
+
+	request.CourseId = courseId
+	request.SectionId = sectionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.JoinSection(ctx, request.(JoinSectionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "JoinSection")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(JoinSectionResponseObject); ok {
+		if err := validResponse.VisitJoinSectionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// LeaveSection operation middleware
+func (sh *strictHandler) LeaveSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID) {
+	var request LeaveSectionRequestObject
+
+	request.CourseId = courseId
+	request.SectionId = sectionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.LeaveSection(ctx, request.(LeaveSectionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "LeaveSection")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(LeaveSectionResponseObject); ok {
+		if err := validResponse.VisitLeaveSectionResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {
@@ -2342,54 +2663,61 @@ func (sh *strictHandler) GetSchool(w http.ResponseWriter, r *http.Request, schoo
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

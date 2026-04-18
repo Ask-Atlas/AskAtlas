@@ -2,8 +2,10 @@ package courses_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -483,4 +485,235 @@ func TestCursor_RoundTrip(t *testing.T) {
 func TestDecodeCursor_BadInput(t *testing.T) {
 	_, err := courses.DecodeCursor("!!!not-base64!!!")
 	require.Error(t, err)
+}
+
+// =====================================================================
+// JoinSection / LeaveSection (ASK-132 / ASK-138)
+// =====================================================================
+
+// expectAssertHelpers wires the two preflight existence probes used by
+// both JoinSection and LeaveSection. Pulling this out keeps the per-AC
+// tests focused on the case under test instead of repeating six lines of
+// repo wiring.
+func expectAssertOK(repo *mock_courses.MockRepository, courseID, sectionID uuid.UUID) {
+	repo.EXPECT().
+		CourseExists(mock.Anything, utils.UUID(courseID)).
+		Return(true, nil)
+	repo.EXPECT().
+		SectionInCourseExists(mock.Anything, db.SectionInCourseExistsParams{
+			SectionID: utils.UUID(sectionID),
+			CourseID:  utils.UUID(courseID),
+		}).
+		Return(true, nil)
+}
+
+func TestService_JoinSection_Success(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	courseID := uuid.New()
+	sectionID := uuid.New()
+	userID := uuid.New()
+	joinedAt := time.Now().UTC()
+
+	expectAssertOK(repo, courseID, sectionID)
+	repo.EXPECT().
+		JoinSection(mock.Anything, db.JoinSectionParams{
+			UserID:    utils.UUID(userID),
+			SectionID: utils.UUID(sectionID),
+		}).
+		Return(db.CourseMember{
+			UserID:    utils.UUID(userID),
+			SectionID: utils.UUID(sectionID),
+			Role:      db.CourseRoleStudent,
+			JoinedAt:  pgtype.Timestamptz{Time: joinedAt, Valid: true},
+		}, nil)
+
+	svc := courses.NewService(repo)
+	got, err := svc.JoinSection(context.Background(), courses.JoinSectionParams{
+		CourseID:  courseID,
+		SectionID: sectionID,
+		UserID:    userID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, userID, got.UserID)
+	assert.Equal(t, sectionID, got.SectionID)
+	assert.Equal(t, courses.MemberRoleStudent, got.Role)
+	assert.True(t, got.JoinedAt.Equal(joinedAt))
+}
+
+func TestService_JoinSection_AlreadyMember(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	courseID := uuid.New()
+	sectionID := uuid.New()
+	userID := uuid.New()
+
+	expectAssertOK(repo, courseID, sectionID)
+	// ON CONFLICT DO NOTHING returns no row -> sql.ErrNoRows from RETURNING.
+	repo.EXPECT().
+		JoinSection(mock.Anything, mock.Anything).
+		Return(db.CourseMember{}, sql.ErrNoRows)
+
+	svc := courses.NewService(repo)
+	_, err := svc.JoinSection(context.Background(), courses.JoinSectionParams{
+		CourseID:  courseID,
+		SectionID: sectionID,
+		UserID:    userID,
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusConflict, appErr.Code)
+	assert.Equal(t, "Already a member of this section", appErr.Message)
+}
+
+func TestService_JoinSection_CourseNotFound(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	courseID := uuid.New()
+	repo.EXPECT().
+		CourseExists(mock.Anything, utils.UUID(courseID)).
+		Return(false, nil)
+
+	svc := courses.NewService(repo)
+	_, err := svc.JoinSection(context.Background(), courses.JoinSectionParams{
+		CourseID:  courseID,
+		SectionID: uuid.New(),
+		UserID:    uuid.New(),
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Course not found", appErr.Message)
+}
+
+func TestService_JoinSection_SectionNotFoundOrCrossCourse(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	courseID := uuid.New()
+	sectionID := uuid.New()
+	repo.EXPECT().
+		CourseExists(mock.Anything, mock.Anything).
+		Return(true, nil)
+	repo.EXPECT().
+		SectionInCourseExists(mock.Anything, mock.Anything).
+		Return(false, nil)
+
+	svc := courses.NewService(repo)
+	_, err := svc.JoinSection(context.Background(), courses.JoinSectionParams{
+		CourseID:  courseID,
+		SectionID: sectionID,
+		UserID:    uuid.New(),
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Section not found", appErr.Message)
+}
+
+func TestService_JoinSection_RepoErrorPropagates(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	expectAssertOK(repo, uuid.Nil, uuid.Nil)
+	// Override the assert wiring to use Anything so the test does not over-couple to ID values.
+	// (mockery records all expectations; the explicit matchers above accept the zero IDs.)
+
+	repo.EXPECT().
+		JoinSection(mock.Anything, mock.Anything).
+		Return(db.CourseMember{}, errors.New("boom"))
+
+	svc := courses.NewService(repo)
+	_, err := svc.JoinSection(context.Background(), courses.JoinSectionParams{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "boom")
+}
+
+func TestService_LeaveSection_Success(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	courseID := uuid.New()
+	sectionID := uuid.New()
+	userID := uuid.New()
+
+	expectAssertOK(repo, courseID, sectionID)
+	repo.EXPECT().
+		LeaveSection(mock.Anything, db.LeaveSectionParams{
+			UserID:    utils.UUID(userID),
+			SectionID: utils.UUID(sectionID),
+		}).
+		Return(utils.UUID(userID), nil)
+
+	svc := courses.NewService(repo)
+	err := svc.LeaveSection(context.Background(), courses.LeaveSectionParams{
+		CourseID:  courseID,
+		SectionID: sectionID,
+		UserID:    userID,
+	})
+	require.NoError(t, err)
+}
+
+func TestService_LeaveSection_NotMember(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	courseID := uuid.New()
+	sectionID := uuid.New()
+
+	expectAssertOK(repo, courseID, sectionID)
+	repo.EXPECT().
+		LeaveSection(mock.Anything, mock.Anything).
+		Return(pgtype.UUID{}, sql.ErrNoRows)
+
+	svc := courses.NewService(repo)
+	err := svc.LeaveSection(context.Background(), courses.LeaveSectionParams{
+		CourseID:  courseID,
+		SectionID: sectionID,
+		UserID:    uuid.New(),
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Not a member of this section", appErr.Message)
+}
+
+func TestService_LeaveSection_CourseNotFound(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(false, nil)
+
+	svc := courses.NewService(repo)
+	err := svc.LeaveSection(context.Background(), courses.LeaveSectionParams{
+		CourseID:  uuid.New(),
+		SectionID: uuid.New(),
+		UserID:    uuid.New(),
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Course not found", appErr.Message)
+}
+
+func TestService_LeaveSection_SectionNotFound(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().SectionInCourseExists(mock.Anything, mock.Anything).Return(false, nil)
+
+	svc := courses.NewService(repo)
+	err := svc.LeaveSection(context.Background(), courses.LeaveSectionParams{
+		CourseID:  uuid.New(),
+		SectionID: uuid.New(),
+		UserID:    uuid.New(),
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Section not found", appErr.Message)
 }

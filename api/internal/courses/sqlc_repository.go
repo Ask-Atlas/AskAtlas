@@ -68,3 +68,27 @@ func (r *sqlcRepository) GetCourse(ctx context.Context, id pgtype.UUID) (db.GetC
 func (r *sqlcRepository) ListCourseSections(ctx context.Context, courseID pgtype.UUID) ([]db.ListCourseSectionsRow, error) {
 	return r.queries.ListCourseSections(ctx, courseID)
 }
+
+func (r *sqlcRepository) CourseExists(ctx context.Context, id pgtype.UUID) (bool, error) {
+	return r.queries.CourseExists(ctx, id)
+}
+
+func (r *sqlcRepository) SectionInCourseExists(ctx context.Context, arg db.SectionInCourseExistsParams) (bool, error) {
+	return r.queries.SectionInCourseExists(ctx, arg)
+}
+
+// JoinSection forwards to the sqlc-generated INSERT … ON CONFLICT DO NOTHING
+// RETURNING. The query returns sql.ErrNoRows when the row already exists;
+// the service treats that as the 409 already-a-member case, so this method
+// passes the error through unchanged rather than mapping it to ErrConflict.
+// The two callers (Service.JoinSection and tests) get to decide.
+func (r *sqlcRepository) JoinSection(ctx context.Context, arg db.JoinSectionParams) (db.CourseMember, error) {
+	return r.queries.JoinSection(ctx, arg)
+}
+
+// LeaveSection forwards to the sqlc-generated DELETE … RETURNING. The query
+// returns sql.ErrNoRows when the membership row does not exist; the service
+// translates that to the 404 not-a-member case.
+func (r *sqlcRepository) LeaveSection(ctx context.Context, arg db.LeaveSectionParams) (pgtype.UUID, error) {
+	return r.queries.LeaveSection(ctx, arg)
+}

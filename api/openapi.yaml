@@ -442,6 +442,81 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /courses/{course_id}/sections/{section_id}/members:
+    post:
+      operationId: JoinSection
+      summary: Join a section as the authenticated user
+      description: |
+        Adds the authenticated user as a `student` member of the given section.
+        The role is hardcoded to `student` regardless of any fields supplied in
+        the request body. `instructor` and `ta` roles are assigned only through
+        the seeding pipeline.
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the parent course
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: section_id
+          in: path
+          description: The unique UUID of the section to join
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Membership created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseMemberResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /courses/{course_id}/sections/{section_id}/members/me:
+    delete:
+      operationId: LeaveSection
+      summary: Leave a section as the authenticated user
+      description: |
+        Removes the authenticated user's membership from the given section.
+        The membership row is hard-deleted. Any role (`student`, `ta`,
+        `instructor`) can leave.
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the parent course
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: section_id
+          in: path
+          description: The unique UUID of the section to leave
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Membership removed; no response body
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
 components:
   securitySchemes:
@@ -796,6 +871,30 @@ components:
       required:
         - courses
         - has_more
+    CourseMemberResponse:
+      type: object
+      description: A user's membership in a course section
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        section_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum:
+            - student
+            - ta
+            - instructor
+        joined_at:
+          type: string
+          format: date-time
+      required:
+        - user_id
+        - section_id
+        - role
+        - joined_at
     AppError:
       type: object
       description: Standardized error response structure matching application error domains
@@ -835,6 +934,12 @@ components:
             $ref: '#/components/schemas/AppError'
     NotFound:
       description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AppError'
+    Conflict:
+      description: Conflict with current resource state
       content:
         application/json:
           schema:
