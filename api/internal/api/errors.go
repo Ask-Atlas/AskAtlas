@@ -3,6 +3,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -12,12 +13,9 @@ import (
 	"github.com/getkin/kin-openapi/openapi3filter"
 )
 
-// BearerAuthFunc enforces the spec-declared security scheme without
-// re-verifying the token. It asserts the operation uses an HTTP bearer
-// scheme and carries an Authorization: Bearer header. JWT verification
-// is performed upstream by the clerkAuth middleware; this function
-// exists so the validator fails loudly if a new operation is added
-// with an unsupported scheme or missing Authorization header.
+// BearerAuthFunc is an openapi3filter.AuthenticationFunc that asserts the
+// operation's security scheme is HTTP bearer and that an Authorization:
+// Bearer header is present. It does not verify the token.
 func BearerAuthFunc(_ context.Context, input *openapi3filter.AuthenticationInput) error {
 	scheme := input.SecurityScheme
 	if scheme == nil || scheme.Type != "http" || !strings.EqualFold(scheme.Scheme, "bearer") {
@@ -25,11 +23,11 @@ func BearerAuthFunc(_ context.Context, input *openapi3filter.AuthenticationInput
 	}
 	header := input.RequestValidationInput.Request.Header.Get("Authorization")
 	if header == "" {
-		return fmt.Errorf("missing Authorization header")
+		return errors.New("missing Authorization header")
 	}
 	const prefix = "Bearer "
 	if len(header) <= len(prefix) || !strings.EqualFold(header[:len(prefix)], prefix) {
-		return fmt.Errorf("Authorization header must use Bearer scheme")
+		return errors.New("Authorization header must use Bearer scheme")
 	}
 	return nil
 }
