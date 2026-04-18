@@ -128,6 +128,23 @@ func mapMembershipCheckRow(r db.GetMembershipRow) MembershipCheck {
 	}
 }
 
+// mapSectionMember converts a sqlc-generated section-member row into
+// the domain SectionMember type. Privacy floor: any change to either
+// side of this mapping must keep email + clerk_id off the wire.
+func mapSectionMember(r db.ListSectionMembersRow) (SectionMember, error) {
+	userID, err := utils.PgxToGoogleUUID(r.UserID)
+	if err != nil {
+		return SectionMember{}, fmt.Errorf("mapSectionMember: user id: %w", err)
+	}
+	return SectionMember{
+		UserID:    userID,
+		FirstName: r.FirstName,
+		LastName:  r.LastName,
+		Role:      MemberRole(r.Role),
+		JoinedAt:  r.JoinedAt.Time,
+	}, nil
+}
+
 // mapSection converts a sqlc-generated section row into the domain Section.
 func mapSection(r db.ListCourseSectionsRow) (Section, error) {
 	id, err := utils.PgxToGoogleUUID(r.ID)

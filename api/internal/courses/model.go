@@ -114,3 +114,14 @@ type MembershipCheck struct {
 	Role     *MemberRole
 	JoinedAt *time.Time
 }
+
+// SectionMember is the per-row payload returned by ListSectionMembers.
+// Privacy floor: only the five fields the public schema exposes; no
+// email, clerk_id, or other PII is reachable through this type.
+type SectionMember struct {
+	UserID    uuid.UUID
+	FirstName string
+	LastName  string
+	Role      MemberRole
+	JoinedAt  time.Time
+}
