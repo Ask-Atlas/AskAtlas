@@ -130,6 +130,26 @@ func (h *CoursesHandler) GetCourse(w http.ResponseWriter, r *http.Request, cours
 	respondJSON(w, http.StatusOK, mapCourseDetailResponse(detail))
 }
 
+// JoinSection is a temporary stub satisfying the generated ServerInterface
+// while the membership wiring lands in follow-up commits.
+func (h *CoursesHandler) JoinSection(w http.ResponseWriter, r *http.Request, _ openapi_types.UUID, _ openapi_types.UUID) {
+	apperrors.RespondWithError(w, &apperrors.AppError{
+		Code:    http.StatusNotImplemented,
+		Status:  "Not Implemented",
+		Message: "Endpoint not yet implemented",
+	})
+}
+
+// LeaveSection is a temporary stub satisfying the generated ServerInterface
+// while the membership wiring lands in follow-up commits.
+func (h *CoursesHandler) LeaveSection(w http.ResponseWriter, r *http.Request, _ openapi_types.UUID, _ openapi_types.UUID) {
+	apperrors.RespondWithError(w, &apperrors.AppError{
+		Code:    http.StatusNotImplemented,
+		Status:  "Not Implemented",
+		Message: "Endpoint not yet implemented",
+	})
+}
+
 // mapSchoolSummary projects the embedded school summary to its wire shape.
 func mapSchoolSummary(s courses.SchoolSummary) api.SchoolSummary {
 	return api.SchoolSummary{
