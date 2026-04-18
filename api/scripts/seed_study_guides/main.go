@@ -87,6 +87,46 @@ const (
 		RETURNING id
 	`
 
+	// Resources has a UNIQUE index on (creator_id, url) so
+	// ON CONFLICT (creator_id, url) DO NOTHING lets the insert
+	// short-circuit on re-runs.
+	insertResourceSQL = `
+		INSERT INTO resources (creator_id, title, url, description, type)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (creator_id, url) DO NOTHING
+		RETURNING id
+	`
+
+	selectResourceIDSQL = `
+		SELECT id FROM resources
+		WHERE creator_id = $1 AND url = $2
+	`
+
+	insertGuideResourceLinkSQL = `
+		INSERT INTO study_guide_resources (resource_id, study_guide_id, attached_by)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (resource_id, study_guide_id) DO NOTHING
+	`
+
+	// files has no unique constraint on (user_id, s3_key) so we use
+	// SELECT-then-INSERT by that pair for idempotency.
+	selectFileIDSQL = `
+		SELECT id FROM files
+		WHERE user_id = $1 AND s3_key = $2
+	`
+
+	insertFileSQL = `
+		INSERT INTO files (user_id, s3_key, name, mime_type, size, status)
+		VALUES ($1, $2, $3, $4, $5, 'complete')
+		RETURNING id
+	`
+
+	insertGuideFileLinkSQL = `
+		INSERT INTO study_guide_files (file_id, study_guide_id)
+		VALUES ($1, $2)
+		ON CONFLICT (file_id, study_guide_id) DO NOTHING
+	`
+
 	insertVoteSQL = `
 		INSERT INTO study_guide_votes (user_id, study_guide_id, vote)
 		VALUES ($1, $2, $3)
@@ -181,6 +221,32 @@ func main() {
 			log.Fatalf("quiz on %q: %v", g.Title, err)
 		}
 
+		// One resource per guide. URL is derived from the guide ID so
+		// the (creator_id, url) uniqueness lets re-runs no-op.
+		resTitle := "Reference: " + g.Title
+		resURL := "https://example.test/seed-resources/" + guideID.String()
+		resDesc := "Auto-seeded reference resource for staging matrix."
+		resourceID, err := insertOrFetchResource(ctx, tx, botIDs[0], resTitle, resURL, resDesc)
+		if err != nil {
+			log.Fatalf("resource on %q: %v", g.Title, err)
+		}
+		if _, err := tx.Exec(ctx, insertGuideResourceLinkSQL, resourceID, guideID, botIDs[0]); err != nil {
+			log.Fatalf("link resource on %q: %v", g.Title, err)
+		}
+
+		// One file per guide. s3_key is synthetic + derived from the
+		// guide ID so re-runs are idempotent via the (user_id, s3_key)
+		// SELECT-first fallback.
+		fileName := "Slides - " + g.Title + ".pdf"
+		s3Key := "seed/study-guides/" + guideID.String() + "/slides.pdf"
+		fileID, err := insertOrFetchGuideFile(ctx, tx, botIDs[0], s3Key, fileName)
+		if err != nil {
+			log.Fatalf("file on %q: %v", g.Title, err)
+		}
+		if _, err := tx.Exec(ctx, insertGuideFileLinkSQL, fileID, guideID); err != nil {
+			log.Fatalf("link file on %q: %v", g.Title, err)
+		}
+
 		inserted++
 	}
 
@@ -258,6 +324,45 @@ func insertOrFetchQuiz(ctx context.Context, tx pgx.Tx, guideID, creatorID uuid.U
 	}
 
 	row := tx.QueryRow(ctx, insertQuizSQL, guideID, creatorID, title)
+	if err := row.Scan(&id); err != nil {
+		return uuid.Nil, fmt.Errorf("insert: %w", err)
+	}
+	return id, nil
+}
+
+// insertOrFetchResource uses ON CONFLICT DO NOTHING on the existing
+// (creator_id, url) unique index. On conflict the insert returns no
+// row; we fall through to SELECT by the same pair to recover the id.
+func insertOrFetchResource(ctx context.Context, tx pgx.Tx, creatorID uuid.UUID, title, url, description string) (uuid.UUID, error) {
+	var id uuid.UUID
+	row := tx.QueryRow(ctx, insertResourceSQL, creatorID, title, url, description, "link")
+	if err := row.Scan(&id); err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return uuid.Nil, fmt.Errorf("insert: %w", err)
+		}
+		if err := tx.QueryRow(ctx, selectResourceIDSQL, creatorID, url).Scan(&id); err != nil {
+			return uuid.Nil, fmt.Errorf("re-fetch: %w", err)
+		}
+	}
+	return id, nil
+}
+
+// insertOrFetchGuideFile is SELECT-then-INSERT by (user_id, s3_key)
+// because the files table has no unique constraint targetable by
+// natural identity. Always seeds status='complete' so the guide-
+// detail list query (which filters f.status = 'complete') surfaces
+// the row.
+func insertOrFetchGuideFile(ctx context.Context, tx pgx.Tx, userID uuid.UUID, s3Key, name string) (uuid.UUID, error) {
+	var id uuid.UUID
+	err := tx.QueryRow(ctx, selectFileIDSQL, userID, s3Key).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, fmt.Errorf("select: %w", err)
+	}
+
+	row := tx.QueryRow(ctx, insertFileSQL, userID, s3Key, name, "application/pdf", int64(2048000))
 	if err := row.Scan(&id); err != nil {
 		return uuid.Nil, fmt.Errorf("insert: %w", err)
 	}
