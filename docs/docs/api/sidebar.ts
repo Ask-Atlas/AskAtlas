@@ -52,6 +52,12 @@ const sidebar: SidebarsConfig = {
           label: "Revoke a permission on a file",
           className: "api-method delete",
         },
+        {
+          type: "doc",
+          id: "api/list-schools",
+          label: "List and search schools",
+          className: "api-method get",
+        },
       ],
     },
   ],

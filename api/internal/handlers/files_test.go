@@ -25,7 +25,8 @@ import (
 
 func fileTestRouter(t *testing.T, fh *handlers.FileHandler) chi.Router {
 	gh := handlers.NewGrantHandler(mock_handlers.NewMockGrantService(t))
-	composite := handlers.NewCompositeHandler(fh, gh)
+	sh := handlers.NewSchoolsHandler(mock_handlers.NewMockSchoolService(t))
+	composite := handlers.NewCompositeHandler(fh, gh, sh)
 	r := chi.NewRouter()
 	api.HandlerWithOptions(composite, api.ChiServerOptions{BaseRouter: r})
 	return r

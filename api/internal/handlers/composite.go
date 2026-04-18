@@ -5,9 +5,11 @@ package handlers
 type CompositeHandler struct {
 	*FileHandler
 	*GrantHandler
+	*SchoolsHandler
 }
 
-// NewCompositeHandler creates a handler that delegates to FileHandler and GrantHandler.
-func NewCompositeHandler(fh *FileHandler, gh *GrantHandler) *CompositeHandler {
-	return &CompositeHandler{FileHandler: fh, GrantHandler: gh}
+// NewCompositeHandler creates a handler that delegates to FileHandler,
+// GrantHandler, and SchoolsHandler.
+func NewCompositeHandler(fh *FileHandler, gh *GrantHandler, sh *SchoolsHandler) *CompositeHandler {
+	return &CompositeHandler{FileHandler: fh, GrantHandler: gh, SchoolsHandler: sh}
 }

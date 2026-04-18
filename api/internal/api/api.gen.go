@@ -345,6 +345,13 @@ type ListFilesResponse struct {
 	NextCursor *string        `json:"next_cursor,omitempty"`
 }
 
+// ListSchoolsResponse A paginated collection of schools
+type ListSchoolsResponse struct {
+	HasMore    bool             `json:"has_more"`
+	NextCursor *string          `json:"next_cursor,omitempty"`
+	Schools    []SchoolResponse `json:"schools"`
+}
+
 // RevokeGrantRequest Request body for revoking a file grant
 type RevokeGrantRequest struct {
 	GranteeId   openapi_types.UUID            `json:"grantee_id"`
@@ -357,6 +364,21 @@ type RevokeGrantRequestGranteeType string
 
 // RevokeGrantRequestPermission defines model for RevokeGrantRequest.Permission.
 type RevokeGrantRequestPermission string
+
+// SchoolResponse A school (university or college)
+type SchoolResponse struct {
+	Acronym string  `json:"acronym"`
+	City    *string `json:"city,omitempty"`
+
+	// Country ISO 3166-1 alpha-2 country code
+	Country   *string            `json:"country,omitempty"`
+	CreatedAt time.Time          `json:"created_at"`
+	Domain    *string            `json:"domain,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
+	Name      string             `json:"name"`
+	State     *string            `json:"state,omitempty"`
+	Url       *string            `json:"url,omitempty"`
+}
 
 // UpdateFileRequest Request body for updating file metadata
 type UpdateFileRequest struct {
@@ -438,6 +460,18 @@ type ListFilesParamsSortBy string
 // ListFilesParamsSortDir defines parameters for ListFiles.
 type ListFilesParamsSortDir string
 
+// ListSchoolsParams defines parameters for ListSchools.
+type ListSchoolsParams struct {
+	// Q Search term, partial match against school name (trigram) or exact match against acronym (case-insensitive)
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// PageLimit Maximum number of schools to return per page
+	PageLimit *int `form:"page_limit,omitempty" json:"page_limit,omitempty"`
+
+	// Cursor Opaque pagination cursor token obtained from the previous response
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // CreateFileJSONRequestBody defines body for CreateFile for application/json ContentType.
 type CreateFileJSONRequestBody = CreateFileRequest
 
@@ -473,6 +507,9 @@ type ServerInterface interface {
 	// List files for the current user
 	// (GET /me/files)
 	ListFiles(w http.ResponseWriter, r *http.Request, params ListFilesParams)
+	// List and search schools
+	// (GET /schools)
+	ListSchools(w http.ResponseWriter, r *http.Request, params ListSchoolsParams)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -518,6 +555,12 @@ func (_ Unimplemented) CreateGrant(w http.ResponseWriter, r *http.Request, fileI
 // List files for the current user
 // (GET /me/files)
 func (_ Unimplemented) ListFiles(w http.ResponseWriter, r *http.Request, params ListFilesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List and search schools
+// (GET /schools)
+func (_ Unimplemented) ListSchools(w http.ResponseWriter, r *http.Request, params ListSchoolsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -842,6 +885,55 @@ func (siw *ServerInterfaceWrapper) ListFiles(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// ListSchools operation middleware
+func (siw *ServerInterfaceWrapper) ListSchools(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSchoolsParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "page_limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "page_limit", r.URL.Query(), &params.PageLimit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page_limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSchools(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -975,6 +1067,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/files", wrapper.ListFiles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/schools", wrapper.ListSchools)
 	})
 
 	return r
@@ -1358,6 +1453,52 @@ func (response ListFiles500JSONResponse) VisitListFilesResponse(w http.ResponseW
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListSchoolsRequestObject struct {
+	Params ListSchoolsParams
+}
+
+type ListSchoolsResponseObject interface {
+	VisitListSchoolsResponse(w http.ResponseWriter) error
+}
+
+type ListSchools200JSONResponse ListSchoolsResponse
+
+func (response ListSchools200JSONResponse) VisitListSchoolsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListSchools400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListSchools400JSONResponse) VisitListSchoolsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListSchools401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListSchools401JSONResponse) VisitListSchoolsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListSchools500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListSchools500JSONResponse) VisitListSchoolsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// Create a file reference and get a presigned upload URL
@@ -1381,6 +1522,9 @@ type StrictServerInterface interface {
 	// List files for the current user
 	// (GET /me/files)
 	ListFiles(ctx context.Context, request ListFilesRequestObject) (ListFilesResponseObject, error)
+	// List and search schools
+	// (GET /schools)
+	ListSchools(ctx context.Context, request ListSchoolsRequestObject) (ListSchoolsResponseObject, error)
 }
 
 type StrictHandlerFunc = strictnethttp.StrictHTTPHandlerFunc
@@ -1620,44 +1764,74 @@ func (sh *strictHandler) ListFiles(w http.ResponseWriter, r *http.Request, param
 	}
 }
 
+// ListSchools operation middleware
+func (sh *strictHandler) ListSchools(w http.ResponseWriter, r *http.Request, params ListSchoolsParams) {
+	var request ListSchoolsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSchools(ctx, request.(ListSchoolsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSchools")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSchoolsResponseObject); ok {
+		if err := validResponse.VisitListSchoolsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/+xa3W/byBH/VxbbPtyhjCUn9rXQm+9SBy7SaxDH6EMQCCPuUNpkv7wfthVD/3uxu6Qk",
-	"ipRluYqD4O5JIrm7M5z5zTfvaaml0QqVd3R0Ty06o5XDdPErsPd4HdD5eFVq5VGlv2CM4CV4rtXgs9Mq",
-	"3nPlDCXEf3+1WNER/ctgdfQgP3WDM2P+aa22dLFYFJShKy038Rw6iuSIrektCnqu7YQzhupZiK+oLQp6",
-	"oTxaBeIS7Q3avOc5mGjoEpcIE8wLC/q79uc6KPYsXPyuPakStUVBrxQEP9OWf8Xnod4iGB/Xm+KZy32j",
-	"+41dlx4UA8viriw20kCZOG9D6YNFIsGXM66mZI31ejXTErhytKDGaoPW82wDpWYYf/3cIB1RrjxOMemE",
-	"oQcu0iJgjMezQLxrba43OW+5msY99Q09+YxlArlE52CKvYudBx/6zlkUNNoJt1ElHzOLy+WrMz/10PvN",
-	"Ing85wLXLLstyncwFxoY8ZqUaTUBovCWVFwgsVihRVViR1CSSxxnevcUVZCRNS5hioPPBqe0qC+MWv2/",
-	"xYmhRQtIhlUbd24UO9IG1Z0UlbYSvHuhq4qXyHQZJCp/dKstM1aX6BxXUymOmid7n2QsOlQ+LZeidUkL",
-	"6vHOD4wArjYORhMmf/vKzZrIV2pUIJNMJNy9RTX1Mzp6eXpaUMlVc33cs83xr2lb5jRD75eTqF644zKK",
-	"93h48o/Tv/8yHKaz6ntFB6kbaEnsFGvqqkntQks2pi5c8hq2AQ9yy/2MAIkS5FOFjASTUHX1/m0HOnHr",
-	"LpfRYmJR0HzcOFix20DS+a0t21/2jQXlt9pG/YBMNJuTSttsIcmjZAFM4/bOC6a7iGPOWhoNgTPao/pm",
-	"+aY1BYeWFrTUwbps8YHNx9PAGfYiz6CV3DmeXXNzyg3H27h5BjYewlCg79u/IcQWU8X6K7UI9Ul2B4C0",
-	"NJEFItEDAw/E1B4or5sk8aoaQDXSun46w3AMviViBh5feJ4g35FPBTfa8h27VBACJhGg3gbsOeWRShXg",
-	"/DjK/v8k1/KzW53N491JN7BtjTvRhNieUt5AUZJN7YISSxueqIlha+psUe2DV22y2/B1li1zhdEtRvok",
-	"BHGxp1Wz8WS+lxN4os94KkzbPuMRymxEUDzWQ7Qk0dJ0n3Lfcuej/3APKdjAlKsUhUotBJYpr9NVUrzr",
-	"DTfpD/co3b6Bp+YQrIV5vJ6BG0tt14U+0VogpEpC4Z0fl8G6nLTusO6euBXZX5LoE9B7vNFf9g1bNm76",
-	"M2w9HLauktt5MFfuCDa5qijYJNYmonUk+6ScsC+R6/IdHTiWwXI/v4wQrkt5BIv2LMST7+kkXZ03Cv3X",
-	"fz/Qus5K8E1PVxqeeW9ypcZVpRPOuY8Ypmfuy5kX4MjZuwta0Bu0WWv0+Gh4NIwyjOk2GE5H9NXR8OhV",
-	"FAT4WWJpsLRDo7Nso4RSQn3BlonleQ72dV/gV83mB6tCu7XQoi3jaKPpxlpP5OXw+Jsw0DiYns5EO7Gu",
-	"/WVOsHvT60VBT4bDbcSXbzNYa++kLce7t7SL84KePoZOXzclwTRICXa+VHXjjFbvCoqRKfptdUQ8JKNo",
-	"cF+HoUW20eQbOoh6ne7XiDJgQaJH6+jo46Zdf5ghCYpfByRXVxevicW6FIym7WeYGfWa1KSiadBRwnaT",
-	"34zWImMbUsUaPHY41cWnDvxOul4oIcSFMhbAVRBiTq4Dhpgpa5s5jOuequOTTPLhTcsG1eFAkbXVgGIy",
-	"JxevU5TBHl/xBv3B1PqcyhwezJfs8iI5C35O33AyfLV7U6vt+r2Q9ia5mDbMDPhy1gXaKic4mAvJ1c03",
-	"Rt3ho2c3O3pU9Hw+xGcG2XfA/fdB8XuMoKmB3BsbByn7dQ+FyLVqYl+A66oF61RiIIEUlUhltfzhIN5T",
-	"Wj0K4z0hOh1Sy4SRn2Jc5owo7Qneced//mMANCNivRWj1RKwxYN1wCEgmeDfINLrHw6PPR3qZ65Y2q22",
-	"Hqebcd7UKBHnICwCm2ecI/tDID1LYRvQo2eWuCp/ezPaZd9rF+bPufBoc6srpi/6VqF1M25IFH7GusAb",
-	"FA3crwPa+QrvrtS59boEAMMKgojwjmdFfDc9mOa6t5VT0EyNT0R/X2YX56sRHln2gXs5bh72sVzW04Q1",
-	"rg0qxtPUce1hBVwg24fPxCGW3CFp5oVEcokv4gGkFOAcr2qz2sJ5q9W9ZP7PYel22f87DzazC3f8KxKu",
-	"yGTu0W0VsRrXg4Uef72coTbz0mHfvLTDRJ647sEE3B2cicZadGMxjZONzsUSqOJTP+OOXH34jXgu0XmQ",
-	"ZguHTde9zst6uHxwprMncxOstMX9uUsx+uC81eOkpwmumUV9K8G1mdtXcA13BxHcJYItZ8SjlTF7MmA9",
-	"ByHm+TMaAlPgyvlsFZH+Nmu4bvGyk+xr8DABh6TUIkgVSTttfcrkLLogfIwW22KDtj7PlfqCw9ogcRUe",
-	"Wjdbc8f2nHL1fc3Siz/Gg11qm0p+xm09mPoJXJlDEkn9uebq54feiXG75aXiAWuvA+kq3XyUg619mwpy",
-	"gnY5NMsVnA9WxSSGGJjiFu7io7Hgkvt+/l6etj5Z2fmxyiaD/zEQ8/l6xBfll8dpxOsvqIieeOAqlvlW",
-	"y4QRY/GG6+CWH4BtczJ5KvcQNr9lw6472Ozt2gnu/GqU+eO19uNr1pCKTi4qqAzWxuQpzQUX6wOrlN6u",
-	"j6o+foo6yF9D5uQ3ffBDB2A4XXxa/C8AAP//wI1+Xb8qAAA=",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
