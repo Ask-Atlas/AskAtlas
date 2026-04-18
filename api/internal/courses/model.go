@@ -65,3 +65,52 @@ type Membership struct {
 	Role      MemberRole
 	JoinedAt  time.Time
 }
+
+// EnrollmentSection is the compact section payload embedded in an
+// Enrollment. Mirrors api.EnrollmentSectionSummary on the wire.
+type EnrollmentSection struct {
+	ID             uuid.UUID
+	Term           string
+	SectionCode    *string
+	InstructorName *string
+}
+
+// EnrollmentCourse is the compact course payload embedded in an
+// Enrollment. No description/created_at -- the course detail endpoint
+// is the source of truth for those.
+type EnrollmentCourse struct {
+	ID         uuid.UUID
+	Department string
+	Number     string
+	Title      string
+}
+
+// EnrollmentSchool is the *very* compact school payload embedded in an
+// Enrollment. Only id + acronym -- the dashboard renders an acronym
+// badge per row, and pulling the full SchoolSummary would bloat the
+// payload for users in many courses.
+type EnrollmentSchool struct {
+	ID      uuid.UUID
+	Acronym string
+}
+
+// Enrollment is the dashboard row returned by Service.ListMyEnrollments:
+// one section the viewer is enrolled in, with just enough course and
+// school context to render a card without a follow-up request.
+type Enrollment struct {
+	Section  EnrollmentSection
+	Course   EnrollmentCourse
+	School   EnrollmentSchool
+	Role     MemberRole
+	JoinedAt time.Time
+}
+
+// MembershipCheck is the per-section enrolled/not-enrolled probe
+// returned by Service.CheckMembership. Role and JoinedAt are pointer
+// types because the wire shape requires explicit JSON nulls (not
+// omitted) when the viewer is not enrolled.
+type MembershipCheck struct {
+	Enrolled bool
+	Role     *MemberRole
+	JoinedAt *time.Time
+}

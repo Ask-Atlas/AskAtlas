@@ -115,3 +115,24 @@ type LeaveSectionParams struct {
 	SectionID uuid.UUID
 	UserID    uuid.UUID
 }
+
+// ListMyEnrollmentsParams is the input to Service.ListMyEnrollments.
+// Term and Role are optional filters; when nil the corresponding sqlc
+// narg short-circuits its WHERE branch.
+type ListMyEnrollmentsParams struct {
+	UserID uuid.UUID
+	Term   *string
+	Role   *MemberRole
+}
+
+// CheckMembershipParams is the input to Service.CheckMembership. Mirrors
+// JoinSectionParams structurally because both go through the same
+// course + section preflight before the per-membership query.
+type CheckMembershipParams struct {
+	CourseID  uuid.UUID
+	SectionID uuid.UUID
+	UserID    uuid.UUID
+}
+
+// MaxTermLength matches the openapi.yaml maxLength on the term filter.
+const MaxTermLength int = 30

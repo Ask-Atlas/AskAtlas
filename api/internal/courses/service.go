@@ -39,6 +39,8 @@ type Repository interface {
 	SectionInCourseExists(ctx context.Context, arg db.SectionInCourseExistsParams) (bool, error)
 	JoinSection(ctx context.Context, arg db.JoinSectionParams) (db.CourseMember, error)
 	LeaveSection(ctx context.Context, arg db.LeaveSectionParams) (pgtype.UUID, error)
+	ListMyEnrollments(ctx context.Context, arg db.ListMyEnrollmentsParams) ([]db.ListMyEnrollmentsRow, error)
+	GetMembership(ctx context.Context, arg db.GetMembershipParams) (db.GetMembershipRow, error)
 }
 
 // sortKey is the lookup key for the per-sort-variant query function table.
@@ -480,4 +482,92 @@ func (s *Service) assertCourseAndSection(ctx context.Context, courseID, sectionI
 		return apperrors.NewNotFound("Section not found")
 	}
 	return nil
+}
+
+// ListMyEnrollments returns every section the viewer is enrolled in,
+// projected through the dashboard-shaped Enrollment payload. The HTTP
+// boundary already enforces role/term validation via the openapi schema,
+// but the service defensively re-validates so internal Go callers can't
+// pass a bogus role through to the database.
+//
+// No pagination by design (per ASK-154): a user is typically enrolled in
+// 4-8 sections. The fixed sort lives in the SQL.
+func (s *Service) ListMyEnrollments(ctx context.Context, p ListMyEnrollmentsParams) ([]Enrollment, error) {
+	arg := db.ListMyEnrollmentsParams{
+		UserID: utils.UUID(p.UserID),
+	}
+	if p.Term != nil {
+		trimmed := strings.TrimSpace(*p.Term)
+		if trimmed != "" {
+			if len(trimmed) > MaxTermLength {
+				return nil, apperrors.NewBadRequest("Invalid query parameters", map[string]string{
+					"term": fmt.Sprintf("must be %d characters or fewer", MaxTermLength),
+				})
+			}
+			arg.Term = pgtype.Text{String: trimmed, Valid: true}
+		}
+	}
+	if p.Role != nil {
+		role, ok := dbRoleFor(*p.Role)
+		if !ok {
+			return nil, apperrors.NewBadRequest("Invalid query parameters", map[string]string{
+				"role": "must be one of: student, instructor, ta",
+			})
+		}
+		arg.Role = db.NullCourseRole{CourseRole: role, Valid: true}
+	}
+
+	rows, err := s.repo.ListMyEnrollments(ctx, arg)
+	if err != nil {
+		return nil, fmt.Errorf("ListMyEnrollments: %w", err)
+	}
+
+	out := make([]Enrollment, 0, len(rows))
+	for _, r := range rows {
+		e, err := mapEnrollment(r)
+		if err != nil {
+			return nil, fmt.Errorf("ListMyEnrollments: map: %w", err)
+		}
+		out = append(out, e)
+	}
+	return out, nil
+}
+
+// CheckMembership returns the viewer's membership status in the given
+// section. Non-membership is NOT a 404 -- it's a 200 with enrolled=false
+// so the frontend can distinguish "not enrolled" from "section doesn't
+// exist" (which IS a 404 from assertCourseAndSection above).
+func (s *Service) CheckMembership(ctx context.Context, p CheckMembershipParams) (MembershipCheck, error) {
+	if err := s.assertCourseAndSection(ctx, p.CourseID, p.SectionID); err != nil {
+		return MembershipCheck{}, err
+	}
+
+	row, err := s.repo.GetMembership(ctx, db.GetMembershipParams{
+		UserID:    utils.UUID(p.UserID),
+		SectionID: utils.UUID(p.SectionID),
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return MembershipCheck{Enrolled: false}, nil
+		}
+		return MembershipCheck{}, fmt.Errorf("CheckMembership: %w", err)
+	}
+	return mapMembershipCheckRow(row), nil
+}
+
+// dbRoleFor maps the domain MemberRole onto the sqlc-generated CourseRole
+// enum, returning false when the input is not a known role. The HTTP
+// boundary validates first via the openapi enum, but this gate keeps the
+// service safe against direct Go callers passing a malformed role.
+func dbRoleFor(r MemberRole) (db.CourseRole, bool) {
+	switch r {
+	case MemberRoleStudent:
+		return db.CourseRoleStudent, true
+	case MemberRoleTA:
+		return db.CourseRoleTa, true
+	case MemberRoleInstructor:
+		return db.CourseRoleInstructor, true
+	default:
+		return "", false
+	}
 }

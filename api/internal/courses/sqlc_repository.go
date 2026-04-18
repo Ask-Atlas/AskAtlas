@@ -92,3 +92,14 @@ func (r *sqlcRepository) JoinSection(ctx context.Context, arg db.JoinSectionPara
 func (r *sqlcRepository) LeaveSection(ctx context.Context, arg db.LeaveSectionParams) (pgtype.UUID, error) {
 	return r.queries.LeaveSection(ctx, arg)
 }
+
+func (r *sqlcRepository) ListMyEnrollments(ctx context.Context, arg db.ListMyEnrollmentsParams) ([]db.ListMyEnrollmentsRow, error) {
+	return r.queries.ListMyEnrollments(ctx, arg)
+}
+
+// GetMembership forwards to the sqlc-generated lookup. Returns sql.ErrNoRows
+// when the user is not a member; the service maps that to {enrolled: false}
+// rather than treating it as an error.
+func (r *sqlcRepository) GetMembership(ctx context.Context, arg db.GetMembershipParams) (db.GetMembershipRow, error) {
+	return r.queries.GetMembership(ctx, arg)
+}
