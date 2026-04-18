@@ -57,7 +57,7 @@ func mapStudyGuide(r sharedGuideRow) (StudyGuide, error) {
 		},
 		CourseID:      courseID,
 		Title:         r.Title,
-		Description:   textPtr(r.Description),
+		Description:   utils.TextPtr(r.Description),
 		Tags:          append([]string(nil), r.Tags...),
 		VoteScore:     r.VoteScore,
 		ViewCount:     int64(r.ViewCount),
@@ -66,16 +66,6 @@ func mapStudyGuide(r sharedGuideRow) (StudyGuide, error) {
 		CreatedAt:     r.CreatedAt.Time,
 		UpdatedAt:     r.UpdatedAt.Time,
 	}, nil
-}
-
-// textPtr returns a *string for a nullable pgtype.Text column. Nil for
-// SQL NULL so the handler emits JSON null (not the empty string).
-func textPtr(t pgtype.Text) *string {
-	if !t.Valid {
-		return nil
-	}
-	s := t.String
-	return &s
 }
 
 // mapStudyGuideDetail projects the main GetStudyGuideDetail row into
@@ -115,8 +105,8 @@ func mapStudyGuideDetail(r db.GetStudyGuideDetailRow) (StudyGuideDetail, error) 
 			Title:      r.CourseTitle,
 		},
 		Title:         r.Title,
-		Description:   textPtr(r.Description),
-		Content:       textPtr(r.Content),
+		Description:   utils.TextPtr(r.Description),
+		Content:       utils.TextPtr(r.Content),
 		Tags:          append([]string(nil), r.Tags...),
 		VoteScore:     r.VoteScore,
 		ViewCount:     int64(r.ViewCount),
@@ -169,7 +159,7 @@ func mapResource(r db.ListGuideResourcesRow) (Resource, error) {
 		Title:       r.Title,
 		URL:         r.Url,
 		Type:        ResourceType(r.Type),
-		Description: textPtr(r.Description),
+		Description: utils.TextPtr(r.Description),
 		CreatedAt:   r.CreatedAt.Time,
 	}, nil
 }

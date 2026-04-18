@@ -45,14 +45,14 @@ func mapCourse(r sharedCourseRow) (Course, error) {
 			ID:      schoolID,
 			Name:    r.SName,
 			Acronym: r.SAcronym,
-			City:    textPtr(r.SCity),
-			State:   textPtr(r.SState),
-			Country: textPtr(r.SCountry),
+			City:    utils.TextPtr(r.SCity),
+			State:   utils.TextPtr(r.SState),
+			Country: utils.TextPtr(r.SCountry),
 		},
 		Department:  r.Department,
 		Number:      r.Number,
 		Title:       r.Title,
-		Description: textPtr(r.Description),
+		Description: utils.TextPtr(r.Description),
 		CreatedAt:   r.CreatedAt.Time,
 	}, nil
 }
@@ -96,8 +96,8 @@ func mapEnrollment(r db.ListMyEnrollmentsRow) (Enrollment, error) {
 		Section: EnrollmentSection{
 			ID:             sectionID,
 			Term:           r.SectionTerm,
-			SectionCode:    textPtr(r.SectionSectionCode),
-			InstructorName: textPtr(r.SectionInstructorName),
+			SectionCode:    utils.TextPtr(r.SectionSectionCode),
+			InstructorName: utils.TextPtr(r.SectionInstructorName),
 		},
 		Course: EnrollmentCourse{
 			ID:         courseID,
@@ -154,19 +154,10 @@ func mapSection(r db.ListCourseSectionsRow) (Section, error) {
 	return Section{
 		ID:             id,
 		Term:           r.Term,
-		SectionCode:    textPtr(r.SectionCode),
-		InstructorName: textPtr(r.InstructorName),
+		SectionCode:    utils.TextPtr(r.SectionCode),
+		InstructorName: utils.TextPtr(r.InstructorName),
 		MemberCount:    r.MemberCount,
 	}, nil
-}
-
-// textPtr returns a *string for a nullable pgtype.Text column. nil for SQL NULL.
-func textPtr(t pgtype.Text) *string {
-	if !t.Valid {
-		return nil
-	}
-	s := t.String
-	return &s
 }
 
 // Per-sort-variant adapter functions. Each projects the typed db row into
