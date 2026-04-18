@@ -40,6 +40,18 @@ const sidebar: SidebarsConfig = {
           label: "Delete a file by ID",
           className: "api-method delete",
         },
+        {
+          type: "doc",
+          id: "api/create-grant",
+          label: "Grant a permission on a file",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "api/revoke-grant",
+          label: "Revoke a permission on a file",
+          className: "api-method delete",
+        },
       ],
     },
   ],

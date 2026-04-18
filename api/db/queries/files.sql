@@ -401,6 +401,32 @@ WHERE id      = sqlc.arg(file_id)::uuid
   AND deletion_status IS NULL
 RETURNING id, user_id, name, size, mime_type, status, created_at, updated_at;
 
+-- name: UpsertFileGrant :one
+-- Inserts a new file grant, returning the row. If the grant already exists
+-- (same file_id, grantee_type, grantee_id, permission), updates granted_by
+-- and returns the row. Using DO UPDATE SET avoids a race window where
+-- concurrent inserts could cause both INSERT and fallback SELECT to miss.
+INSERT INTO file_grants (file_id, grantee_type, grantee_id, permission, granted_by)
+VALUES (
+    sqlc.arg(file_id)::uuid,
+    sqlc.arg(grantee_type)::grantee_type,
+    sqlc.arg(grantee_id)::uuid,
+    sqlc.arg(permission)::permission,
+    sqlc.arg(granted_by)::uuid
+)
+ON CONFLICT (file_id, grantee_type, grantee_id, permission)
+DO UPDATE SET granted_by = EXCLUDED.granted_by
+RETURNING *;
+
+-- name: RevokeFileGrant :exec
+-- Deletes a file grant matching the exact composite key. No-op if the grant
+-- does not exist (idempotent).
+DELETE FROM file_grants
+WHERE file_id = sqlc.arg(file_id)
+  AND grantee_type = sqlc.arg(grantee_type)
+  AND grantee_id = sqlc.arg(grantee_id)
+  AND permission = sqlc.arg(permission);
+
 -- name: GetFileIfViewable :one
 SELECT f.*
 FROM files f

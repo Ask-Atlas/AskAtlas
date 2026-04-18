@@ -1616,6 +1616,33 @@ func (q *Queries) MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
 	return err
 }
 
+const revokeFileGrant = `-- name: RevokeFileGrant :exec
+DELETE FROM file_grants
+WHERE file_id = $1
+  AND grantee_type = $2
+  AND grantee_id = $3
+  AND permission = $4
+`
+
+type RevokeFileGrantParams struct {
+	FileID      pgtype.UUID `json:"file_id"`
+	GranteeType GranteeType `json:"grantee_type"`
+	GranteeID   pgtype.UUID `json:"grantee_id"`
+	Permission  Permission  `json:"permission"`
+}
+
+// Deletes a file grant matching the exact composite key. No-op if the grant
+// does not exist (idempotent).
+func (q *Queries) RevokeFileGrant(ctx context.Context, arg RevokeFileGrantParams) error {
+	_, err := q.db.Exec(ctx, revokeFileGrant,
+		arg.FileID,
+		arg.GranteeType,
+		arg.GranteeID,
+		arg.Permission,
+	)
+	return err
+}
+
 const setFileDeletionJobID = `-- name: SetFileDeletionJobID :exec
 UPDATE files
 SET
@@ -1726,4 +1753,51 @@ type UpdateFileStatusParams struct {
 func (q *Queries) UpdateFileStatus(ctx context.Context, arg UpdateFileStatusParams) error {
 	_, err := q.db.Exec(ctx, updateFileStatus, arg.Status, arg.FileID, arg.OwnerID)
 	return err
+}
+
+const upsertFileGrant = `-- name: UpsertFileGrant :one
+INSERT INTO file_grants (file_id, grantee_type, grantee_id, permission, granted_by)
+VALUES (
+    $1::uuid,
+    $2::grantee_type,
+    $3::uuid,
+    $4::permission,
+    $5::uuid
+)
+ON CONFLICT (file_id, grantee_type, grantee_id, permission)
+DO UPDATE SET granted_by = EXCLUDED.granted_by
+RETURNING id, file_id, grantee_type, grantee_id, permission, granted_by, created_at
+`
+
+type UpsertFileGrantParams struct {
+	FileID      pgtype.UUID `json:"file_id"`
+	GranteeType GranteeType `json:"grantee_type"`
+	GranteeID   pgtype.UUID `json:"grantee_id"`
+	Permission  Permission  `json:"permission"`
+	GrantedBy   pgtype.UUID `json:"granted_by"`
+}
+
+// Inserts a new file grant, returning the row. If the grant already exists
+// (same file_id, grantee_type, grantee_id, permission), updates granted_by
+// and returns the row. Using DO UPDATE SET avoids a race window where
+// concurrent inserts could cause both INSERT and fallback SELECT to miss.
+func (q *Queries) UpsertFileGrant(ctx context.Context, arg UpsertFileGrantParams) (FileGrant, error) {
+	row := q.db.QueryRow(ctx, upsertFileGrant,
+		arg.FileID,
+		arg.GranteeType,
+		arg.GranteeID,
+		arg.Permission,
+		arg.GrantedBy,
+	)
+	var i FileGrant
+	err := row.Scan(
+		&i.ID,
+		&i.FileID,
+		&i.GranteeType,
+		&i.GranteeID,
+		&i.Permission,
+		&i.GrantedBy,
+		&i.CreatedAt,
+	)
+	return i, err
 }

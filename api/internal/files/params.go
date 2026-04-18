@@ -101,6 +101,24 @@ type GetFileParams struct {
 	StudyGuideIDs []uuid.UUID
 }
 
+// CreateGrantParams holds the validated inputs for creating a file grant.
+type CreateGrantParams struct {
+	FileID      uuid.UUID
+	OwnerID     uuid.UUID
+	GranteeType string
+	GranteeID   uuid.UUID
+	Permission  string
+}
+
+// RevokeGrantParams holds the validated inputs for revoking a file grant.
+type RevokeGrantParams struct {
+	FileID      uuid.UUID
+	OwnerID     uuid.UUID
+	GranteeType string
+	GranteeID   uuid.UUID
+	Permission  string
+}
+
 // CreateFileParams contains the validated inputs for creating a new file reference.
 type CreateFileParams struct {
 	UserID   uuid.UUID

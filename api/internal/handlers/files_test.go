@@ -23,6 +23,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func fileTestRouter(t *testing.T, fh *handlers.FileHandler) chi.Router {
+	gh := handlers.NewGrantHandler(mock_handlers.NewMockGrantService(t))
+	composite := handlers.NewCompositeHandler(fh, gh)
+	r := chi.NewRouter()
+	api.HandlerWithOptions(composite, api.ChiServerOptions{BaseRouter: r})
+	return r
+}
+
 func TestFileHandler_CreateFile_Success(t *testing.T) {
 	mockSvc := mock_handlers.NewMockFileService(t)
 	h := handlers.NewFileHandler(mockSvc, nil)
@@ -54,8 +62,7 @@ func TestFileHandler_CreateFile_Success(t *testing.T) {
 		UploadURL: "https://s3.example.com/presigned-url",
 	}, nil)
 
-	r := chi.NewRouter()
-	api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+	r := fileTestRouter(t, h)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusCreated, w.Code)
@@ -97,8 +104,7 @@ func TestFileHandler_CreateFile_ValidationErrors(t *testing.T) {
 			req = req.WithContext(ctx)
 			w := httptest.NewRecorder()
 
-			r := chi.NewRouter()
-			api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+			r := fileTestRouter(t, h)
 			r.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -113,11 +119,9 @@ func TestFileHandler_CreateFile_Unauthorized(t *testing.T) {
 	body := `{"name":"file.pdf","mime_type":"application/pdf","size":100}`
 	req := httptest.NewRequest(http.MethodPost, "/files", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	// no auth context
 	w := httptest.NewRecorder()
 
-	r := chi.NewRouter()
-	api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+	r := fileTestRouter(t, h)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
@@ -139,8 +143,7 @@ func TestFileHandler_CreateFile_ServiceError(t *testing.T) {
 		CreateFile(mock.Anything, mock.Anything).
 		Return(files.CreateFileResult{}, errors.New("internal error"))
 
-	r := chi.NewRouter()
-	api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+	r := fileTestRouter(t, h)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -156,8 +159,7 @@ func TestFileHandler_ListFiles_Success(t *testing.T) {
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
-	r := chi.NewRouter()
-	api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+	r := fileTestRouter(t, h)
 
 	returnedFiles := []files.File{
 		{ID: uuid.New(), Name: "file1.txt", Status: "complete"},
@@ -192,8 +194,7 @@ func TestFileHandler_ListFiles_InvalidParams(t *testing.T) {
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
-	r := chi.NewRouter()
-	api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+	r := fileTestRouter(t, h)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -213,8 +214,7 @@ func TestFileHandler_ListFiles_ServiceError(t *testing.T) {
 		ListFiles(mock.Anything, mock.Anything).
 		Return(nil, nil, errors.New("svc error"))
 
-	r := chi.NewRouter()
-	api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+	r := fileTestRouter(t, h)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -248,8 +248,7 @@ func TestFileHandler_UpdateFile_Success(t *testing.T) {
 		UpdatedAt: now,
 	}, nil)
 
-	r := chi.NewRouter()
-	api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+	r := fileTestRouter(t, h)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
@@ -278,8 +277,7 @@ func TestFileHandler_UpdateFile_NotFound(t *testing.T) {
 	mockSvc.EXPECT().UpdateFile(mock.Anything, mock.Anything).
 		Return(files.File{}, apperrors.ErrNotFound)
 
-	r := chi.NewRouter()
-	api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+	r := fileTestRouter(t, h)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
@@ -302,8 +300,7 @@ func TestFileHandler_UpdateFile_ServiceError(t *testing.T) {
 	mockSvc.EXPECT().UpdateFile(mock.Anything, mock.Anything).
 		Return(files.File{}, errors.New("db connection failed"))
 
-	r := chi.NewRouter()
-	api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+	r := fileTestRouter(t, h)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
@@ -328,8 +325,7 @@ func TestFileHandler_UpdateFile_ValidationError(t *testing.T) {
 			"name": "contains invalid characters: /",
 		}))
 
-	r := chi.NewRouter()
-	api.HandlerWithOptions(h, api.ChiServerOptions{BaseRouter: r})
+	r := fileTestRouter(t, h)
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)

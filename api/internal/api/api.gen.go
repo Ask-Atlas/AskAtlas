@@ -51,6 +51,90 @@ func (e CreateFileRequestMimeType) Valid() bool {
 	}
 }
 
+// Defines values for CreateGrantRequestGranteeType.
+const (
+	CreateGrantRequestGranteeTypeCourse     CreateGrantRequestGranteeType = "course"
+	CreateGrantRequestGranteeTypeStudyGuide CreateGrantRequestGranteeType = "study_guide"
+	CreateGrantRequestGranteeTypeUser       CreateGrantRequestGranteeType = "user"
+)
+
+// Valid indicates whether the value is a known member of the CreateGrantRequestGranteeType enum.
+func (e CreateGrantRequestGranteeType) Valid() bool {
+	switch e {
+	case CreateGrantRequestGranteeTypeCourse:
+		return true
+	case CreateGrantRequestGranteeTypeStudyGuide:
+		return true
+	case CreateGrantRequestGranteeTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateGrantRequestPermission.
+const (
+	CreateGrantRequestPermissionDelete CreateGrantRequestPermission = "delete"
+	CreateGrantRequestPermissionShare  CreateGrantRequestPermission = "share"
+	CreateGrantRequestPermissionView   CreateGrantRequestPermission = "view"
+)
+
+// Valid indicates whether the value is a known member of the CreateGrantRequestPermission enum.
+func (e CreateGrantRequestPermission) Valid() bool {
+	switch e {
+	case CreateGrantRequestPermissionDelete:
+		return true
+	case CreateGrantRequestPermissionShare:
+		return true
+	case CreateGrantRequestPermissionView:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RevokeGrantRequestGranteeType.
+const (
+	RevokeGrantRequestGranteeTypeCourse     RevokeGrantRequestGranteeType = "course"
+	RevokeGrantRequestGranteeTypeStudyGuide RevokeGrantRequestGranteeType = "study_guide"
+	RevokeGrantRequestGranteeTypeUser       RevokeGrantRequestGranteeType = "user"
+)
+
+// Valid indicates whether the value is a known member of the RevokeGrantRequestGranteeType enum.
+func (e RevokeGrantRequestGranteeType) Valid() bool {
+	switch e {
+	case RevokeGrantRequestGranteeTypeCourse:
+		return true
+	case RevokeGrantRequestGranteeTypeStudyGuide:
+		return true
+	case RevokeGrantRequestGranteeTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RevokeGrantRequestPermission.
+const (
+	RevokeGrantRequestPermissionDelete RevokeGrantRequestPermission = "delete"
+	RevokeGrantRequestPermissionShare  RevokeGrantRequestPermission = "share"
+	RevokeGrantRequestPermissionView   RevokeGrantRequestPermission = "view"
+)
+
+// Valid indicates whether the value is a known member of the RevokeGrantRequestPermission enum.
+func (e RevokeGrantRequestPermission) Valid() bool {
+	switch e {
+	case RevokeGrantRequestPermissionDelete:
+		return true
+	case RevokeGrantRequestPermissionShare:
+		return true
+	case RevokeGrantRequestPermissionView:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListFilesParamsScope.
 const (
 	Accessible ListFilesParamsScope = "accessible"
@@ -193,6 +277,19 @@ type CreateFileResponse struct {
 	UploadUrl string       `json:"upload_url"`
 }
 
+// CreateGrantRequest Request body for creating a file grant
+type CreateGrantRequest struct {
+	GranteeId   openapi_types.UUID            `json:"grantee_id"`
+	GranteeType CreateGrantRequestGranteeType `json:"grantee_type"`
+	Permission  CreateGrantRequestPermission  `json:"permission"`
+}
+
+// CreateGrantRequestGranteeType defines model for CreateGrantRequest.GranteeType.
+type CreateGrantRequestGranteeType string
+
+// CreateGrantRequestPermission defines model for CreateGrantRequest.Permission.
+type CreateGrantRequestPermission string
+
 // FileResponse Complete metadata payload describing an uploaded file
 type FileResponse struct {
 	CreatedAt    time.Time          `json:"created_at"`
@@ -206,12 +303,36 @@ type FileResponse struct {
 	UpdatedAt    time.Time          `json:"updated_at"`
 }
 
+// GrantResponse A file permission grant
+type GrantResponse struct {
+	CreatedAt   time.Time          `json:"created_at"`
+	FileId      openapi_types.UUID `json:"file_id"`
+	GrantedBy   openapi_types.UUID `json:"granted_by"`
+	GranteeId   openapi_types.UUID `json:"grantee_id"`
+	GranteeType string             `json:"grantee_type"`
+	Id          openapi_types.UUID `json:"id"`
+	Permission  string             `json:"permission"`
+}
+
 // ListFilesResponse A paginated collection of files
 type ListFilesResponse struct {
 	Files      []FileResponse `json:"files"`
 	HasMore    bool           `json:"has_more"`
 	NextCursor *string        `json:"next_cursor,omitempty"`
 }
+
+// RevokeGrantRequest Request body for revoking a file grant
+type RevokeGrantRequest struct {
+	GranteeId   openapi_types.UUID            `json:"grantee_id"`
+	GranteeType RevokeGrantRequestGranteeType `json:"grantee_type"`
+	Permission  RevokeGrantRequestPermission  `json:"permission"`
+}
+
+// RevokeGrantRequestGranteeType defines model for RevokeGrantRequest.GranteeType.
+type RevokeGrantRequestGranteeType string
+
+// RevokeGrantRequestPermission defines model for RevokeGrantRequest.Permission.
+type RevokeGrantRequestPermission string
 
 // UpdateFileRequest Request body for updating file metadata
 type UpdateFileRequest struct {
@@ -299,6 +420,12 @@ type CreateFileJSONRequestBody = CreateFileRequest
 // UpdateFileJSONRequestBody defines body for UpdateFile for application/json ContentType.
 type UpdateFileJSONRequestBody = UpdateFileRequest
 
+// RevokeGrantJSONRequestBody defines body for RevokeGrant for application/json ContentType.
+type RevokeGrantJSONRequestBody = RevokeGrantRequest
+
+// CreateGrantJSONRequestBody defines body for CreateGrant for application/json ContentType.
+type CreateGrantJSONRequestBody = CreateGrantRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Create a file reference and get a presigned upload URL
@@ -313,6 +440,12 @@ type ServerInterface interface {
 	// Rename a file
 	// (PATCH /files/{file_id})
 	UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+	// Revoke a permission on a file
+	// (DELETE /files/{file_id}/grants)
+	RevokeGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+	// Grant a permission on a file
+	// (POST /files/{file_id}/grants)
+	CreateGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
 	// List files for the current user
 	// (GET /me/files)
 	ListFiles(w http.ResponseWriter, r *http.Request, params ListFilesParams)
@@ -343,6 +476,18 @@ func (_ Unimplemented) GetFile(w http.ResponseWriter, r *http.Request, fileId op
 // Rename a file
 // (PATCH /files/{file_id})
 func (_ Unimplemented) UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Revoke a permission on a file
+// (DELETE /files/{file_id}/grants)
+func (_ Unimplemented) RevokeGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Grant a permission on a file
+// (POST /files/{file_id}/grants)
+func (_ Unimplemented) CreateGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -465,6 +610,68 @@ func (siw *ServerInterfaceWrapper) UpdateFile(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateFile(w, r, fileId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeGrant operation middleware
+func (siw *ServerInterfaceWrapper) RevokeGrant(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "file_id" -------------
+	var fileId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file_id", chi.URLParam(r, "file_id"), &fileId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeGrant(w, r, fileId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateGrant operation middleware
+func (siw *ServerInterfaceWrapper) CreateGrant(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "file_id" -------------
+	var fileId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file_id", chi.URLParam(r, "file_id"), &fileId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateGrant(w, r, fileId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -737,6 +944,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/files/{file_id}", wrapper.UpdateFile)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/files/{file_id}/grants", wrapper.RevokeGrant)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/files/{file_id}/grants", wrapper.CreateGrant)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/files", wrapper.ListFiles)
 	})
 
@@ -964,6 +1177,117 @@ func (response UpdateFile500JSONResponse) VisitUpdateFileResponse(w http.Respons
 	return json.NewEncoder(w).Encode(response)
 }
 
+type RevokeGrantRequestObject struct {
+	FileId openapi_types.UUID `json:"file_id"`
+	Body   *RevokeGrantJSONRequestBody
+}
+
+type RevokeGrantResponseObject interface {
+	VisitRevokeGrantResponse(w http.ResponseWriter) error
+}
+
+type RevokeGrant204Response struct {
+}
+
+func (response RevokeGrant204Response) VisitRevokeGrantResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RevokeGrant400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RevokeGrant400JSONResponse) VisitRevokeGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevokeGrant401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RevokeGrant401JSONResponse) VisitRevokeGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevokeGrant404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RevokeGrant404JSONResponse) VisitRevokeGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevokeGrant500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response RevokeGrant500JSONResponse) VisitRevokeGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateGrantRequestObject struct {
+	FileId openapi_types.UUID `json:"file_id"`
+	Body   *CreateGrantJSONRequestBody
+}
+
+type CreateGrantResponseObject interface {
+	VisitCreateGrantResponse(w http.ResponseWriter) error
+}
+
+type CreateGrant201JSONResponse GrantResponse
+
+func (response CreateGrant201JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateGrant400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateGrant400JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateGrant401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateGrant401JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateGrant404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateGrant404JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateGrant500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response CreateGrant500JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListFilesRequestObject struct {
 	Params ListFilesParams
 }
@@ -1024,6 +1348,12 @@ type StrictServerInterface interface {
 	// Rename a file
 	// (PATCH /files/{file_id})
 	UpdateFile(ctx context.Context, request UpdateFileRequestObject) (UpdateFileResponseObject, error)
+	// Revoke a permission on a file
+	// (DELETE /files/{file_id}/grants)
+	RevokeGrant(ctx context.Context, request RevokeGrantRequestObject) (RevokeGrantResponseObject, error)
+	// Grant a permission on a file
+	// (POST /files/{file_id}/grants)
+	CreateGrant(ctx context.Context, request CreateGrantRequestObject) (CreateGrantResponseObject, error)
 	// List files for the current user
 	// (GET /me/files)
 	ListFiles(ctx context.Context, request ListFilesRequestObject) (ListFilesResponseObject, error)
@@ -1174,6 +1504,72 @@ func (sh *strictHandler) UpdateFile(w http.ResponseWriter, r *http.Request, file
 	}
 }
 
+// RevokeGrant operation middleware
+func (sh *strictHandler) RevokeGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	var request RevokeGrantRequestObject
+
+	request.FileId = fileId
+
+	var body RevokeGrantJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RevokeGrant(ctx, request.(RevokeGrantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RevokeGrant")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RevokeGrantResponseObject); ok {
+		if err := validResponse.VisitRevokeGrantResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateGrant operation middleware
+func (sh *strictHandler) CreateGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	var request CreateGrantRequestObject
+
+	request.FileId = fileId
+
+	var body CreateGrantJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateGrant(ctx, request.(CreateGrantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateGrant")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateGrantResponseObject); ok {
+		if err := validResponse.VisitCreateGrantResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListFiles operation middleware
 func (sh *strictHandler) ListFiles(w http.ResponseWriter, r *http.Request, params ListFilesParams) {
 	var request ListFilesRequestObject
@@ -1203,36 +1599,40 @@ func (sh *strictHandler) ListFiles(w http.ResponseWriter, r *http.Request, param
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
-	"AP//142HFyAfAAA=",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

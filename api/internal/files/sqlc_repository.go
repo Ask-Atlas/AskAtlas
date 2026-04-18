@@ -210,6 +210,23 @@ func (r *sqlcRepository) ListOwnedFilesMimeDesc(ctx context.Context, arg db.List
 	return files, nil
 }
 
+func (r *sqlcRepository) UpsertFileGrant(ctx context.Context, arg db.UpsertFileGrantParams) (db.FileGrant, error) {
+	slog.Debug("upserting file grant", "file_id", arg.FileID, "grantee_type", arg.GranteeType, "grantee_id", arg.GranteeID, "permission", arg.Permission)
+	row, err := r.queries.UpsertFileGrant(ctx, arg)
+	if err != nil {
+		return db.FileGrant{}, fmt.Errorf("UpsertFileGrant: %w", err)
+	}
+	return row, nil
+}
+
+func (r *sqlcRepository) RevokeFileGrant(ctx context.Context, arg db.RevokeFileGrantParams) error {
+	slog.Debug("revoking file grant", "file_id", arg.FileID, "grantee_type", arg.GranteeType, "grantee_id", arg.GranteeID, "permission", arg.Permission)
+	if err := r.queries.RevokeFileGrant(ctx, arg); err != nil {
+		return fmt.Errorf("RevokeFileGrant: %w", err)
+	}
+	return nil
+}
+
 func (r *sqlcRepository) GetFileByOwner(ctx context.Context, arg db.GetFileByOwnerParams) (db.GetFileByOwnerRow, error) {
 	slog.Debug("getting file by owner", "file_id", arg.FileID, "owner_id", arg.OwnerID)
 	file, err := r.queries.GetFileByOwner(ctx, arg)
