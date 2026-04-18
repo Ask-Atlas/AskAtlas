@@ -13,6 +13,7 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"golang.org/x/sync/errgroup"
 )
 
 // Repository is the data-access surface required by Service. The 8 list
@@ -433,17 +434,22 @@ func (s *Service) queryUpdatedAsc(ctx context.Context, f dbFilters, limit int32)
 // upsert, no mutation. View tracking will live on its own dedicated
 // POST (future ticket mirroring ASK-134's POST /files/{id}/view).
 //
-// Runs 6 queries: GetStudyGuideDetail (404 candidate), then
-// GetUserVoteForGuide, ListGuideRecommenders, ListGuideQuizzes...,
-// ListGuideResources, ListGuideFiles. Splitting into sibling queries
-// matches the PRD's "batching as separate queries to keep each query
-// simple and cacheable" guidance.
+// Runs 6 queries total: GetStudyGuideDetail (404 candidate, must
+// complete before the rest fan out so we don't make 5 speculative
+// round trips for a guide that doesn't exist), then the 5 independent
+// sibling queries (user_vote, recommenders, quizzes, resources,
+// files) issued in parallel via errgroup. The 5-wide fan-out cuts
+// end-to-end latency from sum(query_time) to max(query_time) while
+// preserving the strict error-propagation semantics -- any sibling
+// error short-circuits the rest via ctx cancellation and returns a
+// 500 to the handler.
 //
 // Soft-deleted guides return apperrors.ErrNotFound via the underlying
 // query's WHERE sg.deleted_at IS NULL. The handler maps that to a
 // 404 'Study guide not found'.
 func (s *Service) GetStudyGuide(ctx context.Context, p GetStudyGuideParams) (StudyGuideDetail, error) {
 	guidePgxID := utils.UUID(p.StudyGuideID)
+	viewerPgxID := utils.UUID(p.ViewerID)
 
 	row, err := s.repo.GetStudyGuideDetail(ctx, guidePgxID)
 	if err != nil {
@@ -458,72 +464,95 @@ func (s *Service) GetStudyGuide(ctx context.Context, p GetStudyGuideParams) (Stu
 		return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: map detail: %w", err)
 	}
 
-	// user_vote -- absence (sql.ErrNoRows) is the "not voted" branch
-	// and maps to a nil pointer; the wire shape emits JSON null.
-	vote, err := s.repo.GetUserVoteForGuide(ctx, db.GetUserVoteForGuideParams{
-		StudyGuideID: guidePgxID,
-		ViewerID:     utils.UUID(p.ViewerID),
+	// The 5 sibling queries are independent of each other -- fan out
+	// in parallel via errgroup. Each goroutine owns its slot on
+	// `detail` (different field per slot), so there's no data race on
+	// the struct.
+	g, gctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		vote, err := s.repo.GetUserVoteForGuide(gctx, db.GetUserVoteForGuideParams{
+			StudyGuideID: guidePgxID,
+			ViewerID:     viewerPgxID,
+		})
+		switch {
+		case err == nil:
+			v := GuideVote(vote)
+			detail.UserVote = &v
+		case errors.Is(err, sql.ErrNoRows):
+			detail.UserVote = nil
+		default:
+			return fmt.Errorf("user vote: %w", err)
+		}
+		return nil
 	})
-	switch {
-	case err == nil:
-		v := GuideVote(vote)
-		detail.UserVote = &v
-	case errors.Is(err, sql.ErrNoRows):
-		detail.UserVote = nil
-	default:
-		return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: user vote: %w", err)
-	}
 
-	recRows, err := s.repo.ListGuideRecommenders(ctx, guidePgxID)
-	if err != nil {
-		return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: recommenders: %w", err)
-	}
-	detail.RecommendedBy = make([]Creator, 0, len(recRows))
-	for _, r := range recRows {
-		rec, err := mapRecommender(r)
+	g.Go(func() error {
+		rows, err := s.repo.ListGuideRecommenders(gctx, guidePgxID)
 		if err != nil {
-			return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: map recommender: %w", err)
+			return fmt.Errorf("recommenders: %w", err)
 		}
-		detail.RecommendedBy = append(detail.RecommendedBy, rec)
-	}
+		detail.RecommendedBy = make([]Creator, 0, len(rows))
+		for _, r := range rows {
+			rec, err := mapRecommender(r)
+			if err != nil {
+				return fmt.Errorf("map recommender: %w", err)
+			}
+			detail.RecommendedBy = append(detail.RecommendedBy, rec)
+		}
+		return nil
+	})
 
-	quizRows, err := s.repo.ListGuideQuizzesWithQuestionCount(ctx, guidePgxID)
-	if err != nil {
-		return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: quizzes: %w", err)
-	}
-	detail.Quizzes = make([]Quiz, 0, len(quizRows))
-	for _, q := range quizRows {
-		quiz, err := mapQuiz(q)
+	g.Go(func() error {
+		rows, err := s.repo.ListGuideQuizzesWithQuestionCount(gctx, guidePgxID)
 		if err != nil {
-			return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: map quiz: %w", err)
+			return fmt.Errorf("quizzes: %w", err)
 		}
-		detail.Quizzes = append(detail.Quizzes, quiz)
-	}
+		detail.Quizzes = make([]Quiz, 0, len(rows))
+		for _, q := range rows {
+			quiz, err := mapQuiz(q)
+			if err != nil {
+				return fmt.Errorf("map quiz: %w", err)
+			}
+			detail.Quizzes = append(detail.Quizzes, quiz)
+		}
+		return nil
+	})
 
-	resRows, err := s.repo.ListGuideResources(ctx, guidePgxID)
-	if err != nil {
-		return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: resources: %w", err)
-	}
-	detail.Resources = make([]Resource, 0, len(resRows))
-	for _, r := range resRows {
-		res, err := mapResource(r)
+	g.Go(func() error {
+		rows, err := s.repo.ListGuideResources(gctx, guidePgxID)
 		if err != nil {
-			return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: map resource: %w", err)
+			return fmt.Errorf("resources: %w", err)
 		}
-		detail.Resources = append(detail.Resources, res)
-	}
+		detail.Resources = make([]Resource, 0, len(rows))
+		for _, r := range rows {
+			res, err := mapResource(r)
+			if err != nil {
+				return fmt.Errorf("map resource: %w", err)
+			}
+			detail.Resources = append(detail.Resources, res)
+		}
+		return nil
+	})
 
-	fileRows, err := s.repo.ListGuideFiles(ctx, guidePgxID)
-	if err != nil {
-		return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: files: %w", err)
-	}
-	detail.Files = make([]GuideFile, 0, len(fileRows))
-	for _, f := range fileRows {
-		gf, err := mapGuideFile(f)
+	g.Go(func() error {
+		rows, err := s.repo.ListGuideFiles(gctx, guidePgxID)
 		if err != nil {
-			return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: map file: %w", err)
+			return fmt.Errorf("files: %w", err)
 		}
-		detail.Files = append(detail.Files, gf)
+		detail.Files = make([]GuideFile, 0, len(rows))
+		for _, f := range rows {
+			gf, err := mapGuideFile(f)
+			if err != nil {
+				return fmt.Errorf("map file: %w", err)
+			}
+			detail.Files = append(detail.Files, gf)
+		}
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		return StudyGuideDetail{}, fmt.Errorf("GetStudyGuide: %w", err)
 	}
 
 	return detail, nil
