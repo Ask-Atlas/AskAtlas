@@ -1012,3 +1012,235 @@ func TestService_CheckMembership_SectionNotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, appErr.Code)
 	assert.Equal(t, "Section not found", appErr.Message)
 }
+
+// =====================================================================
+// ListSectionMembers (ASK-143)
+// =====================================================================
+
+func memberRow(t *testing.T, first, last, role string, joinedAt time.Time) db.ListSectionMembersRow {
+	t.Helper()
+	return db.ListSectionMembersRow{
+		UserID:    utils.UUID(uuid.New()),
+		FirstName: first,
+		LastName:  last,
+		Role:      db.CourseRole(role),
+		JoinedAt:  pgtype.Timestamptz{Time: joinedAt, Valid: true},
+	}
+}
+
+func TestService_ListSectionMembers_Empty(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	courseID := uuid.New()
+	sectionID := uuid.New()
+
+	expectAssertOK(repo, courseID, sectionID)
+	repo.EXPECT().
+		ListSectionMembers(mock.Anything, mock.MatchedBy(func(arg db.ListSectionMembersParams) bool {
+			return arg.SectionID.Valid && arg.SectionID.Bytes == sectionID && !arg.Role.Valid
+		})).
+		Return(nil, nil)
+
+	svc := courses.NewService(repo)
+	got, err := svc.ListSectionMembers(context.Background(), courses.ListSectionMembersParams{
+		CourseID:  courseID,
+		SectionID: sectionID,
+	})
+	require.NoError(t, err)
+	assert.Empty(t, got.Members)
+	assert.False(t, got.HasMore)
+	assert.Nil(t, got.NextCursor)
+}
+
+func TestService_ListSectionMembers_Success(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	courseID := uuid.New()
+	sectionID := uuid.New()
+	t1 := time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC)
+	t2 := time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC)
+
+	expectAssertOK(repo, courseID, sectionID)
+	repo.EXPECT().
+		ListSectionMembers(mock.Anything, mock.Anything).
+		Return([]db.ListSectionMembersRow{
+			memberRow(t, "Ananth", "Jillepalli", "instructor", t1),
+			memberRow(t, "David", "Del Val", "student", t2),
+		}, nil)
+
+	svc := courses.NewService(repo)
+	got, err := svc.ListSectionMembers(context.Background(), courses.ListSectionMembersParams{
+		CourseID:  courseID,
+		SectionID: sectionID,
+		Limit:     25,
+	})
+	require.NoError(t, err)
+	require.Len(t, got.Members, 2)
+	assert.Equal(t, "Ananth", got.Members[0].FirstName)
+	assert.Equal(t, courses.MemberRoleInstructor, got.Members[0].Role)
+	assert.Equal(t, "David", got.Members[1].FirstName)
+	assert.Equal(t, courses.MemberRoleStudent, got.Members[1].Role)
+	assert.False(t, got.HasMore)
+	assert.Nil(t, got.NextCursor)
+}
+
+// limit=2 with 3 returned rows triggers the n+1 trick: trims to 2 and
+// emits next_cursor. The cursor must encode the LAST visible row's
+// (joined_at, user_id), not the trimmed-off third row.
+func TestService_ListSectionMembers_HasMoreEmitsCursor(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	courseID := uuid.New()
+	sectionID := uuid.New()
+	t1 := time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC)
+	t2 := time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC)
+	t3 := time.Date(2026, 2, 3, 9, 30, 0, 0, time.UTC)
+
+	expectAssertOK(repo, courseID, sectionID)
+	repo.EXPECT().
+		ListSectionMembers(mock.Anything, mock.MatchedBy(func(arg db.ListSectionMembersParams) bool {
+			return arg.PageLimit == 3 // 2 + 1 for has_more detection
+		})).
+		Return([]db.ListSectionMembersRow{
+			memberRow(t, "A", "A", "student", t1),
+			memberRow(t, "B", "B", "student", t2),
+			memberRow(t, "C", "C", "student", t3), // trimmed off
+		}, nil)
+
+	svc := courses.NewService(repo)
+	got, err := svc.ListSectionMembers(context.Background(), courses.ListSectionMembersParams{
+		CourseID:  courseID,
+		SectionID: sectionID,
+		Limit:     2,
+	})
+	require.NoError(t, err)
+	require.Len(t, got.Members, 2)
+	assert.True(t, got.HasMore)
+	require.NotNil(t, got.NextCursor)
+
+	// Round-trip the encoded cursor and verify it points at the last
+	// VISIBLE row (B, joined at t2), not the trimmed third row.
+	decoded, err := courses.DecodeMemberCursor(*got.NextCursor)
+	require.NoError(t, err)
+	assert.True(t, decoded.JoinedAt.Equal(t2))
+	assert.Equal(t, got.Members[1].UserID, decoded.UserID)
+}
+
+func TestService_ListSectionMembers_RoleFilterForwarded(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	courseID := uuid.New()
+	sectionID := uuid.New()
+	role := courses.MemberRoleTA
+
+	expectAssertOK(repo, courseID, sectionID)
+	repo.EXPECT().
+		ListSectionMembers(mock.Anything, mock.MatchedBy(func(arg db.ListSectionMembersParams) bool {
+			return arg.Role.Valid && arg.Role.CourseRole == db.CourseRoleTa
+		})).
+		Return(nil, nil)
+
+	svc := courses.NewService(repo)
+	_, err := svc.ListSectionMembers(context.Background(), courses.ListSectionMembersParams{
+		CourseID:  courseID,
+		SectionID: sectionID,
+		Role:      &role,
+	})
+	require.NoError(t, err)
+}
+
+func TestService_ListSectionMembers_CursorForwarded(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	courseID := uuid.New()
+	sectionID := uuid.New()
+	cursorUserID := uuid.New()
+	cursorJoinedAt := time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC)
+
+	expectAssertOK(repo, courseID, sectionID)
+	repo.EXPECT().
+		ListSectionMembers(mock.Anything, mock.MatchedBy(func(arg db.ListSectionMembersParams) bool {
+			return arg.CursorJoinedAt.Valid && arg.CursorJoinedAt.Time.Equal(cursorJoinedAt) &&
+				arg.CursorUserID.Valid && arg.CursorUserID.Bytes == cursorUserID
+		})).
+		Return(nil, nil)
+
+	svc := courses.NewService(repo)
+	_, err := svc.ListSectionMembers(context.Background(), courses.ListSectionMembersParams{
+		CourseID:  courseID,
+		SectionID: sectionID,
+		Cursor:    &courses.MemberCursor{JoinedAt: cursorJoinedAt, UserID: cursorUserID},
+	})
+	require.NoError(t, err)
+}
+
+func TestService_ListSectionMembers_RejectsBadRole(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	expectAssertOK(repo, uuid.Nil, uuid.Nil)
+	bad := courses.MemberRole("admin")
+
+	svc := courses.NewService(repo)
+	_, err := svc.ListSectionMembers(context.Background(), courses.ListSectionMembersParams{
+		Role: &bad,
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+}
+
+func TestService_ListSectionMembers_CourseNotFound(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(false, nil)
+
+	svc := courses.NewService(repo)
+	_, err := svc.ListSectionMembers(context.Background(), courses.ListSectionMembersParams{
+		CourseID:  uuid.New(),
+		SectionID: uuid.New(),
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Course not found", appErr.Message)
+}
+
+func TestService_ListSectionMembers_SectionNotFoundOrCrossCoursePath(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().SectionInCourseExists(mock.Anything, mock.Anything).Return(false, nil)
+
+	svc := courses.NewService(repo)
+	_, err := svc.ListSectionMembers(context.Background(), courses.ListSectionMembersParams{
+		CourseID:  uuid.New(),
+		SectionID: uuid.New(),
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Section not found", appErr.Message)
+}
+
+func TestMemberCursor_RoundTrip(t *testing.T) {
+	original := courses.MemberCursor{
+		JoinedAt: time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC),
+		UserID:   uuid.New(),
+	}
+	token, err := courses.EncodeMemberCursor(original)
+	require.NoError(t, err)
+	require.NotEmpty(t, token)
+
+	decoded, err := courses.DecodeMemberCursor(token)
+	require.NoError(t, err)
+	assert.True(t, original.JoinedAt.Equal(decoded.JoinedAt))
+	assert.Equal(t, original.UserID, decoded.UserID)
+}
+
+func TestDecodeMemberCursor_BadInput(t *testing.T) {
+	_, err := courses.DecodeMemberCursor("!!!not-base64!!!")
+	require.Error(t, err)
+}

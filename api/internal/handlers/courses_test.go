@@ -956,3 +956,226 @@ func TestCoursesHandler_CheckMembership_InternalError(t *testing.T) {
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
+
+// ------------------------------------------------------------------------
+// ListSectionMembers (ASK-143)
+// ------------------------------------------------------------------------
+
+func TestCoursesHandler_ListSectionMembers_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	url := fmt.Sprintf("/courses/%s/sections/%s/members", uuid.NewString(), uuid.NewString())
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestCoursesHandler_ListSectionMembers_Empty(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		ListSectionMembers(mock.Anything, mock.Anything).
+		Return(courses.ListSectionMembersResult{}, nil)
+
+	url := fmt.Sprintf("/courses/%s/sections/%s/members", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var resp api.ListSectionMembersResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.NotNil(t, resp.Members)
+	assert.Empty(t, resp.Members)
+	assert.False(t, resp.HasMore)
+	assert.Nil(t, resp.NextCursor)
+}
+
+func TestCoursesHandler_ListSectionMembers_Success(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	userID := uuid.New()
+	joinedAt := time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC)
+
+	mockSvc.EXPECT().
+		ListSectionMembers(mock.Anything, mock.Anything).
+		Return(courses.ListSectionMembersResult{
+			Members: []courses.SectionMember{{
+				UserID: userID, FirstName: "David", LastName: "Del Val",
+				Role: courses.MemberRoleStudent, JoinedAt: joinedAt,
+			}},
+			HasMore: false,
+		}, nil)
+
+	url := fmt.Sprintf("/courses/%s/sections/%s/members", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var resp api.ListSectionMembersResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	require.Len(t, resp.Members, 1)
+	m := resp.Members[0]
+	assert.Equal(t, userID, uuid.UUID(m.UserId))
+	assert.Equal(t, "David", m.FirstName)
+	assert.Equal(t, "Del Val", m.LastName)
+	assert.Equal(t, api.SectionMemberResponseRoleStudent, m.Role)
+	assert.True(t, m.JoinedAt.Equal(joinedAt))
+}
+
+// Privacy floor regression: SectionMemberResponse must NEVER expose
+// email, clerk_id, or any other user PII. The string-contains assertion
+// pins the literal wire bytes -- if a future generated struct change
+// surfaces an "email" field, this test fires immediately.
+func TestCoursesHandler_ListSectionMembers_NoPIIInResponse(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		ListSectionMembers(mock.Anything, mock.Anything).
+		Return(courses.ListSectionMembersResult{
+			Members: []courses.SectionMember{{
+				UserID: uuid.New(), FirstName: "David", LastName: "Del Val",
+				Role: courses.MemberRoleStudent, JoinedAt: time.Now().UTC(),
+			}},
+		}, nil)
+
+	url := fmt.Sprintf("/courses/%s/sections/%s/members", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	assert.NotContains(t, body, `"email"`)
+	assert.NotContains(t, body, `"clerk_id"`)
+	assert.NotContains(t, body, `"clerkId"`)
+}
+
+func TestCoursesHandler_ListSectionMembers_FiltersForwarded(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		ListSectionMembers(mock.Anything, mock.MatchedBy(func(p courses.ListSectionMembersParams) bool {
+			return p.Role != nil && *p.Role == courses.MemberRoleInstructor && p.Limit == 5
+		})).
+		Return(courses.ListSectionMembersResult{}, nil)
+
+	url := fmt.Sprintf("/courses/%s/sections/%s/members?role=instructor&limit=5", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestCoursesHandler_ListSectionMembers_BadCursor(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	url := fmt.Sprintf("/courses/%s/sections/%s/members?cursor=!!!notbase64", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	body := w.Body.String()
+	assert.Contains(t, body, "invalid cursor value")
+	mockSvc.AssertNotCalled(t, "ListSectionMembers", mock.Anything, mock.Anything)
+}
+
+func TestCoursesHandler_ListSectionMembers_CursorRoundTrip(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	cursorJoinedAt := time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC)
+	cursorUserID := uuid.New()
+	token, err := courses.EncodeMemberCursor(courses.MemberCursor{JoinedAt: cursorJoinedAt, UserID: cursorUserID})
+	require.NoError(t, err)
+
+	mockSvc.EXPECT().
+		ListSectionMembers(mock.Anything, mock.MatchedBy(func(p courses.ListSectionMembersParams) bool {
+			return p.Cursor != nil && p.Cursor.UserID == cursorUserID && p.Cursor.JoinedAt.Equal(cursorJoinedAt)
+		})).
+		Return(courses.ListSectionMembersResult{}, nil)
+
+	url := fmt.Sprintf("/courses/%s/sections/%s/members?cursor=%s", uuid.NewString(), uuid.NewString(), token)
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestCoursesHandler_ListSectionMembers_CourseNotFound(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		ListSectionMembers(mock.Anything, mock.Anything).
+		Return(courses.ListSectionMembersResult{}, apperrors.NewNotFound("Course not found"))
+
+	url := fmt.Sprintf("/courses/%s/sections/%s/members", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Contains(t, w.Body.String(), "Course not found")
+}
+
+func TestCoursesHandler_ListSectionMembers_BadCourseUUID(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	url := fmt.Sprintf("/courses/not-a-uuid/sections/%s/members", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestCoursesHandler_ListSectionMembers_InternalError(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		ListSectionMembers(mock.Anything, mock.Anything).
+		Return(courses.ListSectionMembersResult{}, errors.New("db down"))
+
+	url := fmt.Sprintf("/courses/%s/sections/%s/members", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
