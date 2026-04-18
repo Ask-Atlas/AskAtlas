@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
+	"github.com/jackc/pgx/v5/pgtype"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -36,6 +37,72 @@ type MockRepository_Expecter struct {
 
 func (_m *MockRepository) EXPECT() *MockRepository_Expecter {
 	return &MockRepository_Expecter{mock: &_m.Mock}
+}
+
+// GetSchool provides a mock function for the type MockRepository
+func (_mock *MockRepository) GetSchool(ctx context.Context, id pgtype.UUID) (db.School, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSchool")
+	}
+
+	var r0 db.School
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) (db.School, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) db.School); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(db.School)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, pgtype.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_GetSchool_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSchool'
+type MockRepository_GetSchool_Call struct {
+	*mock.Call
+}
+
+// GetSchool is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id pgtype.UUID
+func (_e *MockRepository_Expecter) GetSchool(ctx interface{}, id interface{}) *MockRepository_GetSchool_Call {
+	return &MockRepository_GetSchool_Call{Call: _e.mock.On("GetSchool", ctx, id)}
+}
+
+func (_c *MockRepository_GetSchool_Call) Run(run func(ctx context.Context, id pgtype.UUID)) *MockRepository_GetSchool_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_GetSchool_Call) Return(school db.School, err error) *MockRepository_GetSchool_Call {
+	_c.Call.Return(school, err)
+	return _c
+}
+
+func (_c *MockRepository_GetSchool_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) (db.School, error)) *MockRepository_GetSchool_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // ListSchools provides a mock function for the type MockRepository

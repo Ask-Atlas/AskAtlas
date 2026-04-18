@@ -3,6 +3,7 @@ package handlers_test
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/handlers"
 	mock_handlers "github.com/Ask-Atlas/AskAtlas/api/internal/handlers/mocks"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/schools"
+	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/authctx"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -173,6 +175,102 @@ func TestSchoolsHandler_ListSchools_CursorForwardedToService(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestSchoolsHandler_GetSchool_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSchoolService(t)
+	h := handlers.NewSchoolsHandler(mockSvc)
+
+	// No authctx -> handler should reject before touching the service.
+	req := httptest.NewRequest(http.MethodGet, "/schools/"+uuid.New().String(), nil)
+	w := httptest.NewRecorder()
+
+	r := schoolsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestSchoolsHandler_GetSchool_Success(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSchoolService(t)
+	h := handlers.NewSchoolsHandler(mockSvc)
+
+	schoolID := uuid.New()
+	domain := "wsu.edu"
+	city := "Pullman"
+	state := "WA"
+	country := "US"
+	created := time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
+
+	mockSvc.EXPECT().
+		GetSchool(mock.Anything, mock.MatchedBy(func(p schools.GetSchoolParams) bool {
+			return p.SchoolID == schoolID
+		})).
+		Return(schools.School{
+			ID:        schoolID,
+			Name:      "Washington State University",
+			Acronym:   "WSU",
+			Domain:    &domain,
+			City:      &city,
+			State:     &state,
+			Country:   &country,
+			CreatedAt: created,
+		}, nil)
+
+	req := authedRequest(t, "/schools/"+schoolID.String())
+	w := httptest.NewRecorder()
+
+	r := schoolsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var resp api.SchoolResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, schoolID, uuid.UUID(resp.Id))
+	assert.Equal(t, "Washington State University", resp.Name)
+	assert.Equal(t, "WSU", resp.Acronym)
+	require.NotNil(t, resp.Domain)
+	assert.Equal(t, "wsu.edu", *resp.Domain)
+}
+
+func TestSchoolsHandler_GetSchool_NotFound(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSchoolService(t)
+	h := handlers.NewSchoolsHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		GetSchool(mock.Anything, mock.Anything).
+		Return(schools.School{}, fmt.Errorf("GetSchool: %w", apperrors.ErrNotFound))
+
+	req := authedRequest(t, "/schools/"+uuid.New().String())
+	w := httptest.NewRecorder()
+
+	r := schoolsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+
+	var body map[string]any
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&body))
+	// Spec mandates the school-specific message rather than the generic "Resource not found".
+	assert.Equal(t, "School not found", body["message"])
+}
+
+func TestSchoolsHandler_GetSchool_ServiceError(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSchoolService(t)
+	h := handlers.NewSchoolsHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		GetSchool(mock.Anything, mock.Anything).
+		Return(schools.School{}, errors.New("db down"))
+
+	req := authedRequest(t, "/schools/"+uuid.New().String())
+	w := httptest.NewRecorder()
+
+	r := schoolsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
 func TestSchoolsHandler_ListSchools_ServiceError(t *testing.T) {
