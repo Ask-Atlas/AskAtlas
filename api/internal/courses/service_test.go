@@ -1128,6 +1128,65 @@ func TestService_ListSectionMembers_HasMoreEmitsCursor(t *testing.T) {
 	assert.Equal(t, got.Members[1].UserID, decoded.UserID)
 }
 
+// Full client-journey test: page 1 returns has_more=true with a
+// next_cursor, then a follow-up call using that cursor as input must
+// reach the SQL with the right (joined_at, user_id) tuple. This
+// catches sign-flip bugs (e.g., a > swapped to <) that the per-step
+// HasMoreEmitsCursor + CursorForwarded tests would miss because they
+// verify encode + decode in isolation rather than as a round-trip.
+func TestService_ListSectionMembers_PaginationRoundTrip(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	courseID := uuid.New()
+	sectionID := uuid.New()
+	t1 := time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC)
+	t2 := time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC)
+	t3 := time.Date(2026, 2, 3, 9, 30, 0, 0, time.UTC)
+	page1Last := memberRow(t, "B", "B", "student", t2)
+
+	// Page 1: assertOK, then ListSectionMembers returns 3 rows for limit=2.
+	expectAssertOK(repo, courseID, sectionID)
+	repo.EXPECT().
+		ListSectionMembers(mock.Anything, mock.MatchedBy(func(arg db.ListSectionMembersParams) bool {
+			// First call should have no cursor.
+			return arg.PageLimit == 3 && !arg.CursorJoinedAt.Valid && !arg.CursorUserID.Valid
+		})).
+		Return([]db.ListSectionMembersRow{
+			memberRow(t, "A", "A", "student", t1),
+			page1Last,
+			memberRow(t, "C", "C", "student", t3),
+		}, nil).Once()
+
+	svc := courses.NewService(repo)
+	page1, err := svc.ListSectionMembers(context.Background(), courses.ListSectionMembersParams{
+		CourseID: courseID, SectionID: sectionID, Limit: 2,
+	})
+	require.NoError(t, err)
+	require.True(t, page1.HasMore)
+	require.NotNil(t, page1.NextCursor)
+	page1LastUserID := page1.Members[len(page1.Members)-1].UserID
+
+	// Page 2: decode the cursor the service emitted, feed it back.
+	decoded, err := courses.DecodeMemberCursor(*page1.NextCursor)
+	require.NoError(t, err)
+
+	expectAssertOK(repo, courseID, sectionID)
+	repo.EXPECT().
+		ListSectionMembers(mock.Anything, mock.MatchedBy(func(arg db.ListSectionMembersParams) bool {
+			// Second call must carry forward exactly the page-1 boundary.
+			return arg.PageLimit == 3 &&
+				arg.CursorJoinedAt.Valid && arg.CursorJoinedAt.Time.Equal(page1Last.JoinedAt.Time) &&
+				arg.CursorUserID.Valid && arg.CursorUserID.Bytes == page1LastUserID
+		})).
+		Return(nil, nil).Once()
+
+	_, err = svc.ListSectionMembers(context.Background(), courses.ListSectionMembersParams{
+		CourseID: courseID, SectionID: sectionID, Limit: 2,
+		Cursor: &decoded,
+	})
+	require.NoError(t, err)
+}
+
 func TestService_ListSectionMembers_RoleFilterForwarded(t *testing.T) {
 	repo := mock_courses.NewMockRepository(t)
 
@@ -1178,7 +1237,8 @@ func TestService_ListSectionMembers_CursorForwarded(t *testing.T) {
 
 func TestService_ListSectionMembers_RejectsBadRole(t *testing.T) {
 	repo := mock_courses.NewMockRepository(t)
-	expectAssertOK(repo, uuid.Nil, uuid.Nil)
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().SectionInCourseExists(mock.Anything, mock.Anything).Return(true, nil)
 	bad := courses.MemberRole("admin")
 
 	svc := courses.NewService(repo)
