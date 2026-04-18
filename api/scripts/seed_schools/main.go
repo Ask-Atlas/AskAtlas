@@ -47,7 +47,7 @@ type csvSchool struct {
 }
 
 func main() {
-	csvPath := flag.String("csv", "scripts/data/schools.csv", "Path to the schools CSV (relative to the api dir)")
+	csvPath := flag.String("csv", "scripts/data/schools.csv", "Path to the schools CSV. Relative paths resolve from the api/ directory (the cwd the makefile target runs from); pass an absolute path if running directly.")
 	flag.Parse()
 
 	dbURL := os.Getenv("DATABASE_URL")
@@ -121,6 +121,10 @@ func readCSV(path string) ([]csvSchool, error) {
 // seed inserts each row inside a single transaction. ON CONFLICT DO NOTHING
 // makes each insert idempotent against the schools table's partial unique
 // indexes (ipeds_id, domain). Returns inserted vs skipped counts.
+//
+// Single-row INSERTs are fine at the current scale (~25 rows). If the CSV
+// ever grows past a few thousand rows, switch to COPY FROM or multi-VALUES
+// batching -- one round-trip per row gets expensive past that point.
 func seed(ctx context.Context, conn *pgx.Conn, schools []csvSchool) (inserted, skipped int, err error) {
 	tx, err := conn.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
