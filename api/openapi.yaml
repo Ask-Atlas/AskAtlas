@@ -442,6 +442,44 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}:
+    get:
+      operationId: GetStudyGuide
+      summary: Get a study guide detail
+      description: |
+        Returns the full study-guide detail including `content`, the
+        authenticated user's own vote state (`user_vote`), the list of
+        recommenders, inline quizzes (with `question_count`), resources,
+        and attached files. Soft-deleted guides return 404.
+
+        This endpoint is a pure read -- no view-counter increment, no
+        last-viewed upsert, no mutation of any kind. View tracking lives
+        on its own dedicated POST (future ticket, mirroring
+        POST /api/files/{file_id}/view in ASK-134) so GET stays safe
+        and idempotent per HTTP semantics.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The requested study guide with all nested detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGuideDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /courses/{course_id}/study-guides:
     get:
       operationId: ListStudyGuides
@@ -1335,6 +1373,185 @@ components:
         - view_count
         - is_recommended
         - quiz_count
+        - created_at
+        - updated_at
+    GuideCourseSummary:
+      type: object
+      description: |
+        Compact course payload embedded in StudyGuideDetailResponse.
+        Mirrors EnrollmentCourseSummary but lives here separately so
+        the two surfaces can evolve independently.
+      properties:
+        id:
+          type: string
+          format: uuid
+        department:
+          type: string
+        number:
+          type: string
+        title:
+          type: string
+      required:
+        - id
+        - department
+        - number
+        - title
+    QuizSummary:
+      type: object
+      description: |
+        Compact quiz payload embedded in StudyGuideDetailResponse.
+        Privacy floor: id + title + question_count only. Creator id,
+        quiz content, and scoring config are intentionally absent --
+        the quiz detail endpoint (future ticket ASK-142) is the source
+        of truth for those.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        question_count:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+        - id
+        - title
+        - question_count
+    ResourceSummary:
+      type: object
+      description: |
+        Compact resource payload embedded in StudyGuideDetailResponse.
+        No creator or uploader info -- the study-guide detail caller
+        does not need to know who attached the resource.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        url:
+          type: string
+        type:
+          type: string
+          enum:
+            - link
+            - video
+            - article
+            - pdf
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - url
+        - type
+        - created_at
+    StudyGuideFileSummary:
+      type: object
+      description: |
+        Compact file payload embedded in StudyGuideDetailResponse.
+        Privacy floor: id + name + mime_type + size only. Owner,
+        s3_key, and checksum are intentionally absent.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        mime_type:
+          type: string
+        size:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+        - id
+        - name
+        - mime_type
+        - size
+    StudyGuideDetailResponse:
+      type: object
+      description: |
+        Full study-guide payload for the detail endpoint. Includes
+        content (excluded from the list payload) plus the
+        authenticated user's own vote state and the nested
+        recommenders / quizzes / resources / files arrays.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        content:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        creator:
+          $ref: '#/components/schemas/CreatorSummary'
+        course:
+          $ref: '#/components/schemas/GuideCourseSummary'
+        vote_score:
+          type: integer
+          format: int64
+        user_vote:
+          type: string
+          nullable: true
+          enum:
+            - up
+            - down
+        view_count:
+          type: integer
+          format: int64
+          minimum: 0
+        is_recommended:
+          type: boolean
+        recommended_by:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreatorSummary'
+        quizzes:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizSummary'
+        resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResourceSummary'
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudyGuideFileSummary'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - tags
+        - creator
+        - course
+        - vote_score
+        - user_vote
+        - view_count
+        - is_recommended
+        - recommended_by
+        - quizzes
+        - resources
+        - files
         - created_at
         - updated_at
     ListStudyGuidesResponse:
