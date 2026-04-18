@@ -24,6 +24,7 @@ import (
 	qstashclient "github.com/Ask-Atlas/AskAtlas/api/internal/qstash"
 	s3client "github.com/Ask-Atlas/AskAtlas/api/internal/s3"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/user"
+	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -105,6 +106,9 @@ func main() {
 
 	oapiOptions := middleware_oapi.Options{
 		ErrorHandler: api.OAPIValidatorErrorHandler,
+		Options: openapi3filter.Options{
+			AuthenticationFunc: openapi3filter.NoopAuthenticationFunc,
+		},
 	}
 
 	r.Route("/api", func(r chi.Router) {
