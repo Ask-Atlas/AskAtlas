@@ -2,6 +2,7 @@ package studyguides_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"net/http"
 	"os"
@@ -363,4 +364,283 @@ func TestListStudyGuidesSQL_ExcludesSoftDeletedGuidesAndUsers(t *testing.T) {
 				"%s must filter soft-deleted users (privacy convention)", marker)
 		})
 	}
+}
+
+// =====================================================================
+// GetStudyGuide (ASK-114) — detail endpoint tests
+// =====================================================================
+
+// detailFixture builds a minimal GetStudyGuideDetail row for the happy
+// path. The fields map 1:1 to the sqlc-generated columns.
+func detailFixture(t *testing.T, id, courseID, creatorID uuid.UUID) db.GetStudyGuideDetailRow {
+	t.Helper()
+	return db.GetStudyGuideDetailRow{
+		ID:               utils.UUID(id),
+		Title:            "Binary Trees Cheat Sheet",
+		Description:      pgtype.Text{String: "Tree traversals + balancing.", Valid: true},
+		Content:          pgtype.Text{String: "# Binary Trees\n...", Valid: true},
+		Tags:             []string{"trees", "midterm"},
+		ViewCount:        87,
+		CreatedAt:        pgtype.Timestamptz{Time: time.Date(2026, 3, 15, 0, 0, 0, 0, time.UTC), Valid: true},
+		UpdatedAt:        pgtype.Timestamptz{Time: time.Date(2026, 3, 28, 0, 0, 0, 0, time.UTC), Valid: true},
+		CourseID:         utils.UUID(courseID),
+		CourseDepartment: "CS",
+		CourseNumber:     "161",
+		CourseTitle:      "Design and Analysis of Algorithms",
+		CreatorID:        utils.UUID(creatorID),
+		CreatorFirstName: "Tim",
+		CreatorLastName:  "Roughgarden",
+		VoteScore:        7,
+		IsRecommended:    true,
+	}
+}
+
+func TestService_GetStudyGuide_Success(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+
+	guideID := uuid.New()
+	courseID := uuid.New()
+	creatorID := uuid.New()
+	viewerID := uuid.New()
+
+	repo.EXPECT().
+		GetStudyGuideDetail(mock.Anything, mock.Anything).
+		Return(detailFixture(t, guideID, courseID, creatorID), nil)
+	repo.EXPECT().
+		GetUserVoteForGuide(mock.Anything, mock.MatchedBy(func(arg db.GetUserVoteForGuideParams) bool {
+			return arg.StudyGuideID.Valid && arg.StudyGuideID.Bytes == guideID &&
+				arg.ViewerID.Valid && arg.ViewerID.Bytes == viewerID
+		})).
+		Return(db.VoteDirectionUp, nil)
+
+	recID := uuid.New()
+	repo.EXPECT().
+		ListGuideRecommenders(mock.Anything, mock.Anything).
+		Return([]db.ListGuideRecommendersRow{{
+			ID: utils.UUID(recID), FirstName: "Ananth", LastName: "Jillepalli",
+		}}, nil)
+
+	quizID := uuid.New()
+	repo.EXPECT().
+		ListGuideQuizzesWithQuestionCount(mock.Anything, mock.Anything).
+		Return([]db.ListGuideQuizzesWithQuestionCountRow{{
+			ID: utils.UUID(quizID), Title: "Tree Traversal Quiz", QuestionCount: 10,
+		}}, nil)
+
+	resourceID := uuid.New()
+	repo.EXPECT().
+		ListGuideResources(mock.Anything, mock.Anything).
+		Return([]db.ListGuideResourcesRow{{
+			ID:    utils.UUID(resourceID),
+			Title: "Binary Trees Visual", Url: "https://visualgo.net/en/bst",
+			Type: db.ResourceTypeLink, Description: pgtype.Text{String: "Interactive viz.", Valid: true},
+			CreatedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		}}, nil)
+
+	fileID := uuid.New()
+	repo.EXPECT().
+		ListGuideFiles(mock.Anything, mock.Anything).
+		Return([]db.ListGuideFilesRow{{
+			ID: utils.UUID(fileID), Name: "Lecture Slides - Week 7.pdf",
+			MimeType: "application/pdf", Size: 2048000,
+		}}, nil)
+
+	svc := studyguides.NewService(repo)
+	got, err := svc.GetStudyGuide(context.Background(), studyguides.GetStudyGuideParams{
+		StudyGuideID: guideID, ViewerID: viewerID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, guideID, got.ID)
+	assert.Equal(t, "Binary Trees Cheat Sheet", got.Title)
+	require.NotNil(t, got.Content)
+	assert.Equal(t, "# Binary Trees\n...", *got.Content)
+	assert.Equal(t, "Tim", got.Creator.FirstName)
+	assert.Equal(t, courseID, got.Course.ID)
+	assert.Equal(t, "CS", got.Course.Department)
+	assert.Equal(t, int64(7), got.VoteScore)
+	assert.True(t, got.IsRecommended)
+
+	// user_vote branch: viewer voted up
+	require.NotNil(t, got.UserVote)
+	assert.Equal(t, studyguides.GuideVoteUp, *got.UserVote)
+
+	// nested arrays populated
+	require.Len(t, got.RecommendedBy, 1)
+	assert.Equal(t, "Ananth", got.RecommendedBy[0].FirstName)
+	require.Len(t, got.Quizzes, 1)
+	assert.Equal(t, int64(10), got.Quizzes[0].QuestionCount)
+	require.Len(t, got.Resources, 1)
+	assert.Equal(t, studyguides.ResourceTypeLink, got.Resources[0].Type)
+	require.Len(t, got.Files, 1)
+	assert.Equal(t, int64(2048000), got.Files[0].Size)
+}
+
+// Viewer has not voted: GetUserVoteForGuide returns sql.ErrNoRows, the
+// service must map that to nil UserVote (not an error).
+func TestService_GetStudyGuide_UserVoteNil(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID := uuid.New()
+
+	repo.EXPECT().
+		GetStudyGuideDetail(mock.Anything, mock.Anything).
+		Return(detailFixture(t, guideID, uuid.New(), uuid.New()), nil)
+	repo.EXPECT().
+		GetUserVoteForGuide(mock.Anything, mock.Anything).
+		Return(db.VoteDirection(""), sql.ErrNoRows)
+	repo.EXPECT().ListGuideRecommenders(mock.Anything, mock.Anything).Return(nil, nil)
+	repo.EXPECT().ListGuideQuizzesWithQuestionCount(mock.Anything, mock.Anything).Return(nil, nil)
+	repo.EXPECT().ListGuideResources(mock.Anything, mock.Anything).Return(nil, nil)
+	repo.EXPECT().ListGuideFiles(mock.Anything, mock.Anything).Return(nil, nil)
+
+	svc := studyguides.NewService(repo)
+	got, err := svc.GetStudyGuide(context.Background(), studyguides.GetStudyGuideParams{
+		StudyGuideID: guideID, ViewerID: uuid.New(),
+	})
+	require.NoError(t, err)
+	assert.Nil(t, got.UserVote)
+}
+
+// Empty nested arrays must still be non-nil slices so the JSON output
+// is '[]', not null.
+func TestService_GetStudyGuide_EmptyNestedArraysStayNonNil(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID := uuid.New()
+
+	repo.EXPECT().
+		GetStudyGuideDetail(mock.Anything, mock.Anything).
+		Return(detailFixture(t, guideID, uuid.New(), uuid.New()), nil)
+	repo.EXPECT().
+		GetUserVoteForGuide(mock.Anything, mock.Anything).
+		Return(db.VoteDirection(""), sql.ErrNoRows)
+	repo.EXPECT().ListGuideRecommenders(mock.Anything, mock.Anything).Return(nil, nil)
+	repo.EXPECT().ListGuideQuizzesWithQuestionCount(mock.Anything, mock.Anything).Return(nil, nil)
+	repo.EXPECT().ListGuideResources(mock.Anything, mock.Anything).Return(nil, nil)
+	repo.EXPECT().ListGuideFiles(mock.Anything, mock.Anything).Return(nil, nil)
+
+	svc := studyguides.NewService(repo)
+	got, err := svc.GetStudyGuide(context.Background(), studyguides.GetStudyGuideParams{
+		StudyGuideID: guideID, ViewerID: uuid.New(),
+	})
+	require.NoError(t, err)
+	assert.NotNil(t, got.RecommendedBy)
+	assert.NotNil(t, got.Quizzes)
+	assert.NotNil(t, got.Resources)
+	assert.NotNil(t, got.Files)
+	assert.Empty(t, got.RecommendedBy)
+	assert.Empty(t, got.Quizzes)
+	assert.Empty(t, got.Resources)
+	assert.Empty(t, got.Files)
+}
+
+// Missing or soft-deleted guide: GetStudyGuideDetail returns
+// sql.ErrNoRows, service maps to 404 AppError.
+func TestService_GetStudyGuide_NotFound(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().
+		GetStudyGuideDetail(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideDetailRow{}, sql.ErrNoRows)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.GetStudyGuide(context.Background(), studyguides.GetStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Study guide not found", appErr.Message)
+
+	// Subsequent queries must not fire -- proving the short-circuit.
+	repo.AssertNotCalled(t, "GetUserVoteForGuide", mock.Anything, mock.Anything)
+	repo.AssertNotCalled(t, "ListGuideRecommenders", mock.Anything, mock.Anything)
+}
+
+func TestService_GetStudyGuide_DetailErrorPropagates(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().
+		GetStudyGuideDetail(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideDetailRow{}, errors.New("db down"))
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.GetStudyGuide(context.Background(), studyguides.GetStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "db down")
+}
+
+// Regression guard: the detail query must filter soft-deleted guides +
+// soft-deleted creators. Extends the same SQL-text introspection
+// pattern to the new GetStudyGuideDetail block.
+func TestGetStudyGuideDetailSQL_ExcludesSoftDeleted(t *testing.T) {
+	sql, err := os.ReadFile(filepath.Join("..", "..", "db", "queries", "study_guides.sql"))
+	require.NoError(t, err)
+	src := string(sql)
+
+	startMarker := "-- name: GetStudyGuideDetail :one"
+	startIdx := strings.Index(src, startMarker)
+	require.NotEqual(t, -1, startIdx, "GetStudyGuideDetail block missing")
+
+	rest := src[startIdx+len(startMarker):]
+	endIdx := strings.Index(rest, "-- name: ")
+	var block string
+	if endIdx == -1 {
+		block = src[startIdx:]
+	} else {
+		block = src[startIdx : startIdx+len(startMarker)+endIdx]
+	}
+
+	assert.Contains(t, block, "sg.deleted_at IS NULL",
+		"GetStudyGuideDetail must filter soft-deleted guides (404)")
+	assert.Contains(t, block, "u.deleted_at IS NULL",
+		"GetStudyGuideDetail must filter soft-deleted creators (privacy)")
+}
+
+// Regression guard: ListGuideRecommenders must filter soft-deleted
+// recommender users so a user who deleted their account disappears
+// from the "recommended by" list.
+func TestListGuideRecommendersSQL_ExcludesSoftDeletedUsers(t *testing.T) {
+	sql, err := os.ReadFile(filepath.Join("..", "..", "db", "queries", "study_guides.sql"))
+	require.NoError(t, err)
+	src := string(sql)
+
+	startMarker := "-- name: ListGuideRecommenders :many"
+	startIdx := strings.Index(src, startMarker)
+	require.NotEqual(t, -1, startIdx, "ListGuideRecommenders block missing")
+
+	rest := src[startIdx+len(startMarker):]
+	endIdx := strings.Index(rest, "-- name: ")
+	var block string
+	if endIdx == -1 {
+		block = src[startIdx:]
+	} else {
+		block = src[startIdx : startIdx+len(startMarker)+endIdx]
+	}
+
+	assert.Contains(t, block, "u.deleted_at IS NULL",
+		"ListGuideRecommenders must filter soft-deleted users")
+}
+
+// Regression guard: quiz list must filter soft-deleted quizzes so
+// deleted quizzes don't leak back into the detail payload.
+func TestListGuideQuizzesSQL_ExcludesSoftDeleted(t *testing.T) {
+	sql, err := os.ReadFile(filepath.Join("..", "..", "db", "queries", "study_guides.sql"))
+	require.NoError(t, err)
+	src := string(sql)
+
+	startMarker := "-- name: ListGuideQuizzesWithQuestionCount :many"
+	startIdx := strings.Index(src, startMarker)
+	require.NotEqual(t, -1, startIdx, "ListGuideQuizzesWithQuestionCount block missing")
+
+	rest := src[startIdx+len(startMarker):]
+	endIdx := strings.Index(rest, "-- name: ")
+	var block string
+	if endIdx == -1 {
+		block = src[startIdx:]
+	} else {
+		block = src[startIdx : startIdx+len(startMarker)+endIdx]
+	}
+
+	assert.Contains(t, block, "q.deleted_at IS NULL",
+		"ListGuideQuizzesWithQuestionCount must filter soft-deleted quizzes")
 }

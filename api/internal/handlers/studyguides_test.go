@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -284,6 +285,239 @@ func TestStudyGuidesHandler_List_InternalError(t *testing.T) {
 		Return(studyguides.ListStudyGuidesResult{}, errors.New("db down"))
 
 	url := fmt.Sprintf("/courses/%s/study-guides", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// ------------------------------------------------------------------------
+// GetStudyGuide (ASK-114)
+// ------------------------------------------------------------------------
+
+func TestStudyGuidesHandler_Get_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := fmt.Sprintf("/study-guides/%s", uuid.NewString())
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestStudyGuidesHandler_Get_Success(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	guideID := uuid.New()
+	creatorID := uuid.New()
+	courseID := uuid.New()
+	recID := uuid.New()
+	quizID := uuid.New()
+	resourceID := uuid.New()
+	fileID := uuid.New()
+	desc := "A guide about trees."
+	content := "# Binary Trees\n\nA binary tree..."
+	resDesc := "Interactive viz."
+	created := time.Date(2026, 3, 15, 0, 0, 0, 0, time.UTC)
+	updated := time.Date(2026, 3, 28, 0, 0, 0, 0, time.UTC)
+	resCreated := time.Date(2026, 4, 1, 10, 0, 0, 0, time.UTC)
+	up := studyguides.GuideVoteUp
+
+	mockSvc.EXPECT().
+		GetStudyGuide(mock.Anything, mock.MatchedBy(func(p studyguides.GetStudyGuideParams) bool {
+			return p.StudyGuideID == guideID
+		})).
+		Return(studyguides.StudyGuideDetail{
+			ID:          guideID,
+			Title:       "Binary Trees Cheat Sheet",
+			Description: &desc,
+			Content:     &content,
+			Tags:        []string{"trees", "midterm"},
+			Creator:     studyguides.Creator{ID: creatorID, FirstName: "Tim", LastName: "Roughgarden"},
+			Course: studyguides.GuideCourseSummary{
+				ID: courseID, Department: "CS", Number: "161", Title: "Algorithms",
+			},
+			VoteScore:     7,
+			UserVote:      &up,
+			ViewCount:     87,
+			IsRecommended: true,
+			RecommendedBy: []studyguides.Creator{
+				{ID: recID, FirstName: "Ananth", LastName: "Jillepalli"},
+			},
+			Quizzes: []studyguides.Quiz{
+				{ID: quizID, Title: "Tree Traversal Quiz", QuestionCount: 10},
+			},
+			Resources: []studyguides.Resource{
+				{
+					ID: resourceID, Title: "Binary Trees Visual", URL: "https://visualgo.net/en/bst",
+					Type: studyguides.ResourceTypeLink, Description: &resDesc, CreatedAt: resCreated,
+				},
+			},
+			Files: []studyguides.GuideFile{
+				{ID: fileID, Name: "Slides.pdf", MimeType: "application/pdf", Size: 2048000},
+			},
+			CreatedAt: created,
+			UpdatedAt: updated,
+		}, nil)
+
+	url := fmt.Sprintf("/study-guides/%s", guideID)
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var resp api.StudyGuideDetailResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, guideID, uuid.UUID(resp.Id))
+	assert.Equal(t, "Binary Trees Cheat Sheet", resp.Title)
+	require.NotNil(t, resp.Content)
+	assert.Equal(t, content, *resp.Content)
+	assert.Equal(t, "Tim", resp.Creator.FirstName)
+	assert.Equal(t, courseID, uuid.UUID(resp.Course.Id))
+	assert.Equal(t, int64(7), resp.VoteScore)
+	assert.True(t, resp.IsRecommended)
+
+	require.NotNil(t, resp.UserVote)
+	assert.Equal(t, api.StudyGuideDetailResponseUserVote("up"), *resp.UserVote)
+
+	require.Len(t, resp.RecommendedBy, 1)
+	assert.Equal(t, "Ananth", resp.RecommendedBy[0].FirstName)
+	require.Len(t, resp.Quizzes, 1)
+	assert.Equal(t, int64(10), resp.Quizzes[0].QuestionCount)
+	require.Len(t, resp.Resources, 1)
+	assert.Equal(t, api.Link, resp.Resources[0].Type)
+	require.Len(t, resp.Files, 1)
+	assert.Equal(t, int64(2048000), resp.Files[0].Size)
+}
+
+// Critical wire-shape contract: viewer has not voted → user_vote
+// literal null in the JSON bytes (not omitted) so the frontend can
+// destructure safely.
+func TestStudyGuidesHandler_Get_UserVoteNullWireShape(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		GetStudyGuide(mock.Anything, mock.Anything).
+		Return(studyguides.StudyGuideDetail{
+			ID:    uuid.New(),
+			Title: "X",
+			Tags:  []string{},
+			Creator: studyguides.Creator{ID: uuid.New(), FirstName: "A", LastName: "B"},
+			Course: studyguides.GuideCourseSummary{ID: uuid.New(), Department: "D", Number: "1", Title: "T"},
+			// UserVote + all nested arrays nil/empty
+		}, nil)
+
+	url := fmt.Sprintf("/study-guides/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	body := w.Body.String()
+	assert.Contains(t, body, `"user_vote":null`, "user_vote must be emitted as literal JSON null")
+
+	var resp api.StudyGuideDetailResponse
+	require.NoError(t, json.NewDecoder(strings.NewReader(body)).Decode(&resp))
+	assert.Nil(t, resp.UserVote)
+	// nested arrays must be non-null empty slices
+	assert.NotNil(t, resp.RecommendedBy)
+	assert.NotNil(t, resp.Quizzes)
+	assert.NotNil(t, resp.Resources)
+	assert.NotNil(t, resp.Files)
+}
+
+// Privacy regression at the wire boundary: detail response must never
+// include email, clerk_id, s3_key, checksum, or any other PII that's
+// not in the documented schema. Pins the response bytes.
+func TestStudyGuidesHandler_Get_NoPIIInResponse(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		GetStudyGuide(mock.Anything, mock.Anything).
+		Return(studyguides.StudyGuideDetail{
+			ID:    uuid.New(),
+			Title: "X",
+			Tags:  []string{},
+			Creator: studyguides.Creator{ID: uuid.New(), FirstName: "A", LastName: "B"},
+			Course: studyguides.GuideCourseSummary{ID: uuid.New(), Department: "D", Number: "1", Title: "T"},
+			Files: []studyguides.GuideFile{
+				{ID: uuid.New(), Name: "slides.pdf", MimeType: "application/pdf", Size: 100},
+			},
+		}, nil)
+
+	url := fmt.Sprintf("/study-guides/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	body := w.Body.String()
+	assert.NotContains(t, body, `"email"`)
+	assert.NotContains(t, body, `"clerk_id"`)
+	assert.NotContains(t, body, `"clerkId"`)
+	assert.NotContains(t, body, `"s3_key"`)
+	assert.NotContains(t, body, `"checksum"`)
+	assert.NotContains(t, body, `"user_id"`) // file owner id should not leak
+}
+
+func TestStudyGuidesHandler_Get_NotFound(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		GetStudyGuide(mock.Anything, mock.Anything).
+		Return(studyguides.StudyGuideDetail{}, apperrors.NewNotFound("Study guide not found"))
+
+	url := fmt.Sprintf("/study-guides/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	assert.Contains(t, w.Body.String(), "Study guide not found")
+}
+
+func TestStudyGuidesHandler_Get_BadUUID(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := "/study-guides/not-a-uuid"
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestStudyGuidesHandler_Get_InternalError(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		GetStudyGuide(mock.Anything, mock.Anything).
+		Return(studyguides.StudyGuideDetail{}, errors.New("db down"))
+
+	url := fmt.Sprintf("/study-guides/%s", uuid.NewString())
 	req := authedRequestMethod(t, http.MethodGet, url, nil)
 	w := httptest.NewRecorder()
 
