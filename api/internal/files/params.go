@@ -114,3 +114,10 @@ type CreateFileResult struct {
 	File      File
 	UploadURL string
 }
+
+// UpdateFileParams contains the required inputs for renaming a file.
+type UpdateFileParams struct {
+	FileID  uuid.UUID
+	OwnerID uuid.UUID
+	Name    string
+}

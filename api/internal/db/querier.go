@@ -37,6 +37,9 @@ type Querier interface {
 	// and has not already entered a deletion state (idempotency-safe).
 	SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)
 	SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
+	// Renames a file. Only applies if owned by the caller and not in a deletion state.
+	// Returns sql.ErrNoRows when file is not found, not owned, or in deletion.
+	UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateFileRow, error)
 	UpdateFileStatus(ctx context.Context, arg UpdateFileStatusParams) error
 	UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
 }

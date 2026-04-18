@@ -86,10 +86,13 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
   - [func \(q \*Queries\) SetFileDeletionJobID\(ctx context.Context, arg SetFileDeletionJobIDParams\) error](<#Queries.SetFileDeletionJobID>)
   - [func \(q \*Queries\) SoftDeleteFile\(ctx context.Context, arg SoftDeleteFileParams\) \(int64, error\)](<#Queries.SoftDeleteFile>)
   - [func \(q \*Queries\) SoftDeleteUserByClerkID\(ctx context.Context, clerkID string\) \(int64, error\)](<#Queries.SoftDeleteUserByClerkID>)
+  - [func \(q \*Queries\) UpdateFile\(ctx context.Context, arg UpdateFileParams\) \(UpdateFileRow, error\)](<#Queries.UpdateFile>)
   - [func \(q \*Queries\) UpsertClerkUser\(ctx context.Context, arg UpsertClerkUserParams\) \(User, error\)](<#Queries.UpsertClerkUser>)
   - [func \(q \*Queries\) WithTx\(tx pgx.Tx\) \*Queries](<#Queries.WithTx>)
 - [type SetFileDeletionJobIDParams](<#SetFileDeletionJobIDParams>)
 - [type SoftDeleteFileParams](<#SoftDeleteFileParams>)
+- [type UpdateFileParams](<#UpdateFileParams>)
+- [type UpdateFileRow](<#UpdateFileRow>)
 - [type UploadStatus](<#UploadStatus>)
   - [func \(e \*UploadStatus\) Scan\(src interface\{\}\) error](<#UploadStatus.Scan>)
 - [type UpsertClerkUserParams](<#UpsertClerkUserParams>)
@@ -1103,7 +1106,7 @@ func (e *Permission) Scan(src interface{}) error
 
 
 <a name="Querier"></a>
-## type [Querier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/querier.go#L13-L40>)
+## type [Querier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/querier.go#L13-L43>)
 
 
 
@@ -1134,6 +1137,9 @@ type Querier interface {
     // and has not already entered a deletion state (idempotency-safe).
     SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)
     SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
+    // Renames a file. Only applies if owned by the caller and not in a deletion state.
+    // Returns sql.ErrNoRows when file is not found, not owned, or in deletion.
+    UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateFileRow, error)
     UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
 }
 ```
@@ -1329,6 +1335,15 @@ func (q *Queries) SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (
 
 
 
+<a name="Queries.UpdateFile"></a>
+### func \(\*Queries\) [UpdateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1651>)
+
+```go
+func (q *Queries) UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateFileRow, error)
+```
+
+Renames a file. Only applies if owned by the caller and not in a deletion state. Returns sql.ErrNoRows when file is not found, not owned, or in deletion.
+
 <a name="Queries.UpsertClerkUser"></a>
 ### func \(\*Queries\) [UpsertClerkUser](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/users.sql.go#L75>)
 
@@ -1368,6 +1383,37 @@ type SetFileDeletionJobIDParams struct {
 type SoftDeleteFileParams struct {
     FileID  pgtype.UUID `json:"file_id"`
     OwnerID pgtype.UUID `json:"owner_id"`
+}
+```
+
+<a name="UpdateFileParams"></a>
+## type [UpdateFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1632-L1636>)
+
+
+
+```go
+type UpdateFileParams struct {
+    Name    string      `json:"name"`
+    FileID  pgtype.UUID `json:"file_id"`
+    OwnerID pgtype.UUID `json:"owner_id"`
+}
+```
+
+<a name="UpdateFileRow"></a>
+## type [UpdateFileRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1638-L1647>)
+
+
+
+```go
+type UpdateFileRow struct {
+    ID        pgtype.UUID        `json:"id"`
+    UserID    pgtype.UUID        `json:"user_id"`
+    Name      string             `json:"name"`
+    Size      int64              `json:"size"`
+    MimeType  MimeType           `json:"mime_type"`
+    Status    UploadStatus       `json:"status"`
+    CreatedAt pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 ```
 

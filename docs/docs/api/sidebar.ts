@@ -18,9 +18,21 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/create-file",
+          label: "Create a file reference and get a presigned upload URL",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "api/get-file",
           label: "Get a file by ID",
           className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "api/update-file",
+          label: "Rename a file",
+          className: "api-method patch",
         },
         {
           type: "doc",

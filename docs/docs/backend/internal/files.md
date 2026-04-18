@@ -27,8 +27,10 @@ Package files contains the business logic, models, and data access layer for man
   - [func \(s \*Service\) DeleteFile\(ctx context.Context, p DeleteFileParams, publisher QStashPublisher\) error](<#Service.DeleteFile>)
   - [func \(s \*Service\) GetFile\(ctx context.Context, p GetFileParams\) \(File, error\)](<#Service.GetFile>)
   - [func \(s \*Service\) ListFiles\(ctx context.Context, p ListFilesParams\) \(\[\]File, \*string, error\)](<#Service.ListFiles>)
+  - [func \(s \*Service\) UpdateFile\(ctx context.Context, p UpdateFileParams\) \(File, error\)](<#Service.UpdateFile>)
 - [type SortDir](<#SortDir>)
 - [type SortField](<#SortField>)
+- [type UpdateFileParams](<#UpdateFileParams>)
 
 
 ## Constants
@@ -90,7 +92,7 @@ func DecodeCursor(s string) (Cursor, error)
 DecodeCursor parses a base64\-encoded string token back into a Cursor struct.
 
 <a name="DeleteFileParams"></a>
-## type [DeleteFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L113-L116>)
+## type [DeleteFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L180-L183>)
 
 DeleteFileParams holds the inputs required to initiate file deletion.
 
@@ -175,7 +177,7 @@ type ListFilesParams struct {
 ```
 
 <a name="QStashPublisher"></a>
-## type [QStashPublisher](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L120-L122>)
+## type [QStashPublisher](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L187-L189>)
 
 QStashPublisher is the interface the service uses to publish async jobs. Allows the concrete qstashclient.Client to be swapped for a test double.
 
@@ -186,7 +188,7 @@ type QStashPublisher interface {
 ```
 
 <a name="Repository"></a>
-## type [Repository](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L19-L40>)
+## type [Repository](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L19-L41>)
 
 Repository defines the data\-access interface required by the files Service.
 
@@ -199,6 +201,7 @@ type Repository interface {
     SoftDeleteFile(ctx context.Context, arg db.SoftDeleteFileParams) (int64, error)
     SetFileDeletionJobID(ctx context.Context, arg db.SetFileDeletionJobIDParams) error
     MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
+    UpdateFile(ctx context.Context, arg db.UpdateFileParams) (db.UpdateFileRow, error)
 
     ListOwnedFilesUpdatedDesc(ctx context.Context, arg db.ListOwnedFilesUpdatedDescParams) ([]db.ListOwnedFilesUpdatedDescRow, error)
     ListOwnedFilesUpdatedAsc(ctx context.Context, arg db.ListOwnedFilesUpdatedAscParams) ([]db.ListOwnedFilesUpdatedAscRow, error)
@@ -225,7 +228,7 @@ func NewSQLCRepository(pool *pgxpool.Pool, queries *db.Queries) Repository
 NewSQLCRepository creates a postgres\-backed db Repository instance.
 
 <a name="Service"></a>
-## type [Service](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L43-L46>)
+## type [Service](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L44-L47>)
 
 Service is the business\-logic layer for the files feature.
 
@@ -236,7 +239,7 @@ type Service struct {
 ```
 
 <a name="NewService"></a>
-### func [NewService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L49>)
+### func [NewService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L50>)
 
 ```go
 func NewService(repo Repository) *Service
@@ -245,7 +248,7 @@ func NewService(repo Repository) *Service
 NewService creates a new Service instance configured with the given repository.
 
 <a name="Service.DeleteFile"></a>
-### func \(\*Service\) [DeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L127>)
+### func \(\*Service\) [DeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L194>)
 
 ```go
 func (s *Service) DeleteFile(ctx context.Context, p DeleteFileParams, publisher QStashPublisher) error
@@ -254,7 +257,7 @@ func (s *Service) DeleteFile(ctx context.Context, p DeleteFileParams, publisher 
 DeleteFile soft\-deletes the file within a transaction, then publishes an async S3 cleanup job via QStash. Returns apperrors.ErrNotFound if the file does not belong to the caller or is already in a deletion state.
 
 <a name="Service.GetFile"></a>
-### func \(\*Service\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L69>)
+### func \(\*Service\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L70>)
 
 ```go
 func (s *Service) GetFile(ctx context.Context, p GetFileParams) (File, error)
@@ -263,13 +266,22 @@ func (s *Service) GetFile(ctx context.Context, p GetFileParams) (File, error)
 GetFile retrieves a single file, verifying that the requesting user has access to it.
 
 <a name="Service.ListFiles"></a>
-### func \(\*Service\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L83>)
+### func \(\*Service\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L84>)
 
 ```go
 func (s *Service) ListFiles(ctx context.Context, p ListFilesParams) ([]File, *string, error)
 ```
 
 ListFiles queries the repository for a paginated list of files matching the given parameters.
+
+<a name="Service.UpdateFile"></a>
+### func \(\*Service\) [UpdateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L116>)
+
+```go
+func (s *Service) UpdateFile(ctx context.Context, p UpdateFileParams) (File, error)
+```
+
+UpdateFile renames a file after validating the new name. The name is trimmed of leading/trailing whitespace before validation. Returns apperrors.ErrNotFound if the file does not belong to the caller or is in a deletion state.
 
 <a name="SortDir"></a>
 ## type [SortDir](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/params.go#L16>)
@@ -287,6 +299,19 @@ SortField represents the field by which a file query should be ordered.
 
 ```go
 type SortField string
+```
+
+<a name="UpdateFileParams"></a>
+## type [UpdateFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/params.go#L105-L109>)
+
+UpdateFileParams contains the required inputs for renaming a file.
+
+```go
+type UpdateFileParams struct {
+    FileID  uuid.UUID
+    OwnerID uuid.UUID
+    Name    string
+}
 ```
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

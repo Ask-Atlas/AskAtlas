@@ -1291,6 +1291,72 @@ func (_c *MockRepository_SoftDeleteFile_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// UpdateFile provides a mock function for the type MockRepository
+func (_mock *MockRepository) UpdateFile(ctx context.Context, arg db.UpdateFileParams) (db.UpdateFileRow, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateFile")
+	}
+
+	var r0 db.UpdateFileRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.UpdateFileParams) (db.UpdateFileRow, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.UpdateFileParams) db.UpdateFileRow); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(db.UpdateFileRow)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.UpdateFileParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_UpdateFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateFile'
+type MockRepository_UpdateFile_Call struct {
+	*mock.Call
+}
+
+// UpdateFile is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.UpdateFileParams
+func (_e *MockRepository_Expecter) UpdateFile(ctx interface{}, arg interface{}) *MockRepository_UpdateFile_Call {
+	return &MockRepository_UpdateFile_Call{Call: _e.mock.On("UpdateFile", ctx, arg)}
+}
+
+func (_c *MockRepository_UpdateFile_Call) Run(run func(ctx context.Context, arg db.UpdateFileParams)) *MockRepository_UpdateFile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.UpdateFileParams
+		if args[1] != nil {
+			arg1 = args[1].(db.UpdateFileParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_UpdateFile_Call) Return(updateFileRow db.UpdateFileRow, err error) *MockRepository_UpdateFile_Call {
+	_c.Call.Return(updateFileRow, err)
+	return _c
+}
+
+func (_c *MockRepository_UpdateFile_Call) RunAndReturn(run func(ctx context.Context, arg db.UpdateFileParams) (db.UpdateFileRow, error)) *MockRepository_UpdateFile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateFileStatus provides a mock function for the type MockRepository
 func (_mock *MockRepository) UpdateFileStatus(ctx context.Context, arg db.UpdateFileStatusParams) error {
 	ret := _mock.Called(ctx, arg)

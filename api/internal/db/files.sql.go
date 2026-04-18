@@ -1662,6 +1662,52 @@ func (q *Queries) SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) 
 	return result.RowsAffected(), nil
 }
 
+const updateFile = `-- name: UpdateFile :one
+UPDATE files
+SET
+    name       = $1,
+    updated_at = NOW()
+WHERE id      = $2::uuid
+  AND user_id = $3::uuid
+  AND deletion_status IS NULL
+RETURNING id, user_id, name, size, mime_type, status, created_at, updated_at
+`
+
+type UpdateFileParams struct {
+	Name    string      `json:"name"`
+	FileID  pgtype.UUID `json:"file_id"`
+	OwnerID pgtype.UUID `json:"owner_id"`
+}
+
+type UpdateFileRow struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Name      string             `json:"name"`
+	Size      int64              `json:"size"`
+	MimeType  MimeType           `json:"mime_type"`
+	Status    UploadStatus       `json:"status"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// Renames a file. Only applies if owned by the caller and not in a deletion state.
+// Returns sql.ErrNoRows when file is not found, not owned, or in deletion.
+func (q *Queries) UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateFileRow, error) {
+	row := q.db.QueryRow(ctx, updateFile, arg.Name, arg.FileID, arg.OwnerID)
+	var i UpdateFileRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.Size,
+		&i.MimeType,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateFileStatus = `-- name: UpdateFileStatus :exec
 UPDATE files
 SET
