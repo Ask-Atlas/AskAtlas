@@ -102,7 +102,6 @@ func main() {
 		slog.Error("failed to load swagger spec", "error", err)
 		os.Exit(1)
 	}
-	swagger.Servers = nil
 
 	oapiOptions := middleware_oapi.Options{
 		ErrorHandler: api.OAPIValidatorErrorHandler,
