@@ -352,6 +352,96 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /courses:
+    get:
+      operationId: ListCourses
+      summary: List and search courses
+      parameters:
+        - name: school_id
+          in: query
+          description: Filter by school UUID
+          schema:
+            type: string
+            format: uuid
+        - name: department
+          in: query
+          description: Exact department code match (case-insensitive, e.g. "CPTS")
+          schema:
+            type: string
+            maxLength: 20
+        - name: q
+          in: query
+          description: Search term, matches against title (trigram), department, or number (case-insensitive)
+          schema:
+            type: string
+            maxLength: 200
+        - name: sort_by
+          in: query
+          description: Database column to sort the results by
+          schema:
+            type: string
+            enum: [department, number, title, created_at]
+            default: department
+        - name: sort_dir
+          in: query
+          description: Sorting direction (ascending or descending)
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: page_limit
+          in: query
+          description: Maximum number of courses to return per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          description: Opaque pagination cursor token obtained from the previous response
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A paginated list of courses with embedded school summaries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListCoursesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /courses/{course_id}:
+    get:
+      operationId: GetCourse
+      summary: Get a course detail with embedded sections
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the course
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The requested course with embedded school summary and sections
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
 components:
   securitySchemes:
@@ -579,6 +669,132 @@ components:
           type: boolean
       required:
         - schools
+        - has_more
+    SchoolSummary:
+      type: object
+      description: Compact school payload embedded inside other resources (courses, study guides)
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        acronym:
+          type: string
+        city:
+          type: string
+          nullable: true
+        state:
+          type: string
+          nullable: true
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2 country code
+          maxLength: 2
+          nullable: true
+      required:
+        - id
+        - name
+        - acronym
+    CourseResponse:
+      type: object
+      description: A course (e.g. CPTS 322) with its school summary embedded
+      properties:
+        id:
+          type: string
+          format: uuid
+        school:
+          $ref: '#/components/schemas/SchoolSummary'
+        department:
+          type: string
+        number:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - school
+        - department
+        - number
+        - title
+        - created_at
+    SectionSummary:
+      type: object
+      description: A section of a course (term + instructor + roster size)
+      properties:
+        id:
+          type: string
+          format: uuid
+        term:
+          type: string
+        section_code:
+          type: string
+          nullable: true
+        instructor_name:
+          type: string
+          nullable: true
+        member_count:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+        - id
+        - term
+        - member_count
+    CourseDetailResponse:
+      type: object
+      description: A course with its school summary and the full list of sections
+      properties:
+        id:
+          type: string
+          format: uuid
+        school:
+          $ref: '#/components/schemas/SchoolSummary'
+        department:
+          type: string
+        number:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/SectionSummary'
+      required:
+        - id
+        - school
+        - department
+        - number
+        - title
+        - created_at
+        - sections
+    ListCoursesResponse:
+      type: object
+      description: A paginated collection of courses
+      properties:
+        courses:
+          type: array
+          items:
+            $ref: '#/components/schemas/CourseResponse'
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+      required:
+        - courses
         - has_more
     AppError:
       type: object
