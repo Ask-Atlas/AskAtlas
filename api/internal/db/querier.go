@@ -15,6 +15,33 @@ type Querier interface {
 	// "Course not found" 404 from the "Section not found" 404 the spec
 	// requires (see ASK-132 / ASK-138).
 	CourseExists(ctx context.Context, id pgtype.UUID) (bool, error)
+	// Study guide list queries (ASK-104).
+	//
+	// Every ListStudyGuides* variant uses the same CTE structure so the
+	// per-row aggregates (vote_score, is_recommended, quiz_count) are
+	// computed once and can be referenced from the outer WHERE clause
+	// (e.g. for the score-sorted cursor predicate). The CTE pattern also
+	// keeps the 8 named variants near-identical apart from ORDER BY + the
+	// cursor predicate, which makes future maintenance (e.g. adding a new
+	// sort field) a mechanical edit.
+	//
+	// Soft-delete invariants enforced everywhere:
+	//   * sg.deleted_at IS NULL       — excludes guides marked for deletion
+	//   * u.deleted_at IS NULL        — excludes guides authored by a
+	//                                   soft-deleted user; matches the
+	//                                   convention established by ASK-143's
+	//                                   section roster (a soft-deleted user
+	//                                   disappears from public surfaces)
+	//   * quizzes.deleted_at IS NULL  — quiz_count excludes deleted quizzes
+	//
+	// Privacy floor on the creator payload: only id + first_name + last_name
+	// are selected. No email, no clerk_id -- same rule as
+	// SectionMemberResponse in ASK-143.
+	// Single-row probe used by the list handler to disambiguate "course
+	// missing" (404) from "course exists but has no guides" (200 empty
+	// array). Separate from courses.CourseExists only because sqlc-generated
+	// queriers are per-file; the predicate is identical.
+	CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error)
 	GetCourse(ctx context.Context, id pgtype.UUID) (GetCourseRow, error)
 	// Fetches a file only if it belongs to the given user and has not been soft-deleted.
 	// Returns sql.ErrNoRows if not found or already in a deletion state.
@@ -100,6 +127,17 @@ type Querier interface {
 	// (multiple users can join in the same second on a busy section), so
 	// user_id is the tiebreaker that keeps the keyset a strict total order.
 	ListSectionMembers(ctx context.Context, arg ListSectionMembersParams) ([]ListSectionMembersRow, error)
+	ListStudyGuidesNewestAsc(ctx context.Context, arg ListStudyGuidesNewestAscParams) ([]ListStudyGuidesNewestAscRow, error)
+	ListStudyGuidesNewestDesc(ctx context.Context, arg ListStudyGuidesNewestDescParams) ([]ListStudyGuidesNewestDescRow, error)
+	ListStudyGuidesScoreAsc(ctx context.Context, arg ListStudyGuidesScoreAscParams) ([]ListStudyGuidesScoreAscRow, error)
+	// Default sort. Multi-column keyset on (vote_score, view_count,
+	// updated_at, id) -- each column after vote_score is a tiebreaker for
+	// the previous one; id is the final strict-total-order tiebreaker.
+	ListStudyGuidesScoreDesc(ctx context.Context, arg ListStudyGuidesScoreDescParams) ([]ListStudyGuidesScoreDescRow, error)
+	ListStudyGuidesUpdatedAsc(ctx context.Context, arg ListStudyGuidesUpdatedAscParams) ([]ListStudyGuidesUpdatedAscRow, error)
+	ListStudyGuidesUpdatedDesc(ctx context.Context, arg ListStudyGuidesUpdatedDescParams) ([]ListStudyGuidesUpdatedDescRow, error)
+	ListStudyGuidesViewsAsc(ctx context.Context, arg ListStudyGuidesViewsAscParams) ([]ListStudyGuidesViewsAscRow, error)
+	ListStudyGuidesViewsDesc(ctx context.Context, arg ListStudyGuidesViewsDescParams) ([]ListStudyGuidesViewsDescRow, error)
 	// Called by the cleanup job handler once S3 deletion is confirmed.
 	MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
 	// Deletes a file grant matching the exact composite key. No-op if the grant
