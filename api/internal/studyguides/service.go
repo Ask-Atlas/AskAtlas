@@ -578,6 +578,10 @@ func (s *Service) GetStudyGuide(ctx context.Context, p GetStudyGuideParams) (Stu
 // rely on the result being safe to pass to the Postgres NOT NULL
 // text[] column (study_guides.tags has DEFAULT '{}').
 func normalizeTags(in []string) ([]string, error) {
+	// Cap on the RAW input count (pre-dedupe), mirroring the openapi
+	// schema's `tags.maxItems: 20`. Keep the check in this position --
+	// moving it after dedupe would diverge from the schema and let a
+	// 1000-item request waste CPU on the loop before being rejected.
 	if len(in) > MaxTagsCount {
 		return nil, apperrors.NewBadRequest("Invalid request body", map[string]string{
 			"tags": fmt.Sprintf("must contain %d items or fewer", MaxTagsCount),
@@ -604,6 +608,22 @@ func normalizeTags(in []string) ([]string, error) {
 		out = append(out, t)
 	}
 	return out, nil
+}
+
+// trimmedNonEmpty returns nil if s is nil or trims to empty; otherwise
+// returns a pointer to the trimmed string. Used by CreateStudyGuide to
+// normalize the optional description + content fields so a body like
+// `{"description": "   "}` lands as SQL NULL rather than persisting a
+// whitespace-only string.
+func trimmedNonEmpty(s *string) *string {
+	if s == nil {
+		return nil
+	}
+	t := strings.TrimSpace(*s)
+	if t == "" {
+		return nil
+	}
+	return &t
 }
 
 // validateCreateParams runs the service-layer defensive re-validation
@@ -660,12 +680,17 @@ func (s *Service) CreateStudyGuide(ctx context.Context, p CreateStudyGuideParams
 		return StudyGuideDetail{}, err
 	}
 
+	// Title is required; description/content are optional. For all three,
+	// trim leading/trailing whitespace and treat the empty result as the
+	// absent value so the DB stores SQL NULL (not a whitespace-only
+	// string). Title's "absent" form is rejected upstream by
+	// validateCreateParams; description/content are dropped to nil.
 	inserted, err := s.repo.InsertStudyGuide(ctx, db.InsertStudyGuideParams{
 		CourseID:    utils.UUID(p.CourseID),
 		CreatorID:   utils.UUID(p.CreatorID),
 		Title:       strings.TrimSpace(p.Title),
-		Description: utils.Text(p.Description),
-		Content:     utils.Text(p.Content),
+		Description: utils.Text(trimmedNonEmpty(p.Description)),
+		Content:     utils.Text(trimmedNonEmpty(p.Content)),
 		Tags:        tags,
 	})
 	if err != nil {

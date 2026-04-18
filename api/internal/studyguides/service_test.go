@@ -902,6 +902,56 @@ func TestService_CreateStudyGuide_NormalizesAndDedupesTags(t *testing.T) {
 	assert.Equal(t, []string{"trees", "midterm"}, captured.Tags)
 }
 
+// PR #138 review M1: description + content are trimmed and treated as
+// SQL NULL when empty after trim, mirroring how title is handled. A
+// body of `{"description": "   "}` must not persist a whitespace-only
+// string.
+func TestService_CreateStudyGuide_DescriptionAndContent_TrimmedAndDroppedWhenWhitespace(t *testing.T) {
+	cases := map[string]struct {
+		in  string
+		// expectValid: true means we expect a SQL NULL (Valid=false on
+		// pgtype.Text). false means we expect a populated value.
+		expectValid bool
+		expectVal   string
+	}{
+		"whitespace_only":        {in: "   \t\n  ", expectValid: false},
+		"empty_string":           {in: "", expectValid: false},
+		"surrounded_by_spaces":   {in: "  hello  ", expectValid: true, expectVal: "hello"},
+		"normal":                 {in: "no leading or trailing", expectValid: true, expectVal: "no leading or trailing"},
+		"newlines_inside_kept":   {in: "line one\nline two", expectValid: true, expectVal: "line one\nline two"},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			repo := mock_studyguides.NewMockRepository(t)
+			guideID, courseID, creatorID := uuid.New(), uuid.New(), uuid.New()
+
+			repo.EXPECT().CourseExistsForGuides(mock.Anything, mock.Anything).Return(true, nil)
+			captured := expectInsertReturning(t, repo, guideID)
+			repo.EXPECT().GetStudyGuideDetail(mock.Anything, mock.Anything).
+				Return(hydrateRow(t, guideID, courseID, creatorID, "T", nil), nil)
+
+			svc := studyguides.NewService(repo)
+			in := tc.in
+			_, err := svc.CreateStudyGuide(context.Background(), studyguides.CreateStudyGuideParams{
+				CourseID: courseID, CreatorID: creatorID, Title: "T",
+				Description: &in,
+				Content:     &in,
+			})
+			require.NoError(t, err)
+
+			if tc.expectValid {
+				require.True(t, captured.Description.Valid, "description should be non-NULL")
+				assert.Equal(t, tc.expectVal, captured.Description.String)
+				require.True(t, captured.Content.Valid, "content should be non-NULL")
+				assert.Equal(t, tc.expectVal, captured.Content.String)
+			} else {
+				assert.False(t, captured.Description.Valid, "description should be SQL NULL after trim")
+				assert.False(t, captured.Content.Valid, "content should be SQL NULL after trim")
+			}
+		})
+	}
+}
+
 // Tags must always land as a non-nil slice so the Postgres NOT NULL
 // DEFAULT '{}' column doesn't trip on a NULL bind value.
 func TestService_CreateStudyGuide_NilTagsLandsAsEmptySlice(t *testing.T) {
