@@ -1,0 +1,1 @@
+{"title":"Body","body":{"required":true,"content":{"application/json":{"schema":{"type":"object","description":"Request body for updating file metadata","properties":{"name":{"type":"string","minLength":1,"maxLength":255}},"required":["name"],"title":"UpdateFileRequest"}}}}}

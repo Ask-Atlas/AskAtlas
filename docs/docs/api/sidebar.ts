@@ -24,6 +24,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/update-file",
+          label: "Rename a file",
+          className: "api-method patch",
+        },
+        {
+          type: "doc",
           id: "api/delete-file",
           label: "Delete a file by ID",
           className: "api-method delete",

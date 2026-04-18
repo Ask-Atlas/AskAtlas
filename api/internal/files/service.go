@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	qstashclient "github.com/Ask-Atlas/AskAtlas/api/internal/qstash"
@@ -142,7 +144,7 @@ func validateFileName(name string) *apperrors.AppError {
 		return apperrors.NewBadRequest("Invalid file name", details)
 	}
 
-	if len(name) > maxFileNameLength {
+	if utf8.RuneCountInString(name) > maxFileNameLength {
 		details["name"] = fmt.Sprintf("must not exceed %d characters", maxFileNameLength)
 		return apperrors.NewBadRequest("Invalid file name", details)
 	}
@@ -158,7 +160,7 @@ func validateFileName(name string) *apperrors.AppError {
 			ch = "\\"
 		case r == 0:
 			ch = "null byte"
-		case r >= 0x01 && r <= 0x1F:
+		case unicode.IsControl(r):
 			ch = "control character"
 		default:
 			continue
