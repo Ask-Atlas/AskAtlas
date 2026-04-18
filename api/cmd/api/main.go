@@ -107,7 +107,7 @@ func main() {
 	oapiOptions := middleware_oapi.Options{
 		ErrorHandler: api.OAPIValidatorErrorHandler,
 		Options: openapi3filter.Options{
-			AuthenticationFunc: openapi3filter.NoopAuthenticationFunc,
+			AuthenticationFunc: api.BearerAuthFunc,
 		},
 	}
 
