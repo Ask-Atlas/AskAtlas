@@ -104,6 +104,129 @@ func (_c *MockCourseService_GetCourse_Call) RunAndReturn(run func(ctx context.Co
 	return _c
 }
 
+// JoinSection provides a mock function for the type MockCourseService
+func (_mock *MockCourseService) JoinSection(ctx context.Context, params courses.JoinSectionParams) (courses.Membership, error) {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for JoinSection")
+	}
+
+	var r0 courses.Membership
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, courses.JoinSectionParams) (courses.Membership, error)); ok {
+		return returnFunc(ctx, params)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, courses.JoinSectionParams) courses.Membership); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Get(0).(courses.Membership)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, courses.JoinSectionParams) error); ok {
+		r1 = returnFunc(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCourseService_JoinSection_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'JoinSection'
+type MockCourseService_JoinSection_Call struct {
+	*mock.Call
+}
+
+// JoinSection is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params courses.JoinSectionParams
+func (_e *MockCourseService_Expecter) JoinSection(ctx interface{}, params interface{}) *MockCourseService_JoinSection_Call {
+	return &MockCourseService_JoinSection_Call{Call: _e.mock.On("JoinSection", ctx, params)}
+}
+
+func (_c *MockCourseService_JoinSection_Call) Run(run func(ctx context.Context, params courses.JoinSectionParams)) *MockCourseService_JoinSection_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 courses.JoinSectionParams
+		if args[1] != nil {
+			arg1 = args[1].(courses.JoinSectionParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCourseService_JoinSection_Call) Return(membership courses.Membership, err error) *MockCourseService_JoinSection_Call {
+	_c.Call.Return(membership, err)
+	return _c
+}
+
+func (_c *MockCourseService_JoinSection_Call) RunAndReturn(run func(ctx context.Context, params courses.JoinSectionParams) (courses.Membership, error)) *MockCourseService_JoinSection_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// LeaveSection provides a mock function for the type MockCourseService
+func (_mock *MockCourseService) LeaveSection(ctx context.Context, params courses.LeaveSectionParams) error {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LeaveSection")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, courses.LeaveSectionParams) error); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockCourseService_LeaveSection_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LeaveSection'
+type MockCourseService_LeaveSection_Call struct {
+	*mock.Call
+}
+
+// LeaveSection is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params courses.LeaveSectionParams
+func (_e *MockCourseService_Expecter) LeaveSection(ctx interface{}, params interface{}) *MockCourseService_LeaveSection_Call {
+	return &MockCourseService_LeaveSection_Call{Call: _e.mock.On("LeaveSection", ctx, params)}
+}
+
+func (_c *MockCourseService_LeaveSection_Call) Run(run func(ctx context.Context, params courses.LeaveSectionParams)) *MockCourseService_LeaveSection_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 courses.LeaveSectionParams
+		if args[1] != nil {
+			arg1 = args[1].(courses.LeaveSectionParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCourseService_LeaveSection_Call) Return(err error) *MockCourseService_LeaveSection_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockCourseService_LeaveSection_Call) RunAndReturn(run func(ctx context.Context, params courses.LeaveSectionParams) error) *MockCourseService_LeaveSection_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListCourses provides a mock function for the type MockCourseService
 func (_mock *MockCourseService) ListCourses(ctx context.Context, params courses.ListCoursesParams) (courses.ListCoursesResult, error) {
 	ret := _mock.Called(ctx, params)

@@ -17,6 +17,8 @@ import (
 type CourseService interface {
 	ListCourses(ctx context.Context, params courses.ListCoursesParams) (courses.ListCoursesResult, error)
 	GetCourse(ctx context.Context, params courses.GetCourseParams) (courses.CourseDetail, error)
+	JoinSection(ctx context.Context, params courses.JoinSectionParams) (courses.Membership, error)
+	LeaveSection(ctx context.Context, params courses.LeaveSectionParams) error
 }
 
 // CoursesHandler manages incoming HTTP requests relating to course operations.
@@ -130,24 +132,58 @@ func (h *CoursesHandler) GetCourse(w http.ResponseWriter, r *http.Request, cours
 	respondJSON(w, http.StatusOK, mapCourseDetailResponse(detail))
 }
 
-// JoinSection is a temporary stub satisfying the generated ServerInterface
-// while the membership wiring lands in follow-up commits.
-func (h *CoursesHandler) JoinSection(w http.ResponseWriter, r *http.Request, _ openapi_types.UUID, _ openapi_types.UUID) {
-	apperrors.RespondWithError(w, &apperrors.AppError{
-		Code:    http.StatusNotImplemented,
-		Status:  "Not Implemented",
-		Message: "Endpoint not yet implemented",
+// JoinSection handles POST /courses/{course_id}/sections/{section_id}/members.
+// The viewer joins the section as a 'student'. Any fields in the request
+// body are intentionally ignored; the role is enforced by the service +
+// SQL layer to prevent privilege escalation via {"role": "instructor"}.
+func (h *CoursesHandler) JoinSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	membership, err := h.service.JoinSection(r.Context(), courses.JoinSectionParams{
+		CourseID:  uuid.UUID(courseId),
+		SectionID: uuid.UUID(sectionId),
+		UserID:    viewerID,
 	})
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("JoinSection failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, mapCourseMemberResponse(membership))
 }
 
-// LeaveSection is a temporary stub satisfying the generated ServerInterface
-// while the membership wiring lands in follow-up commits.
-func (h *CoursesHandler) LeaveSection(w http.ResponseWriter, r *http.Request, _ openapi_types.UUID, _ openapi_types.UUID) {
-	apperrors.RespondWithError(w, &apperrors.AppError{
-		Code:    http.StatusNotImplemented,
-		Status:  "Not Implemented",
-		Message: "Endpoint not yet implemented",
-	})
+// LeaveSection handles DELETE /courses/{course_id}/sections/{section_id}/members/me.
+// The viewer leaves the section. The /me path segment makes self-only
+// scope explicit; there is no path parameter for the user being removed.
+func (h *CoursesHandler) LeaveSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	if err := h.service.LeaveSection(r.Context(), courses.LeaveSectionParams{
+		CourseID:  uuid.UUID(courseId),
+		SectionID: uuid.UUID(sectionId),
+		UserID:    viewerID,
+	}); err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("LeaveSection failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // mapSchoolSummary projects the embedded school summary to its wire shape.
@@ -197,6 +233,19 @@ func mapSectionSummary(s courses.Section) api.SectionSummary {
 		SectionCode:    s.SectionCode,
 		InstructorName: s.InstructorName,
 		MemberCount:    s.MemberCount,
+	}
+}
+
+// mapCourseMemberResponse projects the domain Membership to the wire shape
+// returned by JoinSection (201). The DB enum and the openapi schema enum
+// share the same string values so MemberRole maps directly into the
+// generated CourseMemberResponseRole type.
+func mapCourseMemberResponse(m courses.Membership) api.CourseMemberResponse {
+	return api.CourseMemberResponse{
+		UserId:    openapi_types.UUID(m.UserID),
+		SectionId: openapi_types.UUID(m.SectionID),
+		Role:      api.CourseMemberResponseRole(m.Role),
+		JoinedAt:  m.JoinedAt,
 	}
 }
 
