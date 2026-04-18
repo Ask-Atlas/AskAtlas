@@ -193,6 +193,28 @@ func validateJoinSectionBody(r *http.Request) *apperrors.AppError {
 	return nil
 }
 
+// ListMyEnrollments is a temporary stub satisfying the generated
+// ServerInterface while the membership-read wiring lands in follow-up
+// commits.
+func (h *CoursesHandler) ListMyEnrollments(w http.ResponseWriter, r *http.Request, _ api.ListMyEnrollmentsParams) {
+	apperrors.RespondWithError(w, &apperrors.AppError{
+		Code:    http.StatusNotImplemented,
+		Status:  "Not Implemented",
+		Message: "Endpoint not yet implemented",
+	})
+}
+
+// CheckMembership is a temporary stub satisfying the generated
+// ServerInterface while the membership-read wiring lands in follow-up
+// commits.
+func (h *CoursesHandler) CheckMembership(w http.ResponseWriter, r *http.Request, _ openapi_types.UUID, _ openapi_types.UUID) {
+	apperrors.RespondWithError(w, &apperrors.AppError{
+		Code:    http.StatusNotImplemented,
+		Status:  "Not Implemented",
+		Message: "Endpoint not yet implemented",
+	})
+}
+
 // LeaveSection handles DELETE /courses/{course_id}/sections/{section_id}/members/me.
 // The viewer leaves the section. The /me path segment makes self-only
 // scope explicit; there is no path parameter for the user being removed.

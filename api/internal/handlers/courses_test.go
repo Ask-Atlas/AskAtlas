@@ -336,7 +336,7 @@ func TestCoursesHandler_JoinSection_Success(t *testing.T) {
 	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
 	assert.Equal(t, userID, uuid.UUID(resp.UserId))
 	assert.Equal(t, sectionID, uuid.UUID(resp.SectionId))
-	assert.Equal(t, api.Student, resp.Role)
+	assert.Equal(t, api.CourseMemberResponseRoleStudent, resp.Role)
 	assert.True(t, resp.JoinedAt.Equal(joinedAt))
 }
 
@@ -375,7 +375,7 @@ func TestCoursesHandler_JoinSection_IgnoresUnexpectedBodyFields(t *testing.T) {
 
 	var resp api.CourseMemberResponse
 	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
-	assert.Equal(t, api.Student, resp.Role)
+	assert.Equal(t, api.CourseMemberResponseRoleStudent, resp.Role)
 }
 
 // Per ASK-132 input-validation table: malformed JSON in the body must
