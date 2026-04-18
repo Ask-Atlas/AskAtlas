@@ -442,6 +442,98 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /courses/{course_id}/study-guides:
+    get:
+      operationId: ListStudyGuides
+      summary: List study guides for a course
+      description: |
+        Returns the study guides for the given course as a paginated
+        list. Soft-deleted guides and guides whose creator has been
+        soft-deleted are excluded. Per-row aggregates (`vote_score`,
+        `is_recommended`, `quiz_count`) are computed inline. The full
+        `content` field is intentionally omitted -- it is only returned
+        by the get-by-id endpoint, keeping the list payload small.
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the course
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          description: Case-insensitive partial match against title and tags
+          required: false
+          schema:
+            type: string
+            maxLength: 200
+        - name: tag
+          in: query
+          description: |
+            Filter by exact tag (case-sensitive). Repeatable; multiple
+            values are AND-matched (a guide must carry every supplied
+            tag to be returned).
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              maxLength: 50
+          style: form
+          explode: true
+        - name: sort_by
+          in: query
+          description: Sort field
+          required: false
+          schema:
+            type: string
+            enum:
+              - score
+              - views
+              - newest
+              - updated
+            default: score
+        - name: sort_dir
+          in: query
+          description: Sort direction
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+        - name: page_limit
+          in: query
+          description: Maximum number of guides per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          description: Opaque keyset cursor token from the previous page
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A paginated list of study guides for the course
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListStudyGuidesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /courses/{course_id}/sections/{section_id}/members:
     get:
       operationId: ListSectionMembers
@@ -1171,6 +1263,95 @@ components:
           type: boolean
       required:
         - members
+        - has_more
+    CreatorSummary:
+      type: object
+      description: |
+        Compact user payload used as the `creator` of a study guide. Same
+        privacy floor as SectionMemberResponse -- no email, no clerk_id.
+      properties:
+        id:
+          type: string
+          format: uuid
+        first_name:
+          type: string
+        last_name:
+          type: string
+      required:
+        - id
+        - first_name
+        - last_name
+    StudyGuideListItemResponse:
+      type: object
+      description: |
+        A study guide as it appears in the list response. Excludes
+        `content` (only returned by the get-by-id endpoint) to keep the
+        list payload small. Per-row aggregates (`vote_score`,
+        `is_recommended`, `quiz_count`) are computed inline.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        creator:
+          $ref: '#/components/schemas/CreatorSummary'
+        course_id:
+          type: string
+          format: uuid
+        vote_score:
+          type: integer
+          format: int64
+        view_count:
+          type: integer
+          format: int64
+          minimum: 0
+        is_recommended:
+          type: boolean
+        quiz_count:
+          type: integer
+          format: int64
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - tags
+        - creator
+        - course_id
+        - vote_score
+        - view_count
+        - is_recommended
+        - quiz_count
+        - created_at
+        - updated_at
+    ListStudyGuidesResponse:
+      type: object
+      description: A paginated collection of study guides for a course
+      properties:
+        study_guides:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudyGuideListItemResponse'
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+      required:
+        - study_guides
         - has_more
     MembershipCheckResponse:
       type: object

@@ -31,7 +31,8 @@ func coursesTestRouter(t *testing.T, ch *handlers.CoursesHandler) chi.Router {
 	fh := handlers.NewFileHandler(mock_handlers.NewMockFileService(t), nil)
 	gh := handlers.NewGrantHandler(mock_handlers.NewMockGrantService(t))
 	sh := handlers.NewSchoolsHandler(mock_handlers.NewMockSchoolService(t))
-	composite := handlers.NewCompositeHandler(fh, gh, sh, ch)
+	sgh := handlers.NewStudyGuideHandler(mock_handlers.NewMockStudyGuideService(t))
+	composite := handlers.NewCompositeHandler(fh, gh, sh, ch, sgh)
 	r := chi.NewRouter()
 	api.HandlerWithOptions(composite, api.ChiServerOptions{BaseRouter: r})
 	return r

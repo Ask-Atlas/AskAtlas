@@ -3,6 +3,7 @@ MAIN_PATH   := ./cmd/api/main.go
 SEED_PATH   := ./scripts/seed_files.go
 SEED_SCHOOLS_PATH := ./scripts/seed_schools
 SEED_COURSES_PATH := ./scripts/seed_courses
+SEED_STUDY_GUIDES_PATH := ./scripts/seed_study_guides
 
 ENV     ?= dev
 ACTION  ?= seed
@@ -11,6 +12,7 @@ MAX_ROWS ?= 1000
 CSV     ?= scripts/data/schools.csv
 COURSES_CSV ?= scripts/data/courses.csv
 SECTIONS_CSV ?= scripts/data/course_sections.csv
+STUDY_GUIDES_CSV ?= scripts/data/study_guides.csv
 
 GOMARKDOC_VERSION        ?= v1.1.0
 GOMARKDOC_CMD            := go run github.com/princjef/gomarkdoc/cmd/gomarkdoc@$(GOMARKDOC_VERSION)
@@ -30,7 +32,8 @@ define prod-confirm
 endef
 
 .PHONY: dev stage prod build install format format-check lint test tidy tidy-check \
-	sqlc/generate docker-build docker-run mockery seed seed-schools seed-courses e2e generate-docs
+	sqlc/generate docker-build docker-run mockery seed seed-schools seed-courses \
+	seed-study-guides e2e generate-docs
 
 dev:
 	infisical run --env=dev -- go run $(MAIN_PATH)
@@ -119,6 +122,20 @@ seed-schools:
 seed-courses:
 	$(call prod-confirm)
 	infisical run --env=$(ENV) -- go run $(SEED_COURSES_PATH) -courses=$(COURSES_CSV) -sections=$(SECTIONS_CSV)
+
+## make seed-study-guides [ENV=dev|staging|prod] [STUDY_GUIDES_CSV=scripts/data/study_guides.csv]
+##
+## Seeds study_guides + the supporting aggregate rows (2 upvotes per
+## guide, 1 recommendation on every other guide, 1 quiz per guide) for
+## ASK-104 staging-matrix verification. Upserts 3 stable "seed bot"
+## users with clerk_ids seed_bot_v1_1..3 so the seed is self-contained
+## and does not depend on the Clerk webhook pipeline. All inserts use
+## ON CONFLICT DO NOTHING so re-runs are safe. Parent courses must be
+## seeded first (see seed-courses). ENV=prod requires interactive [y]
+## confirmation.
+seed-study-guides:
+	$(call prod-confirm)
+	infisical run --env=$(ENV) -- go run $(SEED_STUDY_GUIDES_PATH) -guides=$(STUDY_GUIDES_CSV)
 
 ## make e2e E2E_TOKEN=<token> [ENV=dev|staging]
 e2e:

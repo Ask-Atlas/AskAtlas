@@ -45,3 +45,12 @@ playwright-report/
 blob-report/
 playwright/.cache/
 e2e-results/
+
+# Seed binaries accidentally produced by 'go build ./scripts/seed_*/...'
+# Leading slash anchors these to api/ so only the top-level binary is
+# ignored -- without it the pattern would also shadow the package
+# directories scripts/seed_schools/, scripts/seed_courses/,
+# scripts/seed_study_guides/ for any future file additions.
+/seed_study_guides
+/seed_schools
+/seed_courses
