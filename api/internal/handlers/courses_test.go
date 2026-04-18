@@ -378,6 +378,53 @@ func TestCoursesHandler_JoinSection_IgnoresUnexpectedBodyFields(t *testing.T) {
 	assert.Equal(t, api.Student, resp.Role)
 }
 
+// Per ASK-132 input-validation table: malformed JSON in the body must
+// surface as 400 even though valid JSON with unexpected fields is
+// accepted. NewMockCourseService(t) would fail on an unexpected call,
+// proving the handler rejects before reaching the service.
+func TestCoursesHandler_JoinSection_MalformedJSONBody(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	url := fmt.Sprintf("/courses/%s/sections/%s/members", uuid.NewString(), uuid.NewString())
+	body := strings.NewReader(`{invalid`)
+	req := authedRequestMethod(t, http.MethodPost, url, body)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "Invalid request body")
+}
+
+// Empty body is the documented default and must succeed -- regression
+// guard for the malformed-JSON fix above so the body-decode path doesn't
+// accidentally reject the documented happy case.
+func TestCoursesHandler_JoinSection_EmptyBodyAccepted(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		JoinSection(mock.Anything, mock.Anything).
+		Return(courses.Membership{
+			UserID:    uuid.New(),
+			SectionID: uuid.New(),
+			Role:      courses.MemberRoleStudent,
+			JoinedAt:  time.Now().UTC(),
+		}, nil)
+
+	url := fmt.Sprintf("/courses/%s/sections/%s/members", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+}
+
 func TestCoursesHandler_JoinSection_AlreadyMember(t *testing.T) {
 	mockSvc := mock_handlers.NewMockCourseService(t)
 	h := handlers.NewCoursesHandler(mockSvc)

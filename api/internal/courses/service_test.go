@@ -491,10 +491,10 @@ func TestDecodeCursor_BadInput(t *testing.T) {
 // JoinSection / LeaveSection (ASK-132 / ASK-138)
 // =====================================================================
 
-// expectAssertHelpers wires the two preflight existence probes used by
-// both JoinSection and LeaveSection. Pulling this out keeps the per-AC
-// tests focused on the case under test instead of repeating six lines of
-// repo wiring.
+// expectAssertOK wires the two preflight existence probes used by both
+// JoinSection and LeaveSection. Pulling this out keeps the per-AC tests
+// focused on the case under test instead of repeating six lines of repo
+// wiring.
 func expectAssertOK(repo *mock_courses.MockRepository, courseID, sectionID uuid.UUID) {
 	repo.EXPECT().
 		CourseExists(mock.Anything, utils.UUID(courseID)).
@@ -590,7 +590,13 @@ func TestService_JoinSection_CourseNotFound(t *testing.T) {
 	assert.Equal(t, "Course not found", appErr.Message)
 }
 
-func TestService_JoinSection_SectionNotFoundOrCrossCourse(t *testing.T) {
+// Covers ASK-132 AC #4 (section does not exist) and AC #5 (section
+// exists under a *different* course than the URL's course_id). Both
+// surface the same way at the repo seam: SectionInCourseExists returns
+// false. The 404 message is intentionally identical for both cases so
+// the URL path can't be used to probe for sections under unrelated
+// courses.
+func TestService_JoinSection_SectionNotFoundOrCrossCoursePath(t *testing.T) {
 	repo := mock_courses.NewMockRepository(t)
 
 	courseID := uuid.New()
@@ -618,10 +624,8 @@ func TestService_JoinSection_SectionNotFoundOrCrossCourse(t *testing.T) {
 
 func TestService_JoinSection_RepoErrorPropagates(t *testing.T) {
 	repo := mock_courses.NewMockRepository(t)
-	expectAssertOK(repo, uuid.Nil, uuid.Nil)
-	// Override the assert wiring to use Anything so the test does not over-couple to ID values.
-	// (mockery records all expectations; the explicit matchers above accept the zero IDs.)
-
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().SectionInCourseExists(mock.Anything, mock.Anything).Return(true, nil)
 	repo.EXPECT().
 		JoinSection(mock.Anything, mock.Anything).
 		Return(db.CourseMember{}, errors.New("boom"))
