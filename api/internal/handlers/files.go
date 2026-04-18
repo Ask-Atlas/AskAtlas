@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -13,11 +15,16 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// maxFileSizeBytes is the upper bound on file size that a client may declare (100 MB).
+const maxFileSizeBytes int64 = 100 * 1024 * 1024
+
 // FileService defines the application logic required by the FileHandler.
 type FileService interface {
+	CreateFile(ctx context.Context, params files.CreateFileParams) (files.CreateFileResult, error)
 	GetFile(ctx context.Context, params files.GetFileParams) (files.File, error)
 	ListFiles(ctx context.Context, params files.ListFilesParams) ([]files.File, *string, error)
 	DeleteFile(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher) error
+	UpdateFile(ctx context.Context, params files.UpdateFileParams) (files.File, error)
 }
 
 // FileHandler manages incoming HTTP requests relating to File operations.
@@ -29,6 +36,62 @@ type FileHandler struct {
 // NewFileHandler creates a new FileHandler backed by the given FileService.
 func NewFileHandler(service FileService, publisher files.QStashPublisher) *FileHandler {
 	return &FileHandler{service: service, publisher: publisher}
+}
+
+// CreateFile handles requests to create a new file reference and get a presigned upload URL.
+func (h *FileHandler) CreateFile(w http.ResponseWriter, r *http.Request) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	var body api.CreateFileJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", nil))
+		return
+	}
+
+	errDetails := make(map[string]string)
+	if strings.TrimSpace(body.Name) == "" {
+		errDetails["name"] = "must not be empty"
+	} else if len(body.Name) > 255 {
+		errDetails["name"] = "must not exceed 255 characters"
+	}
+	if body.Size < 1 || body.Size > maxFileSizeBytes {
+		errDetails["size"] = fmt.Sprintf("must be between 1 and %d bytes", maxFileSizeBytes)
+	}
+	if !body.MimeType.Valid() {
+		errDetails["mime_type"] = "unsupported mime type"
+	}
+	if len(errDetails) > 0 {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", errDetails))
+		return
+	}
+
+	params := files.CreateFileParams{
+		UserID:   viewerID,
+		Name:     body.Name,
+		MimeType: string(body.MimeType),
+		Size:     body.Size,
+	}
+
+	result, err := h.service.CreateFile(r.Context(), params)
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("CreateFile failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	resp := api.CreateFileResponse{
+		File:      toDTOFileResponse(result.File),
+		UploadUrl: result.UploadURL,
+	}
+
+	respondJSON(w, http.StatusCreated, resp)
 }
 
 // DeleteFile handles requests to delete a single file by its unique identifier.
@@ -54,6 +117,39 @@ func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request, fileId 
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// UpdateFile handles requests to rename a file.
+func (h *FileHandler) UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	var body api.UpdateFileRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("invalid request body", nil))
+		return
+	}
+
+	params := files.UpdateFileParams{
+		FileID:  uuid.UUID(fileId),
+		OwnerID: viewerID,
+		Name:    body.Name,
+	}
+
+	file, err := h.service.UpdateFile(r.Context(), params)
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("UpdateFile failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, toDTOFileResponse(file))
 }
 
 // GetFile handles requests to retrieve a single file by its unique identifier.

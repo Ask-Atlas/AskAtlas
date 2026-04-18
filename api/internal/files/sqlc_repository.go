@@ -47,6 +47,23 @@ func (r *sqlcRepository) InTx(ctx context.Context, fn func(Repository) error) er
 	return nil
 }
 
+func (r *sqlcRepository) InsertFile(ctx context.Context, arg db.InsertFileParams) (db.File, error) {
+	slog.Debug("inserting file", "user_id", arg.UserID, "name", arg.Name)
+	file, err := r.queries.InsertFile(ctx, arg)
+	if err != nil {
+		return db.File{}, fmt.Errorf("InsertFile: %w", err)
+	}
+	return file, nil
+}
+
+func (r *sqlcRepository) UpdateFileStatus(ctx context.Context, arg db.UpdateFileStatusParams) error {
+	slog.Debug("updating file status", "file_id", arg.FileID, "status", arg.Status)
+	if err := r.queries.UpdateFileStatus(ctx, arg); err != nil {
+		return fmt.Errorf("UpdateFileStatus: %w", err)
+	}
+	return nil
+}
+
 func (r *sqlcRepository) GetFileIfViewable(ctx context.Context, arg db.GetFileIfViewableParams) (db.File, error) {
 	slog.Debug("getting file if viewable", "file_id", arg.FileID, "viewer_id", arg.ViewerID)
 
@@ -237,6 +254,18 @@ func (r *sqlcRepository) SetFileDeletionJobID(ctx context.Context, arg db.SetFil
 		return fmt.Errorf("SetFileDeletionJobID: %w", err)
 	}
 	return nil
+}
+
+func (r *sqlcRepository) UpdateFile(ctx context.Context, arg db.UpdateFileParams) (db.UpdateFileRow, error) {
+	slog.Debug("updating file", "file_id", arg.FileID, "owner_id", arg.OwnerID)
+	row, err := r.queries.UpdateFile(ctx, arg)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return db.UpdateFileRow{}, fmt.Errorf("UpdateFile: %w", apperrors.ErrNotFound)
+		}
+		return db.UpdateFileRow{}, fmt.Errorf("UpdateFile: %w", err)
+	}
+	return row, nil
 }
 
 func (r *sqlcRepository) MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error {

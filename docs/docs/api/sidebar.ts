@@ -18,14 +18,38 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/create-file",
+          label: "Create a file reference and get a presigned upload URL",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "api/get-file",
           label: "Get a file by ID",
           className: "api-method get",
         },
         {
           type: "doc",
+          id: "api/update-file",
+          label: "Rename a file",
+          className: "api-method patch",
+        },
+        {
+          type: "doc",
           id: "api/delete-file",
           label: "Delete a file by ID",
+          className: "api-method delete",
+        },
+        {
+          type: "doc",
+          id: "api/create-grant",
+          label: "Grant a permission on a file",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "api/revoke-grant",
+          label: "Revoke a permission on a file",
           className: "api-method delete",
         },
       ],

@@ -10,6 +10,7 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/files"
 	mock_files "github.com/Ask-Atlas/AskAtlas/api/internal/files/mocks"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
+	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,7 @@ import (
 
 func TestService_ListFiles_Scope(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo)
+	svc := files.NewService(repo, nil)
 
 	params := files.ListFilesParams{
 		Scope: files.ScopeCourse, // Unsupported
@@ -32,7 +33,7 @@ func TestService_ListFiles_Scope(t *testing.T) {
 
 func TestService_ListFiles_Pagination_HasNextPage(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo)
+	svc := files.NewService(repo, nil)
 
 	viewerID := uuid.New()
 	params := files.ListFilesParams{
@@ -67,7 +68,7 @@ func TestService_ListFiles_Pagination_HasNextPage(t *testing.T) {
 
 func TestService_ListFiles_Pagination_NoNextPage(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo)
+	svc := files.NewService(repo, nil)
 
 	viewerID := uuid.New()
 	params := files.ListFilesParams{
@@ -99,9 +100,352 @@ func TestService_ListFiles_Pagination_NoNextPage(t *testing.T) {
 	assert.Nil(t, nextCursor, "expected nextCursor to be nil")
 }
 
+func TestService_CreateFile_Success(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	s3Mock := mock_files.NewMockS3Uploader(t)
+	svc := files.NewService(repo, s3Mock)
+
+	userID := uuid.New()
+	now := time.Now()
+
+	params := files.CreateFileParams{
+		UserID:   userID,
+		Name:     "lecture-notes.pdf",
+		MimeType: "application/pdf",
+		Size:     1048576,
+	}
+
+	// Capture the generated file ID and s3_key from the insert call.
+	var capturedID pgtype.UUID
+	var capturedS3Key string
+
+	repo.EXPECT().
+		InsertFile(mock.Anything, mock.MatchedBy(func(arg db.InsertFileParams) bool {
+			capturedID = arg.ID
+			capturedS3Key = arg.S3Key
+			return arg.ID.Valid &&
+				arg.UserID == utils.UUID(userID) &&
+				arg.Name == "lecture-notes.pdf" &&
+				arg.MimeType == db.MimeTypeApplicationPdf &&
+				arg.Size == int64(1048576) &&
+				arg.S3Key != ""
+		})).
+		RunAndReturn(func(_ context.Context, arg db.InsertFileParams) (db.File, error) {
+			return db.File{
+				ID:        arg.ID,
+				UserID:    arg.UserID,
+				S3Key:     arg.S3Key,
+				Name:      arg.Name,
+				MimeType:  arg.MimeType,
+				Size:      arg.Size,
+				Status:    db.UploadStatusPending,
+				CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+				UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			}, nil
+		})
+
+	s3Mock.EXPECT().
+		GeneratePresignedPutURL(mock.Anything, mock.AnythingOfType("string"), "application/pdf", int64(1048576)).
+		Return("https://s3.example.com/presigned-url", nil)
+
+	result, err := svc.CreateFile(context.Background(), params)
+	require.NoError(t, err)
+
+	fileID, err := utils.PgxToGoogleUUID(capturedID)
+	require.NoError(t, err)
+
+	expectedKey := fmt.Sprintf("users/%s/files/%s/lecture-notes.pdf", userID.String(), fileID.String())
+	assert.Equal(t, expectedKey, capturedS3Key, "S3 key stored in DB must include file ID and name")
+
+	assert.Equal(t, fileID, result.File.ID)
+	assert.Equal(t, "lecture-notes.pdf", result.File.Name)
+	assert.Equal(t, int64(1048576), result.File.Size)
+	assert.Equal(t, "application/pdf", result.File.MimeType)
+	assert.Equal(t, "pending", result.File.Status)
+	assert.Equal(t, "https://s3.example.com/presigned-url", result.UploadURL)
+}
+
+func TestService_CreateFile_InsertError(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	s3Mock := mock_files.NewMockS3Uploader(t)
+	svc := files.NewService(repo, s3Mock)
+
+	params := files.CreateFileParams{
+		UserID:   uuid.New(),
+		Name:     "file.pdf",
+		MimeType: "application/pdf",
+		Size:     100,
+	}
+
+	repo.EXPECT().
+		InsertFile(mock.Anything, mock.Anything).
+		Return(db.File{}, fmt.Errorf("db error"))
+
+	_, err := svc.CreateFile(context.Background(), params)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "CreateFile: insert")
+}
+
+func TestService_CreateFile_PresignError(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	s3Mock := mock_files.NewMockS3Uploader(t)
+	svc := files.NewService(repo, s3Mock)
+
+	userID := uuid.New()
+	now := time.Now()
+
+	params := files.CreateFileParams{
+		UserID:   userID,
+		Name:     "file.pdf",
+		MimeType: "application/pdf",
+		Size:     100,
+	}
+
+	repo.EXPECT().
+		InsertFile(mock.Anything, mock.Anything).
+		RunAndReturn(func(_ context.Context, arg db.InsertFileParams) (db.File, error) {
+			return db.File{
+				ID:        arg.ID,
+				UserID:    arg.UserID,
+				S3Key:     arg.S3Key,
+				Name:      arg.Name,
+				MimeType:  arg.MimeType,
+				Size:      arg.Size,
+				Status:    db.UploadStatusPending,
+				CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+				UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			}, nil
+		})
+
+	s3Mock.EXPECT().
+		GeneratePresignedPutURL(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return("", fmt.Errorf("s3 error"))
+
+	_, err := svc.CreateFile(context.Background(), params)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "CreateFile: presign")
+}
+
+func TestService_CreateFile_PathTraversal_Rejected(t *testing.T) {
+	tests := []struct {
+		name     string
+		fileName string
+	}{
+		{"empty name", ""},
+		{"dot only", "."},
+		{"slash only", "/"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := mock_files.NewMockRepository(t)
+			s3Mock := mock_files.NewMockS3Uploader(t)
+			svc := files.NewService(repo, s3Mock)
+
+			params := files.CreateFileParams{
+				UserID:   uuid.New(),
+				Name:     tc.fileName,
+				MimeType: "application/pdf",
+				Size:     100,
+			}
+
+			_, err := svc.CreateFile(context.Background(), params)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "invalid input")
+		})
+	}
+}
+
+func TestService_CreateFile_PathTraversal_Sanitized(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	s3Mock := mock_files.NewMockS3Uploader(t)
+	svc := files.NewService(repo, s3Mock)
+
+	userID := uuid.New()
+	now := time.Now()
+
+	params := files.CreateFileParams{
+		UserID:   userID,
+		Name:     "../../admin/secrets.pdf",
+		MimeType: "application/pdf",
+		Size:     100,
+	}
+
+	var capturedS3Key string
+
+	repo.EXPECT().
+		InsertFile(mock.Anything, mock.MatchedBy(func(arg db.InsertFileParams) bool {
+			capturedS3Key = arg.S3Key
+			return true
+		})).
+		RunAndReturn(func(_ context.Context, arg db.InsertFileParams) (db.File, error) {
+			return db.File{
+				ID:        arg.ID,
+				UserID:    arg.UserID,
+				S3Key:     arg.S3Key,
+				Name:      arg.Name,
+				MimeType:  arg.MimeType,
+				Size:      arg.Size,
+				Status:    db.UploadStatusPending,
+				CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+				UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			}, nil
+		})
+
+	s3Mock.EXPECT().
+		GeneratePresignedPutURL(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return("https://s3.example.com/presigned-url", nil)
+
+	_, err := svc.CreateFile(context.Background(), params)
+	require.NoError(t, err)
+	assert.Contains(t, capturedS3Key, "/secrets.pdf", "path traversal should be stripped to base name")
+	assert.NotContains(t, capturedS3Key, "..", "S3 key must not contain directory traversal")
+}
+
+func TestService_UpdateFile_Success(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo, nil)
+
+	fid := uuid.New()
+	oid := uuid.New()
+	now := time.Now()
+
+	repo.EXPECT().
+		UpdateFile(mock.Anything, mock.MatchedBy(func(arg db.UpdateFileParams) bool {
+			return arg.FileID == utils.UUID(fid) &&
+				arg.OwnerID == utils.UUID(oid) &&
+				arg.Name == "renamed.pdf"
+		})).
+		Return(db.UpdateFileRow{
+			ID:        utils.UUID(fid),
+			UserID:    utils.UUID(oid),
+			Name:      "renamed.pdf",
+			Size:      1024,
+			MimeType:  "application/pdf",
+			Status:    "complete",
+			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+		}, nil)
+
+	f, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID:  fid,
+		OwnerID: oid,
+		Name:    "renamed.pdf",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, fid, f.ID)
+	assert.Equal(t, "renamed.pdf", f.Name)
+	assert.Equal(t, int64(1024), f.Size)
+}
+
+func TestService_UpdateFile_NotFound(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo, nil)
+
+	repo.EXPECT().
+		UpdateFile(mock.Anything, mock.Anything).
+		Return(db.UpdateFileRow{}, fmt.Errorf("UpdateFile: %w", apperrors.ErrNotFound))
+
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID:  uuid.New(),
+		OwnerID: uuid.New(),
+		Name:    "valid-name.pdf",
+	})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, apperrors.ErrNotFound)
+}
+
+func TestService_UpdateFile_EmptyNameAfterTrim(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo, nil)
+
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID:  uuid.New(),
+		OwnerID: uuid.New(),
+		Name:    "   ",
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, 400, appErr.Code)
+	assert.Contains(t, appErr.Details["name"], "must not be empty")
+}
+
+func TestService_UpdateFile_NameTooLong(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo, nil)
+
+	longName := string(make([]byte, 256))
+	for i := range longName {
+		longName = longName[:i] + "a" + longName[i+1:]
+	}
+
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID:  uuid.New(),
+		OwnerID: uuid.New(),
+		Name:    longName,
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, 400, appErr.Code)
+	assert.Contains(t, appErr.Details["name"], "255")
+}
+
+func TestService_UpdateFile_DangerousChars(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo, nil)
+
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID:  uuid.New(),
+		OwnerID: uuid.New(),
+		Name:    "my/file\\name.pdf",
+	})
+	require.Error(t, err)
+
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, 400, appErr.Code)
+	assert.Contains(t, appErr.Details["name"], "/")
+	assert.Contains(t, appErr.Details["name"], "\\")
+}
+
+func TestService_UpdateFile_WhitespaceTrimmed(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo, nil)
+
+	fid := uuid.New()
+	oid := uuid.New()
+	now := time.Now()
+
+	repo.EXPECT().
+		UpdateFile(mock.Anything, mock.MatchedBy(func(arg db.UpdateFileParams) bool {
+			return arg.Name == "trimmed.pdf" // Verify whitespace was stripped
+		})).
+		Return(db.UpdateFileRow{
+			ID:        utils.UUID(fid),
+			UserID:    utils.UUID(oid),
+			Name:      "trimmed.pdf",
+			Size:      512,
+			MimeType:  "application/pdf",
+			Status:    "complete",
+			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+		}, nil)
+
+	f, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID:  fid,
+		OwnerID: oid,
+		Name:    "  trimmed.pdf  ",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "trimmed.pdf", f.Name)
+}
+
 func TestService_GetFile(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo)
+	svc := files.NewService(repo, nil)
 
 	fid := uuid.New()
 	vid := uuid.New()

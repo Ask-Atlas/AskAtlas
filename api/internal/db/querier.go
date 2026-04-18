@@ -16,6 +16,7 @@ type Querier interface {
 	GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) (GetFileByOwnerRow, error)
 	GetFileIfViewable(ctx context.Context, arg GetFileIfViewableParams) (File, error)
 	GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtype.UUID, error)
+	InsertFile(ctx context.Context, arg InsertFileParams) (File, error)
 	ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFilesCreatedAscParams) ([]ListOwnedFilesCreatedAscRow, error)
 	ListOwnedFilesCreatedDesc(ctx context.Context, arg ListOwnedFilesCreatedDescParams) ([]ListOwnedFilesCreatedDescRow, error)
 	ListOwnedFilesMimeAsc(ctx context.Context, arg ListOwnedFilesMimeAscParams) ([]ListOwnedFilesMimeAscRow, error)
@@ -39,6 +40,10 @@ type Querier interface {
 	// and has not already entered a deletion state (idempotency-safe).
 	SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)
 	SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
+	// Renames a file. Only applies if owned by the caller and not in a deletion state.
+	// Returns sql.ErrNoRows when file is not found, not owned, or in deletion.
+	UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateFileRow, error)
+	UpdateFileStatus(ctx context.Context, arg UpdateFileStatusParams) error
 	UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
 	// Inserts a new file grant, returning the row. If the grant already exists
 	// (same file_id, grantee_type, grantee_id, permission), updates granted_by

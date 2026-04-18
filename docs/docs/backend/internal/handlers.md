@@ -19,6 +19,7 @@ Package handlers contains the HTTP handlers and routes for the API endpoints.
   - [func \(h \*FileHandler\) DeleteFile\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#FileHandler.DeleteFile>)
   - [func \(h \*FileHandler\) GetFile\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#FileHandler.GetFile>)
   - [func \(h \*FileHandler\) ListFiles\(w http.ResponseWriter, r \*http.Request, params api.ListFilesParams\)](<#FileHandler.ListFiles>)
+  - [func \(h \*FileHandler\) UpdateFile\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#FileHandler.UpdateFile>)
 - [type FileService](<#FileService>)
 - [type JobHandler](<#JobHandler>)
   - [func NewJobHandler\(s3 \*s3client.Client, queries \*db.Queries\) \*JobHandler](<#NewJobHandler>)
@@ -67,7 +68,7 @@ type ClerkService interface {
 ```
 
 <a name="FileHandler"></a>
-## type [FileHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L24-L27>)
+## type [FileHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L26-L29>)
 
 FileHandler manages incoming HTTP requests relating to File operations.
 
@@ -78,7 +79,7 @@ type FileHandler struct {
 ```
 
 <a name="NewFileHandler"></a>
-### func [NewFileHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L30>)
+### func [NewFileHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L32>)
 
 ```go
 func NewFileHandler(service FileService, publisher files.QStashPublisher) *FileHandler
@@ -87,7 +88,7 @@ func NewFileHandler(service FileService, publisher files.QStashPublisher) *FileH
 NewFileHandler creates a new FileHandler backed by the given FileService.
 
 <a name="FileHandler.DeleteFile"></a>
-### func \(\*FileHandler\) [DeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L35>)
+### func \(\*FileHandler\) [DeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L37>)
 
 ```go
 func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
@@ -96,7 +97,7 @@ func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request, fileId 
 DeleteFile handles requests to delete a single file by its unique identifier.
 
 <a name="FileHandler.GetFile"></a>
-### func \(\*FileHandler\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L60>)
+### func \(\*FileHandler\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L95>)
 
 ```go
 func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
@@ -105,7 +106,7 @@ func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request, fileId ope
 GetFile handles requests to retrieve a single file by its unique identifier.
 
 <a name="FileHandler.ListFiles"></a>
-### func \(\*FileHandler\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L86>)
+### func \(\*FileHandler\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L121>)
 
 ```go
 func (h *FileHandler) ListFiles(w http.ResponseWriter, r *http.Request, params api.ListFilesParams)
@@ -113,8 +114,17 @@ func (h *FileHandler) ListFiles(w http.ResponseWriter, r *http.Request, params a
 
 ListFiles handles requests to retrieve a paginated list of files accessible to the viewer.
 
+<a name="FileHandler.UpdateFile"></a>
+### func \(\*FileHandler\) [UpdateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L62>)
+
+```go
+func (h *FileHandler) UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+```
+
+UpdateFile handles requests to rename a file.
+
 <a name="FileService"></a>
-## type [FileService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L17-L21>)
+## type [FileService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L18-L23>)
 
 FileService defines the application logic required by the FileHandler.
 
@@ -123,6 +133,7 @@ type FileService interface {
     GetFile(ctx context.Context, params files.GetFileParams) (files.File, error)
     ListFiles(ctx context.Context, params files.ListFilesParams) ([]files.File, *string, error)
     DeleteFile(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher) error
+    UpdateFile(ctx context.Context, params files.UpdateFileParams) (files.File, error)
 }
 ```
 

@@ -118,3 +118,24 @@ type RevokeGrantParams struct {
 	GranteeID   uuid.UUID
 	Permission  string
 }
+
+// CreateFileParams contains the validated inputs for creating a new file reference.
+type CreateFileParams struct {
+	UserID   uuid.UUID
+	Name     string
+	MimeType string
+	Size     int64
+}
+
+// CreateFileResult holds the created file record and the presigned upload URL.
+type CreateFileResult struct {
+	File      File
+	UploadURL string
+}
+
+// UpdateFileParams contains the required inputs for renaming a file.
+type UpdateFileParams struct {
+	FileID  uuid.UUID
+	OwnerID uuid.UUID
+	Name    string
+}

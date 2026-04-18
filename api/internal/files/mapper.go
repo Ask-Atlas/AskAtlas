@@ -142,6 +142,29 @@ func mapGrantRow(r db.FileGrant) (Grant, error) {
 	}, nil
 }
 
+// mapUpdateFileRow converts an UpdateFile RETURNING row into the domain File model.
+func mapUpdateFileRow(r db.UpdateFileRow) (File, error) {
+	id, err := utils.PgxToGoogleUUID(r.ID)
+	if err != nil {
+		return File{}, fmt.Errorf("mapUpdateFileRow: ID: %w", err)
+	}
+	userID, err := utils.PgxToGoogleUUID(r.UserID)
+	if err != nil {
+		return File{}, fmt.Errorf("mapUpdateFileRow: UserID: %w", err)
+	}
+
+	return File{
+		ID:        id,
+		UserID:    userID,
+		Name:      r.Name,
+		Size:      r.Size,
+		MimeType:  string(r.MimeType),
+		Status:    string(r.Status),
+		CreatedAt: r.CreatedAt.Time,
+		UpdatedAt: r.UpdatedAt.Time,
+	}, nil
+}
+
 // mapDBFile converts a database File model into the domain File standard model.
 func mapDBFile(f db.File) (File, error) {
 	id, err := utils.PgxToGoogleUUID(f.ID)

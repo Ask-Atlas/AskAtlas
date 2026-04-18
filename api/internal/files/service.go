@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	qstashclient "github.com/Ask-Atlas/AskAtlas/api/internal/qstash"
@@ -19,11 +22,14 @@ import (
 type Repository interface {
 	InTx(ctx context.Context, fn func(Repository) error) error
 
+	InsertFile(ctx context.Context, arg db.InsertFileParams) (db.File, error)
+	UpdateFileStatus(ctx context.Context, arg db.UpdateFileStatusParams) error
 	GetFileIfViewable(ctx context.Context, arg db.GetFileIfViewableParams) (db.File, error)
 	GetFileByOwner(ctx context.Context, arg db.GetFileByOwnerParams) (db.GetFileByOwnerRow, error)
 	SoftDeleteFile(ctx context.Context, arg db.SoftDeleteFileParams) (int64, error)
 	SetFileDeletionJobID(ctx context.Context, arg db.SetFileDeletionJobIDParams) error
 	MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
+	UpdateFile(ctx context.Context, arg db.UpdateFileParams) (db.UpdateFileRow, error)
 
 	UpsertFileGrant(ctx context.Context, arg db.UpsertFileGrantParams) (db.FileGrant, error)
 	RevokeFileGrant(ctx context.Context, arg db.RevokeFileGrantParams) error
@@ -42,15 +48,21 @@ type Repository interface {
 	ListOwnedFilesMimeDesc(ctx context.Context, arg db.ListOwnedFilesMimeDescParams) ([]db.ListOwnedFilesMimeDescRow, error)
 }
 
+// S3Uploader is the interface the service uses to generate presigned upload URLs.
+type S3Uploader interface {
+	GeneratePresignedPutURL(ctx context.Context, key, contentType string, contentLength int64) (string, error)
+}
+
 // Service is the business-logic layer for the files feature.
 type Service struct {
 	repo       Repository
+	s3         S3Uploader
 	queryTable map[sortKey]queryFn
 }
 
 // NewService creates a new Service instance configured with the given repository.
-func NewService(repo Repository) *Service {
-	s := &Service{repo: repo}
+func NewService(repo Repository, s3 S3Uploader) *Service {
+	s := &Service{repo: repo, s3: s3}
 	s.queryTable = map[sortKey]queryFn{
 		{SortFieldUpdatedAt, SortDirDesc}: s.queryUpdatedDesc,
 		{SortFieldUpdatedAt, SortDirAsc}:  s.queryUpdatedAsc,
@@ -82,6 +94,45 @@ func (s *Service) GetFile(ctx context.Context, p GetFileParams) (File, error) {
 	return mapDBFile(row)
 }
 
+// CreateFile inserts a pending file record in the database, generates a presigned S3 PUT URL,
+// and returns both the file reference and the upload URL.
+func (s *Service) CreateFile(ctx context.Context, p CreateFileParams) (CreateFileResult, error) {
+	safeName := filepath.Base(p.Name)
+	if safeName == "." || safeName == "/" || safeName == "" || strings.ContainsRune(safeName, 0) {
+		return CreateFileResult{}, fmt.Errorf("CreateFile: %w", apperrors.ErrInvalidInput)
+	}
+
+	fileID := uuid.New()
+	s3Key := fmt.Sprintf("users/%s/files/%s/%s", p.UserID.String(), fileID.String(), safeName)
+
+	row, err := s.repo.InsertFile(ctx, db.InsertFileParams{
+		ID:       utils.UUID(fileID),
+		UserID:   utils.UUID(p.UserID),
+		S3Key:    s3Key,
+		Name:     p.Name,
+		MimeType: db.MimeType(p.MimeType),
+		Size:     p.Size,
+	})
+	if err != nil {
+		return CreateFileResult{}, fmt.Errorf("CreateFile: insert: %w", err)
+	}
+
+	uploadURL, err := s.s3.GeneratePresignedPutURL(ctx, s3Key, p.MimeType, p.Size)
+	if err != nil {
+		return CreateFileResult{}, fmt.Errorf("CreateFile: presign: %w", err)
+	}
+
+	file, err := mapDBFile(row)
+	if err != nil {
+		return CreateFileResult{}, fmt.Errorf("CreateFile: map: %w", err)
+	}
+
+	return CreateFileResult{
+		File:      file,
+		UploadURL: uploadURL,
+	}, nil
+}
+
 // ListFiles queries the repository for a paginated list of files matching the given parameters.
 func (s *Service) ListFiles(ctx context.Context, p ListFilesParams) ([]File, *string, error) {
 	if p.Scope != ScopeOwned {
@@ -110,6 +161,72 @@ func (s *Service) ListFiles(ctx context.Context, p ListFilesParams) ([]File, *st
 	}
 
 	return files, nextCursor, nil
+}
+
+// UpdateFile renames a file after validating the new name. The name is trimmed
+// of leading/trailing whitespace before validation. Returns apperrors.ErrNotFound
+// if the file does not belong to the caller or is in a deletion state.
+func (s *Service) UpdateFile(ctx context.Context, p UpdateFileParams) (File, error) {
+	name := strings.TrimSpace(p.Name)
+	if err := validateFileName(name); err != nil {
+		return File{}, err
+	}
+
+	row, err := s.repo.UpdateFile(ctx, db.UpdateFileParams{
+		FileID:  utils.UUID(p.FileID),
+		OwnerID: utils.UUID(p.OwnerID),
+		Name:    name,
+	})
+	if err != nil {
+		return File{}, err
+	}
+	return mapUpdateFileRow(row)
+}
+
+const maxFileNameLength = 255
+
+// validateFileName checks that a (already-trimmed) file name is non-empty,
+// within length limits, and free of dangerous characters.
+func validateFileName(name string) *apperrors.AppError {
+	details := make(map[string]string)
+
+	if name == "" {
+		details["name"] = "must not be empty"
+		return apperrors.NewBadRequest("Invalid file name", details)
+	}
+
+	if utf8.RuneCountInString(name) > maxFileNameLength {
+		details["name"] = fmt.Sprintf("must not exceed %d characters", maxFileNameLength)
+		return apperrors.NewBadRequest("Invalid file name", details)
+	}
+
+	var invalid []string
+	seen := make(map[string]bool)
+	for _, r := range name {
+		var ch string
+		switch {
+		case r == '/':
+			ch = "/"
+		case r == '\\':
+			ch = "\\"
+		case r == 0:
+			ch = "null byte"
+		case unicode.IsControl(r):
+			ch = "control character"
+		default:
+			continue
+		}
+		if !seen[ch] {
+			seen[ch] = true
+			invalid = append(invalid, ch)
+		}
+	}
+	if len(invalid) > 0 {
+		details["name"] = "contains invalid characters: " + strings.Join(invalid, ", ")
+		return apperrors.NewBadRequest("Invalid file name", details)
+	}
+
+	return nil
 }
 
 // DeleteFileParams holds the inputs required to initiate file deletion.

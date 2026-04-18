@@ -38,6 +38,72 @@ func (_m *MockFileService) EXPECT() *MockFileService_Expecter {
 	return &MockFileService_Expecter{mock: &_m.Mock}
 }
 
+// CreateFile provides a mock function for the type MockFileService
+func (_mock *MockFileService) CreateFile(ctx context.Context, params files.CreateFileParams) (files.CreateFileResult, error) {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateFile")
+	}
+
+	var r0 files.CreateFileResult
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, files.CreateFileParams) (files.CreateFileResult, error)); ok {
+		return returnFunc(ctx, params)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, files.CreateFileParams) files.CreateFileResult); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Get(0).(files.CreateFileResult)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, files.CreateFileParams) error); ok {
+		r1 = returnFunc(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockFileService_CreateFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateFile'
+type MockFileService_CreateFile_Call struct {
+	*mock.Call
+}
+
+// CreateFile is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params files.CreateFileParams
+func (_e *MockFileService_Expecter) CreateFile(ctx interface{}, params interface{}) *MockFileService_CreateFile_Call {
+	return &MockFileService_CreateFile_Call{Call: _e.mock.On("CreateFile", ctx, params)}
+}
+
+func (_c *MockFileService_CreateFile_Call) Run(run func(ctx context.Context, params files.CreateFileParams)) *MockFileService_CreateFile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 files.CreateFileParams
+		if args[1] != nil {
+			arg1 = args[1].(files.CreateFileParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockFileService_CreateFile_Call) Return(createFileResult files.CreateFileResult, err error) *MockFileService_CreateFile_Call {
+	_c.Call.Return(createFileResult, err)
+	return _c
+}
+
+func (_c *MockFileService_CreateFile_Call) RunAndReturn(run func(ctx context.Context, params files.CreateFileParams) (files.CreateFileResult, error)) *MockFileService_CreateFile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteFile provides a mock function for the type MockFileService
 func (_mock *MockFileService) DeleteFile(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher) error {
 	ret := _mock.Called(ctx, params, publisher)
@@ -239,6 +305,72 @@ func (_c *MockFileService_ListFiles_Call) Return(files1 []files.File, s *string,
 }
 
 func (_c *MockFileService_ListFiles_Call) RunAndReturn(run func(ctx context.Context, params files.ListFilesParams) ([]files.File, *string, error)) *MockFileService_ListFiles_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateFile provides a mock function for the type MockFileService
+func (_mock *MockFileService) UpdateFile(ctx context.Context, params files.UpdateFileParams) (files.File, error) {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateFile")
+	}
+
+	var r0 files.File
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, files.UpdateFileParams) (files.File, error)); ok {
+		return returnFunc(ctx, params)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, files.UpdateFileParams) files.File); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Get(0).(files.File)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, files.UpdateFileParams) error); ok {
+		r1 = returnFunc(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockFileService_UpdateFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateFile'
+type MockFileService_UpdateFile_Call struct {
+	*mock.Call
+}
+
+// UpdateFile is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params files.UpdateFileParams
+func (_e *MockFileService_Expecter) UpdateFile(ctx interface{}, params interface{}) *MockFileService_UpdateFile_Call {
+	return &MockFileService_UpdateFile_Call{Call: _e.mock.On("UpdateFile", ctx, params)}
+}
+
+func (_c *MockFileService_UpdateFile_Call) Run(run func(ctx context.Context, params files.UpdateFileParams)) *MockFileService_UpdateFile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 files.UpdateFileParams
+		if args[1] != nil {
+			arg1 = args[1].(files.UpdateFileParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockFileService_UpdateFile_Call) Return(file files.File, err error) *MockFileService_UpdateFile_Call {
+	_c.Call.Return(file, err)
+	return _c
+}
+
+func (_c *MockFileService_UpdateFile_Call) RunAndReturn(run func(ctx context.Context, params files.UpdateFileParams) (files.File, error)) *MockFileService_UpdateFile_Call {
 	_c.Call.Return(run)
 	return _c
 }
