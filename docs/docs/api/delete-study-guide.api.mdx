@@ -1,0 +1,84 @@
+---
+id: delete-study-guide
+title: "Soft-delete a study guide"
+description: "Soft-deletes the guide (`study_guides.deleted_at = now()`) and"
+sidebar_label: "Soft-delete a study guide"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV01P40gQ/Su1dVnQmBCG7MWrOQQSVlkxgJZEeyARdNwV3JNOt+luw4TI/31VtkkMiVZa7YFLTv6q6nqvXlW7eoU2IyeCsmYgMcYeaQp0G3K5/CNXkjBCST5xKmMTjPHWzsKRLK08hJTgkc3g4MGzz3355FuVgbwXAb6BsS8Hhw+HIIwcm0T4REj2tSC0hiRVWsJTrl5fycPBQ323c4WxEcEuVCK0XoIyIMAr86gJghPGi4QhtqCbZVolJaUjTc+koY45NgfGBuidwXn39rzb6x+Ct+vQc6KMCSkH9sVAI75WM0qWiaaxmVkHwixhlofcEeSmMoMX6+YzbV9aYzM2545EsO7IGr2ModM+BTUrU/Ws6IUcKA+MY528Xz0klUsLOu1OFWWhPJMDDqgdCbmssy6hzjFcO0kO7AySlJK5j8cG4KQFFxSSFL6Atsm8VseVyAC+lgEYTmP5BtPBLVxdD+FqdHlZ2p+23uDXAO+VhF++1UTulSytOi0Y3fS6w34d7ct7USM4v/7+fTBsjQ1GmAknFhTIeYzvVmjEgjDGRvHcK4kRKq61TIR0qwCHKeddPeUEo9Ggx/w5k+UKNYBga1IYoaOnXDmSGAeXU4Q+SWkhMF5hWGZVaKfMI0Y4s24hAsaY50piUUzY2WfWePJs/7Xd4ct7NGWTgN80hfwdjIU3R5haucQiwk67ve18JiQwPvIBI0ysCWQCm4lNCR//8Gy72gZupz8oCdsNGoSRwkn1ShLIOes2aHxweVJW7kKEJOUCaISqraVdCGU8a+V4cwiq4p9YSY3wygR6JMfkfBAh99s5LSJckPfikXZ+kxSE0n4XJSGlYkhC37zD8GGNomgKfFdBXOPZRJ9EGFTQ7NrNsj7TZOdSl5NtXUZG5CG1jlO4F+azhDndFubCuqmSksxelc9SZcceeGUDzGxu9r3ySar8tuvnMjCBnBEaPLlnclVe9gp9hkIlwJBaHrDXg0k53MR4XA4uR9VMd7x6PwgVHKWUr5qWcqfZRWQKeTzxlOROhWX57YyEI9fNedW7SfPzLUtaEWsarWmmIWRYT0b8PC2NMKpvLt7moj//HiJzUWZmS/c3rn7eDVp46N4MMEJGW9XISavdarMEmfVhIcr6qge+xjGCx/jN8Pax0Fabgt2fPfZnj/919qjrPdDPcJxpoQzXZtlTq7od77DZjhhh/OFkMokwtT6w5Wo1FZ5GThcFv37KyXEnTiJ8Fk6JKffG3Qql8nwvMZ4J7elfyvvgr3qPOYT/eMjZSax+KcySm1LonJ8wwjktt09cxaSIMCUhyZWoK6NuklAWGu5bfwzeZ9Z7W69/2R/2sSj+ARyptA8=
+sidebar_class_name: "delete api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Soft-delete a study guide"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"delete"}
+  path={"/study-guides/{study_guide_id}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Soft-deletes the guide (`study_guides.deleted_at = now()`) and
+cascades to all child quizzes (`quizzes.deleted_at = now()`)
+atomically in a single transaction. Application-level cascade
+(not DB CASCADE) so quizzes keep their own deleted_at lifecycle
+for any future undelete workflow.
+
+Creator-only: 403 if the viewer is not the guide's creator. 404
+for missing or already-deleted guides. Order of checks:
+  1. Fetch + lock guide row.
+  2. 404 if missing or deleted_at IS NOT NULL.
+  3. 403 if creator_id != viewer_id.
+  4. UPDATE guide + child quizzes, COMMIT.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  parameters={[{"name":"study_guide_id","in":"path","description":"The unique UUID of the study guide to delete","required":true,"schema":{"type":"string","format":"uuid"}}]}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={undefined}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"204":{"description":"Guide soft-deleted; no response body"},"400":{"description":"Bad request","content":{"application/json":{"schema":{"type":"object","description":"Standardized error response structure matching application error domains","properties":{"code":{"type":"integer"},"status":{"type":"string"},"message":{"type":"string"},"details":{"type":"object","additionalProperties":{"type":"string"}}},"required":["code","status","message"],"title":"AppError"}}}},"401":{"description":"Unauthorized","content":{"application/json":{"schema":{"type":"object","description":"Standardized error response structure matching application error domains","properties":{"code":{"type":"integer"},"status":{"type":"string"},"message":{"type":"string"},"details":{"type":"object","additionalProperties":{"type":"string"}}},"required":["code","status","message"],"title":"AppError"}}}},"403":{"description":"Forbidden","content":{"application/json":{"schema":{"type":"object","description":"Standardized error response structure matching application error domains","properties":{"code":{"type":"integer"},"status":{"type":"string"},"message":{"type":"string"},"details":{"type":"object","additionalProperties":{"type":"string"}}},"required":["code","status","message"],"title":"AppError"}}}},"404":{"description":"Not found","content":{"application/json":{"schema":{"type":"object","description":"Standardized error response structure matching application error domains","properties":{"code":{"type":"integer"},"status":{"type":"string"},"message":{"type":"string"},"details":{"type":"object","additionalProperties":{"type":"string"}}},"required":["code","status","message"],"title":"AppError"}}}},"500":{"description":"Internal server error","content":{"application/json":{"schema":{"type":"object","description":"Standardized error response structure matching application error domains","properties":{"code":{"type":"integer"},"status":{"type":"string"},"message":{"type":"string"},"details":{"type":"object","additionalProperties":{"type":"string"}}},"required":["code","status","message"],"title":"AppError"}}}}}}
+>
+  
+</StatusCodes>
+
+
+      
