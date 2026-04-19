@@ -21,6 +21,7 @@ type StudyGuideService interface {
 	AssertCourseExists(ctx context.Context, courseID uuid.UUID) error
 	GetStudyGuide(ctx context.Context, params studyguides.GetStudyGuideParams) (studyguides.StudyGuideDetail, error)
 	CreateStudyGuide(ctx context.Context, params studyguides.CreateStudyGuideParams) (studyguides.StudyGuideDetail, error)
+	UpdateStudyGuide(ctx context.Context, params studyguides.UpdateStudyGuideParams) (studyguides.StudyGuideDetail, error)
 	DeleteStudyGuide(ctx context.Context, params studyguides.DeleteStudyGuideParams) error
 	CastVote(ctx context.Context, params studyguides.CastVoteParams) (studyguides.CastVoteResult, error)
 	RemoveVote(ctx context.Context, params studyguides.RemoveVoteParams) error
@@ -172,6 +173,52 @@ func (h *StudyGuideHandler) CreateStudyGuide(w http.ResponseWriter, r *http.Requ
 	}
 
 	respondJSON(w, http.StatusCreated, mapStudyGuideDetailResponse(detail))
+}
+
+// UpdateStudyGuide handles PATCH /study-guides/{study_guide_id}.
+// Decodes the partial-update body into pointer-typed params (so
+// 'absent' is distinct from 'empty'), pulls viewer id from JWT,
+// delegates to service.UpdateStudyGuide which gates on creator-only +
+// returns the freshly re-hydrated detail. 200 on success; 400/403/404
+// flow through ToHTTPError unchanged.
+func (h *StudyGuideHandler) UpdateStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	var body api.UpdateStudyGuideJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", nil))
+		return
+	}
+
+	params := studyguides.UpdateStudyGuideParams{
+		StudyGuideID: uuid.UUID(studyGuideId),
+		ViewerID:     viewerID,
+		Title:        body.Title,
+		Description:  body.Description,
+		Content:      body.Content,
+	}
+	if body.Tags != nil {
+		// Snapshot the slice so the service can normalize it freely
+		// without aliasing the decoded body's backing array.
+		copied := append([]string(nil), (*body.Tags)...)
+		params.Tags = &copied
+	}
+
+	detail, err := h.service.UpdateStudyGuide(r.Context(), params)
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("UpdateStudyGuide failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, mapStudyGuideDetailResponse(detail))
 }
 
 // DeleteStudyGuide handles DELETE /study-guides/{study_guide_id}.
