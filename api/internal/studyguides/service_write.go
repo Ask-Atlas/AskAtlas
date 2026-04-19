@@ -768,6 +768,172 @@ func (s *Service) DetachResource(ctx context.Context, p DetachResourceParams) er
 	})
 }
 
+// AttachFile attaches a file the viewer owns to a study guide
+// (ASK-121). Single transaction wrapping:
+//
+//  1. GuideExistsAndLive -- 404 if guide missing/soft-deleted.
+//  2. GetFileForAttach -- 404 if the file row doesn't exist.
+//  3. Owner check -- 403 if viewer is not the file's user_id.
+//     We deliberately surface 403 here (not 404) because the file
+//     EXISTS; conflating 'not yours' with 'not found' would hide
+//     ownership state from the caller in a way the spec doesn't
+//     want.
+//  4. Status + soft-delete check -- 404 if file isn't 'complete' or
+//     is in any deletion state. Pending/failed uploads aren't
+//     attachable; a half-uploaded file would render as broken on
+//     the frontend.
+//  5. InsertGuideFile (ON CONFLICT DO NOTHING + RETURNING) -- 409
+//     if the (file, guide) pair is already attached. sql.ErrNoRows
+//     is the canonical signal for the no-op case here.
+//
+// No attached_by tracking on the join row -- file ownership is
+// already on files.user_id, and the dual-authz check on detach
+// uses guide.creator_id + file.user_id directly.
+func (s *Service) AttachFile(ctx context.Context, p AttachFileParams) (FileAttachment, error) {
+	guidePgxID := utils.UUID(p.StudyGuideID)
+	filePgxID := utils.UUID(p.FileID)
+
+	var attachment FileAttachment
+	if err := s.repo.InTx(ctx, func(tx Repository) error {
+		live, err := tx.GuideExistsAndLive(ctx, guidePgxID)
+		if err != nil {
+			return fmt.Errorf("AttachFile: live check: %w", err)
+		}
+		if !live {
+			return apperrors.NewNotFound("Study guide or file not found")
+		}
+
+		file, err := tx.GetFileForAttach(ctx, filePgxID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return apperrors.NewNotFound("Study guide or file not found")
+			}
+			return fmt.Errorf("AttachFile: get file: %w", err)
+		}
+		ownerID, err := utils.PgxToGoogleUUID(file.UserID)
+		if err != nil {
+			return fmt.Errorf("AttachFile: file owner id: %w", err)
+		}
+		if ownerID != p.AttacherID {
+			return &apperrors.AppError{
+				Code:    http.StatusForbidden,
+				Status:  "Forbidden",
+				Message: "You can only attach files you own",
+			}
+		}
+		// Status + deletion checks: must be 'complete' AND not in any
+		// deletion state. The spec collapses these into 404 because
+		// from the caller's point of view, an unusable file is
+		// indistinguishable from a missing one.
+		if file.Status != db.UploadStatusComplete {
+			return apperrors.NewNotFound("Study guide or file not found")
+		}
+		if file.DeletedAt.Valid || file.DeletionStatus.Valid {
+			return apperrors.NewNotFound("Study guide or file not found")
+		}
+
+		createdAt, err := tx.InsertGuideFile(ctx, db.InsertGuideFileParams{
+			FileID:       filePgxID,
+			StudyGuideID: guidePgxID,
+		})
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return &apperrors.AppError{
+					Code:    http.StatusConflict,
+					Status:  "Conflict",
+					Message: "File is already attached to this study guide",
+				}
+			}
+			return fmt.Errorf("AttachFile: insert join: %w", err)
+		}
+
+		attachment = FileAttachment{
+			FileID:       p.FileID,
+			StudyGuideID: p.StudyGuideID,
+			CreatedAt:    createdAt.Time,
+		}
+		return nil
+	}); err != nil {
+		return FileAttachment{}, err
+	}
+	return attachment, nil
+}
+
+// DetachFile removes the (file, guide) join row (ASK-124). The file
+// itself is preserved. Single transaction wrapping:
+//
+//  1. GetStudyGuideByIDForUpdate -- locked SELECT. 404 if guide
+//     missing/soft-deleted.
+//  2. GetFileForAttach -- 404 if file missing. We re-use the same
+//     query as Attach because it returns the user_id we need for
+//     the dual-authz comparison.
+//  3. GuideFileAttached -- 404 if the file isn't attached to this
+//     guide. Short-circuits BEFORE the dual-authz check so 'not
+//     attached' beats 'forbidden' on response.
+//  4. Dual-authz -- viewer must be EITHER the guide creator OR the
+//     file owner. Otherwise 403.
+//  5. DeleteGuideFile (:execrows) -- 0 rows means a parallel detach
+//     raced ahead, still 404 to match the get-then-delete contract.
+func (s *Service) DetachFile(ctx context.Context, p DetachFileParams) error {
+	guidePgxID := utils.UUID(p.StudyGuideID)
+	filePgxID := utils.UUID(p.FileID)
+	return s.repo.InTx(ctx, func(tx Repository) error {
+		guide, err := tx.GetStudyGuideByIDForUpdate(ctx, guidePgxID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return apperrors.NewNotFound("File attachment not found")
+			}
+			return fmt.Errorf("DetachFile: lock guide: %w", err)
+		}
+		if guide.DeletedAt.Valid {
+			return apperrors.NewNotFound("File attachment not found")
+		}
+		guideCreatorID, err := utils.PgxToGoogleUUID(guide.CreatorID)
+		if err != nil {
+			return fmt.Errorf("DetachFile: guide creator id: %w", err)
+		}
+
+		file, err := tx.GetFileForAttach(ctx, filePgxID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return apperrors.NewNotFound("File attachment not found")
+			}
+			return fmt.Errorf("DetachFile: get file: %w", err)
+		}
+		fileOwnerID, err := utils.PgxToGoogleUUID(file.UserID)
+		if err != nil {
+			return fmt.Errorf("DetachFile: file owner id: %w", err)
+		}
+
+		attached, err := tx.GuideFileAttached(ctx, db.GuideFileAttachedParams{
+			FileID:       filePgxID,
+			StudyGuideID: guidePgxID,
+		})
+		if err != nil {
+			return fmt.Errorf("DetachFile: attached check: %w", err)
+		}
+		if !attached {
+			return apperrors.NewNotFound("File attachment not found")
+		}
+
+		if p.ViewerID != guideCreatorID && p.ViewerID != fileOwnerID {
+			return apperrors.NewForbidden()
+		}
+
+		rows, err := tx.DeleteGuideFile(ctx, db.DeleteGuideFileParams{
+			FileID:       filePgxID,
+			StudyGuideID: guidePgxID,
+		})
+		if err != nil {
+			return fmt.Errorf("DetachFile: delete: %w", err)
+		}
+		if rows == 0 {
+			return apperrors.NewNotFound("File attachment not found")
+		}
+		return nil
+	})
+}
+
 // guideVoteToDB maps the domain GuideVote enum onto the sqlc-generated
 // db.VoteDirection enum. Returns ok=false on unknown values; the
 // service translates that to a 400 'must be up or down'. The switch
