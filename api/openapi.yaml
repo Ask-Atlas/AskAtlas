@@ -1077,6 +1077,89 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /quizzes/{quiz_id}/sessions:
+    post:
+      operationId: StartPracticeSession
+      summary: Start a new practice session or resume an existing incomplete one
+      description: |
+        Returns the practice session for the authenticated user on the
+        target quiz. The status code distinguishes the two paths:
+
+          * **201 Created** -- a new session was inserted. A snapshot
+            of the quiz's CURRENT questions is frozen into
+            `practice_session_questions` so subsequent edits to the
+            quiz (questions added or removed) do not affect this
+            session. `answers` is an empty array.
+          * **200 OK** -- an in-progress session already exists for
+            this user+quiz (`completed_at IS NULL`). The existing
+            row is returned along with all answers submitted so far.
+            No new snapshot is created.
+
+        Stale-session cleanup: incomplete sessions whose `started_at`
+        is older than 7 days are hard-deleted before the resume check.
+        After cleanup, "no incomplete session" surfaces as 201
+        (fresh start) rather than 200 (resume) -- per spec AC6.
+
+        Snapshot semantics: `total_questions` is the COUNT of
+        `quiz_questions` at session-start time. If a question is
+        deleted from the quiz LATER, the
+        `practice_session_questions.question_id` column is set to
+        NULL (ON DELETE SET NULL) but the row persists --
+        `total_questions` does not change. New questions added after
+        session start are NOT in the snapshot.
+
+        Race protection: a partial unique index on
+        `practice_sessions(user_id, quiz_id) WHERE completed_at IS NULL`
+        guarantees at most one incomplete session per user+quiz at
+        the database level. Two simultaneous starts will both attempt
+        to insert; one wins, the other is detected via
+        `INSERT ... ON CONFLICT DO NOTHING RETURNING` and falls back
+        to the resume path (returning 200 with the winner's session).
+
+        Authorization: any authenticated user can start a session on
+        any live quiz on a live study guide. There is no per-viewer
+        access control.
+
+        Resumed-session question content: this endpoint returns
+        session state + answers only. The frontend fetches question
+        content separately via `GET /api/quizzes/{quiz_id}` (ASK-142).
+
+        Response answer rows: `question_id`, `user_answer`, and
+        `is_correct` are all nullable on the wire. `question_id`
+        becomes NULL when the underlying question is hard-deleted
+        after the answer was submitted (ON DELETE SET NULL).
+        `user_answer` and `is_correct` are nullable to match the
+        schema, though in practice the submit-answer endpoint will
+        never write NULL values.
+      parameters:
+        - name: quiz_id
+          in: path
+          description: The unique UUID of the quiz to start a session for
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Existing in-progress session resumed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeSessionResponse'
+        '201':
+          description: A new practice session was created with a fresh question snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeSessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /study-guides/{study_guide_id}/recommendations:
     post:
       operationId: RecommendStudyGuide
@@ -2826,6 +2909,92 @@ components:
           type: string
           nullable: true
           maxLength: 2000
+    PracticeAnswerResponse:
+      type: object
+      description: |
+        A single answer submitted within a practice session.
+        `question_id`, `user_answer`, and `is_correct` are nullable:
+          * `question_id` becomes NULL when the underlying quiz
+            question is hard-deleted after the answer was submitted
+            (ON DELETE SET NULL on `practice_answers.question_id`).
+          * `user_answer` and `is_correct` track the schema's
+            nullable columns; in practice, the submit-answer
+            endpoint always writes non-null values.
+        `verified` is true for server-validated answer types
+        (multiple-choice, true-false) and false for freeform answers
+        (string-match only).
+      properties:
+        question_id:
+          type: string
+          format: uuid
+          nullable: true
+        user_answer:
+          type: string
+          nullable: true
+        is_correct:
+          type: boolean
+          nullable: true
+        verified:
+          type: boolean
+        answered_at:
+          type: string
+          format: date-time
+      required:
+        - question_id
+        - user_answer
+        - is_correct
+        - verified
+        - answered_at
+    PracticeSessionResponse:
+      type: object
+      description: |
+        A practice session row plus the answers submitted so far.
+        Returned by POST /api/quizzes/{quiz_id}/sessions on both the
+        201 (created) and 200 (resumed) paths -- the wire shape is
+        identical, the status code distinguishes the two paths.
+
+        `total_questions` is frozen at session-start time from the
+        snapshot count (COUNT of `practice_session_questions` rows).
+        Subsequent edits to the parent quiz do not change it.
+        `correct_answers` is the running count of submitted answers
+        with `is_correct = true`; the submit-answer endpoint
+        increments it.
+
+        On a freshly-created session, `answers` is an empty array
+        (not null). On a resumed session, `answers` carries every
+        row submitted so far, ordered by `answered_at ASC`.
+      properties:
+        id:
+          type: string
+          format: uuid
+        quiz_id:
+          type: string
+          format: uuid
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        total_questions:
+          type: integer
+          minimum: 0
+        correct_answers:
+          type: integer
+          minimum: 0
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PracticeAnswerResponse'
+      required:
+        - id
+        - quiz_id
+        - started_at
+        - completed_at
+        - total_questions
+        - correct_answers
+        - answers
     AppError:
       type: object
       description: Standardized error response structure matching application error domains

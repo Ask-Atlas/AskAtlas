@@ -156,6 +156,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/start-practice-session",
+          label: "Start a new practice session or resume an existing incomplete one",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "api/recommend-study-guide",
           label: "Recommend a study guide",
           className: "api-method post",
