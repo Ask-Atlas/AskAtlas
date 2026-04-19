@@ -389,6 +389,65 @@ func (q *Queries) ListSessionAnswers(ctx context.Context, sessionID pgtype.UUID)
 	return items, nil
 }
 
+const lockSessionForCompletion = `-- name: LockSessionForCompletion :one
+SELECT id, user_id, quiz_id, started_at, completed_at, total_questions, correct_answers
+FROM practice_sessions
+WHERE id = $1::uuid
+FOR UPDATE
+`
+
+// Locks the session row and returns ALL fields the
+// CompleteSession endpoint (ASK-140) needs to assemble its
+// response. FOR UPDATE serializes against a concurrent
+// SubmitAnswer (ASK-137 also FOR UPDATEs the session row), so
+// the spec's "answer-vs-complete race -> first commit wins"
+// semantics fall out naturally:
+//   - answer wins -> complete sees correct_answers updated
+//   - complete wins -> answer's locked SELECT sees completed_at
+//     set and returns 409
+//
+// Returns sql.ErrNoRows when the session doesn't exist; the
+// service maps that to 404. The presence of completed_at on the
+// returned row drives the 409-vs-proceed decision.
+func (q *Queries) LockSessionForCompletion(ctx context.Context, id pgtype.UUID) (PracticeSession, error) {
+	row := q.db.QueryRow(ctx, lockSessionForCompletion, id)
+	var i PracticeSession
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.QuizID,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.TotalQuestions,
+		&i.CorrectAnswers,
+	)
+	return i, err
+}
+
+const markSessionCompleted = `-- name: MarkSessionCompleted :one
+UPDATE practice_sessions
+SET completed_at = now()
+WHERE id = $1::uuid
+RETURNING completed_at
+`
+
+// Sets completed_at = now() and returns the timestamp the row
+// now carries. The service uses the returned timestamp to
+// assemble the response without a re-fetch (the rest of the
+// session fields were captured by LockSessionForCompletion in
+// the same tx, so they don't need to round-trip again).
+//
+// This is a blind UPDATE: the service has already verified
+// ownership + completed_at IS NULL inside the same tx via
+// LockSessionForCompletion + the FOR UPDATE row lock. By the
+// time this runs, the only legitimate outcome is "row updated".
+func (q *Queries) MarkSessionCompleted(ctx context.Context, id pgtype.UUID) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, markSessionCompleted, id)
+	var completed_at pgtype.Timestamptz
+	err := row.Scan(&completed_at)
+	return completed_at, err
+}
+
 const snapshotQuizQuestionsAndUpdateCount = `-- name: SnapshotQuizQuestionsAndUpdateCount :one
 WITH inserted AS (
   INSERT INTO practice_session_questions (session_id, question_id, sort_order)

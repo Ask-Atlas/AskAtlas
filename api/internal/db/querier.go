@@ -545,8 +545,33 @@ type Querier interface {
 	ListStudyGuidesUpdatedDesc(ctx context.Context, arg ListStudyGuidesUpdatedDescParams) ([]ListStudyGuidesUpdatedDescRow, error)
 	ListStudyGuidesViewsAsc(ctx context.Context, arg ListStudyGuidesViewsAscParams) ([]ListStudyGuidesViewsAscRow, error)
 	ListStudyGuidesViewsDesc(ctx context.Context, arg ListStudyGuidesViewsDescParams) ([]ListStudyGuidesViewsDescRow, error)
+	// Locks the session row and returns ALL fields the
+	// CompleteSession endpoint (ASK-140) needs to assemble its
+	// response. FOR UPDATE serializes against a concurrent
+	// SubmitAnswer (ASK-137 also FOR UPDATEs the session row), so
+	// the spec's "answer-vs-complete race -> first commit wins"
+	// semantics fall out naturally:
+	//   * answer wins -> complete sees correct_answers updated
+	//   * complete wins -> answer's locked SELECT sees completed_at
+	//     set and returns 409
+	//
+	// Returns sql.ErrNoRows when the session doesn't exist; the
+	// service maps that to 404. The presence of completed_at on the
+	// returned row drives the 409-vs-proceed decision.
+	LockSessionForCompletion(ctx context.Context, id pgtype.UUID) (PracticeSession, error)
 	// Called by the cleanup job handler once S3 deletion is confirmed.
 	MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
+	// Sets completed_at = now() and returns the timestamp the row
+	// now carries. The service uses the returned timestamp to
+	// assemble the response without a re-fetch (the rest of the
+	// session fields were captured by LockSessionForCompletion in
+	// the same tx, so they don't need to round-trip again).
+	//
+	// This is a blind UPDATE: the service has already verified
+	// ownership + completed_at IS NULL inside the same tx via
+	// LockSessionForCompletion + the FOR UPDATE row lock. By the
+	// time this runs, the only legitimate outcome is "row updated".
+	MarkSessionCompleted(ctx context.Context, id pgtype.UUID) (pgtype.Timestamptz, error)
 	// Deletes a file grant matching the exact composite key. No-op if the grant
 	// does not exist (idempotent).
 	RevokeFileGrant(ctx context.Context, arg RevokeFileGrantParams) error

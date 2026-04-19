@@ -19,6 +19,15 @@ import (
 // is the only edit required to update the policy.
 const StaleSessionAge = 7 * 24 * time.Hour
 
+// CompleteSessionParams is the input to Service.CompleteSession
+// (ASK-140). UserID is taken from the JWT in the handler -- the
+// spec forbids accepting a user id from the body. SessionID is
+// the path parameter.
+type CompleteSessionParams struct {
+	SessionID uuid.UUID
+	UserID    uuid.UUID
+}
+
 // SubmitAnswerParams is the input to Service.SubmitAnswer (ASK-137).
 // UserID is taken from the JWT in the handler -- the spec forbids
 // accepting a user id from the request body. UserAnswer is the

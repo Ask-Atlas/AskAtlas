@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
@@ -38,6 +39,10 @@ type Repository interface {
 	GetCorrectOptionText(ctx context.Context, questionID pgtype.UUID) (string, error)
 	InsertPracticeAnswer(ctx context.Context, arg db.InsertPracticeAnswerParams) (db.InsertPracticeAnswerRow, error)
 	IncrementSessionCorrectAnswers(ctx context.Context, id pgtype.UUID) error
+
+	// CompleteSession-related (ASK-140).
+	LockSessionForCompletion(ctx context.Context, id pgtype.UUID) (db.PracticeSession, error)
+	MarkSessionCompleted(ctx context.Context, id pgtype.UUID) (pgtype.Timestamptz, error)
 
 	// InTx runs fn inside a single Postgres transaction. The
 	// Repository passed to fn is scoped to the tx via Queries.WithTx,
@@ -478,4 +483,117 @@ func mapInsertedAnswer(row db.InsertPracticeAnswerRow) (AnswerSummary, error) {
 		out.IsCorrect = &b
 	}
 	return out, nil
+}
+
+// CompleteSession marks an in-progress practice session as
+// completed and returns the finalized payload with a server-
+// computed score (ASK-140). Cannot be called on a session that
+// is already completed -- second calls return 409, not a
+// no-op success.
+//
+// Order of operations (single transaction):
+//  1. LockSessionForCompletion -- locked SELECT returning all
+//     session fields. FOR UPDATE serializes against a concurrent
+//     SubmitAnswer (ASK-137 also FOR UPDATEs the row).
+//  2. 404 if missing.
+//  3. 403 if user_id != viewer.
+//  4. 409 if completed_at IS NOT NULL.
+//  5. MarkSessionCompleted -- blind UPDATE setting completed_at
+//     = now(), returning the new timestamp. The locked SELECT
+//     in step 1 + the FOR UPDATE row lock guarantee no other
+//     writer can change the row between the check and the
+//     update; ownership + completed_at have already been
+//     verified inside the same tx.
+//  6. Compute score_percentage from the captured
+//     correct_answers / total_questions (the snapshot
+//     captured by step 1 -- correct_answers may have been
+//     bumped by SubmitAnswers that committed before our lock,
+//     all of which is desired).
+func (s *Service) CompleteSession(ctx context.Context, p CompleteSessionParams) (CompletedSessionDetail, error) {
+	sessionPgxID := utils.UUID(p.SessionID)
+
+	var detail CompletedSessionDetail
+	if err := s.repo.InTx(ctx, func(tx Repository) error {
+		row, err := tx.LockSessionForCompletion(ctx, sessionPgxID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return apperrors.NewNotFound("Session not found")
+			}
+			return fmt.Errorf("lock session: %w", err)
+		}
+		ownerID, err := utils.PgxToGoogleUUID(row.UserID)
+		if err != nil {
+			return fmt.Errorf("session owner id: %w", err)
+		}
+		if ownerID != p.UserID {
+			return apperrors.NewForbidden()
+		}
+		if row.CompletedAt.Valid {
+			return apperrors.NewConflict("Session already completed")
+		}
+
+		completedAt, err := tx.MarkSessionCompleted(ctx, sessionPgxID)
+		if err != nil {
+			return fmt.Errorf("mark completed: %w", err)
+		}
+
+		mapped, err := mapCompletedSession(row, completedAt)
+		if err != nil {
+			return fmt.Errorf("map: %w", err)
+		}
+		detail = mapped
+		return nil
+	}); err != nil {
+		return CompletedSessionDetail{}, err
+	}
+	return detail, nil
+}
+
+// mapCompletedSession projects the locked-session row + the
+// freshly-set completed_at timestamp onto the wire-shape domain
+// type. score_percentage is derived from correct_answers /
+// total_questions; computeScorePercentage handles the
+// total_questions == 0 edge case.
+func mapCompletedSession(row db.PracticeSession, completedAt pgtype.Timestamptz) (CompletedSessionDetail, error) {
+	id, err := utils.PgxToGoogleUUID(row.ID)
+	if err != nil {
+		return CompletedSessionDetail{}, fmt.Errorf("session id: %w", err)
+	}
+	quizID, err := utils.PgxToGoogleUUID(row.QuizID)
+	if err != nil {
+		return CompletedSessionDetail{}, fmt.Errorf("quiz id: %w", err)
+	}
+	if !completedAt.Valid {
+		// Should be unreachable -- the UPDATE just set it. Defensive
+		// to avoid emitting a zero time.Time on the wire if pgx ever
+		// returns a NULL here (e.g. driver bug).
+		return CompletedSessionDetail{}, fmt.Errorf("MarkSessionCompleted returned invalid completed_at")
+	}
+	return CompletedSessionDetail{
+		ID:              id,
+		QuizID:          quizID,
+		StartedAt:       row.StartedAt.Time,
+		CompletedAt:     completedAt.Time,
+		TotalQuestions:  row.TotalQuestions,
+		CorrectAnswers:  row.CorrectAnswers,
+		ScorePercentage: computeScorePercentage(row.CorrectAnswers, row.TotalQuestions),
+	}, nil
+}
+
+// computeScorePercentage returns round((correct / total) * 100)
+// as int32, with the total <= 0 edge case collapsing to 0
+// (avoiding a NaN / div-by-zero panic). Spec AC: 7/10 -> 70,
+// 1/3 -> 33, 2/3 -> 67, 10/10 -> 100, 0/10 -> 0, 0/0 -> 0.
+//
+// math.Round in Go rounds half-AWAY-from-zero (NOT banker's),
+// so e.g. 1/8 = 12.5% rounds to 13, 1/2 = 50% rounds to 50.
+// Ties on the .5 boundary are possible whenever (correct/total)
+// has a fractional part of exactly 0.5 -- not just at 50%.
+// Half-away matches the spec example (2/3 = 66.66... -> 67) and
+// the lay user's expectation of "round normally".
+func computeScorePercentage(correct, total int32) int32 {
+	if total <= 0 {
+		return 0
+	}
+	return int32(math.Round(float64(correct) / float64(total) * 100))
 }

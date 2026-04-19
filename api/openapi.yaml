@@ -1160,6 +1160,70 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /sessions/{session_id}/complete:
+    post:
+      operationId: CompletePracticeSession
+      summary: Mark a practice session as completed and return the score
+      description: |
+        Sets the session's `completed_at = now()` and returns the
+        finalized session payload with a server-computed
+        `score_percentage`. Can be called even when not all questions
+        were answered (the user quit early) -- `total_questions`
+        stays at the snapshot value, `correct_answers` reflects
+        only the answers actually submitted.
+
+        Score: `round((correct_answers / total_questions) * 100)`,
+        rounded to the nearest integer. When `total_questions` is 0
+        (theoretically unreachable -- create-quiz requires >=1 --
+        but the read-side defensively handles it), the score is 0
+        rather than a division-by-zero panic.
+
+        Authorization: the session must belong to the
+        authenticated user (403 otherwise). Once completed, a
+        second call returns 409 -- this endpoint is NOT
+        idempotent. Callers that want to fetch a completed
+        session's state should use GET /api/sessions/{id}
+        (ASK-152, future).
+
+        Race protection: SELECT FOR UPDATE on the session row
+        serializes against any concurrent SubmitAnswer (ASK-137).
+        If an answer commits first, it's counted in the final
+        score; if complete commits first, the answer call returns
+        409.
+
+        Response shape: similar to PracticeSessionResponse but
+        without the `answers` array (callers can fetch them via
+        GET /api/sessions/{id}) and with the new
+        `score_percentage` field. `completed_at` is non-nullable
+        on this endpoint -- a successful response always carries
+        the freshly-set timestamp.
+      parameters:
+        - name: session_id
+          in: path
+          description: The unique UUID of the practice session to complete
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session completed; returns the final state with score.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompletedSessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /sessions/{session_id}/answers:
     post:
       operationId: SubmitPracticeAnswer
@@ -2986,6 +3050,55 @@ components:
           type: string
           nullable: true
           maxLength: 2000
+    CompletedSessionResponse:
+      type: object
+      description: |
+        Returned by POST /api/sessions/{session_id}/complete
+        (ASK-140). Same shape as PracticeSessionResponse minus the
+        `answers` array (callers fetch them separately via
+        GET /api/sessions/{id}) and plus the server-computed
+        `score_percentage` field.
+
+        `completed_at` is non-nullable here -- a successful response
+        always carries the freshly-set timestamp from the
+        completion UPDATE.
+
+        `score_percentage` is `round((correct_answers /
+        total_questions) * 100)`, rounded to the nearest integer.
+        Always 0 when `total_questions` is 0 (avoids
+        division-by-zero on the theoretically unreachable
+        empty-quiz edge case).
+      properties:
+        id:
+          type: string
+          format: uuid
+        quiz_id:
+          type: string
+          format: uuid
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        total_questions:
+          type: integer
+          minimum: 0
+        correct_answers:
+          type: integer
+          minimum: 0
+        score_percentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+      required:
+        - id
+        - quiz_id
+        - started_at
+        - completed_at
+        - total_questions
+        - correct_answers
+        - score_percentage
     SubmitAnswerRequest:
       type: object
       description: |

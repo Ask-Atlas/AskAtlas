@@ -19,6 +19,7 @@ import (
 type SessionService interface {
 	StartSession(ctx context.Context, params sessions.StartSessionParams) (sessions.StartSessionResult, error)
 	SubmitAnswer(ctx context.Context, params sessions.SubmitAnswerParams) (sessions.AnswerSummary, error)
+	CompleteSession(ctx context.Context, params sessions.CompleteSessionParams) (sessions.CompletedSessionDetail, error)
 }
 
 // SessionsHandler manages incoming HTTP requests for the practice-
@@ -69,6 +70,54 @@ func (h *SessionsHandler) StartPracticeSession(w http.ResponseWriter, r *http.Re
 		status = http.StatusCreated
 	}
 	respondJSON(w, status, mapPracticeSessionResponse(result.Session))
+}
+
+// CompletePracticeSession handles POST /sessions/{session_id}/complete
+// (ASK-140). All the gating + score-calc happens in
+// service.CompleteSession; the handler is a thin auth + dispatch +
+// render pass. Returns 200 on success with the finalized session
+// payload (including server-computed score_percentage).
+//
+// 404 / 403 / 409 disambiguation lives in the service: 404 when
+// the session is missing, 403 when the viewer isn't the owner,
+// 409 when the session is already completed (this endpoint is NOT
+// idempotent).
+func (h *SessionsHandler) CompletePracticeSession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	detail, err := h.service.CompleteSession(r.Context(), sessions.CompleteSessionParams{
+		SessionID: uuid.UUID(sessionId),
+		UserID:    viewerID,
+	})
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("CompletePracticeSession failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, mapCompletedSessionResponse(detail))
+}
+
+// mapCompletedSessionResponse projects a domain
+// CompletedSessionDetail onto the wire CompletedSessionResponse.
+// All required fields populate non-null on success.
+func mapCompletedSessionResponse(d sessions.CompletedSessionDetail) api.CompletedSessionResponse {
+	return api.CompletedSessionResponse{
+		Id:              openapi_types.UUID(d.ID),
+		QuizId:          openapi_types.UUID(d.QuizID),
+		StartedAt:       d.StartedAt,
+		CompletedAt:     d.CompletedAt,
+		TotalQuestions:  int(d.TotalQuestions),
+		CorrectAnswers:  int(d.CorrectAnswers),
+		ScorePercentage: int(d.ScorePercentage),
+	}
 }
 
 // SubmitPracticeAnswer handles POST /sessions/{session_id}/answers

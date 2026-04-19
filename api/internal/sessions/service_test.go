@@ -1017,3 +1017,246 @@ func TestSubmitAnswer_QuestionDeletedAfterSnapshotCheck_400(t *testing.T) {
 	sysErr := apperrors.ToHTTPError(err)
 	assert.Equal(t, http.StatusBadRequest, sysErr.Code)
 }
+
+// ============================================================
+// CompleteSession (ASK-140)
+// ============================================================
+
+// completeSessionFixture wires a happy-path locked SELECT so per-
+// test setup focuses on what's distinctive (correct/total values
+// for score testing, or the failure branch).
+func completeSessionFixture(repo *mock_sessions.MockRepository, sessionID, userID, quizID uuid.UUID, total, correct int32, completedAt pgtype.Timestamptz) {
+	repo.EXPECT().LockSessionForCompletion(mock.Anything, mock.Anything).
+		Return(db.PracticeSession{
+			ID:             utils.UUID(sessionID),
+			UserID:         utils.UUID(userID),
+			QuizID:         utils.UUID(quizID),
+			StartedAt:      pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+			CompletedAt:    completedAt,
+			TotalQuestions: total,
+			CorrectAnswers: correct,
+		}, nil)
+}
+
+// TestCompleteSession_AC1_HappyPath covers AC1: 7/10 -> 70%, 200,
+// completed_at set.
+func TestCompleteSession_AC1_HappyPath(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+	quizID := uuid.New()
+	completedAt := fixtureTime.Add(15 * time.Minute)
+
+	completeSessionFixture(repo, sessionID, userID, quizID, 10, 7, pgtype.Timestamptz{})
+	repo.EXPECT().MarkSessionCompleted(mock.Anything, mock.Anything).
+		Return(pgtype.Timestamptz{Time: completedAt, Valid: true}, nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
+		SessionID: sessionID,
+		UserID:    userID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, sessionID, got.ID)
+	assert.Equal(t, quizID, got.QuizID)
+	assert.Equal(t, completedAt, got.CompletedAt)
+	assert.Equal(t, int32(10), got.TotalQuestions)
+	assert.Equal(t, int32(7), got.CorrectAnswers)
+	assert.Equal(t, int32(70), got.ScorePercentage)
+}
+
+// TestCompleteSession_AC2_AllSkipped covers AC2: 0/10 = 0%.
+func TestCompleteSession_AC2_AllSkipped(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+	completeSessionFixture(repo, sessionID, userID, uuid.New(), 10, 0, pgtype.Timestamptz{})
+	repo.EXPECT().MarkSessionCompleted(mock.Anything, mock.Anything).
+		Return(pgtype.Timestamptz{Time: fixtureTime, Valid: true}, nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
+		SessionID: sessionID,
+		UserID:    userID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int32(0), got.ScorePercentage)
+}
+
+// TestCompleteSession_AC4_AlreadyCompleted_409 covers AC4: a
+// second call returns 409, NOT 200.
+func TestCompleteSession_AC4_AlreadyCompleted_409(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+	userID := uuid.New()
+
+	completeSessionFixture(repo, uuid.New(), userID, uuid.New(), 10, 5,
+		pgtype.Timestamptz{Time: fixtureTime, Valid: true}) // already completed
+	// No MarkSessionCompleted expectation -- service short-circuits.
+
+	svc := sessions.NewService(repo)
+	_, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
+		SessionID: uuid.New(),
+		UserID:    userID,
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusConflict, sysErr.Code)
+}
+
+// TestCompleteSession_AC5_NotOwner_403 covers AC5.
+func TestCompleteSession_AC5_NotOwner_403(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+	owner := uuid.New()
+	other := uuid.New()
+
+	completeSessionFixture(repo, uuid.New(), owner, uuid.New(), 5, 3, pgtype.Timestamptz{})
+	// No MarkSessionCompleted expectation.
+
+	svc := sessions.NewService(repo)
+	_, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
+		SessionID: uuid.New(),
+		UserID:    other,
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusForbidden, sysErr.Code)
+}
+
+// TestCompleteSession_AC6_NotFound_404 covers AC6.
+func TestCompleteSession_AC6_NotFound_404(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+	repo.EXPECT().LockSessionForCompletion(mock.Anything, mock.Anything).
+		Return(db.PracticeSession{}, sql.ErrNoRows)
+
+	svc := sessions.NewService(repo)
+	_, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
+		SessionID: uuid.New(),
+		UserID:    uuid.New(),
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusNotFound, sysErr.Code)
+}
+
+func TestCompleteSession_LockError_500(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+	repo.EXPECT().LockSessionForCompletion(mock.Anything, mock.Anything).
+		Return(db.PracticeSession{}, errors.New("connection refused"))
+
+	svc := sessions.NewService(repo)
+	_, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
+		SessionID: uuid.New(), UserID: uuid.New(),
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}
+
+func TestCompleteSession_MarkError_500(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+	userID := uuid.New()
+	completeSessionFixture(repo, uuid.New(), userID, uuid.New(), 5, 3, pgtype.Timestamptz{})
+	repo.EXPECT().MarkSessionCompleted(mock.Anything, mock.Anything).
+		Return(pgtype.Timestamptz{}, errors.New("constraint violation"))
+
+	svc := sessions.NewService(repo)
+	_, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
+		SessionID: uuid.New(), UserID: userID,
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}
+
+// TestCompleteSession_MarkReturnedInvalidTimestamp_500 guards
+// against a driver bug where MarkSessionCompleted's RETURNING
+// clause yields a NULL completed_at -- the mapper rejects it
+// rather than emitting a zero time.Time on the wire.
+func TestCompleteSession_MarkReturnedInvalidTimestamp_500(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+	userID := uuid.New()
+	completeSessionFixture(repo, uuid.New(), userID, uuid.New(), 5, 3, pgtype.Timestamptz{})
+	repo.EXPECT().MarkSessionCompleted(mock.Anything, mock.Anything).
+		Return(pgtype.Timestamptz{}, nil) // Valid=false
+
+	svc := sessions.NewService(repo)
+	_, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
+		SessionID: uuid.New(), UserID: userID,
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}
+
+// TestCompleteSession_PartialAnswered covers AC3: user quit early
+// at 3/10 answered with 2 correct -> total stays 10, correct = 2,
+// score = round(2/10 * 100) = 20.
+func TestCompleteSession_PartialAnswered(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+	completeSessionFixture(repo, sessionID, userID, uuid.New(), 10, 2, pgtype.Timestamptz{})
+	repo.EXPECT().MarkSessionCompleted(mock.Anything, mock.Anything).
+		Return(pgtype.Timestamptz{Time: fixtureTime, Valid: true}, nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
+		SessionID: sessionID, UserID: userID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, int32(10), got.TotalQuestions, "total stays at snapshot value")
+	assert.Equal(t, int32(2), got.CorrectAnswers)
+	assert.Equal(t, int32(20), got.ScorePercentage)
+}
+
+// TestComputeScorePercentage covers the rounding + edge cases of
+// the score calculator. Uses table-driven tests so all the spec's
+// boundary values are easy to scan.
+func TestComputeScorePercentage(t *testing.T) {
+	cases := []struct {
+		name    string
+		correct int32
+		total   int32
+		want    int32
+	}{
+		{"perfect", 10, 10, 100},
+		{"zero correct", 0, 10, 0},
+		{"7 of 10 (clean)", 7, 10, 70},
+		{"1 of 3 rounds down (33.33 -> 33)", 1, 3, 33},
+		{"2 of 3 rounds up (66.66 -> 67)", 2, 3, 67},
+		{"1 of 2 rounds half (50.0 -> 50)", 1, 2, 50},
+		{"total zero (div-by-zero guard)", 0, 0, 0},
+		{"correct positive total zero (defensive)", 5, 0, 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Indirect via CompleteSession to exercise the same code
+			// path callers hit.
+			repo := mock_sessions.NewMockRepository(t)
+			inTxRunsFn(repo)
+			userID := uuid.New()
+			completeSessionFixture(repo, uuid.New(), userID, uuid.New(), tc.total, tc.correct, pgtype.Timestamptz{})
+			repo.EXPECT().MarkSessionCompleted(mock.Anything, mock.Anything).
+				Return(pgtype.Timestamptz{Time: fixtureTime, Valid: true}, nil)
+
+			svc := sessions.NewService(repo)
+			got, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
+				SessionID: uuid.New(), UserID: userID,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got.ScorePercentage)
+		})
+	}
+}

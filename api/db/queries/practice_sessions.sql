@@ -208,6 +208,41 @@ UPDATE practice_sessions
 SET correct_answers = correct_answers + 1
 WHERE id = sqlc.arg(id)::uuid;
 
+-- name: LockSessionForCompletion :one
+-- Locks the session row and returns ALL fields the
+-- CompleteSession endpoint (ASK-140) needs to assemble its
+-- response. FOR UPDATE serializes against a concurrent
+-- SubmitAnswer (ASK-137 also FOR UPDATEs the session row), so
+-- the spec's "answer-vs-complete race -> first commit wins"
+-- semantics fall out naturally:
+--   * answer wins -> complete sees correct_answers updated
+--   * complete wins -> answer's locked SELECT sees completed_at
+--     set and returns 409
+--
+-- Returns sql.ErrNoRows when the session doesn't exist; the
+-- service maps that to 404. The presence of completed_at on the
+-- returned row drives the 409-vs-proceed decision.
+SELECT id, user_id, quiz_id, started_at, completed_at, total_questions, correct_answers
+FROM practice_sessions
+WHERE id = sqlc.arg(id)::uuid
+FOR UPDATE;
+
+-- name: MarkSessionCompleted :one
+-- Sets completed_at = now() and returns the timestamp the row
+-- now carries. The service uses the returned timestamp to
+-- assemble the response without a re-fetch (the rest of the
+-- session fields were captured by LockSessionForCompletion in
+-- the same tx, so they don't need to round-trip again).
+--
+-- This is a blind UPDATE: the service has already verified
+-- ownership + completed_at IS NULL inside the same tx via
+-- LockSessionForCompletion + the FOR UPDATE row lock. By the
+-- time this runs, the only legitimate outcome is "row updated".
+UPDATE practice_sessions
+SET completed_at = now()
+WHERE id = sqlc.arg(id)::uuid
+RETURNING completed_at;
+
 -- name: ListSessionAnswers :many
 -- All answers submitted in a session, ordered by answered_at ASC so
 -- the response renders them in the order the user produced them.

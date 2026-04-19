@@ -453,3 +453,142 @@ func TestSessionsHandler_SubmitAnswer_Success(t *testing.T) {
 	assert.True(t, *resp.IsCorrect)
 	assert.True(t, resp.Verified)
 }
+
+// ---- CompletePracticeSession (ASK-140) ----
+
+func TestSessionsHandler_Complete_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	url := fmt.Sprintf("/sessions/%s/complete", uuid.NewString())
+	req := httptest.NewRequest(http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestSessionsHandler_Complete_InvalidUUID_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	req := authedRequestMethod(t, http.MethodPost, "/sessions/not-a-uuid/complete", nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestSessionsHandler_Complete_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().CompleteSession(mock.Anything, mock.Anything).
+		Return(sessions.CompletedSessionDetail{}, apperrors.NewNotFound("Session not found"))
+
+	url := fmt.Sprintf("/sessions/%s/complete", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestSessionsHandler_Complete_NotOwner_403(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().CompleteSession(mock.Anything, mock.Anything).
+		Return(sessions.CompletedSessionDetail{}, apperrors.NewForbidden())
+
+	url := fmt.Sprintf("/sessions/%s/complete", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestSessionsHandler_Complete_AlreadyCompleted_409(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().CompleteSession(mock.Anything, mock.Anything).
+		Return(sessions.CompletedSessionDetail{}, apperrors.NewConflict("Session already completed"))
+
+	url := fmt.Sprintf("/sessions/%s/complete", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusConflict, w.Code)
+}
+
+func TestSessionsHandler_Complete_ServiceError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().CompleteSession(mock.Anything, mock.Anything).
+		Return(sessions.CompletedSessionDetail{}, errors.New("connection refused"))
+
+	url := fmt.Sprintf("/sessions/%s/complete", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// TestSessionsHandler_Complete_Success exercises the full happy
+// path: 200 status, all fields plumb through, score_percentage
+// renders as int.
+func TestSessionsHandler_Complete_Success(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	sessionID := uuid.New()
+	quizID := uuid.New()
+	startedAt := time.Date(2026, 4, 1, 10, 0, 0, 0, time.UTC)
+	completedAt := time.Date(2026, 4, 1, 10, 15, 0, 0, time.UTC)
+
+	mockSvc.EXPECT().CompleteSession(mock.Anything, mock.MatchedBy(func(p sessions.CompleteSessionParams) bool {
+		return p.SessionID == sessionID
+	})).Return(sessions.CompletedSessionDetail{
+		ID:              sessionID,
+		QuizID:          quizID,
+		StartedAt:       startedAt,
+		CompletedAt:     completedAt,
+		TotalQuestions:  10,
+		CorrectAnswers:  7,
+		ScorePercentage: 70,
+	}, nil)
+
+	url := fmt.Sprintf("/sessions/%s/complete", sessionID.String())
+	req := authedRequestMethod(t, http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp api.CompletedSessionResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, sessionID, uuid.UUID(resp.Id))
+	assert.Equal(t, quizID, uuid.UUID(resp.QuizId))
+	assert.Equal(t, completedAt, resp.CompletedAt)
+	assert.Equal(t, 10, resp.TotalQuestions)
+	assert.Equal(t, 7, resp.CorrectAnswers)
+	assert.Equal(t, 70, resp.ScorePercentage)
+}
