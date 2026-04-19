@@ -23,7 +23,13 @@ test.describe("Files API", () => {
 
     expect(body).toHaveProperty("files");
     expect(body).toHaveProperty("has_more");
-    expect(body).toHaveProperty("next_cursor");
+    expect(typeof body.has_more).toBe("boolean");
+    // next_cursor is nullable + not required in the OpenAPI spec, so it
+    // may be omitted from JSON when there is no next page. When present,
+    // it must be a string (or null per the nullable schema).
+    if ("next_cursor" in body && body.next_cursor !== null) {
+      expect(typeof body.next_cursor).toBe("string");
+    }
     expect(Array.isArray(body.files)).toBeTruthy();
 
     if (body.files.length > 0) {
@@ -56,9 +62,9 @@ test.describe("Files API", () => {
     expect(body).toHaveProperty("code", 400);
     expect(body).toHaveProperty("status", "Bad Request");
     expect(body.details).toHaveProperty("scope");
-    expect(body.details.scope).toContain(
-      "must be one of: owned, course, study_guide, accessible",
-    );
+    // kin-openapi enum violation message format.
+    expect(body.details.scope).toContain("is not one of the allowed values");
+    expect(body.details.scope).toContain("owned");
   });
 
   for (const sortBy of VALID_SORTS) {
@@ -77,7 +83,8 @@ test.describe("Files API", () => {
     expect(response.status()).toBe(400);
     const body = await response.json();
     expect(body.details).toHaveProperty("sort_by");
-    expect(body.details.sort_by).toContain("must be one of: updated_at");
+    expect(body.details.sort_by).toContain("is not one of the allowed values");
+    expect(body.details.sort_by).toContain("updated_at");
   });
 
   test("GET /files accepts valid sort_dir (asc/desc)", async ({ request }) => {
@@ -99,7 +106,9 @@ test.describe("Files API", () => {
     expect(response.status()).toBe(400);
     const body = await response.json();
     expect(body.details).toHaveProperty("sort_dir");
-    expect(body.details.sort_dir).toContain("must be one of: asc, desc");
+    expect(body.details.sort_dir).toContain("is not one of the allowed values");
+    expect(body.details.sort_dir).toContain("asc");
+    expect(body.details.sort_dir).toContain("desc");
   });
 
   for (const status of VALID_STATUSES) {
@@ -120,9 +129,8 @@ test.describe("Files API", () => {
     expect(response.status()).toBe(400);
     const body = await response.json();
     expect(body.details).toHaveProperty("status");
-    expect(body.details.status).toContain(
-      "must be one of: pending, complete, failed",
-    );
+    expect(body.details.status).toContain("is not one of the allowed values");
+    expect(body.details.status).toContain("pending");
   });
 
   test("GET /files rejects invalid mime_type", async ({ request }) => {
