@@ -24,6 +24,8 @@ type StudyGuideService interface {
 	DeleteStudyGuide(ctx context.Context, params studyguides.DeleteStudyGuideParams) error
 	CastVote(ctx context.Context, params studyguides.CastVoteParams) (studyguides.CastVoteResult, error)
 	RemoveVote(ctx context.Context, params studyguides.RemoveVoteParams) error
+	RecommendStudyGuide(ctx context.Context, params studyguides.RecommendStudyGuideParams) (studyguides.Recommendation, error)
+	RemoveRecommendation(ctx context.Context, params studyguides.RemoveRecommendationParams) error
 }
 
 // StudyGuideHandler manages incoming HTTP requests for the study-guide
@@ -254,6 +256,62 @@ func (h *StudyGuideHandler) RemoveStudyGuideVote(w http.ResponseWriter, r *http.
 		sysErr := apperrors.ToHTTPError(err)
 		if sysErr.Code >= 500 {
 			slog.Error("RemoveStudyGuideVote failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// RecommendStudyGuide handles POST /study-guides/{id}/recommendations.
+// No request body. Service returns 403 / 404 / 409 directly via typed
+// AppErrors; handler just maps + emits 201 with the recommendation
+// payload on success.
+func (h *StudyGuideHandler) RecommendStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	rec, err := h.service.RecommendStudyGuide(r.Context(), studyguides.RecommendStudyGuideParams{
+		StudyGuideID: uuid.UUID(studyGuideId),
+		ViewerID:     viewerID,
+	})
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("RecommendStudyGuide failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, api.RecommendationResponse{
+		StudyGuideId:  openapi_types.UUID(rec.StudyGuideID),
+		RecommendedBy: mapCreatorSummary(rec.Recommender),
+		CreatedAt:     rec.CreatedAt,
+	})
+}
+
+// RemoveStudyGuideRecommendation handles DELETE
+// /study-guides/{id}/recommendations. Same role gate as POST. 204
+// on success; 403/404 from the service flow through ToHTTPError.
+func (h *StudyGuideHandler) RemoveStudyGuideRecommendation(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	if err := h.service.RemoveRecommendation(r.Context(), studyguides.RemoveRecommendationParams{
+		StudyGuideID: uuid.UUID(studyGuideId),
+		ViewerID:     viewerID,
+	}); err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("RemoveStudyGuideRecommendation failed", "error", err)
 		}
 		apperrors.RespondWithError(w, sysErr)
 		return
