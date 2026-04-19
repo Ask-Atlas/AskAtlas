@@ -48,6 +48,31 @@ func (q *Queries) CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bo
 	return exists, err
 }
 
+const deleteStudyGuideRecommendation = `-- name: DeleteStudyGuideRecommendation :execrows
+DELETE FROM study_guide_recommendations
+WHERE study_guide_id = $1::uuid
+  AND recommended_by = $2::uuid
+`
+
+type DeleteStudyGuideRecommendationParams struct {
+	StudyGuideID  pgtype.UUID `json:"study_guide_id"`
+	RecommendedBy pgtype.UUID `json:"recommended_by"`
+}
+
+// Hard-delete the (viewer, guide) recommendation row. Returns the
+// rows-affected count so the service can distinguish "viewer never
+// recommended this guide" (0 rows -> 404 'Recommendation not found')
+// from a successful delete (1 row -> 204). The guide-existence +
+// role gate runs FIRST in the service so 'Study guide not found' /
+// 403 win over 'Recommendation not found' when applicable.
+func (q *Queries) DeleteStudyGuideRecommendation(ctx context.Context, arg DeleteStudyGuideRecommendationParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteStudyGuideRecommendation, arg.StudyGuideID, arg.RecommendedBy)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteStudyGuideVote = `-- name: DeleteStudyGuideVote :execrows
 DELETE FROM study_guide_votes
 WHERE user_id = $1::uuid
@@ -309,6 +334,33 @@ func (q *Queries) InsertStudyGuide(ctx context.Context, arg InsertStudyGuidePara
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const insertStudyGuideRecommendation = `-- name: InsertStudyGuideRecommendation :one
+INSERT INTO study_guide_recommendations (study_guide_id, recommended_by)
+VALUES (
+  $1::uuid,
+  $2::uuid
+)
+RETURNING created_at
+`
+
+type InsertStudyGuideRecommendationParams struct {
+	StudyGuideID  pgtype.UUID `json:"study_guide_id"`
+	RecommendedBy pgtype.UUID `json:"recommended_by"`
+}
+
+// Inserts the (study_guide_id, recommended_by) row and returns the
+// server-generated created_at so the response can ship the timestamp
+// without a follow-up SELECT. The (study_guide_id, recommended_by)
+// PK from the schema makes a duplicate insert raise unique_violation
+// (Postgres SQLSTATE 23505), which the service catches and maps to
+// apperrors.ErrConflict (409).
+func (q *Queries) InsertStudyGuideRecommendation(ctx context.Context, arg InsertStudyGuideRecommendationParams) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, insertStudyGuideRecommendation, arg.StudyGuideID, arg.RecommendedBy)
+	var created_at pgtype.Timestamptz
+	err := row.Scan(&created_at)
+	return created_at, err
 }
 
 const listGuideFiles = `-- name: ListGuideFiles :many
@@ -1515,4 +1567,55 @@ type UpsertStudyGuideVoteParams struct {
 func (q *Queries) UpsertStudyGuideVote(ctx context.Context, arg UpsertStudyGuideVoteParams) error {
 	_, err := q.db.Exec(ctx, upsertStudyGuideVote, arg.UserID, arg.StudyGuideID, arg.Vote)
 	return err
+}
+
+const viewerCanRecommendForGuide = `-- name: ViewerCanRecommendForGuide :one
+WITH guide AS (
+  SELECT id, course_id
+  FROM study_guides
+  WHERE id = $2::uuid
+    AND deleted_at IS NULL
+)
+SELECT
+  EXISTS (SELECT 1 FROM guide) AS guide_exists,
+  EXISTS (
+    SELECT 1
+    FROM course_members cm
+    JOIN course_sections cs ON cs.id = cm.section_id
+    WHERE cs.course_id = (SELECT course_id FROM guide)
+      AND cm.user_id = $1::uuid
+      AND cm.role IN ('instructor', 'ta')
+  ) AS has_role
+`
+
+type ViewerCanRecommendForGuideParams struct {
+	ViewerID     pgtype.UUID `json:"viewer_id"`
+	StudyGuideID pgtype.UUID `json:"study_guide_id"`
+}
+
+type ViewerCanRecommendForGuideRow struct {
+	GuideExists bool `json:"guide_exists"`
+	HasRole     bool `json:"has_role"`
+}
+
+// Combined live-presence + role-gate probe for the recommend
+// endpoints (ASK-147 + ASK-101). Returns one row when the viewer
+// holds instructor or ta role in AT LEAST ONE section of the guide's
+// course AND the guide is live (not soft-deleted).
+//
+// Returns three booleans so the service can distinguish 404 from
+// 403 with a single round trip:
+//   - guide_exists  -- guide row present AND deleted_at IS NULL
+//   - has_role      -- viewer is instructor/ta in some section
+//     of the guide's course (ignored if guide
+//     doesn't exist)
+//
+// Combining the two checks into a single query (rather than two
+// sequential calls) keeps the recommend hot path at one DB round
+// trip for the gate; the actual insert/delete is the second.
+func (q *Queries) ViewerCanRecommendForGuide(ctx context.Context, arg ViewerCanRecommendForGuideParams) (ViewerCanRecommendForGuideRow, error) {
+	row := q.db.QueryRow(ctx, viewerCanRecommendForGuide, arg.ViewerID, arg.StudyGuideID)
+	var i ViewerCanRecommendForGuideRow
+	err := row.Scan(&i.GuideExists, &i.HasRole)
+	return i, err
 }

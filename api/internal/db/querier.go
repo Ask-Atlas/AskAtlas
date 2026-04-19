@@ -25,6 +25,13 @@ type Querier interface {
 	// array). Separate from courses.CourseExists only because sqlc-generated
 	// queriers are per-file; the predicate is identical.
 	CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error)
+	// Hard-delete the (viewer, guide) recommendation row. Returns the
+	// rows-affected count so the service can distinguish "viewer never
+	// recommended this guide" (0 rows -> 404 'Recommendation not found')
+	// from a successful delete (1 row -> 204). The guide-existence +
+	// role gate runs FIRST in the service so 'Study guide not found' /
+	// 403 win over 'Recommendation not found' when applicable.
+	DeleteStudyGuideRecommendation(ctx context.Context, arg DeleteStudyGuideRecommendationParams) (int64, error)
 	// Hard-delete the (viewer, guide) vote row (ASK-141). Returns the
 	// rows-affected count so the service can distinguish "no existing
 	// vote" (0 rows -> 404 'Vote not found') from a successful delete
@@ -111,6 +118,13 @@ type Querier interface {
 	// the FK violation is unreachable in normal flow; the FK still acts
 	// as a backstop if a course is hard-deleted between preflight + insert.
 	InsertStudyGuide(ctx context.Context, arg InsertStudyGuideParams) (InsertStudyGuideRow, error)
+	// Inserts the (study_guide_id, recommended_by) row and returns the
+	// server-generated created_at so the response can ship the timestamp
+	// without a follow-up SELECT. The (study_guide_id, recommended_by)
+	// PK from the schema makes a duplicate insert raise unique_violation
+	// (Postgres SQLSTATE 23505), which the service catches and maps to
+	// apperrors.ErrConflict (409).
+	InsertStudyGuideRecommendation(ctx context.Context, arg InsertStudyGuideRecommendationParams) (pgtype.Timestamptz, error)
 	// Adds the user to the section as a 'student'. ON CONFLICT DO NOTHING
 	// keeps duplicate joins atomic (no PK violation surfacing) and concurrency
 	// safe; the service layer treats an empty result as the 409 "Already a
@@ -261,6 +275,22 @@ type Querier interface {
 	// updated_at preserved). The (user_id, study_guide_id) PK from the
 	// schema is what makes ON CONFLICT resolve correctly.
 	UpsertStudyGuideVote(ctx context.Context, arg UpsertStudyGuideVoteParams) error
+	// Combined live-presence + role-gate probe for the recommend
+	// endpoints (ASK-147 + ASK-101). Returns one row when the viewer
+	// holds instructor or ta role in AT LEAST ONE section of the guide's
+	// course AND the guide is live (not soft-deleted).
+	//
+	// Returns three booleans so the service can distinguish 404 from
+	// 403 with a single round trip:
+	//   * guide_exists  -- guide row present AND deleted_at IS NULL
+	//   * has_role      -- viewer is instructor/ta in some section
+	//                      of the guide's course (ignored if guide
+	//                      doesn't exist)
+	//
+	// Combining the two checks into a single query (rather than two
+	// sequential calls) keeps the recommend hot path at one DB round
+	// trip for the gate; the actual insert/delete is the second.
+	ViewerCanRecommendForGuide(ctx context.Context, arg ViewerCanRecommendForGuideParams) (ViewerCanRecommendForGuideRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

@@ -644,3 +644,61 @@ WHERE study_guide_id = sqlc.arg(study_guide_id)::uuid;
 DELETE FROM study_guide_votes
 WHERE user_id = sqlc.arg(user_id)::uuid
   AND study_guide_id = sqlc.arg(study_guide_id)::uuid;
+
+-- name: ViewerCanRecommendForGuide :one
+-- Combined live-presence + role-gate probe for the recommend
+-- endpoints (ASK-147 + ASK-101). Returns one row when the viewer
+-- holds instructor or ta role in AT LEAST ONE section of the guide's
+-- course AND the guide is live (not soft-deleted).
+--
+-- Returns three booleans so the service can distinguish 404 from
+-- 403 with a single round trip:
+--   * guide_exists  -- guide row present AND deleted_at IS NULL
+--   * has_role      -- viewer is instructor/ta in some section
+--                      of the guide's course (ignored if guide
+--                      doesn't exist)
+--
+-- Combining the two checks into a single query (rather than two
+-- sequential calls) keeps the recommend hot path at one DB round
+-- trip for the gate; the actual insert/delete is the second.
+WITH guide AS (
+  SELECT id, course_id
+  FROM study_guides
+  WHERE id = sqlc.arg(study_guide_id)::uuid
+    AND deleted_at IS NULL
+)
+SELECT
+  EXISTS (SELECT 1 FROM guide) AS guide_exists,
+  EXISTS (
+    SELECT 1
+    FROM course_members cm
+    JOIN course_sections cs ON cs.id = cm.section_id
+    WHERE cs.course_id = (SELECT course_id FROM guide)
+      AND cm.user_id = sqlc.arg(viewer_id)::uuid
+      AND cm.role IN ('instructor', 'ta')
+  ) AS has_role;
+
+-- name: InsertStudyGuideRecommendation :one
+-- Inserts the (study_guide_id, recommended_by) row and returns the
+-- server-generated created_at so the response can ship the timestamp
+-- without a follow-up SELECT. The (study_guide_id, recommended_by)
+-- PK from the schema makes a duplicate insert raise unique_violation
+-- (Postgres SQLSTATE 23505), which the service catches and maps to
+-- apperrors.ErrConflict (409).
+INSERT INTO study_guide_recommendations (study_guide_id, recommended_by)
+VALUES (
+  sqlc.arg(study_guide_id)::uuid,
+  sqlc.arg(recommended_by)::uuid
+)
+RETURNING created_at;
+
+-- name: DeleteStudyGuideRecommendation :execrows
+-- Hard-delete the (viewer, guide) recommendation row. Returns the
+-- rows-affected count so the service can distinguish "viewer never
+-- recommended this guide" (0 rows -> 404 'Recommendation not found')
+-- from a successful delete (1 row -> 204). The guide-existence +
+-- role gate runs FIRST in the service so 'Study guide not found' /
+-- 403 win over 'Recommendation not found' when applicable.
+DELETE FROM study_guide_recommendations
+WHERE study_guide_id = sqlc.arg(study_guide_id)::uuid
+  AND recommended_by = sqlc.arg(recommended_by)::uuid;

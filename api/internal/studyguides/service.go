@@ -50,6 +50,10 @@ type Repository interface {
 	ComputeGuideVoteScore(ctx context.Context, studyGuideID pgtype.UUID) (int64, error)
 	DeleteStudyGuideVote(ctx context.Context, arg db.DeleteStudyGuideVoteParams) (int64, error)
 
+	ViewerCanRecommendForGuide(ctx context.Context, arg db.ViewerCanRecommendForGuideParams) (db.ViewerCanRecommendForGuideRow, error)
+	InsertStudyGuideRecommendation(ctx context.Context, arg db.InsertStudyGuideRecommendationParams) (pgtype.Timestamptz, error)
+	DeleteStudyGuideRecommendation(ctx context.Context, arg db.DeleteStudyGuideRecommendationParams) (int64, error)
+
 	// InTx runs fn inside a single Postgres transaction. The Repository
 	// passed to fn is scoped to the tx; commits on a nil return,
 	// rolls back on any error. Used by DeleteStudyGuide for the

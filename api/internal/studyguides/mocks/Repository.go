@@ -172,6 +172,72 @@ func (_c *MockRepository_CourseExistsForGuides_Call) RunAndReturn(run func(ctx c
 	return _c
 }
 
+// DeleteStudyGuideRecommendation provides a mock function for the type MockRepository
+func (_mock *MockRepository) DeleteStudyGuideRecommendation(ctx context.Context, arg db.DeleteStudyGuideRecommendationParams) (int64, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteStudyGuideRecommendation")
+	}
+
+	var r0 int64
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.DeleteStudyGuideRecommendationParams) (int64, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.DeleteStudyGuideRecommendationParams) int64); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.DeleteStudyGuideRecommendationParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_DeleteStudyGuideRecommendation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteStudyGuideRecommendation'
+type MockRepository_DeleteStudyGuideRecommendation_Call struct {
+	*mock.Call
+}
+
+// DeleteStudyGuideRecommendation is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.DeleteStudyGuideRecommendationParams
+func (_e *MockRepository_Expecter) DeleteStudyGuideRecommendation(ctx interface{}, arg interface{}) *MockRepository_DeleteStudyGuideRecommendation_Call {
+	return &MockRepository_DeleteStudyGuideRecommendation_Call{Call: _e.mock.On("DeleteStudyGuideRecommendation", ctx, arg)}
+}
+
+func (_c *MockRepository_DeleteStudyGuideRecommendation_Call) Run(run func(ctx context.Context, arg db.DeleteStudyGuideRecommendationParams)) *MockRepository_DeleteStudyGuideRecommendation_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.DeleteStudyGuideRecommendationParams
+		if args[1] != nil {
+			arg1 = args[1].(db.DeleteStudyGuideRecommendationParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_DeleteStudyGuideRecommendation_Call) Return(n int64, err error) *MockRepository_DeleteStudyGuideRecommendation_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockRepository_DeleteStudyGuideRecommendation_Call) RunAndReturn(run func(ctx context.Context, arg db.DeleteStudyGuideRecommendationParams) (int64, error)) *MockRepository_DeleteStudyGuideRecommendation_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteStudyGuideVote provides a mock function for the type MockRepository
 func (_mock *MockRepository) DeleteStudyGuideVote(ctx context.Context, arg db.DeleteStudyGuideVoteParams) (int64, error) {
 	ret := _mock.Called(ctx, arg)
@@ -621,6 +687,72 @@ func (_c *MockRepository_InsertStudyGuide_Call) Return(insertStudyGuideRow db.In
 }
 
 func (_c *MockRepository_InsertStudyGuide_Call) RunAndReturn(run func(ctx context.Context, arg db.InsertStudyGuideParams) (db.InsertStudyGuideRow, error)) *MockRepository_InsertStudyGuide_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// InsertStudyGuideRecommendation provides a mock function for the type MockRepository
+func (_mock *MockRepository) InsertStudyGuideRecommendation(ctx context.Context, arg db.InsertStudyGuideRecommendationParams) (pgtype.Timestamptz, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InsertStudyGuideRecommendation")
+	}
+
+	var r0 pgtype.Timestamptz
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.InsertStudyGuideRecommendationParams) (pgtype.Timestamptz, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.InsertStudyGuideRecommendationParams) pgtype.Timestamptz); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(pgtype.Timestamptz)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.InsertStudyGuideRecommendationParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_InsertStudyGuideRecommendation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InsertStudyGuideRecommendation'
+type MockRepository_InsertStudyGuideRecommendation_Call struct {
+	*mock.Call
+}
+
+// InsertStudyGuideRecommendation is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.InsertStudyGuideRecommendationParams
+func (_e *MockRepository_Expecter) InsertStudyGuideRecommendation(ctx interface{}, arg interface{}) *MockRepository_InsertStudyGuideRecommendation_Call {
+	return &MockRepository_InsertStudyGuideRecommendation_Call{Call: _e.mock.On("InsertStudyGuideRecommendation", ctx, arg)}
+}
+
+func (_c *MockRepository_InsertStudyGuideRecommendation_Call) Run(run func(ctx context.Context, arg db.InsertStudyGuideRecommendationParams)) *MockRepository_InsertStudyGuideRecommendation_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.InsertStudyGuideRecommendationParams
+		if args[1] != nil {
+			arg1 = args[1].(db.InsertStudyGuideRecommendationParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_InsertStudyGuideRecommendation_Call) Return(timestamptz pgtype.Timestamptz, err error) *MockRepository_InsertStudyGuideRecommendation_Call {
+	_c.Call.Return(timestamptz, err)
+	return _c
+}
+
+func (_c *MockRepository_InsertStudyGuideRecommendation_Call) RunAndReturn(run func(ctx context.Context, arg db.InsertStudyGuideRecommendationParams) (pgtype.Timestamptz, error)) *MockRepository_InsertStudyGuideRecommendation_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1608,6 +1740,72 @@ func (_c *MockRepository_UpsertStudyGuideVote_Call) Return(err error) *MockRepos
 }
 
 func (_c *MockRepository_UpsertStudyGuideVote_Call) RunAndReturn(run func(ctx context.Context, arg db.UpsertStudyGuideVoteParams) error) *MockRepository_UpsertStudyGuideVote_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ViewerCanRecommendForGuide provides a mock function for the type MockRepository
+func (_mock *MockRepository) ViewerCanRecommendForGuide(ctx context.Context, arg db.ViewerCanRecommendForGuideParams) (db.ViewerCanRecommendForGuideRow, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ViewerCanRecommendForGuide")
+	}
+
+	var r0 db.ViewerCanRecommendForGuideRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ViewerCanRecommendForGuideParams) (db.ViewerCanRecommendForGuideRow, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ViewerCanRecommendForGuideParams) db.ViewerCanRecommendForGuideRow); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(db.ViewerCanRecommendForGuideRow)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ViewerCanRecommendForGuideParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_ViewerCanRecommendForGuide_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ViewerCanRecommendForGuide'
+type MockRepository_ViewerCanRecommendForGuide_Call struct {
+	*mock.Call
+}
+
+// ViewerCanRecommendForGuide is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.ViewerCanRecommendForGuideParams
+func (_e *MockRepository_Expecter) ViewerCanRecommendForGuide(ctx interface{}, arg interface{}) *MockRepository_ViewerCanRecommendForGuide_Call {
+	return &MockRepository_ViewerCanRecommendForGuide_Call{Call: _e.mock.On("ViewerCanRecommendForGuide", ctx, arg)}
+}
+
+func (_c *MockRepository_ViewerCanRecommendForGuide_Call) Run(run func(ctx context.Context, arg db.ViewerCanRecommendForGuideParams)) *MockRepository_ViewerCanRecommendForGuide_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ViewerCanRecommendForGuideParams
+		if args[1] != nil {
+			arg1 = args[1].(db.ViewerCanRecommendForGuideParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_ViewerCanRecommendForGuide_Call) Return(viewerCanRecommendForGuideRow db.ViewerCanRecommendForGuideRow, err error) *MockRepository_ViewerCanRecommendForGuide_Call {
+	_c.Call.Return(viewerCanRecommendForGuideRow, err)
+	return _c
+}
+
+func (_c *MockRepository_ViewerCanRecommendForGuide_Call) RunAndReturn(run func(ctx context.Context, arg db.ViewerCanRecommendForGuideParams) (db.ViewerCanRecommendForGuideRow, error)) *MockRepository_ViewerCanRecommendForGuide_Call {
 	_c.Call.Return(run)
 	return _c
 }

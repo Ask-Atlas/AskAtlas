@@ -151,3 +151,15 @@ func (r *sqlcRepository) ComputeGuideVoteScore(ctx context.Context, studyGuideID
 func (r *sqlcRepository) DeleteStudyGuideVote(ctx context.Context, arg db.DeleteStudyGuideVoteParams) (int64, error) {
 	return r.queries.DeleteStudyGuideVote(ctx, arg)
 }
+
+func (r *sqlcRepository) ViewerCanRecommendForGuide(ctx context.Context, arg db.ViewerCanRecommendForGuideParams) (db.ViewerCanRecommendForGuideRow, error) {
+	return r.queries.ViewerCanRecommendForGuide(ctx, arg)
+}
+
+func (r *sqlcRepository) InsertStudyGuideRecommendation(ctx context.Context, arg db.InsertStudyGuideRecommendationParams) (pgtype.Timestamptz, error) {
+	return r.queries.InsertStudyGuideRecommendation(ctx, arg)
+}
+
+func (r *sqlcRepository) DeleteStudyGuideRecommendation(ctx context.Context, arg db.DeleteStudyGuideRecommendationParams) (int64, error) {
+	return r.queries.DeleteStudyGuideRecommendation(ctx, arg)
+}
