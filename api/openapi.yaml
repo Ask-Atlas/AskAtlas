@@ -568,6 +568,102 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}/resources:
+    post:
+      operationId: AttachResource
+      summary: Attach an external resource to a study guide
+      description: |
+        Attaches a URL-based resource (link / video / article / pdf) to
+        a study guide. Resources are community-contributed -- any
+        authenticated user can attach.
+
+        Resource reuse: a (creator_id, url) pair is unique in the
+        `resources` table. If the viewer has previously created a
+        resource row with the same URL (for any guide), the existing
+        row is reused via INSERT ... ON CONFLICT DO NOTHING + lookup;
+        the original title / description / type are preserved.
+
+        Conflict detection: if ANY resource (regardless of creator)
+        with the same URL is already attached to this guide, returns
+        409 BEFORE the upsert -- avoids creating new resource rows
+        only to discard them on the join PK violation.
+
+        Returns 201 with the (possibly-reused) resource row.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttachResourceRequest'
+      responses:
+        '201':
+          description: Resource attached.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}/resources/{resource_id}:
+    delete:
+      operationId: DetachResource
+      summary: Detach a resource from a study guide
+      description: |
+        Removes the link between a resource and a guide. Does NOT
+        delete the resource itself -- a resource may be attached to
+        multiple guides + courses.
+
+        Authorization: the guide's creator OR the user who attached
+        the resource (`attached_by` on the join row) can detach. The
+        resource's own creator (if different from both) cannot detach
+        when they didn't attach it here.
+
+        404 covers both 'guide missing/deleted' and 'resource not
+        attached to this guide'.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: resource_id
+          in: path
+          description: The unique UUID of the resource to detach
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Resource detached; no response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /study-guides/{study_guide_id}/recommendations:
     post:
       operationId: RecommendStudyGuide
@@ -1705,6 +1801,36 @@ components:
         - id
         - title
         - question_count
+    AttachResourceRequest:
+      type: object
+      description: |
+        Request body for POST /api/study-guides/{study_guide_id}/resources.
+        `title` and `url` are required. `type` defaults to `link` when
+        omitted. URL must be http or https (validated server-side; the
+        openapi `format: uri` only checks general syntax).
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+        url:
+          type: string
+          format: uri
+          maxLength: 2000
+        type:
+          type: string
+          enum:
+            - link
+            - video
+            - article
+            - pdf
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+      required:
+        - title
+        - url
     ResourceSummary:
       type: object
       description: |
