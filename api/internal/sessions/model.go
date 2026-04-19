@@ -50,7 +50,15 @@ type SessionDetail struct {
 	CompletedAt    *time.Time
 	TotalQuestions int32
 	CorrectAnswers int32
-	Answers        []AnswerSummary
+	// ScorePercentage is set by GetSession (ASK-152) for completed
+	// sessions and left nil for in-progress ones. StartSession
+	// (ASK-128) always leaves it nil because PracticeSessionResponse
+	// does not carry the field on the wire; the GetSession handler's
+	// SessionDetailResponse mapper is the only consumer that reads
+	// it. A pointer (vs int32 + IsValid bool) keeps the JSON wire
+	// rendering trivial: nil -> null, value -> integer.
+	ScorePercentage *int32
+	Answers         []AnswerSummary
 }
 
 // CompletedSessionDetail is the domain payload returned by

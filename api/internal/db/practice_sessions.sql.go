@@ -189,6 +189,41 @@ func (q *Queries) GetCorrectOptionText(ctx context.Context, questionID pgtype.UU
 	return text, err
 }
 
+const getSessionByID = `-- name: GetSessionByID :one
+SELECT id, user_id, quiz_id, started_at, completed_at, total_questions, correct_answers
+FROM practice_sessions
+WHERE id = $1::uuid
+`
+
+// Reads a session row by id. Used by GetPracticeSession (ASK-152)
+// to render the session detail. Unlike LockSessionForCompletion
+// this does NOT FOR UPDATE -- it's a pure read so concurrent
+// writers (SubmitAnswer, CompleteSession) shouldn't block.
+//
+// Returns ALL session fields so the service can build the wire
+// response (including the nullable completed_at the score
+// calculator gates on).
+//
+// No parent quiz / study_guide deletion check: sessions are
+// historical data and remain accessible even after the parent
+// quiz or guide is soft-deleted (ASK-152 spec AC6 + technical
+// note: "sessions must remain accessible even after the quiz is
+// removed").
+func (q *Queries) GetSessionByID(ctx context.Context, id pgtype.UUID) (PracticeSession, error) {
+	row := q.db.QueryRow(ctx, getSessionByID, id)
+	var i PracticeSession
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.QuizID,
+		&i.StartedAt,
+		&i.CompletedAt,
+		&i.TotalQuestions,
+		&i.CorrectAnswers,
+	)
+	return i, err
+}
+
 const getSessionForAnswerSubmission = `-- name: GetSessionForAnswerSubmission :one
 SELECT id, user_id, completed_at
 FROM practice_sessions

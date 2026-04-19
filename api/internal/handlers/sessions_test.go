@@ -592,3 +592,179 @@ func TestSessionsHandler_Complete_Success(t *testing.T) {
 	assert.Equal(t, 7, resp.CorrectAnswers)
 	assert.Equal(t, 70, resp.ScorePercentage)
 }
+
+// ---- GetPracticeSession (ASK-152) ----
+
+func TestSessionsHandler_GetSession_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	url := fmt.Sprintf("/sessions/%s", uuid.NewString())
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestSessionsHandler_GetSession_InvalidUUID_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	req := authedRequestMethod(t, http.MethodGet, "/sessions/not-a-uuid", nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestSessionsHandler_GetSession_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().GetSession(mock.Anything, mock.Anything).
+		Return(sessions.SessionDetail{}, apperrors.NewNotFound("Session not found"))
+
+	url := fmt.Sprintf("/sessions/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestSessionsHandler_GetSession_NotOwner_403(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().GetSession(mock.Anything, mock.Anything).
+		Return(sessions.SessionDetail{}, apperrors.NewForbidden())
+
+	url := fmt.Sprintf("/sessions/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestSessionsHandler_GetSession_ServiceError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().GetSession(mock.Anything, mock.Anything).
+		Return(sessions.SessionDetail{}, errors.New("connection refused"))
+
+	url := fmt.Sprintf("/sessions/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// TestSessionsHandler_GetSession_Completed_Success exercises the
+// happy completed path: 200 with score_percentage populated.
+func TestSessionsHandler_GetSession_Completed_Success(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	sessionID := uuid.New()
+	quizID := uuid.New()
+	q1 := uuid.New()
+	startedAt := time.Date(2026, 4, 1, 10, 0, 0, 0, time.UTC)
+	completedAt := time.Date(2026, 4, 1, 10, 15, 0, 0, time.UTC)
+	score := int32(70)
+	answer := "Sorted ascending"
+	correct := true
+
+	mockSvc.EXPECT().GetSession(mock.Anything, mock.MatchedBy(func(p sessions.GetSessionParams) bool {
+		return p.SessionID == sessionID
+	})).Return(sessions.SessionDetail{
+		ID:              sessionID,
+		QuizID:          quizID,
+		StartedAt:       startedAt,
+		CompletedAt:     &completedAt,
+		TotalQuestions:  10,
+		CorrectAnswers:  7,
+		ScorePercentage: &score,
+		Answers: []sessions.AnswerSummary{
+			{QuestionID: &q1, UserAnswer: &answer, IsCorrect: &correct, Verified: true, AnsweredAt: startedAt.Add(time.Minute)},
+		},
+	}, nil)
+
+	url := fmt.Sprintf("/sessions/%s", sessionID.String())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp api.SessionDetailResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, sessionID, uuid.UUID(resp.Id))
+	assert.Equal(t, quizID, uuid.UUID(resp.QuizId))
+	require.NotNil(t, resp.CompletedAt)
+	assert.Equal(t, completedAt, *resp.CompletedAt)
+	require.NotNil(t, resp.ScorePercentage)
+	assert.Equal(t, 70, *resp.ScorePercentage)
+	assert.Equal(t, 10, resp.TotalQuestions)
+	assert.Equal(t, 7, resp.CorrectAnswers)
+	require.Len(t, resp.Answers, 1)
+}
+
+// TestSessionsHandler_GetSession_InProgress_NullScore verifies
+// the wire side renders nullable fields correctly: completed_at
+// and score_percentage both serialize as JSON null while the
+// session is in-progress.
+func TestSessionsHandler_GetSession_InProgress_NullScore(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	sessionID := uuid.New()
+	startedAt := time.Date(2026, 4, 1, 10, 0, 0, 0, time.UTC)
+
+	mockSvc.EXPECT().GetSession(mock.Anything, mock.Anything).
+		Return(sessions.SessionDetail{
+			ID:             sessionID,
+			QuizID:         uuid.New(),
+			StartedAt:      startedAt,
+			CompletedAt:    nil,
+			TotalQuestions: 10,
+			CorrectAnswers: 2,
+			// ScorePercentage left nil
+			Answers: []sessions.AnswerSummary{},
+		}, nil)
+
+	url := fmt.Sprintf("/sessions/%s", sessionID.String())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	// Decode as raw map to verify JSON literal nulls (typed
+	// SessionDetailResponse decodes nulls back to nil pointers,
+	// which would also pass an assert.Nil but doesn't prove the
+	// wire shape).
+	var raw map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &raw))
+	assert.Nil(t, raw["completed_at"], "in-progress: completed_at must be JSON null")
+	assert.Nil(t, raw["score_percentage"], "in-progress: score_percentage must be JSON null")
+	answersAny, ok := raw["answers"].([]any)
+	require.True(t, ok)
+	assert.Empty(t, answersAny, "empty answers must serialize as []")
+}

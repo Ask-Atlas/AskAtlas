@@ -1274,3 +1274,239 @@ func TestComputeScorePercentage(t *testing.T) {
 		})
 	}
 }
+
+// ============================================================
+// GetSession (ASK-152)
+// ============================================================
+
+// expectGetSessionByID wires the GetSessionByID mock to return a
+// row with the given fields. completedAt controls in-progress vs
+// completed paths. Pinned to the passed-in sessionID so a service
+// that ever queried with a different ID would fail (same safety
+// pattern as completeSessionFixture).
+func expectGetSessionByID(repo *mock_sessions.MockRepository, sessionID, userID, quizID uuid.UUID, total, correct int32, completedAt pgtype.Timestamptz) {
+	repo.EXPECT().GetSessionByID(mock.Anything, utils.UUID(sessionID)).
+		Return(db.PracticeSession{
+			ID:             utils.UUID(sessionID),
+			UserID:         utils.UUID(userID),
+			QuizID:         utils.UUID(quizID),
+			StartedAt:      pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+			CompletedAt:    completedAt,
+			TotalQuestions: total,
+			CorrectAnswers: correct,
+		}, nil)
+}
+
+// TestGetSession_AC1_CompletedWithAnswers covers AC1: a completed
+// session with 3 answers returns all of them + computed score.
+func TestGetSession_AC1_CompletedWithAnswers(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	sessionID := uuid.New()
+	userID := uuid.New()
+	quizID := uuid.New()
+	completedAt := fixtureTime.Add(15 * time.Minute)
+	q1, q2, q3 := uuid.New(), uuid.New(), uuid.New()
+	a1, a2, a3 := "Sorted ascending", "true", "O(n)"
+	t1, f2, f3 := true, false, false
+
+	expectGetSessionByID(repo, sessionID, userID, quizID, 10, 7,
+		pgtype.Timestamptz{Time: completedAt, Valid: true})
+	repo.EXPECT().ListSessionAnswers(mock.Anything, utils.UUID(sessionID)).
+		Return([]db.ListSessionAnswersRow{
+			{QuestionID: utils.UUID(q1), UserAnswer: pgtype.Text{String: a1, Valid: true}, IsCorrect: pgtype.Bool{Bool: t1, Valid: true}, Verified: true, AnsweredAt: pgtype.Timestamptz{Time: fixtureTime.Add(time.Minute), Valid: true}},
+			{QuestionID: utils.UUID(q2), UserAnswer: pgtype.Text{String: a2, Valid: true}, IsCorrect: pgtype.Bool{Bool: f2, Valid: true}, Verified: true, AnsweredAt: pgtype.Timestamptz{Time: fixtureTime.Add(2 * time.Minute), Valid: true}},
+			{QuestionID: utils.UUID(q3), UserAnswer: pgtype.Text{String: a3, Valid: true}, IsCorrect: pgtype.Bool{Bool: f3, Valid: true}, Verified: false, AnsweredAt: pgtype.Timestamptz{Time: fixtureTime.Add(3 * time.Minute), Valid: true}},
+		}, nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.GetSession(context.Background(), sessions.GetSessionParams{
+		SessionID: sessionID,
+		UserID:    userID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, sessionID, got.ID)
+	assert.Equal(t, quizID, got.QuizID)
+	require.NotNil(t, got.CompletedAt)
+	assert.Equal(t, completedAt, *got.CompletedAt)
+	require.NotNil(t, got.ScorePercentage)
+	assert.Equal(t, int32(70), *got.ScorePercentage, "7/10 -> 70")
+	require.Len(t, got.Answers, 3)
+}
+
+// TestGetSession_AC2_InProgressNullScore covers AC2: an in-
+// progress session has nil ScorePercentage AND nil CompletedAt.
+func TestGetSession_AC2_InProgressNullScore(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	sessionID := uuid.New()
+	userID := uuid.New()
+	q1 := uuid.New()
+	answer := "Sorted ascending"
+	correct := true
+
+	expectGetSessionByID(repo, sessionID, userID, uuid.New(), 10, 1,
+		pgtype.Timestamptz{}) // CompletedAt invalid -> in-progress
+	repo.EXPECT().ListSessionAnswers(mock.Anything, utils.UUID(sessionID)).
+		Return([]db.ListSessionAnswersRow{
+			{QuestionID: utils.UUID(q1), UserAnswer: pgtype.Text{String: answer, Valid: true}, IsCorrect: pgtype.Bool{Bool: correct, Valid: true}, Verified: true, AnsweredAt: pgtype.Timestamptz{Time: fixtureTime, Valid: true}},
+		}, nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.GetSession(context.Background(), sessions.GetSessionParams{
+		SessionID: sessionID, UserID: userID,
+	})
+	require.NoError(t, err)
+	assert.Nil(t, got.CompletedAt, "in-progress: completed_at must be nil")
+	assert.Nil(t, got.ScorePercentage, "in-progress: score_percentage must be nil")
+	require.Len(t, got.Answers, 1)
+}
+
+// TestGetSession_AC3_NullQuestionID covers AC3: an answer whose
+// underlying question was hard-deleted (question_id SET NULL)
+// must be INCLUDED in the response, not filtered out.
+func TestGetSession_AC3_NullQuestionID(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	sessionID := uuid.New()
+	userID := uuid.New()
+	q1 := uuid.New() // surviving question
+	a1, a2 := "answer 1", "orphaned answer"
+	correct1 := true
+
+	expectGetSessionByID(repo, sessionID, userID, uuid.New(), 5, 1, pgtype.Timestamptz{})
+	repo.EXPECT().ListSessionAnswers(mock.Anything, utils.UUID(sessionID)).
+		Return([]db.ListSessionAnswersRow{
+			{QuestionID: utils.UUID(q1), UserAnswer: pgtype.Text{String: a1, Valid: true}, IsCorrect: pgtype.Bool{Bool: correct1, Valid: true}, Verified: true, AnsweredAt: pgtype.Timestamptz{Time: fixtureTime, Valid: true}},
+			// Orphaned answer: question was hard-deleted after submission.
+			{QuestionID: pgtype.UUID{}, UserAnswer: pgtype.Text{String: a2, Valid: true}, IsCorrect: pgtype.Bool{}, Verified: false, AnsweredAt: pgtype.Timestamptz{Time: fixtureTime.Add(time.Minute), Valid: true}},
+		}, nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.GetSession(context.Background(), sessions.GetSessionParams{
+		SessionID: sessionID, UserID: userID,
+	})
+	require.NoError(t, err)
+	require.Len(t, got.Answers, 2, "orphaned answer must NOT be filtered")
+	require.NotNil(t, got.Answers[0].QuestionID, "first answer keeps its id")
+	assert.Nil(t, got.Answers[1].QuestionID, "orphaned answer surfaces with nil question_id")
+	assert.Nil(t, got.Answers[1].IsCorrect, "orphaned answer is_correct passes through nil")
+}
+
+// TestGetSession_AC4_NotOwner_403 covers AC4.
+func TestGetSession_AC4_NotOwner_403(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	sessionID := uuid.New()
+	owner := uuid.New()
+	other := uuid.New()
+	expectGetSessionByID(repo, sessionID, owner, uuid.New(), 5, 0, pgtype.Timestamptz{})
+	// No ListSessionAnswers expectation -- the 403 short-circuits.
+
+	svc := sessions.NewService(repo)
+	_, err := svc.GetSession(context.Background(), sessions.GetSessionParams{
+		SessionID: sessionID, UserID: other,
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusForbidden, sysErr.Code)
+}
+
+// TestGetSession_AC5_NotFound_404 covers AC5.
+func TestGetSession_AC5_NotFound_404(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	sessionID := uuid.New()
+	repo.EXPECT().GetSessionByID(mock.Anything, utils.UUID(sessionID)).
+		Return(db.PracticeSession{}, sql.ErrNoRows)
+
+	svc := sessions.NewService(repo)
+	_, err := svc.GetSession(context.Background(), sessions.GetSessionParams{
+		SessionID: sessionID, UserID: uuid.New(),
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusNotFound, sysErr.Code)
+}
+
+// TestGetSession_AC6_HistoricalAccessibleAfterQuizDeleted covers
+// AC6: GetSession does NOT check parent quiz/guide deletion.
+// Sessions are historical and remain readable forever.
+//
+// This test exercises the same code path as a happy GET -- the
+// service just doesn't have a parent-check call that could
+// reject. We assert the absence by NOT setting any
+// CheckQuizLiveForSession or similar mock expectation.
+func TestGetSession_AC6_HistoricalAccessibleAfterQuizDeleted(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	sessionID := uuid.New()
+	userID := uuid.New()
+	completedAt := fixtureTime.Add(time.Hour)
+
+	expectGetSessionByID(repo, sessionID, userID, uuid.New(), 5, 5,
+		pgtype.Timestamptz{Time: completedAt, Valid: true})
+	repo.EXPECT().ListSessionAnswers(mock.Anything, utils.UUID(sessionID)).
+		Return([]db.ListSessionAnswersRow{}, nil)
+	// Crucially: NO CheckQuizLiveForSession expectation. mockery's
+	// Cleanup-time AssertExpectations would fail if the service
+	// added a parent-check call.
+
+	svc := sessions.NewService(repo)
+	got, err := svc.GetSession(context.Background(), sessions.GetSessionParams{
+		SessionID: sessionID, UserID: userID,
+	})
+	require.NoError(t, err, "completed session must remain readable even if parent quiz was deleted later")
+	require.NotNil(t, got.ScorePercentage)
+	assert.Equal(t, int32(100), *got.ScorePercentage, "5/5 -> 100")
+}
+
+// TestGetSession_EmptyAnswers covers the boundary: a fresh
+// session with 0 answers must return 200 with an empty array.
+func TestGetSession_EmptyAnswers(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	sessionID := uuid.New()
+	userID := uuid.New()
+	expectGetSessionByID(repo, sessionID, userID, uuid.New(), 5, 0, pgtype.Timestamptz{})
+	repo.EXPECT().ListSessionAnswers(mock.Anything, utils.UUID(sessionID)).
+		Return([]db.ListSessionAnswersRow{}, nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.GetSession(context.Background(), sessions.GetSessionParams{
+		SessionID: sessionID, UserID: userID,
+	})
+	require.NoError(t, err)
+	assert.Empty(t, got.Answers)
+	assert.NotNil(t, got.Answers, "empty slice must be non-nil so JSON renders []")
+	assert.Nil(t, got.ScorePercentage)
+}
+
+// TestGetSession_LoadError_500 surfaces a non-ErrNoRows DB error
+// as 500 (NOT 404).
+func TestGetSession_LoadError_500(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	sessionID := uuid.New()
+	repo.EXPECT().GetSessionByID(mock.Anything, utils.UUID(sessionID)).
+		Return(db.PracticeSession{}, errors.New("connection refused"))
+
+	svc := sessions.NewService(repo)
+	_, err := svc.GetSession(context.Background(), sessions.GetSessionParams{
+		SessionID: sessionID, UserID: uuid.New(),
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}
+
+// TestGetSession_ListAnswersError_500 surfaces a list-answers DB
+// failure as 500.
+func TestGetSession_ListAnswersError_500(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	sessionID := uuid.New()
+	userID := uuid.New()
+	expectGetSessionByID(repo, sessionID, userID, uuid.New(), 5, 1, pgtype.Timestamptz{})
+	repo.EXPECT().ListSessionAnswers(mock.Anything, utils.UUID(sessionID)).
+		Return(nil, errors.New("query timeout"))
+
+	svc := sessions.NewService(repo)
+	_, err := svc.GetSession(context.Background(), sessions.GetSessionParams{
+		SessionID: sessionID, UserID: userID,
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}

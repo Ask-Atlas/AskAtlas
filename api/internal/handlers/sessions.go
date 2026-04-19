@@ -20,6 +20,7 @@ type SessionService interface {
 	StartSession(ctx context.Context, params sessions.StartSessionParams) (sessions.StartSessionResult, error)
 	SubmitAnswer(ctx context.Context, params sessions.SubmitAnswerParams) (sessions.AnswerSummary, error)
 	CompleteSession(ctx context.Context, params sessions.CompleteSessionParams) (sessions.CompletedSessionDetail, error)
+	GetSession(ctx context.Context, params sessions.GetSessionParams) (sessions.SessionDetail, error)
 }
 
 // SessionsHandler manages incoming HTTP requests for the practice-
@@ -70,6 +71,66 @@ func (h *SessionsHandler) StartPracticeSession(w http.ResponseWriter, r *http.Re
 		status = http.StatusCreated
 	}
 	respondJSON(w, status, mapPracticeSessionResponse(result.Session))
+}
+
+// GetPracticeSession handles GET /sessions/{session_id} (ASK-152).
+// Returns the session detail (metadata + answers + nullable score)
+// for the authenticated owner. 404 / 403 dispatch lives in the
+// service.
+//
+// The wire shape is the SessionDetailResponse schema -- distinct
+// from PracticeSessionResponse (no score field) and from
+// CompletedSessionResponse (no answers field). The score is
+// nullable on the wire to distinguish in-progress sessions from
+// completed ones cleanly.
+func (h *SessionsHandler) GetPracticeSession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	detail, err := h.service.GetSession(r.Context(), sessions.GetSessionParams{
+		SessionID: uuid.UUID(sessionId),
+		UserID:    viewerID,
+	})
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("GetPracticeSession failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, mapSessionDetailResponse(detail))
+}
+
+// mapSessionDetailResponse projects a domain SessionDetail onto
+// the wire SessionDetailResponse. Always emits a non-nil Answers
+// slice so the JSON renders `[]` (not `null`) for sessions with
+// no submitted answers. ScorePercentage forwards as-is: nil
+// pointer renders as JSON null per the openapi nullable: true
+// declaration.
+func mapSessionDetailResponse(d sessions.SessionDetail) api.SessionDetailResponse {
+	answers := make([]api.PracticeAnswerResponse, 0, len(d.Answers))
+	for _, a := range d.Answers {
+		answers = append(answers, mapPracticeAnswerResponse(a))
+	}
+	resp := api.SessionDetailResponse{
+		Id:             openapi_types.UUID(d.ID),
+		QuizId:         openapi_types.UUID(d.QuizID),
+		StartedAt:      d.StartedAt,
+		CompletedAt:    d.CompletedAt,
+		TotalQuestions: int(d.TotalQuestions),
+		CorrectAnswers: int(d.CorrectAnswers),
+		Answers:        answers,
+	}
+	if d.ScorePercentage != nil {
+		score := int(*d.ScorePercentage)
+		resp.ScorePercentage = &score
+	}
+	return resp
 }
 
 // CompletePracticeSession handles POST /sessions/{session_id}/complete
