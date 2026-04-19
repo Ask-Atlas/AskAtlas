@@ -1510,3 +1510,372 @@ func TestGetSession_ListAnswersError_500(t *testing.T) {
 	sysErr := apperrors.ToHTTPError(err)
 	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
 }
+
+// ============================================================
+// ListSessions tests (ASK-149)
+// ============================================================
+
+// listRow is a shorthand builder for db.ListUserSessionsForQuizRow
+// fixtures so the test bodies stay readable. CompletedAt is passed
+// in as *time.Time -- nil means in-progress.
+func listRow(id uuid.UUID, started time.Time, completed *time.Time, total, correct int32) db.ListUserSessionsForQuizRow {
+	row := db.ListUserSessionsForQuizRow{
+		ID:             utils.UUID(id),
+		StartedAt:      pgtype.Timestamptz{Time: started, Valid: true},
+		TotalQuestions: total,
+		CorrectAnswers: correct,
+	}
+	if completed != nil {
+		row.CompletedAt = pgtype.Timestamptz{Time: *completed, Valid: true}
+	}
+	return row
+}
+
+// validListParams returns a baseline ListSessionsParams. Per-test
+// overrides target individual fields (status, cursor, limit) to
+// exercise specific edge cases.
+func validListParams(t *testing.T) sessions.ListSessionsParams {
+	t.Helper()
+	return sessions.ListSessionsParams{
+		UserID:    uuid.New(),
+		QuizID:    uuid.New(),
+		PageLimit: 10,
+	}
+}
+
+// TestListSessions_QuizNotLive_404 covers AC7+AC8: a missing,
+// soft-deleted, or parent-deleted quiz all collapse to 404.
+// Mirrors the StartSession/GetSession info-leak rule.
+func TestListSessions_QuizNotLive_404(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	repo.EXPECT().CheckQuizLiveForSession(mock.Anything, mock.Anything).Return(false, nil)
+
+	svc := sessions.NewService(repo)
+	_, err := svc.ListSessions(context.Background(), validListParams(t))
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusNotFound, sysErr.Code)
+}
+
+// TestListSessions_LiveCheckError_500 surfaces a CheckQuizLiveForSession
+// DB failure as 500 (NOT 404 -- a transport error must not be
+// disguised as a missing resource).
+func TestListSessions_LiveCheckError_500(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	repo.EXPECT().CheckQuizLiveForSession(mock.Anything, mock.Anything).
+		Return(false, errors.New("connection refused"))
+
+	svc := sessions.NewService(repo)
+	_, err := svc.ListSessions(context.Background(), validListParams(t))
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}
+
+// TestListSessions_NoFilter_AllReturned covers AC1: a user with
+// 3 completed sessions for a quiz, no filters -> all 3 returned in
+// (started_at DESC) order. The test fixture deliberately returns
+// rows already sorted DESC (the SQL ORDER BY does the work; we
+// just verify the service forwards them verbatim).
+func TestListSessions_NoFilter_AllReturned(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	repo.EXPECT().CheckQuizLiveForSession(mock.Anything, mock.Anything).Return(true, nil)
+
+	userID := uuid.New()
+	quizID := uuid.New()
+	id1, id2, id3 := uuid.New(), uuid.New(), uuid.New()
+	t1 := fixtureTime
+	t2 := fixtureTime.Add(-1 * time.Hour)
+	t3 := fixtureTime.Add(-2 * time.Hour)
+	c1 := t1.Add(10 * time.Minute)
+	c2 := t2.Add(10 * time.Minute)
+	c3 := t3.Add(10 * time.Minute)
+
+	repo.EXPECT().ListUserSessionsForQuiz(mock.Anything,
+		mock.MatchedBy(func(arg db.ListUserSessionsForQuizParams) bool {
+			// Default no-filter call: status_filter unset, cursor unset, limit+1.
+			return arg.UserID == utils.UUID(userID) &&
+				arg.QuizID == utils.UUID(quizID) &&
+				!arg.StatusFilter.Valid &&
+				!arg.CursorStartedAt.Valid &&
+				!arg.CursorID.Valid &&
+				arg.PageLimit == 11 // 10 + 1
+		})).Return([]db.ListUserSessionsForQuizRow{
+		listRow(id1, t1, &c1, 10, 7),
+		listRow(id2, t2, &c2, 10, 5),
+		listRow(id3, t3, &c3, 10, 9),
+	}, nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.ListSessions(context.Background(), sessions.ListSessionsParams{
+		UserID: userID, QuizID: quizID, PageLimit: 10,
+	})
+	require.NoError(t, err)
+	require.Len(t, got.Sessions, 3)
+	assert.Equal(t, id1, got.Sessions[0].ID)
+	assert.Equal(t, id2, got.Sessions[1].ID)
+	assert.Equal(t, id3, got.Sessions[2].ID)
+	require.NotNil(t, got.Sessions[0].ScorePercentage)
+	assert.Equal(t, int32(70), *got.Sessions[0].ScorePercentage)
+	require.NotNil(t, got.Sessions[1].ScorePercentage)
+	assert.Equal(t, int32(50), *got.Sessions[1].ScorePercentage)
+	require.NotNil(t, got.Sessions[2].ScorePercentage)
+	assert.Equal(t, int32(90), *got.Sessions[2].ScorePercentage)
+	assert.Nil(t, got.NextCursor, "no more pages -> next_cursor: null")
+}
+
+// TestListSessions_StatusActive covers AC2: status=active forwards
+// the filter through to sqlc and returns only in-progress sessions
+// (CompletedAt nil + ScorePercentage nil on the wire).
+func TestListSessions_StatusActive(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	repo.EXPECT().CheckQuizLiveForSession(mock.Anything, mock.Anything).Return(true, nil)
+
+	id1 := uuid.New()
+	repo.EXPECT().ListUserSessionsForQuiz(mock.Anything,
+		mock.MatchedBy(func(arg db.ListUserSessionsForQuizParams) bool {
+			return arg.StatusFilter.Valid && arg.StatusFilter.String == "active"
+		})).Return([]db.ListUserSessionsForQuizRow{
+		listRow(id1, fixtureTime, nil, 10, 3),
+	}, nil)
+
+	status := sessions.SessionStatusActive
+	svc := sessions.NewService(repo)
+	got, err := svc.ListSessions(context.Background(), sessions.ListSessionsParams{
+		UserID: uuid.New(), QuizID: uuid.New(), PageLimit: 10, Status: &status,
+	})
+	require.NoError(t, err)
+	require.Len(t, got.Sessions, 1)
+	assert.Nil(t, got.Sessions[0].CompletedAt, "active sessions have no completed_at")
+	assert.Nil(t, got.Sessions[0].ScorePercentage, "active sessions have no score")
+}
+
+// TestListSessions_StatusCompleted covers AC3: status=completed
+// forwards the filter through and returns only finalised sessions
+// (CompletedAt non-nil + ScorePercentage non-nil).
+func TestListSessions_StatusCompleted(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	repo.EXPECT().CheckQuizLiveForSession(mock.Anything, mock.Anything).Return(true, nil)
+
+	id1 := uuid.New()
+	c := fixtureTime.Add(time.Hour)
+	repo.EXPECT().ListUserSessionsForQuiz(mock.Anything,
+		mock.MatchedBy(func(arg db.ListUserSessionsForQuizParams) bool {
+			return arg.StatusFilter.Valid && arg.StatusFilter.String == "completed"
+		})).Return([]db.ListUserSessionsForQuizRow{
+		listRow(id1, fixtureTime, &c, 10, 8),
+	}, nil)
+
+	status := sessions.SessionStatusCompleted
+	svc := sessions.NewService(repo)
+	got, err := svc.ListSessions(context.Background(), sessions.ListSessionsParams{
+		UserID: uuid.New(), QuizID: uuid.New(), PageLimit: 10, Status: &status,
+	})
+	require.NoError(t, err)
+	require.Len(t, got.Sessions, 1)
+	require.NotNil(t, got.Sessions[0].CompletedAt)
+	require.NotNil(t, got.Sessions[0].ScorePercentage)
+	assert.Equal(t, int32(80), *got.Sessions[0].ScorePercentage)
+}
+
+// TestListSessions_HasMore_TrimsAndEncodesCursor covers AC4: when
+// the query returns limit+1 rows, the service trims the extra row,
+// sets has_more (NextCursor != nil), and the cursor encodes the
+// LAST RETAINED row (NOT the trimmed-off row -- callers ask for
+// "everything strictly after the last row I saw").
+func TestListSessions_HasMore_TrimsAndEncodesCursor(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	repo.EXPECT().CheckQuizLiveForSession(mock.Anything, mock.Anything).Return(true, nil)
+
+	// Build 4 rows; limit=3 means service asked for 4 (limit+1).
+	// All 4 come back -> trim to 3, encode cursor at row[2] (the
+	// LAST RETAINED row), drop row[3].
+	//
+	// Rows[1] and rows[2] share the same started_at on purpose:
+	// the (started_at DESC, id DESC) tiebreaker must use id for
+	// the cursor encoding, so an id-DESC regression would still
+	// pass an all-distinct-timestamp fixture but fail this one.
+	// coderabbit PR #158 nitpick.
+	ids := []uuid.UUID{uuid.New(), uuid.New(), uuid.New(), uuid.New()}
+	rows := make([]db.ListUserSessionsForQuizRow, 4)
+	tieTime := fixtureTime.Add(-1 * time.Hour)
+	stamps := []time.Time{
+		fixtureTime,                     // row 0 -- newest
+		tieTime,                         // row 1 -- tie
+		tieTime,                         // row 2 -- tie (last retained)
+		fixtureTime.Add(-3 * time.Hour), // row 3 -- trimmed
+	}
+	for i := range rows {
+		c := stamps[i].Add(10 * time.Minute)
+		rows[i] = listRow(ids[i], stamps[i], &c, 10, int32(i*3))
+	}
+	repo.EXPECT().ListUserSessionsForQuiz(mock.Anything,
+		mock.MatchedBy(func(arg db.ListUserSessionsForQuizParams) bool {
+			return arg.PageLimit == 4 // 3 + 1
+		})).Return(rows, nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.ListSessions(context.Background(), sessions.ListSessionsParams{
+		UserID: uuid.New(), QuizID: uuid.New(), PageLimit: 3,
+	})
+	require.NoError(t, err)
+	require.Len(t, got.Sessions, 3, "trim limit+1 down to limit")
+	assert.Equal(t, ids[0], got.Sessions[0].ID)
+	assert.Equal(t, ids[2], got.Sessions[2].ID)
+
+	require.NotNil(t, got.NextCursor)
+	decoded, err := sessions.DecodeSessionsCursor(*got.NextCursor)
+	require.NoError(t, err)
+	assert.Equal(t, ids[2], decoded.ID, "cursor encodes the LAST RETAINED row")
+	assert.True(t, decoded.StartedAt.Equal(rows[2].StartedAt.Time),
+		"cursor started_at matches last retained row")
+}
+
+// TestListSessions_ExactlyLimit_NoCursor: when the query returns
+// EXACTLY limit rows (no extra), has_more must be false and
+// NextCursor must be nil. Boundary-condition test from spec.
+func TestListSessions_ExactlyLimit_NoCursor(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	repo.EXPECT().CheckQuizLiveForSession(mock.Anything, mock.Anything).Return(true, nil)
+
+	rows := []db.ListUserSessionsForQuizRow{
+		listRow(uuid.New(), fixtureTime, nil, 10, 0),
+		listRow(uuid.New(), fixtureTime.Add(-time.Hour), nil, 10, 0),
+	}
+	repo.EXPECT().ListUserSessionsForQuiz(mock.Anything, mock.Anything).Return(rows, nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.ListSessions(context.Background(), sessions.ListSessionsParams{
+		UserID: uuid.New(), QuizID: uuid.New(), PageLimit: 2,
+	})
+	require.NoError(t, err)
+	require.Len(t, got.Sessions, 2)
+	assert.Nil(t, got.NextCursor, "exactly limit -> no next cursor")
+}
+
+// TestListSessions_CursorForwarded covers AC5: when a cursor is
+// passed in, the service decodes it and forwards (started_at, id)
+// to the sqlc query so the keyset scan resumes from that point.
+func TestListSessions_CursorForwarded(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	repo.EXPECT().CheckQuizLiveForSession(mock.Anything, mock.Anything).Return(true, nil)
+
+	cursorID := uuid.New()
+	cursorTime := fixtureTime.Add(-30 * time.Minute)
+
+	repo.EXPECT().ListUserSessionsForQuiz(mock.Anything,
+		mock.MatchedBy(func(arg db.ListUserSessionsForQuizParams) bool {
+			return arg.CursorStartedAt.Valid &&
+				arg.CursorStartedAt.Time.Equal(cursorTime) &&
+				arg.CursorID == utils.UUID(cursorID)
+		})).Return([]db.ListUserSessionsForQuizRow{}, nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.ListSessions(context.Background(), sessions.ListSessionsParams{
+		UserID: uuid.New(), QuizID: uuid.New(), PageLimit: 10,
+		Cursor: &sessions.SessionsListCursor{StartedAt: cursorTime, ID: cursorID},
+	})
+	require.NoError(t, err)
+	assert.Empty(t, got.Sessions)
+	assert.Nil(t, got.NextCursor)
+}
+
+// TestListSessions_UserScoping covers AC6: the JWT-derived user_id
+// is always passed to sqlc, so the listing is scoped to the
+// authenticated user even if a malicious caller spoofs path params.
+func TestListSessions_UserScoping(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	repo.EXPECT().CheckQuizLiveForSession(mock.Anything, mock.Anything).Return(true, nil)
+
+	authedUser := uuid.New()
+	repo.EXPECT().ListUserSessionsForQuiz(mock.Anything,
+		mock.MatchedBy(func(arg db.ListUserSessionsForQuizParams) bool {
+			return arg.UserID == utils.UUID(authedUser)
+		})).Return([]db.ListUserSessionsForQuizRow{}, nil)
+
+	svc := sessions.NewService(repo)
+	_, err := svc.ListSessions(context.Background(), sessions.ListSessionsParams{
+		UserID: authedUser, QuizID: uuid.New(), PageLimit: 10,
+	})
+	require.NoError(t, err)
+}
+
+// TestListSessions_Empty_NonNilSlice: a user with zero sessions for
+// the quiz returns an empty slice (NOT nil) so the wire renders
+// `[]` per spec.
+func TestListSessions_Empty_NonNilSlice(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	repo.EXPECT().CheckQuizLiveForSession(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().ListUserSessionsForQuiz(mock.Anything, mock.Anything).
+		Return([]db.ListUserSessionsForQuizRow{}, nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.ListSessions(context.Background(), validListParams(t))
+	require.NoError(t, err)
+	require.NotNil(t, got.Sessions, "empty slice must be non-nil so wire renders []")
+	assert.Empty(t, got.Sessions)
+	assert.Nil(t, got.NextCursor)
+}
+
+// TestListSessions_QueryError_500 surfaces a list-query DB failure
+// as 500 (e.g. lost connection mid-page).
+func TestListSessions_QueryError_500(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	repo.EXPECT().CheckQuizLiveForSession(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().ListUserSessionsForQuiz(mock.Anything, mock.Anything).
+		Return(nil, errors.New("query timeout"))
+
+	svc := sessions.NewService(repo)
+	_, err := svc.ListSessions(context.Background(), validListParams(t))
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}
+
+// TestListSessions_MixedActiveAndCompleted: a page mixing in-progress
+// and completed sessions correctly emits per-row score gating
+// (score nil for active, set for completed) and preserves order.
+func TestListSessions_MixedActiveAndCompleted(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	repo.EXPECT().CheckQuizLiveForSession(mock.Anything, mock.Anything).Return(true, nil)
+
+	id1, id2 := uuid.New(), uuid.New()
+	t1 := fixtureTime
+	t2 := fixtureTime.Add(-time.Hour)
+	c2 := t2.Add(10 * time.Minute)
+	repo.EXPECT().ListUserSessionsForQuiz(mock.Anything, mock.Anything).Return(
+		[]db.ListUserSessionsForQuizRow{
+			listRow(id1, t1, nil, 10, 4), // active
+			listRow(id2, t2, &c2, 10, 6), // completed
+		}, nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.ListSessions(context.Background(), validListParams(t))
+	require.NoError(t, err)
+	require.Len(t, got.Sessions, 2)
+	assert.Nil(t, got.Sessions[0].ScorePercentage, "active row must have nil score")
+	require.NotNil(t, got.Sessions[1].ScorePercentage, "completed row must have score")
+	assert.Equal(t, int32(60), *got.Sessions[1].ScorePercentage)
+}
+
+// TestListSessions_ZeroTotal_ScoreZero defensively verifies the
+// total_questions=0 edge case (theoretically unreachable -- create-
+// quiz requires >=1 -- but the read path must not panic). The
+// score collapses to 0 instead of div-by-zero.
+func TestListSessions_ZeroTotal_ScoreZero(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	repo.EXPECT().CheckQuizLiveForSession(mock.Anything, mock.Anything).Return(true, nil)
+
+	c := fixtureTime.Add(time.Minute)
+	repo.EXPECT().ListUserSessionsForQuiz(mock.Anything, mock.Anything).Return(
+		[]db.ListUserSessionsForQuizRow{
+			listRow(uuid.New(), fixtureTime, &c, 0, 0),
+		}, nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.ListSessions(context.Background(), validListParams(t))
+	require.NoError(t, err)
+	require.Len(t, got.Sessions, 1)
+	require.NotNil(t, got.Sessions[0].ScorePercentage)
+	assert.Equal(t, int32(0), *got.Sessions[0].ScorePercentage)
+}

@@ -52,6 +52,36 @@ func mapFoundSession(row db.FindIncompleteSessionRow, answers []db.ListSessionAn
 	return out, nil
 }
 
+// mapSessionSummary projects a ListUserSessionsForQuizRow onto the
+// domain SessionSummary type used by ListSessions (ASK-149).
+// CompletedAt and ScorePercentage are pointer-nilable: completed_at
+// is null for in-progress sessions, and score_percentage is computed
+// only when completed_at is set (so nil ScorePercentage and nil
+// CompletedAt always travel together).
+//
+// computeScorePercentage handles the total_questions == 0 edge case
+// (returns 0); the nil/non-nil split here is purely about the
+// completed-vs-in-progress distinction, not a div-by-zero guard.
+func mapSessionSummary(row db.ListUserSessionsForQuizRow) (SessionSummary, error) {
+	id, err := utils.PgxToGoogleUUID(row.ID)
+	if err != nil {
+		return SessionSummary{}, fmt.Errorf("mapSessionSummary: id: %w", err)
+	}
+	out := SessionSummary{
+		ID:             id,
+		StartedAt:      row.StartedAt.Time,
+		TotalQuestions: row.TotalQuestions,
+		CorrectAnswers: row.CorrectAnswers,
+	}
+	if row.CompletedAt.Valid {
+		t := row.CompletedAt.Time
+		out.CompletedAt = &t
+		score := computeScorePercentage(row.CorrectAnswers, row.TotalQuestions)
+		out.ScorePercentage = &score
+	}
+	return out, nil
+}
+
 // mapAnswer projects a single practice_answers row onto AnswerSummary.
 // The pgtype-Valid checks gate the pointer-or-nil decision on each
 // nullable column: question_id (ON DELETE SET NULL), user_answer

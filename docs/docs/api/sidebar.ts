@@ -156,6 +156,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/list-practice-sessions",
+          label: "List the authenticated user's practice sessions for a quiz",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "api/start-practice-session",
           label: "Start a new practice session or resume an existing incomplete one",
           className: "api-method post",

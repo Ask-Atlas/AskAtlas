@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -21,6 +22,7 @@ type SessionService interface {
 	SubmitAnswer(ctx context.Context, params sessions.SubmitAnswerParams) (sessions.AnswerSummary, error)
 	CompleteSession(ctx context.Context, params sessions.CompleteSessionParams) (sessions.CompletedSessionDetail, error)
 	GetSession(ctx context.Context, params sessions.GetSessionParams) (sessions.SessionDetail, error)
+	ListSessions(ctx context.Context, params sessions.ListSessionsParams) (sessions.ListSessionsResult, error)
 }
 
 // SessionsHandler manages incoming HTTP requests for the practice-
@@ -240,6 +242,144 @@ func mapPracticeSessionResponse(d sessions.SessionDetail) api.PracticeSessionRes
 		CorrectAnswers: int(d.CorrectAnswers),
 		Answers:        answers,
 	}
+}
+
+// listSessionsDefaultLimit is the default page size when the caller
+// omits the `limit` query param (ASK-149 spec). Min 1, max 50 are
+// enforced below in mapListSessionsParams.
+const listSessionsDefaultLimit = 10
+
+// listSessionsMaxLimit is the cap on the `limit` query param per
+// the ASK-149 spec. Anything > 50 is a 400.
+const listSessionsMaxLimit = 50
+
+// ListPracticeSessions handles GET /quizzes/{quiz_id}/sessions
+// (ASK-149). Returns the authenticated user's sessions for a quiz,
+// cursor-paginated and optionally status-filtered. The 404 dispatch
+// for a non-live parent quiz lives in the service.
+//
+// Validation here is purely query-param shape (limit range, status
+// enum, cursor decoding); ownership scoping is enforced inside the
+// service by the JWT-derived UserID, not by the path param.
+func (h *SessionsHandler) ListPracticeSessions(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID, params api.ListPracticeSessionsParams) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	domainParams, appErr := mapListSessionsParams(viewerID, uuid.UUID(quizId), params)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	result, err := h.service.ListSessions(r.Context(), domainParams)
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("ListPracticeSessions failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, mapListSessionsResponse(result))
+}
+
+// mapListSessionsParams converts the OpenAPI HTTP-layer parameters
+// into the domain ListSessionsParams. Returns a typed 400 with the
+// spec-mandated detail keys on any validation failure.
+//
+// Defaults:
+//   - limit: missing -> 10
+//   - status: missing -> nil (no filter)
+//   - cursor: missing -> nil (first page)
+//
+// Invariants enforced:
+//   - 1 <= limit <= 50 (spec)
+//   - status, when present, is "active" or "completed"
+//     (oapi-codegen also enforces the enum, but defense-in-depth
+//     for the rare path where the wrapper passes an unknown value)
+//   - cursor decodes successfully
+func mapListSessionsParams(viewerID, quizID uuid.UUID, params api.ListPracticeSessionsParams) (sessions.ListSessionsParams, *apperrors.AppError) {
+	p := sessions.ListSessionsParams{
+		UserID:    viewerID,
+		QuizID:    quizID,
+		PageLimit: listSessionsDefaultLimit,
+	}
+
+	if params.Limit != nil {
+		l := *params.Limit
+		if l < 1 || l > listSessionsMaxLimit {
+			return p, apperrors.NewBadRequest("Invalid query parameters", map[string]string{
+				"limit": fmt.Sprintf("must be between 1 and %d", listSessionsMaxLimit),
+			})
+		}
+		p.PageLimit = l
+	}
+
+	if params.Status != nil {
+		s := string(*params.Status)
+		switch s {
+		case sessions.SessionStatusActive, sessions.SessionStatusCompleted:
+			p.Status = &s
+		default:
+			return p, apperrors.NewBadRequest("Invalid query parameters", map[string]string{
+				"status": "must be 'active' or 'completed'",
+			})
+		}
+	}
+
+	if params.Cursor != nil {
+		c, err := sessions.DecodeSessionsCursor(*params.Cursor)
+		if err != nil {
+			return p, apperrors.NewBadRequest("Invalid query parameters", map[string]string{
+				"cursor": "invalid cursor value",
+			})
+		}
+		p.Cursor = &c
+	}
+
+	return p, nil
+}
+
+// mapListSessionsResponse projects a ListSessionsResult onto the
+// wire ListSessionsResponse. Always emits a non-nil Sessions slice
+// so the JSON renders `[]` (not `null`) on empty pages. HasMore is
+// (NextCursor != nil) -- the service guarantees the two travel
+// together (NextCursor non-nil iff more pages exist).
+func mapListSessionsResponse(r sessions.ListSessionsResult) api.ListSessionsResponse {
+	out := api.ListSessionsResponse{
+		Sessions:   make([]api.SessionSummaryResponse, 0, len(r.Sessions)),
+		HasMore:    r.NextCursor != nil,
+		NextCursor: r.NextCursor,
+	}
+	for _, s := range r.Sessions {
+		out.Sessions = append(out.Sessions, mapSessionSummaryResponse(s))
+	}
+	return out
+}
+
+// mapSessionSummaryResponse projects a domain SessionSummary onto
+// the wire SessionSummaryResponse. The two nullable wire fields
+// (completed_at, score_percentage) are pointer-typed on the domain
+// side, so a nil pointer renders as JSON null. ScorePercentage is a
+// pointer to int32 on the domain; the wire field is *int, so we
+// allocate a new local int and forward its address.
+func mapSessionSummaryResponse(s sessions.SessionSummary) api.SessionSummaryResponse {
+	resp := api.SessionSummaryResponse{
+		Id:             openapi_types.UUID(s.ID),
+		StartedAt:      s.StartedAt,
+		CompletedAt:    s.CompletedAt,
+		TotalQuestions: int(s.TotalQuestions),
+		CorrectAnswers: int(s.CorrectAnswers),
+	}
+	if s.ScorePercentage != nil {
+		score := int(*s.ScorePercentage)
+		resp.ScorePercentage = &score
+	}
+	return resp
 }
 
 // mapPracticeAnswerResponse projects an AnswerSummary onto the wire

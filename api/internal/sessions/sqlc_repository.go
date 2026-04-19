@@ -116,3 +116,7 @@ func (r *sqlcRepository) MarkSessionCompleted(ctx context.Context, id pgtype.UUI
 func (r *sqlcRepository) GetSessionByID(ctx context.Context, id pgtype.UUID) (db.PracticeSession, error) {
 	return r.queries.GetSessionByID(ctx, id)
 }
+
+func (r *sqlcRepository) ListUserSessionsForQuiz(ctx context.Context, arg db.ListUserSessionsForQuizParams) ([]db.ListUserSessionsForQuizRow, error) {
+	return r.queries.ListUserSessionsForQuiz(ctx, arg)
+}

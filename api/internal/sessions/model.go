@@ -77,6 +77,35 @@ type CompletedSessionDetail struct {
 	ScorePercentage int32
 }
 
+// SessionSummary is the compact per-session payload returned in the
+// ListSessions listing (ASK-149). Distinct from SessionDetail: no
+// Answers slice (callers fetch them via GET /sessions/{id}) and no
+// QuizID (the listing is already scoped to one quiz, so the wire
+// shape omits it -- see SessionSummaryResponse in the openapi spec).
+//
+// CompletedAt is a pointer because in-progress sessions have no
+// completion timestamp; ScorePercentage is a pointer for the same
+// reason -- the score is computed only when the session is
+// finalised. Both render as JSON null on the wire when nil.
+type SessionSummary struct {
+	ID              uuid.UUID
+	StartedAt       time.Time
+	CompletedAt     *time.Time
+	TotalQuestions  int32
+	CorrectAnswers  int32
+	ScorePercentage *int32
+}
+
+// ListSessionsResult bundles a page of SessionSummary rows with the
+// optional next-page cursor produced by the service. NextCursor is
+// nil when the caller is on the last page (no more rows beyond what
+// Sessions carries). The handler converts (NextCursor != nil) into
+// the wire `has_more` boolean and forwards the *string verbatim.
+type ListSessionsResult struct {
+	Sessions   []SessionSummary
+	NextCursor *string
+}
+
 // StartSessionResult bundles the SessionDetail with a Created flag
 // so the handler can choose 201 (created) vs 200 (resumed) without
 // re-deriving the path from the session row's timestamps. Both

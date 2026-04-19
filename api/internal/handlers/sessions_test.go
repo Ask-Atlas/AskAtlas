@@ -768,3 +768,324 @@ func TestSessionsHandler_GetSession_InProgress_NullScore(t *testing.T) {
 	require.True(t, ok)
 	assert.Empty(t, answersAny, "empty answers must serialize as []")
 }
+
+// ============================================================
+// ListPracticeSessions tests (ASK-149)
+// ============================================================
+
+func TestSessionsHandler_List_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	url := fmt.Sprintf("/quizzes/%s/sessions", uuid.NewString())
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestSessionsHandler_List_InvalidUUID_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	req := authedRequestMethod(t, http.MethodGet, "/quizzes/not-a-uuid/sessions", nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestSessionsHandler_List_LimitTooLarge_400 verifies the
+// handler-side range check rejects limit > 50 (oapi-codegen also
+// has the schema bound, so the wrapper may 400 first; either way
+// the result must be 400 and the service is NOT invoked).
+func TestSessionsHandler_List_LimitTooLarge_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	url := fmt.Sprintf("/quizzes/%s/sessions?limit=51", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestSessionsHandler_List_LimitZero_400: limit=0 must be rejected
+// (spec: 1 <= limit <= 50).
+func TestSessionsHandler_List_LimitZero_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	url := fmt.Sprintf("/quizzes/%s/sessions?limit=0", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestSessionsHandler_List_StatusUnknown_400: status=pending (or
+// any value other than active/completed) must be rejected. The
+// oapi-codegen wrapper enforces the enum at parse time, so we get
+// a 400 before reaching the handler body.
+func TestSessionsHandler_List_StatusUnknown_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	url := fmt.Sprintf("/quizzes/%s/sessions?status=pending", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestSessionsHandler_List_CursorInvalid_400: a garbled cursor
+// (not valid base64) must be rejected with details.cursor.
+func TestSessionsHandler_List_CursorInvalid_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	url := fmt.Sprintf("/quizzes/%s/sessions?cursor=not-valid-base64$$$", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	var resp api.AppError
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	require.NotNil(t, resp.Details)
+	assert.Equal(t, "invalid cursor value", (*resp.Details)["cursor"])
+}
+
+func TestSessionsHandler_List_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().ListSessions(mock.Anything, mock.Anything).
+		Return(sessions.ListSessionsResult{}, apperrors.NewNotFound("Quiz not found"))
+
+	url := fmt.Sprintf("/quizzes/%s/sessions", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestSessionsHandler_List_ServiceError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().ListSessions(mock.Anything, mock.Anything).
+		Return(sessions.ListSessionsResult{}, errors.New("connection refused"))
+
+	url := fmt.Sprintf("/quizzes/%s/sessions", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// TestSessionsHandler_List_OK_DefaultParams covers the happy path
+// with no query params: limit defaults to 10, status nil, cursor nil.
+// The mock checks that the handler forwards those defaults to the
+// service correctly. Response body is a non-empty page with no
+// next cursor.
+func TestSessionsHandler_List_OK_DefaultParams(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	quizID := uuid.New()
+	sessionID := uuid.New()
+	now := time.Date(2026, 4, 19, 10, 0, 0, 0, time.UTC)
+	completed := now.Add(15 * time.Minute)
+	score := int32(70)
+
+	mockSvc.EXPECT().ListSessions(mock.Anything,
+		mock.MatchedBy(func(p sessions.ListSessionsParams) bool {
+			return p.QuizID == quizID && p.PageLimit == 10 && p.Status == nil && p.Cursor == nil
+		})).Return(sessions.ListSessionsResult{
+		Sessions: []sessions.SessionSummary{
+			{
+				ID:              sessionID,
+				StartedAt:       now,
+				CompletedAt:     &completed,
+				TotalQuestions:  10,
+				CorrectAnswers:  7,
+				ScorePercentage: &score,
+			},
+		},
+	}, nil)
+
+	url := fmt.Sprintf("/quizzes/%s/sessions", quizID.String())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp api.ListSessionsResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	require.Len(t, resp.Sessions, 1)
+	assert.Equal(t, sessionID, uuid.UUID(resp.Sessions[0].Id))
+	assert.Equal(t, 10, resp.Sessions[0].TotalQuestions)
+	assert.Equal(t, 7, resp.Sessions[0].CorrectAnswers)
+	require.NotNil(t, resp.Sessions[0].ScorePercentage)
+	assert.Equal(t, 70, *resp.Sessions[0].ScorePercentage)
+	assert.False(t, resp.HasMore)
+	assert.Nil(t, resp.NextCursor)
+}
+
+// TestSessionsHandler_List_OK_HasMoreAndCursor verifies the wire
+// shape when more pages exist: has_more=true and next_cursor set.
+func TestSessionsHandler_List_OK_HasMoreAndCursor(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	cursor := "ZXhhbXBsZQ" // any non-nil string -- handler forwards verbatim
+	mockSvc.EXPECT().ListSessions(mock.Anything, mock.Anything).
+		Return(sessions.ListSessionsResult{
+			Sessions:   []sessions.SessionSummary{},
+			NextCursor: &cursor,
+		}, nil)
+
+	url := fmt.Sprintf("/quizzes/%s/sessions", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp api.ListSessionsResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.True(t, resp.HasMore)
+	require.NotNil(t, resp.NextCursor)
+	assert.Equal(t, cursor, *resp.NextCursor)
+}
+
+// TestSessionsHandler_List_OK_EmptyRendersBracket verifies the
+// empty-result wire shape: sessions:[] (NOT null), has_more:false,
+// next_cursor:null. We unmarshal into a generic map to assert the
+// raw JSON field types, not just the typed-decode result (which
+// would happily accept a JSON null as a nil slice).
+func TestSessionsHandler_List_OK_EmptyRendersBracket(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().ListSessions(mock.Anything, mock.Anything).
+		Return(sessions.ListSessionsResult{Sessions: []sessions.SessionSummary{}}, nil)
+
+	url := fmt.Sprintf("/quizzes/%s/sessions", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var raw map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &raw))
+	sessionsAny, ok := raw["sessions"].([]any)
+	require.True(t, ok, "sessions must serialize as JSON array, not null")
+	assert.Empty(t, sessionsAny)
+	assert.Equal(t, false, raw["has_more"])
+	assert.Nil(t, raw["next_cursor"])
+}
+
+// TestSessionsHandler_List_OK_FiltersForwarded verifies status +
+// limit + cursor query params are forwarded to the service in
+// their decoded form.
+func TestSessionsHandler_List_OK_FiltersForwarded(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	cursorTime := time.Date(2026, 4, 1, 10, 0, 0, 0, time.UTC)
+	cursorID := uuid.New()
+	encoded, err := sessions.EncodeSessionsCursor(sessions.SessionsListCursor{
+		StartedAt: cursorTime, ID: cursorID,
+	})
+	require.NoError(t, err)
+
+	mockSvc.EXPECT().ListSessions(mock.Anything,
+		mock.MatchedBy(func(p sessions.ListSessionsParams) bool {
+			return p.PageLimit == 25 &&
+				p.Status != nil && *p.Status == "completed" &&
+				p.Cursor != nil &&
+				p.Cursor.StartedAt.Equal(cursorTime) &&
+				p.Cursor.ID == cursorID
+		})).Return(sessions.ListSessionsResult{Sessions: []sessions.SessionSummary{}}, nil)
+
+	url := fmt.Sprintf("/quizzes/%s/sessions?limit=25&status=completed&cursor=%s",
+		uuid.NewString(), encoded)
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+// TestSessionsHandler_List_OK_InProgressNullScore verifies the wire
+// shape for an in-progress session: completed_at null AND
+// score_percentage null. Both must serialize as JSON null (not
+// missing keys, not zero values).
+func TestSessionsHandler_List_OK_InProgressNullScore(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	now := time.Date(2026, 4, 19, 10, 0, 0, 0, time.UTC)
+	mockSvc.EXPECT().ListSessions(mock.Anything, mock.Anything).
+		Return(sessions.ListSessionsResult{
+			Sessions: []sessions.SessionSummary{
+				{
+					ID:             uuid.New(),
+					StartedAt:      now,
+					TotalQuestions: 10,
+					CorrectAnswers: 3,
+					// CompletedAt + ScorePercentage left nil
+				},
+			},
+		}, nil)
+
+	url := fmt.Sprintf("/quizzes/%s/sessions", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	// Inspect raw JSON so we catch a missing-key bug (the typed
+	// decode would happily accept either "missing" or "null").
+	var raw map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &raw))
+	sessionsAny, ok := raw["sessions"].([]any)
+	require.True(t, ok)
+	require.Len(t, sessionsAny, 1)
+	first := sessionsAny[0].(map[string]any)
+	assert.Nil(t, first["completed_at"], "in-progress: completed_at must be JSON null")
+	assert.Nil(t, first["score_percentage"], "in-progress: score_percentage must be JSON null")
+}
