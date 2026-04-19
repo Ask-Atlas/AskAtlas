@@ -960,6 +960,70 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /quizzes/{quiz_id}/questions:
+    post:
+      operationId: AddQuizQuestion
+      summary: Add a question to an existing quiz
+      description: |
+        Appends a single question (with its answer options for MCQ, or
+        the auto-expanded True/False option pair for TF) to an
+        existing quiz. The validation rules are identical to the
+        per-question rules on POST /api/study-guides/{id}/quizzes --
+        same `type` enum, same per-type `correct_answer` typing, same
+        MCQ option counts and "exactly one correct" invariant.
+
+        Authorization: creator-only. The authenticated user MUST be
+        `quizzes.creator_id`; any other authenticated user gets 403.
+
+        Per-quiz cap: a quiz can hold at most 100 questions. The
+        count is taken inside the same transaction as the insert so
+        a concurrent add cannot push the quiz over the cap.
+
+        `quizzes.updated_at` is refreshed on every successful add.
+        Active practice sessions are NOT affected -- the new
+        question is not retro-injected into existing
+        `practice_session_questions` snapshots; only sessions started
+        after the add will include it.
+
+        404 covers BOTH the quiz being missing/soft-deleted AND the
+        parent study guide being soft-deleted (same convention as
+        PATCH /quizzes/{quiz_id}).
+
+        Default `sort_order`: when omitted, defaults to the current
+        question count (so the new question lands at the end of the
+        existing sequence). An explicit value is honored verbatim --
+        callers may interleave with existing questions if they want.
+      parameters:
+        - name: quiz_id
+          in: path
+          description: The unique UUID of the quiz to add a question to
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuizQuestion'
+      responses:
+        '201':
+          description: The freshly-created question with its options and resolved correct answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizQuestionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /study-guides/{study_guide_id}/recommendations:
     post:
       operationId: RecommendStudyGuide

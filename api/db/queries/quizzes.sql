@@ -241,3 +241,50 @@ FROM quiz_answer_options o
 JOIN quiz_questions qq ON qq.id = o.question_id
 WHERE qq.quiz_id = sqlc.arg(quiz_id)::uuid
 ORDER BY o.question_id ASC, o.sort_order ASC, o.id ASC;
+
+-- name: CountQuizQuestions :one
+-- Count of all questions on a quiz. Used by AddQuizQuestion (ASK-115)
+-- to enforce the per-quiz 100-question cap inside the same
+-- transaction as the insert, so two concurrent adds at the boundary
+-- can't both squeeze through. Also doubles as the default
+-- sort_order resolution (a new question lands at index = current
+-- count when the caller doesn't supply an explicit value).
+SELECT COUNT(*)::bigint AS count
+FROM quiz_questions
+WHERE quiz_id = sqlc.arg(quiz_id)::uuid;
+
+-- name: TouchQuizUpdatedAt :exec
+-- Bumps quizzes.updated_at = now() without touching any other
+-- column. Called by AddQuizQuestion (ASK-115) so the quiz row's
+-- modified-time reflects the structural change. Kept as a focused
+-- single-column UPDATE rather than reusing the broader UpdateQuiz
+-- query so a future AddQuizQuestion review can spot the intent at
+-- a glance and so a CASE expression with both args nil isn't
+-- relied on as the "no-op write that bumps updated_at" path.
+UPDATE quizzes
+SET updated_at = now()
+WHERE id = sqlc.arg(id)::uuid;
+
+-- name: GetQuizQuestionByID :one
+-- Hydrates a single question row by id. Used by AddQuizQuestion
+-- (ASK-115) to project the freshly-inserted row onto the
+-- QuizQuestionResponse wire shape after the tx commits. Mirrors
+-- the field selection of ListQuizQuestionsByQuiz so the same Go
+-- mapper (mapQuestion) can consume both row types.
+SELECT
+  id, type, question_text, hint,
+  feedback_correct, feedback_incorrect, reference_answer, sort_order
+FROM quiz_questions
+WHERE id = sqlc.arg(id)::uuid;
+
+-- name: ListQuizAnswerOptionsByQuestion :many
+-- All answer options for one question, ordered by sort_order then
+-- id. Used by AddQuizQuestion (ASK-115) to attach the freshly-
+-- inserted option rows to the question on the response. The
+-- single-question scope keeps the read narrow -- no need to load
+-- every option on the parent quiz when the caller only wants the
+-- new question.
+SELECT id, question_id, text, is_correct, sort_order
+FROM quiz_answer_options
+WHERE question_id = sqlc.arg(question_id)::uuid
+ORDER BY sort_order ASC, id ASC;

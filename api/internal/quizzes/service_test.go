@@ -1279,3 +1279,475 @@ func TestCreateQuiz_InsertError_Returns500(t *testing.T) {
 	sysErr := apperrors.ToHTTPError(err)
 	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
 }
+
+// ============================================================
+// AddQuestion (ASK-115)
+// ============================================================
+//
+// Helper: validAddParams returns a baseline AddQuestionParams with a
+// well-formed MCQ question. Per-test variants override individual
+// fields to exercise specific edge cases. The QuizID + ViewerID are
+// fresh per call so happy-path and 403-mismatch tests can compose.
+func validAddParams(t *testing.T) quizzes.AddQuestionParams {
+	t.Helper()
+	return quizzes.AddQuestionParams{
+		QuizID:   uuid.New(),
+		ViewerID: uuid.New(),
+		Question: mcqQuestion("Which traversal visits the root node first?", 1),
+	}
+}
+
+// expectAddTxLockSuccess wires the locked SELECT + count check to
+// the happy-path values: viewer matches creator, quiz live, parent
+// guide live, count under the cap. Used by every AddQuestion happy-
+// path test so the per-test setup focuses on the question payload
+// + insert assertions rather than re-stating the gate plumbing.
+func expectAddTxLockSuccess(repo *mock_quizzes.MockRepository, quizID, creatorID uuid.UUID, count int64) {
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			ID:        utils.UUID(quizID),
+			CreatorID: utils.UUID(creatorID),
+		}, nil)
+	repo.EXPECT().CountQuizQuestions(mock.Anything, mock.Anything).Return(count, nil)
+	repo.EXPECT().TouchQuizUpdatedAt(mock.Anything, mock.Anything).Return(nil)
+}
+
+// expectAddHydration wires GetQuizQuestionByID + ListQuizAnswerOptionsByQuestion
+// to project the inserted question back onto the response. Mirrors
+// expectHydration for the quiz-level path but scoped to one question.
+func expectAddHydration(repo *mock_quizzes.MockRepository, questionID uuid.UUID, qType db.QuestionType, questionText string, sortOrder int32, referenceAnswer pgtype.Text, options []db.QuizAnswerOption) {
+	repo.EXPECT().GetQuizQuestionByID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionByIDRow{
+			ID:              utils.UUID(questionID),
+			Type:            qType,
+			QuestionText:    questionText,
+			ReferenceAnswer: referenceAnswer,
+			SortOrder:       sortOrder,
+		}, nil)
+	repo.EXPECT().ListQuizAnswerOptionsByQuestion(mock.Anything, mock.Anything).Return(options, nil)
+}
+
+// ---- AddQuestion validation tests (no DB / InTx wiring needed) ----
+
+func TestAddQuestion_BlankQuestionText_400(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	svc := quizzes.NewService(repo)
+
+	p := validAddParams(t)
+	p.Question.Question = "   "
+	_, err := svc.AddQuestion(context.Background(), p)
+	assertBadRequest(t, err, "question")
+}
+
+func TestAddQuestion_UnknownType_400(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	svc := quizzes.NewService(repo)
+
+	p := validAddParams(t)
+	p.Question.Type = "essay"
+	_, err := svc.AddQuestion(context.Background(), p)
+	assertBadRequest(t, err, "type")
+}
+
+func TestAddQuestion_MCQ_ZeroCorrect_400(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	svc := quizzes.NewService(repo)
+
+	p := validAddParams(t)
+	for i := range p.Question.Options {
+		p.Question.Options[i].IsCorrect = false
+	}
+	_, err := svc.AddQuestion(context.Background(), p)
+	assertBadRequest(t, err, "options")
+	appErr := extractAppError(t, err)
+	assert.Contains(t, appErr.Details["options"], "exactly one")
+}
+
+func TestAddQuestion_TF_NonBoolean_400(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	svc := quizzes.NewService(repo)
+
+	p := validAddParams(t)
+	p.Question = quizzes.CreateQuizQuestionInput{
+		Type:          quizzes.QuestionTypeTrueFalse,
+		Question:      "Is the sky blue?",
+		CorrectAnswer: "yes",
+	}
+	_, err := svc.AddQuestion(context.Background(), p)
+	assertBadRequest(t, err, "correct_answer")
+	appErr := extractAppError(t, err)
+	assert.Contains(t, appErr.Details["correct_answer"], "boolean")
+}
+
+func TestAddQuestion_Freeform_EmptyAnswer_400(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	svc := quizzes.NewService(repo)
+
+	p := validAddParams(t)
+	p.Question = quizzes.CreateQuizQuestionInput{
+		Type:          quizzes.QuestionTypeFreeform,
+		Question:      "What is BFS?",
+		CorrectAnswer: "   ",
+	}
+	_, err := svc.AddQuestion(context.Background(), p)
+	assertBadRequest(t, err, "correct_answer")
+}
+
+// ---- AddQuestion authorization + state tests ----
+
+// TestAddQuestion_QuizNotFound_404 covers the spec's "quiz_id has
+// no matching row" path -- the locked SELECT returns sql.ErrNoRows
+// and the service maps it to 404.
+func TestAddQuestion_QuizNotFound_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{}, sql.ErrNoRows)
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.AddQuestion(context.Background(), validAddParams(t))
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusNotFound, sysErr.Code)
+}
+
+// TestAddQuestion_QuizSoftDeleted_404 covers AC5: a soft-deleted
+// quiz returns 404 even when the lock query technically returned a
+// row (deleted_at is non-null).
+func TestAddQuestion_QuizSoftDeleted_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			CreatorID: utils.UUID(creatorID),
+			DeletedAt: pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+		}, nil)
+
+	svc := quizzes.NewService(repo)
+	p := validAddParams(t)
+	p.ViewerID = creatorID
+	_, err := svc.AddQuestion(context.Background(), p)
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusNotFound, sysErr.Code)
+}
+
+// TestAddQuestion_GuideSoftDeleted_404 covers AC6: parent study
+// guide soft-deleted -> 404 (not 403, not 200) even when viewer is
+// the creator. The 404 wins to match the spec's "missing OR
+// deleted = 404" rule.
+func TestAddQuestion_GuideSoftDeleted_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			CreatorID:      utils.UUID(creatorID),
+			GuideDeletedAt: pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+		}, nil)
+
+	svc := quizzes.NewService(repo)
+	p := validAddParams(t)
+	p.ViewerID = creatorID
+	_, err := svc.AddQuestion(context.Background(), p)
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusNotFound, sysErr.Code)
+}
+
+// TestAddQuestion_NotCreator_403 covers AC4: a different
+// authenticated user -> 403 (the row is live and the viewer is not
+// the creator).
+func TestAddQuestion_NotCreator_403(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	otherUser := uuid.New()
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			CreatorID: utils.UUID(creatorID),
+		}, nil)
+
+	svc := quizzes.NewService(repo)
+	p := validAddParams(t)
+	p.ViewerID = otherUser
+	_, err := svc.AddQuestion(context.Background(), p)
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusForbidden, sysErr.Code)
+}
+
+// TestAddQuestion_AtCapacity_400 covers AC3: a quiz already at the
+// 100-question cap rejects the next add with a typed 400. The
+// count check happens INSIDE the tx (after the lock) so the
+// cap is race-safe.
+func TestAddQuestion_AtCapacity_400(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			CreatorID: utils.UUID(creatorID),
+		}, nil)
+	repo.EXPECT().CountQuizQuestions(mock.Anything, mock.Anything).
+		Return(int64(quizzes.MaxQuestionsCount), nil)
+
+	svc := quizzes.NewService(repo)
+	p := validAddParams(t)
+	p.ViewerID = creatorID
+	_, err := svc.AddQuestion(context.Background(), p)
+	assertBadRequest(t, err, "questions")
+	appErr := extractAppError(t, err)
+	assert.Contains(t, appErr.Details["questions"], "more than 100")
+}
+
+// ---- AddQuestion happy-path tests ----
+
+// TestAddQuestion_MCQ_Success covers AC1: creator on a 5-question
+// quiz adds a valid MCQ -> 201, question + options inserted, quiz
+// updated_at touched, response carries the resolved correct_answer.
+func TestAddQuestion_MCQ_Success(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	quizID := uuid.New()
+	questionID := uuid.New()
+
+	expectAddTxLockSuccess(repo, quizID, creatorID, 5)
+
+	var capturedQuestion db.InsertQuizQuestionParams
+	repo.EXPECT().InsertQuizQuestion(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, arg db.InsertQuizQuestionParams) (pgtype.UUID, error) {
+			capturedQuestion = arg
+			return utils.UUID(questionID), nil
+		})
+
+	var capturedOptions []db.InsertQuizAnswerOptionParams
+	repo.EXPECT().InsertQuizAnswerOption(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, arg db.InsertQuizAnswerOptionParams) error {
+			capturedOptions = append(capturedOptions, arg)
+			return nil
+		}).Times(4)
+
+	expectAddHydration(repo, questionID, db.QuestionTypeMultipleChoice,
+		"Which traversal visits the root node first?", 5, pgtype.Text{},
+		[]db.QuizAnswerOption{
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "Random order", IsCorrect: false, SortOrder: 0},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "Sorted ascending", IsCorrect: true, SortOrder: 1},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "Sorted descending", IsCorrect: false, SortOrder: 2},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "Level order", IsCorrect: false, SortOrder: 3},
+		},
+	)
+
+	svc := quizzes.NewService(repo)
+	p := validAddParams(t)
+	p.QuizID = quizID
+	p.ViewerID = creatorID
+	got, err := svc.AddQuestion(context.Background(), p)
+	require.NoError(t, err)
+
+	assert.Equal(t, questionID, got.ID)
+	assert.Equal(t, quizzes.QuestionTypeMultipleChoice, got.Type)
+	assert.Equal(t, "Sorted ascending", got.CorrectAnswer)
+	require.Len(t, got.Options, 4)
+
+	// sort_order defaulted to count (5) since the caller didn't supply one.
+	assert.Equal(t, int32(5), capturedQuestion.SortOrder)
+	assert.Equal(t, db.QuestionTypeMultipleChoice, capturedQuestion.Type)
+	require.Len(t, capturedOptions, 4)
+}
+
+// TestAddQuestion_TF_Success covers AC2: a true-false question
+// auto-expands to 2 quiz_answer_options ("True" + "False") with
+// the matching is_correct flag.
+func TestAddQuestion_TF_Success(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	quizID := uuid.New()
+	questionID := uuid.New()
+
+	expectAddTxLockSuccess(repo, quizID, creatorID, 2)
+	repo.EXPECT().InsertQuizQuestion(mock.Anything, mock.Anything).
+		Return(utils.UUID(questionID), nil)
+
+	var capturedOptions []db.InsertQuizAnswerOptionParams
+	repo.EXPECT().InsertQuizAnswerOption(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, arg db.InsertQuizAnswerOptionParams) error {
+			capturedOptions = append(capturedOptions, arg)
+			return nil
+		}).Times(2)
+
+	expectAddHydration(repo, questionID, db.QuestionTypeTrueFalse,
+		"Is BFS optimal in unweighted graphs?", 2, pgtype.Text{},
+		[]db.QuizAnswerOption{
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "True", IsCorrect: true, SortOrder: 0},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "False", IsCorrect: false, SortOrder: 1},
+		},
+	)
+
+	svc := quizzes.NewService(repo)
+	p := quizzes.AddQuestionParams{
+		QuizID:   quizID,
+		ViewerID: creatorID,
+		Question: tfQuestion("Is BFS optimal in unweighted graphs?", true),
+	}
+	got, err := svc.AddQuestion(context.Background(), p)
+	require.NoError(t, err)
+
+	assert.Equal(t, true, got.CorrectAnswer)
+	require.Len(t, capturedOptions, 2)
+	assert.Equal(t, "True", capturedOptions[0].Text)
+	assert.True(t, capturedOptions[0].IsCorrect)
+	assert.Equal(t, "False", capturedOptions[1].Text)
+	assert.False(t, capturedOptions[1].IsCorrect)
+}
+
+// TestAddQuestion_Freeform_Success covers the freeform path: the
+// reference_answer is persisted on quiz_questions and ZERO
+// quiz_answer_options rows are inserted.
+func TestAddQuestion_Freeform_Success(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	quizID := uuid.New()
+	questionID := uuid.New()
+
+	expectAddTxLockSuccess(repo, quizID, creatorID, 1)
+
+	var capturedQuestion db.InsertQuizQuestionParams
+	repo.EXPECT().InsertQuizQuestion(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, arg db.InsertQuizQuestionParams) (pgtype.UUID, error) {
+			capturedQuestion = arg
+			return utils.UUID(questionID), nil
+		})
+	// Crucially: no InsertQuizAnswerOption expectation. mockery's
+	// Cleanup-time AssertExpectations fails if the service touches
+	// it for a freeform-only add.
+
+	expectAddHydration(repo, questionID, db.QuestionTypeFreeform,
+		"What is the worst-case time of quicksort?", 1,
+		pgtype.Text{String: "O(n^2)", Valid: true},
+		nil,
+	)
+
+	svc := quizzes.NewService(repo)
+	p := quizzes.AddQuestionParams{
+		QuizID:   quizID,
+		ViewerID: creatorID,
+		Question: freeformQuestion("What is the worst-case time of quicksort?", "O(n^2)"),
+	}
+	got, err := svc.AddQuestion(context.Background(), p)
+	require.NoError(t, err)
+
+	assert.True(t, capturedQuestion.ReferenceAnswer.Valid)
+	assert.Equal(t, "O(n^2)", capturedQuestion.ReferenceAnswer.String)
+	assert.Equal(t, "O(n^2)", got.CorrectAnswer)
+	assert.Empty(t, got.Options)
+}
+
+// TestAddQuestion_Boundary_99To100_OK covers the boundary case:
+// adding the 100th question on a quiz that already holds 99 must
+// succeed.
+func TestAddQuestion_Boundary_99To100_OK(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	quizID := uuid.New()
+	questionID := uuid.New()
+
+	expectAddTxLockSuccess(repo, quizID, creatorID, int64(quizzes.MaxQuestionsCount-1))
+	repo.EXPECT().InsertQuizQuestion(mock.Anything, mock.Anything).
+		Return(utils.UUID(questionID), nil)
+	repo.EXPECT().InsertQuizAnswerOption(mock.Anything, mock.Anything).
+		Return(nil).Times(4)
+
+	expectAddHydration(repo, questionID, db.QuestionTypeMultipleChoice,
+		"Which traversal visits the root node first?",
+		int32(quizzes.MaxQuestionsCount-1), pgtype.Text{},
+		[]db.QuizAnswerOption{
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "Random order", IsCorrect: false, SortOrder: 0},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "Sorted ascending", IsCorrect: true, SortOrder: 1},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "Sorted descending", IsCorrect: false, SortOrder: 2},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "Level order", IsCorrect: false, SortOrder: 3},
+		},
+	)
+
+	svc := quizzes.NewService(repo)
+	p := validAddParams(t)
+	p.QuizID = quizID
+	p.ViewerID = creatorID
+	_, err := svc.AddQuestion(context.Background(), p)
+	require.NoError(t, err)
+}
+
+// TestAddQuestion_ExplicitSortOrderHonored covers the spec's
+// "explicit sort_order is preserved verbatim" rule -- a caller can
+// interleave with the existing sequence by sending its own value
+// (including 0) instead of letting the service default to count.
+func TestAddQuestion_ExplicitSortOrderHonored(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	quizID := uuid.New()
+	questionID := uuid.New()
+
+	expectAddTxLockSuccess(repo, quizID, creatorID, 5)
+
+	var capturedQuestion db.InsertQuizQuestionParams
+	repo.EXPECT().InsertQuizQuestion(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, arg db.InsertQuizQuestionParams) (pgtype.UUID, error) {
+			capturedQuestion = arg
+			return utils.UUID(questionID), nil
+		})
+	repo.EXPECT().InsertQuizAnswerOption(mock.Anything, mock.Anything).
+		Return(nil).Times(4)
+
+	expectAddHydration(repo, questionID, db.QuestionTypeMultipleChoice,
+		"Which traversal visits the root node first?", 0, pgtype.Text{},
+		[]db.QuizAnswerOption{
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "Random order", IsCorrect: false, SortOrder: 0},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "Sorted ascending", IsCorrect: true, SortOrder: 1},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "Sorted descending", IsCorrect: false, SortOrder: 2},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "Level order", IsCorrect: false, SortOrder: 3},
+		},
+	)
+
+	svc := quizzes.NewService(repo)
+	p := validAddParams(t)
+	p.QuizID = quizID
+	p.ViewerID = creatorID
+	zero := int32(0)
+	p.Question.SortOrder = &zero
+	_, err := svc.AddQuestion(context.Background(), p)
+	require.NoError(t, err)
+
+	assert.Equal(t, int32(0), capturedQuestion.SortOrder, "explicit 0 should be honored")
+}
+
+// TestAddQuestion_LockError_500 surfaces a DB-level failure on the
+// locked SELECT as a wrapped 500. errors.New (not sql.ErrNoRows)
+// keeps it on the 'unexpected DB failure' branch rather than the
+// 404 branch.
+func TestAddQuestion_LockError_500(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{}, errors.New("connection refused"))
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.AddQuestion(context.Background(), validAddParams(t))
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}

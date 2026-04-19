@@ -111,6 +111,19 @@ type DeleteQuizParams struct {
 	ViewerID uuid.UUID
 }
 
+// AddQuestionParams is the input to Service.AddQuestion (ASK-115).
+// ViewerID drives the creator-only authorization gate; the service
+// returns apperrors.NewForbidden if it doesn't match the row's
+// creator_id. Question carries the same per-question payload as a
+// single entry inside CreateQuizParams.Questions -- the validation
+// rules are intentionally identical so a question that would have
+// been accepted on create is also accepted on add.
+type AddQuestionParams struct {
+	QuizID   uuid.UUID
+	ViewerID uuid.UUID
+	Question CreateQuizQuestionInput
+}
+
 // UpdateQuizParams is the input to Service.UpdateQuiz (ASK-153).
 // Tri-state semantics for description require an explicit
 // ClearDescription flag because Go cannot distinguish "field

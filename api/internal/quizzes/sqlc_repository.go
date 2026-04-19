@@ -106,3 +106,19 @@ func (r *sqlcRepository) GetQuizForUpdateWithParentStatus(ctx context.Context, i
 func (r *sqlcRepository) UpdateQuiz(ctx context.Context, arg db.UpdateQuizParams) error {
 	return r.queries.UpdateQuiz(ctx, arg)
 }
+
+func (r *sqlcRepository) CountQuizQuestions(ctx context.Context, quizID pgtype.UUID) (int64, error) {
+	return r.queries.CountQuizQuestions(ctx, quizID)
+}
+
+func (r *sqlcRepository) TouchQuizUpdatedAt(ctx context.Context, id pgtype.UUID) error {
+	return r.queries.TouchQuizUpdatedAt(ctx, id)
+}
+
+func (r *sqlcRepository) GetQuizQuestionByID(ctx context.Context, id pgtype.UUID) (db.GetQuizQuestionByIDRow, error) {
+	return r.queries.GetQuizQuestionByID(ctx, id)
+}
+
+func (r *sqlcRepository) ListQuizAnswerOptionsByQuestion(ctx context.Context, questionID pgtype.UUID) ([]db.QuizAnswerOption, error) {
+	return r.queries.ListQuizAnswerOptionsByQuestion(ctx, questionID)
+}

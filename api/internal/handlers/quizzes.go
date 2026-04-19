@@ -24,6 +24,7 @@ type QuizService interface {
 	ListQuizzes(ctx context.Context, params quizzes.ListQuizzesParams) ([]quizzes.QuizListItem, error)
 	DeleteQuiz(ctx context.Context, params quizzes.DeleteQuizParams) error
 	UpdateQuiz(ctx context.Context, params quizzes.UpdateQuizParams) (quizzes.QuizDetail, error)
+	AddQuestion(ctx context.Context, params quizzes.AddQuestionParams) (quizzes.Question, error)
 }
 
 // QuizzesHandler manages incoming HTTP requests for the quizzes
@@ -206,52 +207,133 @@ func (h *QuizzesHandler) CreateQuiz(w http.ResponseWriter, r *http.Request, stud
 	respondJSON(w, http.StatusCreated, mapQuizDetailResponse(detail))
 }
 
-// convertCreateQuizQuestions projects the openapi-generated request
-// type onto the domain CreateQuizQuestionInput slice. SortOrder
-// crosses an int (from the wire decoder) -> int32 (DB column) bound
-// here; on 64-bit platforms a >2^31 input would silently overflow
-// into a negative value, so reject anything outside [0, MaxInt32]
-// up-front with a typed 400 (copilot PR feedback).
+// AddQuizQuestion handles POST /quizzes/{quiz_id}/questions (ASK-115).
+// Creator-only -- the service runs the locked SELECT + creator check
+// + question-cap check + insert + updated_at touch in a single
+// transaction. The wire request body is the same shape as one
+// element of CreateQuizRequest.questions, so the per-question
+// converter is shared with CreateQuiz; service-layer validation is
+// also shared (validateQuestion is reused), so a question accepted
+// on create is also accepted on add.
 //
-// Returns a typed *apperrors.AppError on validation failure so the
-// handler can RespondWithError without an extra unwrap.
+// 201 on success carries the freshly-hydrated QuizQuestionResponse
+// (id + per-type correct_answer resolution + non-null feedback
+// envelope) so the frontend can patch its local state without a
+// follow-up GET on the parent quiz.
+func (h *QuizzesHandler) AddQuizQuestion(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	var body api.AddQuizQuestionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", nil))
+		return
+	}
+
+	// Empty fieldPrefix: the question IS the whole body, so 400
+	// detail keys collapse to e.g. `sort_order` rather than
+	// `questions[0].sort_order`.
+	question, convErr := convertCreateQuizQuestion(body, "")
+	if convErr != nil {
+		apperrors.RespondWithError(w, convErr)
+		return
+	}
+
+	created, err := h.service.AddQuestion(r.Context(), quizzes.AddQuestionParams{
+		QuizID:   uuid.UUID(quizId),
+		ViewerID: viewerID,
+		Question: question,
+	})
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("AddQuizQuestion failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, mapQuizQuestionResponse(created))
+}
+
+// convertCreateQuizQuestions projects the openapi-generated request
+// type onto the domain CreateQuizQuestionInput slice. The per-question
+// conversion (including sort_order overflow protection) is delegated
+// to convertCreateQuizQuestion; this wrapper just iterates and
+// stitches the per-index field key (e.g. `questions[3].sort_order`)
+// for any 400 details.
 func convertCreateQuizQuestions(in []api.CreateQuizQuestion) ([]quizzes.CreateQuizQuestionInput, *apperrors.AppError) {
 	if len(in) == 0 {
 		return nil, nil
 	}
 	out := make([]quizzes.CreateQuizQuestionInput, len(in))
 	for i, q := range in {
-		input := quizzes.CreateQuizQuestionInput{
-			Type:              quizzes.QuestionType(q.Type),
-			Question:          q.Question,
-			CorrectAnswer:     q.CorrectAnswer,
-			Hint:              q.Hint,
-			FeedbackCorrect:   q.FeedbackCorrect,
-			FeedbackIncorrect: q.FeedbackIncorrect,
-		}
-		if q.SortOrder != nil {
-			s := *q.SortOrder
-			if s < 0 || s > math.MaxInt32 {
-				return nil, apperrors.NewBadRequest("Invalid request body", map[string]string{
-					fmt.Sprintf("questions[%d].sort_order", i): fmt.Sprintf("must be between 0 and %d", math.MaxInt32),
-				})
-			}
-			v := int32(s)
-			input.SortOrder = &v
-		}
-		if q.Options != nil {
-			opts := make([]quizzes.CreateQuizMCQOptionInput, len(*q.Options))
-			for j, opt := range *q.Options {
-				opts[j] = quizzes.CreateQuizMCQOptionInput{
-					Text:      opt.Text,
-					IsCorrect: opt.IsCorrect,
-				}
-			}
-			input.Options = opts
+		input, err := convertCreateQuizQuestion(q, fmt.Sprintf("questions[%d]", i))
+		if err != nil {
+			return nil, err
 		}
 		out[i] = input
 	}
 	return out, nil
+}
+
+// convertCreateQuizQuestion projects a single openapi CreateQuizQuestion
+// onto the domain CreateQuizQuestionInput. SortOrder crosses an int
+// (from the wire decoder) -> int32 (DB column) bound here; on 64-bit
+// platforms a >2^31 input would silently overflow into a negative
+// value, so reject anything outside [0, MaxInt32] up-front with a
+// typed 400 (copilot PR feedback on ASK-150).
+//
+// fieldPrefix is the dotted-path prefix for any 400 detail keys --
+// e.g. "questions[3]" inside CreateQuiz, or "" inside AddQuizQuestion
+// where the question is the entire body. An empty prefix collapses
+// the field key to just `sort_order`.
+//
+// Returns a typed *apperrors.AppError on validation failure so the
+// handler can RespondWithError without an extra unwrap.
+func convertCreateQuizQuestion(q api.CreateQuizQuestion, fieldPrefix string) (quizzes.CreateQuizQuestionInput, *apperrors.AppError) {
+	input := quizzes.CreateQuizQuestionInput{
+		Type:              quizzes.QuestionType(q.Type),
+		Question:          q.Question,
+		CorrectAnswer:     q.CorrectAnswer,
+		Hint:              q.Hint,
+		FeedbackCorrect:   q.FeedbackCorrect,
+		FeedbackIncorrect: q.FeedbackIncorrect,
+	}
+	if q.SortOrder != nil {
+		s := *q.SortOrder
+		if s < 0 || s > math.MaxInt32 {
+			return quizzes.CreateQuizQuestionInput{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
+				prefixedKey(fieldPrefix, "sort_order"): fmt.Sprintf("must be between 0 and %d", math.MaxInt32),
+			})
+		}
+		v := int32(s)
+		input.SortOrder = &v
+	}
+	if q.Options != nil {
+		opts := make([]quizzes.CreateQuizMCQOptionInput, len(*q.Options))
+		for j, opt := range *q.Options {
+			opts[j] = quizzes.CreateQuizMCQOptionInput{
+				Text:      opt.Text,
+				IsCorrect: opt.IsCorrect,
+			}
+		}
+		input.Options = opts
+	}
+	return input, nil
+}
+
+// prefixedKey joins a dotted field path. An empty prefix collapses
+// to just the field name so AddQuizQuestion (where the question is
+// the whole body) renders `sort_order` rather than `.sort_order`.
+func prefixedKey(prefix, field string) string {
+	if prefix == "" {
+		return field
+	}
+	return prefix + "." + field
 }
 
 // mapQuizDetailResponse projects the QuizDetail domain type onto
