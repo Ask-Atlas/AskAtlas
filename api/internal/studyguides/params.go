@@ -135,6 +135,25 @@ type DeleteStudyGuideParams struct {
 	ViewerID     uuid.UUID
 }
 
+// UpdateStudyGuideParams is the input to Service.UpdateStudyGuide
+// (ASK-129). Every updatable field is a pointer so a nil value
+// reliably encodes "field absent in the request body" -- distinct
+// from "field provided as empty/zero". The service rejects an
+// all-nil-fields call as 400 'at least one field required' before
+// SQL.
+//
+// Tag semantics: nil = don't touch existing tags; non-nil (even
+// length 0) = REPLACE existing tags with the given list (after
+// normalization).
+type UpdateStudyGuideParams struct {
+	StudyGuideID uuid.UUID
+	ViewerID     uuid.UUID
+	Title        *string
+	Description  *string
+	Content      *string
+	Tags         *[]string
+}
+
 // CastVoteParams is the input to Service.CastVote (ASK-139). ViewerID
 // is taken from the JWT in the handler. Vote is the GuideVote enum
 // declared in model.go (mirrors the vote_direction Postgres enum).

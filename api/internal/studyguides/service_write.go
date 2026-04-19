@@ -11,6 +11,7 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // normalizeTags trims, lowercases, and dedupes a raw input tag slice.
@@ -386,6 +387,142 @@ func (s *Service) RemoveRecommendation(ctx context.Context, p RemoveRecommendati
 		return apperrors.NewNotFound("Recommendation not found")
 	}
 	return nil
+}
+
+// validateUpdateParams runs the service-layer defensive re-validation
+// for UpdateStudyGuide. openapi enforces the per-field caps at the
+// wrapper layer in production; this re-check covers Go callers
+// (including tests) and adds the at-least-one-field rule that openapi
+// can't express directly.
+//
+// Title is the only field with a non-empty constraint when present
+// (the spec says title cannot be empty after trim). Description and
+// content have only an upper bound. Tag-count + per-tag length are
+// re-checked by normalizeTags downstream so we don't duplicate that
+// logic here.
+func validateUpdateParams(p UpdateStudyGuideParams) error {
+	if p.Title == nil && p.Description == nil && p.Content == nil && p.Tags == nil {
+		return apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"body": "at least one field must be provided",
+		})
+	}
+	if p.Title != nil {
+		if strings.TrimSpace(*p.Title) == "" {
+			return apperrors.NewBadRequest("Invalid request body", map[string]string{
+				"title": "must not be empty",
+			})
+		}
+		if len(*p.Title) > MaxTitleLength {
+			return apperrors.NewBadRequest("Invalid request body", map[string]string{
+				"title": fmt.Sprintf("must be %d characters or fewer", MaxTitleLength),
+			})
+		}
+	}
+	if p.Description != nil && len(*p.Description) > MaxDescriptionLength {
+		return apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"description": fmt.Sprintf("must be %d characters or fewer", MaxDescriptionLength),
+		})
+	}
+	if p.Content != nil && len(*p.Content) > MaxContentLength {
+		return apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"content": fmt.Sprintf("must be %d characters or fewer", MaxContentLength),
+		})
+	}
+	return nil
+}
+
+// UpdateStudyGuide partially updates a guide (ASK-129). Only the
+// fields provided as non-nil pointers in p are touched; absent fields
+// preserve their current values via the SQL's COALESCE(narg, current)
+// pattern.
+//
+// Order of checks (in a single transaction):
+//  1. validateUpdateParams -- per-field caps + at-least-one-field rule.
+//  2. Normalize provided fields (trim title; trim+drop-empty for
+//     description/content matching CreateStudyGuide; normalize tags).
+//  3. GetStudyGuideByIDForUpdate -- locked SELECT inside the tx so a
+//     concurrent delete can't race the update.
+//  4. 404 if missing or already soft-deleted.
+//  5. 403 if creator_id != viewer_id.
+//  6. UpdateStudyGuide.
+//
+// After the tx commits, re-hydrates the full StudyGuideDetail via
+// GetStudyGuide so the response includes the viewer's vote, the
+// recommenders, quizzes, resources, and files (same wire shape as
+// GET /study-guides/{id}). The 5-way sibling fan-out is reused from
+// the read path -- no parallel projection logic to keep in sync with
+// GET.
+//
+// Description/content trim semantics: a body field of "  " is trimmed
+// to "" and treated as "no update on this field" rather than
+// persisting whitespace. Mirrors CreateStudyGuide; users can't clear
+// description/content via this endpoint (would need a separate clear
+// endpoint to distinguish "absent" from "set to NULL").
+func (s *Service) UpdateStudyGuide(ctx context.Context, p UpdateStudyGuideParams) (StudyGuideDetail, error) {
+	if err := validateUpdateParams(p); err != nil {
+		return StudyGuideDetail{}, err
+	}
+
+	guidePgxID := utils.UUID(p.StudyGuideID)
+
+	// Resolve the SQL params before opening the tx. Normalization can
+	// fail (oversized tag, empty-after-trim tag) and surfacing that as
+	// 400 outside the tx is cleaner than rolling back.
+	sqlArgs := db.UpdateStudyGuideParams{ID: guidePgxID}
+	if p.Title != nil {
+		sqlArgs.Title = pgtype.Text{String: strings.TrimSpace(*p.Title), Valid: true}
+	}
+	if p.Description != nil {
+		if t := trimmedNonEmpty(p.Description); t != nil {
+			sqlArgs.Description = pgtype.Text{String: *t, Valid: true}
+		}
+	}
+	if p.Content != nil {
+		if t := trimmedNonEmpty(p.Content); t != nil {
+			sqlArgs.Content = pgtype.Text{String: *t, Valid: true}
+		}
+	}
+	if p.Tags != nil {
+		tags, err := normalizeTags(*p.Tags)
+		if err != nil {
+			return StudyGuideDetail{}, err
+		}
+		// Non-nil even when empty -- the SQL COALESCE replaces only
+		// when the arg is non-NULL, so an empty slice clears tags
+		// while a nil slice leaves them alone.
+		sqlArgs.Tags = tags
+	}
+
+	if err := s.repo.InTx(ctx, func(tx Repository) error {
+		row, err := tx.GetStudyGuideByIDForUpdate(ctx, guidePgxID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return apperrors.NewNotFound("Study guide not found")
+			}
+			return fmt.Errorf("UpdateStudyGuide: lock: %w", err)
+		}
+		if row.DeletedAt.Valid {
+			return apperrors.NewNotFound("Study guide not found")
+		}
+		creatorID, err := utils.PgxToGoogleUUID(row.CreatorID)
+		if err != nil {
+			return fmt.Errorf("UpdateStudyGuide: creator id: %w", err)
+		}
+		if creatorID != p.ViewerID {
+			return apperrors.NewForbidden()
+		}
+		if err := tx.UpdateStudyGuide(ctx, sqlArgs); err != nil {
+			return fmt.Errorf("UpdateStudyGuide: update: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return StudyGuideDetail{}, err
+	}
+
+	return s.GetStudyGuide(ctx, GetStudyGuideParams{
+		StudyGuideID: p.StudyGuideID,
+		ViewerID:     p.ViewerID,
+	})
 }
 
 // guideVoteToDB maps the domain GuideVote enum onto the sqlc-generated
