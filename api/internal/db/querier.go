@@ -25,6 +25,12 @@ type Querier interface {
 	// array). Separate from courses.CourseExists only because sqlc-generated
 	// queriers are per-file; the predicate is identical.
 	CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error)
+	// Removes the join row only. The resources row is preserved -- it
+	// may be attached to other guides + courses, and the spec
+	// explicitly forbids cascading the resource delete from a single
+	// detach. Returns rows-affected so the service can detect
+	// already-detached races (0 rows -> 404) vs success (1 row -> nil).
+	DeleteGuideResource(ctx context.Context, arg DeleteGuideResourceParams) (int64, error)
 	// Hard-delete the (viewer, guide) recommendation row. Returns the
 	// rows-affected count so the service can distinguish "viewer never
 	// recommended this guide" (0 rows -> 404 'Recommendation not found')
@@ -44,11 +50,22 @@ type Querier interface {
 	// Returns sql.ErrNoRows if not found or already in a deletion state.
 	GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) (GetFileByOwnerRow, error)
 	GetFileIfViewable(ctx context.Context, arg GetFileIfViewableParams) (File, error)
+	// Lookup for DetachResource (ASK-116). Returns the attached_by user
+	// on the join row so the service can run the dual-authz check
+	// (viewer is guide creator OR viewer is attached_by). sql.ErrNoRows
+	// maps to 'Resource attachment not found' 404 -- the resource may
+	// exist but isn't attached to THIS guide.
+	GetGuideResourceAttacher(ctx context.Context, arg GetGuideResourceAttacherParams) (pgtype.UUID, error)
 	// Single-row membership lookup powering the per-section
 	// enrolled/not-enrolled probe (ASK-148). Returns sql.ErrNoRows when the
 	// viewer is not a member; the service translates that into the 200
 	// {enrolled:false} response, NOT a 404.
 	GetMembership(ctx context.Context, arg GetMembershipParams) (GetMembershipRow, error)
+	// Lookup pair for UpsertResource above. Returns the resources row
+	// the viewer owns for this URL; always succeeds because the upsert
+	// runs immediately before this in the same tx (either the INSERT
+	// wrote the row or it was already there).
+	GetResourceByCreatorURL(ctx context.Context, arg GetResourceByCreatorURLParams) (GetResourceByCreatorURLRow, error)
 	GetSchool(ctx context.Context, id pgtype.UUID) (School, error)
 	// Locked SELECT used at the start of DeleteStudyGuide. SELECT FOR
 	// UPDATE prevents concurrent deletes from racing on the same guide
@@ -90,6 +107,15 @@ type Querier interface {
 	// through to the SQL layer and surfacing a generic FK error.
 	GuideExistsAndLive(ctx context.Context, id pgtype.UUID) (bool, error)
 	InsertFile(ctx context.Context, arg InsertFileParams) (File, error)
+	// Creates the (resource_id, study_guide_id, attached_by) join row.
+	// The PK is (resource_id, study_guide_id) so a same-resource-and-guide
+	// duplicate raises a unique_violation -- but the user-facing 409
+	// conflict on a duplicate URL is detected EARLIER by
+	// URLAlreadyAttachedToGuide (which catches across resource rows
+	// with the same URL but different creators). This INSERT's PK
+	// failure mode is the narrow concurrency-race: two attachers slip
+	// through the pre-check between query 1 and query 4.
+	InsertGuideResource(ctx context.Context, arg InsertGuideResourceParams) error
 	// Study guide list queries (ASK-104).
 	//
 	// Every ListStudyGuides* variant uses the same CTE structure so the
@@ -261,6 +287,20 @@ type Querier interface {
 	// transaction wraps this + SoftDeleteQuizzesForGuide.
 	SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUID) error
 	SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
+	// Pre-flight conflict check for AttachResource (ASK-111). Returns
+	// TRUE when ANY resource with this URL is already attached to the
+	// given guide -- regardless of who created the resource row. Lets
+	// the service short-circuit to 409 BEFORE the resource upsert, so a
+	// duplicate attempt doesn't create or touch a resources row only to
+	// discard it on the join PK violation.
+	//
+	// Why "regardless of creator": the join PK is (resource_id,
+	// study_guide_id), so two distinct resource rows (different creators
+	// but same URL) could both attach to the same guide without raising
+	// the join PK constraint. The spec treats that as a duplicate URL
+	// on the guide -- this query enforces the no-duplicate-URLs-per-guide
+	// contract at the application layer.
+	URLAlreadyAttachedToGuide(ctx context.Context, arg URLAlreadyAttachedToGuideParams) (bool, error)
 	// Renames a file. Only applies if owned by the caller and not in a deletion state.
 	// Returns sql.ErrNoRows when file is not found, not owned, or in deletion.
 	UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateFileRow, error)
@@ -289,6 +329,17 @@ type Querier interface {
 	// and returns the row. Using DO UPDATE SET avoids a race window where
 	// concurrent inserts could cause both INSERT and fallback SELECT to miss.
 	UpsertFileGrant(ctx context.Context, arg UpsertFileGrantParams) (FileGrant, error)
+	// Inserts a new resources row for the (creator_id, url) pair. The
+	// ON CONFLICT DO NOTHING preserves the existing row's title /
+	// description / type when the viewer has used this URL before -- a
+	// silent overwrite would mutate state visible to the resource's
+	// other attachments (the same row may be attached to other guides
+	// + courses).
+	//
+	// Paired with GetResourceByCreatorURL: the service runs both calls
+	// in sequence, then uses the SELECT'd row regardless of whether the
+	// INSERT actually wrote.
+	UpsertResource(ctx context.Context, arg UpsertResourceParams) error
 	// Cast or change a vote (ASK-139). Inserts a new (user_id,
 	// study_guide_id, vote) row when the viewer has not voted, or
 	// updates the existing row's vote when the direction changes. Same-

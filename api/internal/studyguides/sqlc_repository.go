@@ -167,3 +167,27 @@ func (r *sqlcRepository) InsertStudyGuideRecommendation(ctx context.Context, arg
 func (r *sqlcRepository) DeleteStudyGuideRecommendation(ctx context.Context, arg db.DeleteStudyGuideRecommendationParams) (int64, error) {
 	return r.queries.DeleteStudyGuideRecommendation(ctx, arg)
 }
+
+func (r *sqlcRepository) URLAlreadyAttachedToGuide(ctx context.Context, arg db.URLAlreadyAttachedToGuideParams) (bool, error) {
+	return r.queries.URLAlreadyAttachedToGuide(ctx, arg)
+}
+
+func (r *sqlcRepository) UpsertResource(ctx context.Context, arg db.UpsertResourceParams) error {
+	return r.queries.UpsertResource(ctx, arg)
+}
+
+func (r *sqlcRepository) GetResourceByCreatorURL(ctx context.Context, arg db.GetResourceByCreatorURLParams) (db.GetResourceByCreatorURLRow, error) {
+	return r.queries.GetResourceByCreatorURL(ctx, arg)
+}
+
+func (r *sqlcRepository) InsertGuideResource(ctx context.Context, arg db.InsertGuideResourceParams) error {
+	return r.queries.InsertGuideResource(ctx, arg)
+}
+
+func (r *sqlcRepository) GetGuideResourceAttacher(ctx context.Context, arg db.GetGuideResourceAttacherParams) (pgtype.UUID, error) {
+	return r.queries.GetGuideResourceAttacher(ctx, arg)
+}
+
+func (r *sqlcRepository) DeleteGuideResource(ctx context.Context, arg db.DeleteGuideResourceParams) (int64, error) {
+	return r.queries.DeleteGuideResource(ctx, arg)
+}
