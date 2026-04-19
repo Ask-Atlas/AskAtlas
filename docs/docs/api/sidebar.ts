@@ -90,6 +90,18 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/recommend-study-guide",
+          label: "Recommend a study guide",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "api/remove-study-guide-recommendation",
+          label: "Remove the authenticated user's recommendation on a study guide",
+          className: "api-method delete",
+        },
+        {
+          type: "doc",
           id: "api/cast-study-guide-vote",
           label: "Cast or change a vote on a study guide",
           className: "api-method post",
