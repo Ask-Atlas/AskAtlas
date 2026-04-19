@@ -802,3 +802,215 @@ func TestStudyGuidesHandler_Delete_InternalError_500(t *testing.T) {
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
+
+// ---------------------------------------------------------------------
+// CastStudyGuideVote (ASK-139)
+// ---------------------------------------------------------------------
+
+func voteBody(t *testing.T, vote string) *strings.Reader {
+	t.Helper()
+	raw, err := json.Marshal(api.CastVoteRequest{Vote: api.CastVoteRequestVote(vote)})
+	require.NoError(t, err)
+	return strings.NewReader(string(raw))
+}
+
+func TestStudyGuidesHandler_Vote_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := fmt.Sprintf("/study-guides/%s/votes", uuid.NewString())
+	req := httptest.NewRequest(http.MethodPost, url, strings.NewReader(`{"vote":"up"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestStudyGuidesHandler_Vote_MalformedJSON_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := fmt.Sprintf("/study-guides/%s/votes", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, strings.NewReader(`{not json}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestStudyGuidesHandler_Vote_Success_200(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	guideID := uuid.New()
+	captured := &studyguides.CastVoteParams{}
+	mockSvc.EXPECT().
+		CastVote(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, p studyguides.CastVoteParams) {
+			*captured = p
+		}).
+		Return(studyguides.CastVoteResult{
+			Vote:      studyguides.GuideVoteUp,
+			VoteScore: 13,
+		}, nil)
+
+	url := fmt.Sprintf("/study-guides/%s/votes", guideID)
+	req := authedRequestMethod(t, http.MethodPost, url, voteBody(t, "up"))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp api.CastVoteResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, api.CastVoteResponseVote("up"), resp.Vote)
+	assert.Equal(t, int64(13), resp.VoteScore)
+	assert.Equal(t, guideID, captured.StudyGuideID)
+	assert.Equal(t, studyguides.GuideVoteUp, captured.Vote)
+}
+
+func TestStudyGuidesHandler_Vote_GuideMissing_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		CastVote(mock.Anything, mock.Anything).
+		Return(studyguides.CastVoteResult{}, apperrors.NewNotFound("Study guide not found"))
+
+	url := fmt.Sprintf("/study-guides/%s/votes", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, voteBody(t, "up"))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestStudyGuidesHandler_Vote_InvalidEnum_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	// Passing an invalid enum value -- the openapi-validator middleware
+	// catches this in production before reaching the service. In tests
+	// (no validator middleware), the service-layer guard should still
+	// catch it.
+	mockSvc.EXPECT().
+		CastVote(mock.Anything, mock.Anything).
+		Return(studyguides.CastVoteResult{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"vote": "must be 'up' or 'down'",
+		}))
+
+	url := fmt.Sprintf("/study-guides/%s/votes", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, strings.NewReader(`{"vote":"neutral"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	var errResp apperrors.AppError
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&errResp))
+	assert.Contains(t, errResp.Details, "vote")
+}
+
+func TestStudyGuidesHandler_Vote_InternalError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		CastVote(mock.Anything, mock.Anything).
+		Return(studyguides.CastVoteResult{}, errors.New("db down"))
+
+	url := fmt.Sprintf("/study-guides/%s/votes", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, voteBody(t, "up"))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// ---------------------------------------------------------------------
+// RemoveStudyGuideVote (ASK-141)
+// ---------------------------------------------------------------------
+
+func TestStudyGuidesHandler_RemoveVote_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := fmt.Sprintf("/study-guides/%s/votes", uuid.NewString())
+	req := httptest.NewRequest(http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestStudyGuidesHandler_RemoveVote_Success_204(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	guideID := uuid.New()
+	captured := &studyguides.RemoveVoteParams{}
+	mockSvc.EXPECT().
+		RemoveVote(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, p studyguides.RemoveVoteParams) {
+			*captured = p
+		}).
+		Return(nil)
+
+	url := fmt.Sprintf("/study-guides/%s/votes", guideID)
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNoContent, w.Code)
+	assert.Empty(t, w.Body.String())
+	assert.Equal(t, guideID, captured.StudyGuideID)
+	assert.NotEqual(t, uuid.Nil, captured.ViewerID)
+}
+
+func TestStudyGuidesHandler_RemoveVote_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		RemoveVote(mock.Anything, mock.Anything).
+		Return(apperrors.NewNotFound("Vote not found"))
+
+	url := fmt.Sprintf("/study-guides/%s/votes", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestStudyGuidesHandler_RemoveVote_InternalError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		RemoveVote(mock.Anything, mock.Anything).
+		Return(errors.New("db down"))
+
+	url := fmt.Sprintf("/study-guides/%s/votes", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}

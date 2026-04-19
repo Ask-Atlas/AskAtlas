@@ -1271,3 +1271,198 @@ func TestService_DeleteStudyGuide_QuizCascadeError_Propagates(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "quiz cascade blew up")
 }
+
+// ---------------------------------------------------------------------
+// CastVote (ASK-139)
+// ---------------------------------------------------------------------
+
+func TestService_CastVote_UpsertsAndReturnsScore(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, viewerID := uuid.New(), uuid.New()
+
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	captured := &db.UpsertStudyGuideVoteParams{}
+	repo.EXPECT().
+		UpsertStudyGuideVote(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, arg db.UpsertStudyGuideVoteParams) {
+			*captured = arg
+		}).Return(nil)
+	repo.EXPECT().ComputeGuideVoteScore(mock.Anything, mock.Anything).Return(int64(7), nil)
+
+	svc := studyguides.NewService(repo)
+	got, err := svc.CastVote(context.Background(), studyguides.CastVoteParams{
+		StudyGuideID: guideID, ViewerID: viewerID, Vote: studyguides.GuideVoteUp,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, studyguides.GuideVoteUp, got.Vote)
+	assert.Equal(t, int64(7), got.VoteScore)
+	assert.Equal(t, db.VoteDirection("up"), captured.Vote)
+}
+
+func TestService_CastVote_AcceptsBothDirections(t *testing.T) {
+	for _, dir := range []studyguides.GuideVote{studyguides.GuideVoteUp, studyguides.GuideVoteDown} {
+		t.Run(string(dir), func(t *testing.T) {
+			repo := mock_studyguides.NewMockRepository(t)
+			repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+			repo.EXPECT().UpsertStudyGuideVote(mock.Anything, mock.Anything).Return(nil)
+			repo.EXPECT().ComputeGuideVoteScore(mock.Anything, mock.Anything).Return(int64(0), nil)
+
+			svc := studyguides.NewService(repo)
+			_, err := svc.CastVote(context.Background(), studyguides.CastVoteParams{
+				StudyGuideID: uuid.New(), ViewerID: uuid.New(), Vote: dir,
+			})
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestService_CastVote_InvalidDirection_400(t *testing.T) {
+	cases := []studyguides.GuideVote{"", "neutral", "UP", "Down"}
+	for _, dir := range cases {
+		t.Run(string(dir), func(t *testing.T) {
+			repo := mock_studyguides.NewMockRepository(t)
+			svc := studyguides.NewService(repo)
+			_, err := svc.CastVote(context.Background(), studyguides.CastVoteParams{
+				StudyGuideID: uuid.New(), ViewerID: uuid.New(), Vote: dir,
+			})
+			require.Error(t, err)
+			var appErr *apperrors.AppError
+			require.ErrorAs(t, err, &appErr)
+			assert.Equal(t, http.StatusBadRequest, appErr.Code)
+			assert.Contains(t, appErr.Details, "vote")
+			repo.AssertNotCalled(t, "GuideExistsAndLive", mock.Anything, mock.Anything)
+		})
+	}
+}
+
+func TestService_CastVote_GuideMissing_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(false, nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.CastVote(context.Background(), studyguides.CastVoteParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(), Vote: studyguides.GuideVoteUp,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Study guide not found", appErr.Message)
+	repo.AssertNotCalled(t, "UpsertStudyGuideVote", mock.Anything, mock.Anything)
+}
+
+func TestService_CastVote_LiveCheckError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(false, errors.New("db down"))
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.CastVote(context.Background(), studyguides.CastVoteParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(), Vote: studyguides.GuideVoteUp,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "db down")
+}
+
+func TestService_CastVote_UpsertError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().UpsertStudyGuideVote(mock.Anything, mock.Anything).Return(errors.New("upsert blew up"))
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.CastVote(context.Background(), studyguides.CastVoteParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(), Vote: studyguides.GuideVoteUp,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "upsert blew up")
+}
+
+func TestService_CastVote_ScoreError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().UpsertStudyGuideVote(mock.Anything, mock.Anything).Return(nil)
+	repo.EXPECT().ComputeGuideVoteScore(mock.Anything, mock.Anything).Return(int64(0), errors.New("score blew up"))
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.CastVote(context.Background(), studyguides.CastVoteParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(), Vote: studyguides.GuideVoteUp,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "score blew up")
+}
+
+// ---------------------------------------------------------------------
+// RemoveVote (ASK-141)
+// ---------------------------------------------------------------------
+
+func TestService_RemoveVote_Success(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().DeleteStudyGuideVote(mock.Anything, mock.Anything).Return(int64(1), nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.RemoveVote(context.Background(), studyguides.RemoveVoteParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.NoError(t, err)
+}
+
+// Guide-existence check runs before the delete: when both the guide
+// is missing AND there's no vote, the more-specific "Study guide not
+// found" message must win.
+func TestService_RemoveVote_GuideMissing_404_GuideMessage(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(false, nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.RemoveVote(context.Background(), studyguides.RemoveVoteParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Study guide not found", appErr.Message)
+	repo.AssertNotCalled(t, "DeleteStudyGuideVote", mock.Anything, mock.Anything)
+}
+
+// Guide exists but the viewer has no vote -> 404 'Vote not found'.
+func TestService_RemoveVote_NoExistingVote_404_VoteMessage(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().DeleteStudyGuideVote(mock.Anything, mock.Anything).Return(int64(0), nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.RemoveVote(context.Background(), studyguides.RemoveVoteParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Vote not found", appErr.Message)
+}
+
+func TestService_RemoveVote_LiveCheckError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(false, errors.New("db down"))
+
+	svc := studyguides.NewService(repo)
+	err := svc.RemoveVote(context.Background(), studyguides.RemoveVoteParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "db down")
+}
+
+func TestService_RemoveVote_DeleteError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().DeleteStudyGuideVote(mock.Anything, mock.Anything).Return(int64(0), errors.New("delete blew up"))
+
+	svc := studyguides.NewService(repo)
+	err := svc.RemoveVote(context.Background(), studyguides.RemoveVoteParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "delete blew up")
+}
