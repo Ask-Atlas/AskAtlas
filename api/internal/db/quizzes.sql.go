@@ -11,6 +11,33 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getQuizByIDForUpdate = `-- name: GetQuizByIDForUpdate :one
+SELECT id, creator_id, deleted_at
+FROM quizzes
+WHERE id = $1::uuid
+FOR UPDATE
+`
+
+type GetQuizByIDForUpdateRow struct {
+	ID        pgtype.UUID        `json:"id"`
+	CreatorID pgtype.UUID        `json:"creator_id"`
+	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+}
+
+// Locked SELECT used at the start of DeleteQuiz (ASK-102) and
+// UpdateQuiz (ASK-153). SELECT FOR UPDATE prevents two concurrent
+// mutators from racing on the same row -- one wins with 204/200,
+// the other sees the post-mutation state in its tx snapshot and
+// returns 404. Filters NOTHING -- the service inspects deleted_at
+// + creator_id to choose 404 vs 403 vs proceed (mirrors
+// studyguides.GetStudyGuideByIDForUpdate).
+func (q *Queries) GetQuizByIDForUpdate(ctx context.Context, id pgtype.UUID) (GetQuizByIDForUpdateRow, error) {
+	row := q.db.QueryRow(ctx, getQuizByIDForUpdate, id)
+	var i GetQuizByIDForUpdateRow
+	err := row.Scan(&i.ID, &i.CreatorID, &i.DeletedAt)
+	return i, err
+}
+
 const getQuizDetail = `-- name: GetQuizDetail :one
 SELECT
   q.id, q.study_guide_id, q.title, q.description,
@@ -402,4 +429,21 @@ func (q *Queries) ListQuizzesByStudyGuide(ctx context.Context, studyGuideID pgty
 		return nil, err
 	}
 	return items, nil
+}
+
+const softDeleteQuiz = `-- name: SoftDeleteQuiz :exec
+UPDATE quizzes
+SET deleted_at = now()
+WHERE id = $1::uuid
+`
+
+// Set deleted_at = now() on the quiz. The service has already
+// verified the row exists, isn't already deleted, and the viewer
+// is the creator -- so this is a blind UPDATE. No cascade: practice
+// sessions, questions, and answer options are preserved per the
+// ASK-102 spec ("preserve historical practice data; the quiz
+// simply becomes invisible to list/detail endpoints").
+func (q *Queries) SoftDeleteQuiz(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, softDeleteQuiz, id)
+	return err
 }

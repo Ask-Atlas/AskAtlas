@@ -15,6 +15,7 @@ Package quizzes hosts the domain types, params, mappers, and service logic for t
 - [type CreateQuizParams](<#CreateQuizParams>)
 - [type CreateQuizQuestionInput](<#CreateQuizQuestionInput>)
 - [type Creator](<#Creator>)
+- [type DeleteQuizParams](<#DeleteQuizParams>)
 - [type ListQuizzesParams](<#ListQuizzesParams>)
 - [type MCQOption](<#MCQOption>)
 - [type Question](<#Question>)
@@ -26,6 +27,7 @@ Package quizzes hosts the domain types, params, mappers, and service logic for t
 - [type Service](<#Service>)
   - [func NewService\(repo Repository\) \*Service](<#NewService>)
   - [func \(s \*Service\) CreateQuiz\(ctx context.Context, p CreateQuizParams\) \(QuizDetail, error\)](<#Service.CreateQuiz>)
+  - [func \(s \*Service\) DeleteQuiz\(ctx context.Context, p DeleteQuizParams\) error](<#Service.DeleteQuiz>)
   - [func \(s \*Service\) ListQuizzes\(ctx context.Context, p ListQuizzesParams\) \(\[\]QuizListItem, error\)](<#Service.ListQuizzes>)
 
 
@@ -136,6 +138,18 @@ type Creator struct {
 }
 ```
 
+<a name="DeleteQuizParams"></a>
+## type [DeleteQuizParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/params.go#L109-L112>)
+
+DeleteQuizParams is the input to Service.DeleteQuiz \(ASK\-102\). ViewerID drives the creator\-only authorization gate; the service returns apperrors.NewForbidden if it doesn't match the row's creator\_id.
+
+```go
+type DeleteQuizParams struct {
+    QuizID   uuid.UUID
+    ViewerID uuid.UUID
+}
+```
+
 <a name="ListQuizzesParams"></a>
 ## type [ListQuizzesParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/params.go#L101-L103>)
 
@@ -235,7 +249,7 @@ type QuizListItem struct {
 ```
 
 <a name="Repository"></a>
-## type [Repository](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L18-L35>)
+## type [Repository](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L20-L39>)
 
 Repository is the data\-access surface required by Service. Mirrors the studyguides.Repository pattern \-\- the production implementation is sqlc\-backed and lives in sqlc\_repository.go; tests inject a mockery\-generated mock.
 
@@ -249,6 +263,8 @@ type Repository interface {
     ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]db.ListQuizQuestionsByQuizRow, error)
     ListQuizAnswerOptionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]db.QuizAnswerOption, error)
     ListQuizzesByStudyGuide(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListQuizzesByStudyGuideRow, error)
+    GetQuizByIDForUpdate(ctx context.Context, id pgtype.UUID) (db.GetQuizByIDForUpdateRow, error)
+    SoftDeleteQuiz(ctx context.Context, id pgtype.UUID) error
 
     // InTx runs fn inside a single Postgres transaction. The
     // Repository passed to fn is scoped to the tx via
@@ -270,7 +286,7 @@ func NewSQLCRepository(pool *pgxpool.Pool, queries *db.Queries) Repository
 NewSQLCRepository returns a Repository backed by sqlc\-generated Postgres queries. Takes the pgxpool.Pool alongside the Queries instance so InTx can begin transactions.
 
 <a name="Service"></a>
-## type [Service](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L38-L40>)
+## type [Service](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L42-L44>)
 
 Service is the business\-logic layer for the quizzes feature.
 
@@ -281,7 +297,7 @@ type Service struct {
 ```
 
 <a name="NewService"></a>
-### func [NewService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L43>)
+### func [NewService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L47>)
 
 ```go
 func NewService(repo Repository) *Service
@@ -290,7 +306,7 @@ func NewService(repo Repository) *Service
 NewService creates a new Service backed by the given Repository.
 
 <a name="Service.CreateQuiz"></a>
-### func \(\*Service\) [CreateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L117>)
+### func \(\*Service\) [CreateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L167>)
 
 ```go
 func (s *Service) CreateQuiz(ctx context.Context, p CreateQuizParams) (QuizDetail, error)
@@ -307,8 +323,21 @@ True/false questions auto\-expand to 2 quiz\_answer\_options rows \("True", "Fal
 
 After the tx commits, hydrates the response by loading the quiz \+ creator \(privacy floor\) \+ questions \+ options via three separate reads. The two\-list \(questions \+ options\) fan\-out matches the studyguides detail pattern; mapping options back onto questions happens in Go via group\-by\-question\_id.
 
+<a name="Service.DeleteQuiz"></a>
+### func \(\*Service\) [DeleteQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L115>)
+
+```go
+func (s *Service) DeleteQuiz(ctx context.Context, p DeleteQuizParams) error
+```
+
+DeleteQuiz soft\-deletes a quiz \(creator\-only, ASK\-102\). Wraps the locked SELECT \+ creator check \+ soft\-delete in a single transaction so a concurrent delete cannot race the auth check \(one wins with 204, the other sees the row already\-deleted in its tx snapshot and returns 404\).
+
+404 is returned both when the quiz is missing and when it's already soft\-deleted \(idempotent semantics: a duplicate DELETE does not surface a 409 since the desired state is already reached\). 403 is returned when the viewer is not the quiz's creator. The order of checks is "missing/deleted \-\> creator mismatch \-\> proceed", so a 404 wins over a 403 when both apply \(a non\-creator probing a deleted quiz can't distinguish "no such quiz" from "you can't touch this quiz"\).
+
+No cascade: practice sessions, questions, and answer options stay intact. The quiz simply becomes invisible to the list/ detail endpoints \(which all filter q.deleted\_at IS NULL\). This preserves historical practice data per the spec.
+
 <a name="Service.ListQuizzes"></a>
-### func \(\*Service\) [ListQuizzes](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L65>)
+### func \(\*Service\) [ListQuizzes](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L69>)
 
 ```go
 func (s *Service) ListQuizzes(ctx context.Context, p ListQuizzesParams) ([]QuizListItem, error)

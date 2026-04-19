@@ -81,6 +81,14 @@ type Querier interface {
 	// viewer is not a member; the service translates that into the 200
 	// {enrolled:false} response, NOT a 404.
 	GetMembership(ctx context.Context, arg GetMembershipParams) (GetMembershipRow, error)
+	// Locked SELECT used at the start of DeleteQuiz (ASK-102) and
+	// UpdateQuiz (ASK-153). SELECT FOR UPDATE prevents two concurrent
+	// mutators from racing on the same row -- one wins with 204/200,
+	// the other sees the post-mutation state in its tx snapshot and
+	// returns 404. Filters NOTHING -- the service inspects deleted_at
+	// + creator_id to choose 404 vs 403 vs proceed (mirrors
+	// studyguides.GetStudyGuideByIDForUpdate).
+	GetQuizByIDForUpdate(ctx context.Context, id pgtype.UUID) (GetQuizByIDForUpdateRow, error)
 	// Load the quiz row + privacy-floor creator info for the detail
 	// payload. The study guide is NOT joined back -- the caller already
 	// knows the study_guide_id (it's in the URL on POST and on the
@@ -400,6 +408,13 @@ type Querier interface {
 	// Marks a file as pending deletion. Only applies if the file is owned by the caller
 	// and has not already entered a deletion state (idempotency-safe).
 	SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)
+	// Set deleted_at = now() on the quiz. The service has already
+	// verified the row exists, isn't already deleted, and the viewer
+	// is the creator -- so this is a blind UPDATE. No cascade: practice
+	// sessions, questions, and answer options are preserved per the
+	// ASK-102 spec ("preserve historical practice data; the quiz
+	// simply becomes invisible to list/detail endpoints").
+	SoftDeleteQuiz(ctx context.Context, id pgtype.UUID) error
 	// Application-level cascade: soft-delete every non-deleted quiz on
 	// the guide. WHERE deleted_at IS NULL preserves the deleted_at
 	// timestamp on quizzes that were already soft-deleted before the

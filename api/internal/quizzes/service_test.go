@@ -2,6 +2,7 @@ package quizzes_test
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"net/http"
 	"strings"
@@ -690,6 +691,150 @@ func TestCreateQuiz_SortOrderHonored(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, []int32{99, 1}, capturedSortOrders)
+}
+
+// ---- DeleteQuiz (ASK-102) ----
+
+// quizForUpdateFixture builds a GetQuizByIDForUpdateRow with the
+// given creator + deleted_at state. Tests pass false for the
+// deleted_at flag in the happy path and true to exercise the
+// "already soft-deleted -> 404" branch.
+func quizForUpdateFixture(t *testing.T, quizID, creatorID uuid.UUID, deleted bool) db.GetQuizByIDForUpdateRow {
+	t.Helper()
+	row := db.GetQuizByIDForUpdateRow{
+		ID:        utils.UUID(quizID),
+		CreatorID: utils.UUID(creatorID),
+	}
+	if deleted {
+		row.DeletedAt = pgtype.Timestamptz{Time: fixtureTime, Valid: true}
+	}
+	return row
+}
+
+func TestDeleteQuiz_Success(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	quizID := uuid.New()
+	creatorID := uuid.New()
+
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizByIDForUpdate(mock.Anything, mock.Anything).
+		Return(quizForUpdateFixture(t, quizID, creatorID, false), nil)
+	repo.EXPECT().SoftDeleteQuiz(mock.Anything, mock.Anything).Return(nil)
+
+	svc := quizzes.NewService(repo)
+	err := svc.DeleteQuiz(context.Background(), quizzes.DeleteQuizParams{
+		QuizID:   quizID,
+		ViewerID: creatorID,
+	})
+	require.NoError(t, err)
+}
+
+// TestDeleteQuiz_NotFound_404: missing quiz row -> 404. The
+// underlying sql.ErrNoRows from the locked SELECT is mapped to
+// apperrors.NewNotFound("Quiz not found").
+func TestDeleteQuiz_NotFound_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetQuizByIDForUpdateRow{}, sql.ErrNoRows)
+
+	svc := quizzes.NewService(repo)
+	err := svc.DeleteQuiz(context.Background(), quizzes.DeleteQuizParams{
+		QuizID:   uuid.New(),
+		ViewerID: uuid.New(),
+	})
+	var appErr *apperrors.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Quiz not found", appErr.Message)
+}
+
+// TestDeleteQuiz_AlreadyDeleted_404 covers AC3 + idempotency: a
+// second DELETE on an already-deleted quiz returns 404 (not 204
+// or 409). The desired state is "deleted" but the spec explicitly
+// chose 404 over 204 here so a duplicate request doesn't silently
+// confirm a destructive action.
+func TestDeleteQuiz_AlreadyDeleted_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	quizID := uuid.New()
+	creatorID := uuid.New()
+
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizByIDForUpdate(mock.Anything, mock.Anything).
+		Return(quizForUpdateFixture(t, quizID, creatorID, true), nil)
+
+	svc := quizzes.NewService(repo)
+	err := svc.DeleteQuiz(context.Background(), quizzes.DeleteQuizParams{
+		QuizID:   quizID,
+		ViewerID: creatorID,
+	})
+	var appErr *apperrors.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+// TestDeleteQuiz_NotCreator_403 covers AC4. Order of checks: the
+// service short-circuits to 404 BEFORE the creator check when the
+// row is missing/deleted, so the 403 only fires on a live row
+// owned by someone else.
+func TestDeleteQuiz_NotCreator_403(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	quizID := uuid.New()
+	creatorID := uuid.New()
+	otherUser := uuid.New()
+
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizByIDForUpdate(mock.Anything, mock.Anything).
+		Return(quizForUpdateFixture(t, quizID, creatorID, false), nil)
+
+	svc := quizzes.NewService(repo)
+	err := svc.DeleteQuiz(context.Background(), quizzes.DeleteQuizParams{
+		QuizID:   quizID,
+		ViewerID: otherUser,
+	})
+	var appErr *apperrors.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, http.StatusForbidden, appErr.Code)
+}
+
+// TestDeleteQuiz_404BeatsAuthCheck: a non-creator probing a
+// deleted/missing quiz cannot distinguish "no such quiz" from
+// "you can't touch this quiz" -- 404 wins over 403. Prevents an
+// information leak about quiz existence to non-creators.
+func TestDeleteQuiz_404BeatsAuthCheck(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	quizID := uuid.New()
+	creatorID := uuid.New()
+	otherUser := uuid.New()
+
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizByIDForUpdate(mock.Anything, mock.Anything).
+		Return(quizForUpdateFixture(t, quizID, creatorID, true), nil)
+
+	svc := quizzes.NewService(repo)
+	err := svc.DeleteQuiz(context.Background(), quizzes.DeleteQuizParams{
+		QuizID:   quizID,
+		ViewerID: otherUser,
+	})
+	var appErr *apperrors.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, http.StatusNotFound, appErr.Code, "404 must win over 403 for deleted quiz")
+}
+
+func TestDeleteQuiz_DBError_500(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetQuizByIDForUpdateRow{}, errors.New("connection refused"))
+
+	svc := quizzes.NewService(repo)
+	err := svc.DeleteQuiz(context.Background(), quizzes.DeleteQuizParams{
+		QuizID:   uuid.New(),
+		ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
 }
 
 // ---- ListQuizzes (ASK-136) ----

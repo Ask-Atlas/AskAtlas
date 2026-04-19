@@ -90,3 +90,11 @@ func (r *sqlcRepository) ListQuizAnswerOptionsByQuiz(ctx context.Context, quizID
 func (r *sqlcRepository) ListQuizzesByStudyGuide(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListQuizzesByStudyGuideRow, error) {
 	return r.queries.ListQuizzesByStudyGuide(ctx, studyGuideID)
 }
+
+func (r *sqlcRepository) GetQuizByIDForUpdate(ctx context.Context, id pgtype.UUID) (db.GetQuizByIDForUpdateRow, error) {
+	return r.queries.GetQuizByIDForUpdate(ctx, id)
+}
+
+func (r *sqlcRepository) SoftDeleteQuiz(ctx context.Context, id pgtype.UUID) error {
+	return r.queries.SoftDeleteQuiz(ctx, id)
+}

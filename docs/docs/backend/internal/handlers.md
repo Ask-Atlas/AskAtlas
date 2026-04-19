@@ -47,6 +47,7 @@ Package handlers contains the HTTP handlers and routes for the API endpoints.
 - [type QuizzesHandler](<#QuizzesHandler>)
   - [func NewQuizzesHandler\(service QuizService\) \*QuizzesHandler](<#NewQuizzesHandler>)
   - [func \(h \*QuizzesHandler\) CreateQuiz\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#QuizzesHandler.CreateQuiz>)
+  - [func \(h \*QuizzesHandler\) DeleteQuiz\(w http.ResponseWriter, r \*http.Request, quizId openapi\_types.UUID\)](<#QuizzesHandler.DeleteQuiz>)
   - [func \(h \*QuizzesHandler\) ListQuizzes\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#QuizzesHandler.ListQuizzes>)
 - [type SchoolService](<#SchoolService>)
 - [type SchoolsHandler](<#SchoolsHandler>)
@@ -405,7 +406,7 @@ func (h *JobHandler) DeleteFileJob(w http.ResponseWriter, r *http.Request)
 DeleteFileJob handles POST /jobs/delete\-file. It deletes the S3 object and marks the file as deleted in the DB.
 
 <a name="QuizService"></a>
-## type [QuizService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L21-L24>)
+## type [QuizService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L21-L25>)
 
 QuizService defines the application logic required by the QuizzesHandler. Mirrors StudyGuideService: small, defined at the consumer, and mocked via mockery for handler tests.
 
@@ -413,11 +414,12 @@ QuizService defines the application logic required by the QuizzesHandler. Mirror
 type QuizService interface {
     CreateQuiz(ctx context.Context, params quizzes.CreateQuizParams) (quizzes.QuizDetail, error)
     ListQuizzes(ctx context.Context, params quizzes.ListQuizzesParams) ([]quizzes.QuizListItem, error)
+    DeleteQuiz(ctx context.Context, params quizzes.DeleteQuizParams) error
 }
 ```
 
 <a name="QuizzesHandler"></a>
-## type [QuizzesHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L29-L31>)
+## type [QuizzesHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L30-L32>)
 
 QuizzesHandler manages incoming HTTP requests for the quizzes surface. Embedded in CompositeHandler so a single instance satisfies the generated api.ServerInterface.
 
@@ -428,7 +430,7 @@ type QuizzesHandler struct {
 ```
 
 <a name="NewQuizzesHandler"></a>
-### func [NewQuizzesHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L35>)
+### func [NewQuizzesHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L36>)
 
 ```go
 func NewQuizzesHandler(service QuizService) *QuizzesHandler
@@ -437,7 +439,7 @@ func NewQuizzesHandler(service QuizService) *QuizzesHandler
 NewQuizzesHandler creates a new QuizzesHandler backed by the given QuizService.
 
 <a name="QuizzesHandler.CreateQuiz"></a>
-### func \(\*QuizzesHandler\) [CreateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L73>)
+### func \(\*QuizzesHandler\) [CreateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L102>)
 
 ```go
 func (h *QuizzesHandler) CreateQuiz(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
@@ -445,8 +447,17 @@ func (h *QuizzesHandler) CreateQuiz(w http.ResponseWriter, r *http.Request, stud
 
 CreateQuiz handles POST /study\-guides/\{study\_guide\_id\}/quizzes. The body is decoded into the openapi\-generated request type; the service layer applies the cross\-field validation \(per\-type correct\_answer typing, MCQ correct\-count invariant\) and runs the quiz \+ questions \+ options inserts inside one transaction. The creator id is always taken from the JWT \-\- the openapi schema explicitly forbids accepting one in the request body.
 
+<a name="QuizzesHandler.DeleteQuiz"></a>
+### func \(\*QuizzesHandler\) [DeleteQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L73>)
+
+```go
+func (h *QuizzesHandler) DeleteQuiz(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID)
+```
+
+DeleteQuiz handles DELETE /quizzes/\{quiz\_id\} \(ASK\-102\). Creator\-only \-\- the service runs the locked SELECT \+ creator check \+ soft\-delete in a single transaction. 404 covers both 'never existed' and 'already deleted' \(idempotent semantics\); 403 covers viewer\-is\-not\-creator. Returns 204 with no body on success.
+
 <a name="QuizzesHandler.ListQuizzes"></a>
-### func \(\*QuizzesHandler\) [ListQuizzes](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L45>)
+### func \(\*QuizzesHandler\) [ListQuizzes](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L46>)
 
 ```go
 func (h *QuizzesHandler) ListQuizzes(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)

@@ -132,6 +132,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/delete-quiz",
+          label: "Soft-delete a quiz",
+          className: "api-method delete",
+        },
+        {
+          type: "doc",
           id: "api/recommend-study-guide",
           label: "Recommend a study guide",
           className: "api-method post",

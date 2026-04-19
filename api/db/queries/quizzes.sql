@@ -115,6 +115,30 @@ FROM quiz_questions
 WHERE quiz_id = sqlc.arg(quiz_id)::uuid
 ORDER BY sort_order ASC, id ASC;
 
+-- name: GetQuizByIDForUpdate :one
+-- Locked SELECT used at the start of DeleteQuiz (ASK-102) and
+-- UpdateQuiz (ASK-153). SELECT FOR UPDATE prevents two concurrent
+-- mutators from racing on the same row -- one wins with 204/200,
+-- the other sees the post-mutation state in its tx snapshot and
+-- returns 404. Filters NOTHING -- the service inspects deleted_at
+-- + creator_id to choose 404 vs 403 vs proceed (mirrors
+-- studyguides.GetStudyGuideByIDForUpdate).
+SELECT id, creator_id, deleted_at
+FROM quizzes
+WHERE id = sqlc.arg(id)::uuid
+FOR UPDATE;
+
+-- name: SoftDeleteQuiz :exec
+-- Set deleted_at = now() on the quiz. The service has already
+-- verified the row exists, isn't already deleted, and the viewer
+-- is the creator -- so this is a blind UPDATE. No cascade: practice
+-- sessions, questions, and answer options are preserved per the
+-- ASK-102 spec ("preserve historical practice data; the quiz
+-- simply becomes invisible to list/detail endpoints").
+UPDATE quizzes
+SET deleted_at = now()
+WHERE id = sqlc.arg(id)::uuid;
+
 -- name: ListQuizzesByStudyGuide :many
 -- Lists every non-soft-deleted quiz attached to a study guide
 -- (ASK-136). Each row carries the privacy-floor creator payload

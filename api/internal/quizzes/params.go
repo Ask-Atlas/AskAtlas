@@ -101,3 +101,12 @@ type CreateQuizParams struct {
 type ListQuizzesParams struct {
 	StudyGuideID uuid.UUID
 }
+
+// DeleteQuizParams is the input to Service.DeleteQuiz (ASK-102).
+// ViewerID drives the creator-only authorization gate; the service
+// returns apperrors.NewForbidden if it doesn't match the row's
+// creator_id.
+type DeleteQuizParams struct {
+	QuizID   uuid.UUID
+	ViewerID uuid.UUID
+}

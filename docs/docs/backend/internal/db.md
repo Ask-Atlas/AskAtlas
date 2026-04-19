@@ -37,6 +37,7 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
 - [type GetGuideResourceAttacherParams](<#GetGuideResourceAttacherParams>)
 - [type GetMembershipParams](<#GetMembershipParams>)
 - [type GetMembershipRow](<#GetMembershipRow>)
+- [type GetQuizByIDForUpdateRow](<#GetQuizByIDForUpdateRow>)
 - [type GetQuizDetailRow](<#GetQuizDetailRow>)
 - [type GetResourceByCreatorURLParams](<#GetResourceByCreatorURLParams>)
 - [type GetResourceByCreatorURLRow](<#GetResourceByCreatorURLRow>)
@@ -172,6 +173,7 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
   - [func \(q \*Queries\) GetFileIfViewable\(ctx context.Context, arg GetFileIfViewableParams\) \(File, error\)](<#Queries.GetFileIfViewable>)
   - [func \(q \*Queries\) GetGuideResourceAttacher\(ctx context.Context, arg GetGuideResourceAttacherParams\) \(pgtype.UUID, error\)](<#Queries.GetGuideResourceAttacher>)
   - [func \(q \*Queries\) GetMembership\(ctx context.Context, arg GetMembershipParams\) \(GetMembershipRow, error\)](<#Queries.GetMembership>)
+  - [func \(q \*Queries\) GetQuizByIDForUpdate\(ctx context.Context, id pgtype.UUID\) \(GetQuizByIDForUpdateRow, error\)](<#Queries.GetQuizByIDForUpdate>)
   - [func \(q \*Queries\) GetQuizDetail\(ctx context.Context, id pgtype.UUID\) \(GetQuizDetailRow, error\)](<#Queries.GetQuizDetail>)
   - [func \(q \*Queries\) GetResourceByCreatorURL\(ctx context.Context, arg GetResourceByCreatorURLParams\) \(GetResourceByCreatorURLRow, error\)](<#Queries.GetResourceByCreatorURL>)
   - [func \(q \*Queries\) GetSchool\(ctx context.Context, id pgtype.UUID\) \(School, error\)](<#Queries.GetSchool>)
@@ -236,6 +238,7 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
   - [func \(q \*Queries\) SectionInCourseExists\(ctx context.Context, arg SectionInCourseExistsParams\) \(bool, error\)](<#Queries.SectionInCourseExists>)
   - [func \(q \*Queries\) SetFileDeletionJobID\(ctx context.Context, arg SetFileDeletionJobIDParams\) error](<#Queries.SetFileDeletionJobID>)
   - [func \(q \*Queries\) SoftDeleteFile\(ctx context.Context, arg SoftDeleteFileParams\) \(int64, error\)](<#Queries.SoftDeleteFile>)
+  - [func \(q \*Queries\) SoftDeleteQuiz\(ctx context.Context, id pgtype.UUID\) error](<#Queries.SoftDeleteQuiz>)
   - [func \(q \*Queries\) SoftDeleteQuizzesForGuide\(ctx context.Context, studyGuideID pgtype.UUID\) error](<#Queries.SoftDeleteQuizzesForGuide>)
   - [func \(q \*Queries\) SoftDeleteStudyGuide\(ctx context.Context, id pgtype.UUID\) error](<#Queries.SoftDeleteStudyGuide>)
   - [func \(q \*Queries\) SoftDeleteUserByClerkID\(ctx context.Context, clerkID string\) \(int64, error\)](<#Queries.SoftDeleteUserByClerkID>)
@@ -713,8 +716,21 @@ type GetMembershipRow struct {
 }
 ```
 
+<a name="GetQuizByIDForUpdateRow"></a>
+## type [GetQuizByIDForUpdateRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L21-L25>)
+
+
+
+```go
+type GetQuizByIDForUpdateRow struct {
+    ID        pgtype.UUID        `json:"id"`
+    CreatorID pgtype.UUID        `json:"creator_id"`
+    DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+}
+```
+
 <a name="GetQuizDetailRow"></a>
-## type [GetQuizDetailRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L30-L40>)
+## type [GetQuizDetailRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L57-L67>)
 
 
 
@@ -894,7 +910,7 @@ type InsertGuideResourceParams struct {
 ```
 
 <a name="InsertQuizAnswerOptionParams"></a>
-## type [InsertQuizAnswerOptionParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L158-L163>)
+## type [InsertQuizAnswerOptionParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L185-L190>)
 
 
 
@@ -908,7 +924,7 @@ type InsertQuizAnswerOptionParams struct {
 ```
 
 <a name="InsertQuizParams"></a>
-## type [InsertQuizParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L118-L123>)
+## type [InsertQuizParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L145-L150>)
 
 
 
@@ -922,7 +938,7 @@ type InsertQuizParams struct {
 ```
 
 <a name="InsertQuizQuestionParams"></a>
-## type [InsertQuizQuestionParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L197-L206>)
+## type [InsertQuizQuestionParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L224-L233>)
 
 
 
@@ -940,7 +956,7 @@ type InsertQuizQuestionParams struct {
 ```
 
 <a name="InsertQuizRow"></a>
-## type [InsertQuizRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L125-L129>)
+## type [InsertQuizRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L152-L156>)
 
 
 
@@ -2061,7 +2077,7 @@ type ListOwnedFilesUpdatedDescRow struct {
 ```
 
 <a name="ListQuizQuestionsByQuizRow"></a>
-## type [ListQuizQuestionsByQuizRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L276-L285>)
+## type [ListQuizQuestionsByQuizRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L303-L312>)
 
 
 
@@ -2079,7 +2095,7 @@ type ListQuizQuestionsByQuizRow struct {
 ```
 
 <a name="ListQuizzesByStudyGuideRow"></a>
-## type [ListQuizzesByStudyGuideRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L338-L348>)
+## type [ListQuizzesByStudyGuideRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L365-L375>)
 
 
 
@@ -2784,7 +2800,7 @@ type PracticeSessionQuestion struct {
 ```
 
 <a name="Querier"></a>
-## type [Querier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/querier.go#L13-L501>)
+## type [Querier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/querier.go#L13-L516>)
 
 
 
@@ -2860,6 +2876,14 @@ type Querier interface {
     // viewer is not a member; the service translates that into the 200
     // {enrolled:false} response, NOT a 404.
     GetMembership(ctx context.Context, arg GetMembershipParams) (GetMembershipRow, error)
+    // Locked SELECT used at the start of DeleteQuiz (ASK-102) and
+    // UpdateQuiz (ASK-153). SELECT FOR UPDATE prevents two concurrent
+    // mutators from racing on the same row -- one wins with 204/200,
+    // the other sees the post-mutation state in its tx snapshot and
+    // returns 404. Filters NOTHING -- the service inspects deleted_at
+    // + creator_id to choose 404 vs 403 vs proceed (mirrors
+    // studyguides.GetStudyGuideByIDForUpdate).
+    GetQuizByIDForUpdate(ctx context.Context, id pgtype.UUID) (GetQuizByIDForUpdateRow, error)
     // Load the quiz row + privacy-floor creator info for the detail
     // payload. The study guide is NOT joined back -- the caller already
     // knows the study_guide_id (it's in the URL on POST and on the
@@ -3179,6 +3203,13 @@ type Querier interface {
     // Marks a file as pending deletion. Only applies if the file is owned by the caller
     // and has not already entered a deletion state (idempotency-safe).
     SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)
+    // Set deleted_at = now() on the quiz. The service has already
+    // verified the row exists, isn't already deleted, and the viewer
+    // is the creator -- so this is a blind UPDATE. No cascade: practice
+    // sessions, questions, and answer options are preserved per the
+    // ASK-102 spec ("preserve historical practice data; the quiz
+    // simply becomes invisible to list/detail endpoints").
+    SoftDeleteQuiz(ctx context.Context, id pgtype.UUID) error
     // Application-level cascade: soft-delete every non-deleted quiz on
     // the guide. WHERE deleted_at IS NULL preserves the deleted_at
     // timestamp on quizzes that were already soft-deleted before the
@@ -3419,8 +3450,17 @@ func (q *Queries) GetMembership(ctx context.Context, arg GetMembershipParams) (G
 
 Single\-row membership lookup powering the per\-section enrolled/not\-enrolled probe \(ASK\-148\). Returns sql.ErrNoRows when the viewer is not a member; the service translates that into the 200 \{enrolled:false\} response, NOT a 404.
 
+<a name="Queries.GetQuizByIDForUpdate"></a>
+### func \(\*Queries\) [GetQuizByIDForUpdate](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L34>)
+
+```go
+func (q *Queries) GetQuizByIDForUpdate(ctx context.Context, id pgtype.UUID) (GetQuizByIDForUpdateRow, error)
+```
+
+Locked SELECT used at the start of DeleteQuiz \(ASK\-102\) and UpdateQuiz \(ASK\-153\). SELECT FOR UPDATE prevents two concurrent mutators from racing on the same row \-\- one wins with 204/200, the other sees the post\-mutation state in its tx snapshot and returns 404. Filters NOTHING \-\- the service inspects deleted\_at \+ creator\_id to choose 404 vs 403 vs proceed \(mirrors studyguides.GetStudyGuideByIDForUpdate\).
+
 <a name="Queries.GetQuizDetail"></a>
-### func \(\*Queries\) [GetQuizDetail](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L50>)
+### func \(\*Queries\) [GetQuizDetail](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L77>)
 
 ```go
 func (q *Queries) GetQuizDetail(ctx context.Context, id pgtype.UUID) (GetQuizDetailRow, error)
@@ -3504,7 +3544,7 @@ func (q *Queries) GuideExistsAndLive(ctx context.Context, id pgtype.UUID) (bool,
 Live\-presence probe used by both vote endpoints. Returns TRUE only when the guide row exists AND is not soft\-deleted. The vote service gates on this before the upsert/delete so a missing\-or\-deleted guide returns 404 with a clear message rather than e.g. trampling through to the SQL layer and surfacing a generic FK error.
 
 <a name="Queries.GuideExistsAndLiveForQuizzes"></a>
-### func \(\*Queries\) [GuideExistsAndLiveForQuizzes](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L100>)
+### func \(\*Queries\) [GuideExistsAndLiveForQuizzes](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L127>)
 
 ```go
 func (q *Queries) GuideExistsAndLiveForQuizzes(ctx context.Context, id pgtype.UUID) (bool, error)
@@ -3557,7 +3597,7 @@ func (q *Queries) InsertGuideResource(ctx context.Context, arg InsertGuideResour
 Creates the \(resource\_id, study\_guide\_id, attached\_by\) join row. The PK is \(resource\_id, study\_guide\_id\) so a same\-resource\-and\-guide duplicate raises a unique\_violation \-\- but the user\-facing 409 conflict on a duplicate URL is detected EARLIER by URLAlreadyAttachedToGuide \(which catches across resource rows with the same URL but different creators\). This INSERT's PK failure mode is the narrow concurrency\-race: two attachers slip through the pre\-check between query 1 and query 4.
 
 <a name="Queries.InsertQuiz"></a>
-### func \(\*Queries\) [InsertQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L136>)
+### func \(\*Queries\) [InsertQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L163>)
 
 ```go
 func (q *Queries) InsertQuiz(ctx context.Context, arg InsertQuizParams) (InsertQuizRow, error)
@@ -3566,7 +3606,7 @@ func (q *Queries) InsertQuiz(ctx context.Context, arg InsertQuizParams) (InsertQ
 Insert a new quiz row. Returns the columns the service needs to build the QuizDetailResponse without an extra round trip on the write side \-\- the read\-side hydration still happens via GetQuizDetail because the creator's first\_name \+ last\_name come from a join to users \(and would inflate this RETURNING clause\).
 
 <a name="Queries.InsertQuizAnswerOption"></a>
-### func \(\*Queries\) [InsertQuizAnswerOption](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L169>)
+### func \(\*Queries\) [InsertQuizAnswerOption](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L196>)
 
 ```go
 func (q *Queries) InsertQuizAnswerOption(ctx context.Context, arg InsertQuizAnswerOptionParams) error
@@ -3575,7 +3615,7 @@ func (q *Queries) InsertQuizAnswerOption(ctx context.Context, arg InsertQuizAnsw
 Insert one option row. The service has already validated that exactly one option per MCQ has is\_correct=true; for true\-false questions the service synthesises two options \(\`True\` \+ \`False\`\) with the matching is\_correct flag.
 
 <a name="Queries.InsertQuizQuestion"></a>
-### func \(\*Queries\) [InsertQuizQuestion](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L212>)
+### func \(\*Queries\) [InsertQuizQuestion](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L239>)
 
 ```go
 func (q *Queries) InsertQuizQuestion(ctx context.Context, arg InsertQuizQuestionParams) (pgtype.UUID, error)
@@ -3870,7 +3910,7 @@ func (q *Queries) ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFi
 
 
 <a name="Queries.ListQuizAnswerOptionsByQuiz"></a>
-### func \(\*Queries\) [ListQuizAnswerOptionsByQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L241>)
+### func \(\*Queries\) [ListQuizAnswerOptionsByQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L268>)
 
 ```go
 func (q *Queries) ListQuizAnswerOptionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]QuizAnswerOption, error)
@@ -3879,7 +3919,7 @@ func (q *Queries) ListQuizAnswerOptionsByQuiz(ctx context.Context, quizID pgtype
 All answer options for every question in a quiz, ordered by question\_id then sort\_order then id. The mapper groups by question\_id in Go to attach options to their parent question. The triple\-key ordering keeps the option list deterministic.
 
 <a name="Queries.ListQuizQuestionsByQuiz"></a>
-### func \(\*Queries\) [ListQuizQuestionsByQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L292>)
+### func \(\*Queries\) [ListQuizQuestionsByQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L319>)
 
 ```go
 func (q *Queries) ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]ListQuizQuestionsByQuizRow, error)
@@ -3888,7 +3928,7 @@ func (q *Queries) ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUI
 All questions for a quiz, ordered by sort\_order then id \(the id tiebreaker keeps the response deterministic when two questions happen to share a sort\_order \-\- the spec doesn't enforce uniqueness on sort\_order\). Returns reference\_answer so the mapper can emit it as \`correct\_answer\` on freeform questions.
 
 <a name="Queries.ListQuizzesByStudyGuide"></a>
-### func \(\*Queries\) [ListQuizzesByStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L377>)
+### func \(\*Queries\) [ListQuizzesByStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L404>)
 
 ```go
 func (q *Queries) ListQuizzesByStudyGuide(ctx context.Context, studyGuideID pgtype.UUID) ([]ListQuizzesByStudyGuideRow, error)
@@ -4043,6 +4083,15 @@ func (q *Queries) SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) 
 ```
 
 Marks a file as pending deletion. Only applies if the file is owned by the caller and has not already entered a deletion state \(idempotency\-safe\).
+
+<a name="Queries.SoftDeleteQuiz"></a>
+### func \(\*Queries\) [SoftDeleteQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L446>)
+
+```go
+func (q *Queries) SoftDeleteQuiz(ctx context.Context, id pgtype.UUID) error
+```
+
+Set deleted\_at = now\(\) on the quiz. The service has already verified the row exists, isn't already deleted, and the viewer is the creator \-\- so this is a blind UPDATE. No cascade: practice sessions, questions, and answer options are preserved per the ASK\-102 spec \("preserve historical practice data; the quiz simply becomes invisible to list/detail endpoints"\).
 
 <a name="Queries.SoftDeleteQuizzesForGuide"></a>
 ### func \(\*Queries\) [SoftDeleteQuizzesForGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1777>)

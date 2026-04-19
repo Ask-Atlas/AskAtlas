@@ -347,6 +347,96 @@ func TestQuizzesHandler_Create_Success_FullPayload(t *testing.T) {
 // same package.
 func ptrStrQ(s string) *string { return &s }
 
+// ---- DeleteQuiz (ASK-102) ----
+
+func TestQuizzesHandler_Delete_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	url := fmt.Sprintf("/quizzes/%s", uuid.NewString())
+	req := httptest.NewRequest(http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestQuizzesHandler_Delete_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().DeleteQuiz(mock.Anything, mock.Anything).
+		Return(apperrors.NewNotFound("Quiz not found"))
+
+	url := fmt.Sprintf("/quizzes/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestQuizzesHandler_Delete_NotCreator_403(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().DeleteQuiz(mock.Anything, mock.Anything).
+		Return(apperrors.NewForbidden())
+
+	url := fmt.Sprintf("/quizzes/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestQuizzesHandler_Delete_DBError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().DeleteQuiz(mock.Anything, mock.Anything).
+		Return(errors.New("connection refused"))
+
+	url := fmt.Sprintf("/quizzes/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// TestQuizzesHandler_Delete_Success verifies AC1: 204 No Content
+// + empty body. Asserts on the path-param plumbing too -- the
+// quiz id from the URL must reach the service unchanged.
+func TestQuizzesHandler_Delete_Success(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	quizID := uuid.New()
+	mockSvc.EXPECT().DeleteQuiz(mock.Anything, mock.MatchedBy(func(p quizzes.DeleteQuizParams) bool {
+		return p.QuizID == quizID
+	})).Return(nil)
+
+	url := fmt.Sprintf("/quizzes/%s", quizID.String())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	assert.Empty(t, w.Body.String(), "204 must have no body")
+}
+
 // ---- ListQuizzes (ASK-136) ----
 
 func TestQuizzesHandler_List_Unauthorized(t *testing.T) {
