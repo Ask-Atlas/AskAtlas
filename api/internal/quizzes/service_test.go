@@ -694,6 +694,11 @@ func TestCreateQuiz_SortOrderHonored(t *testing.T) {
 
 // ---- ListQuizzes (ASK-136) ----
 
+// fixtureTime is the canonical timestamp used in test fixtures.
+// Fixed (not time.Now()) so assertions stay deterministic across
+// runs and CI machines (gemini PR #148 feedback).
+var fixtureTime = time.Date(2026, 4, 19, 10, 0, 0, 0, time.UTC)
+
 // listQuizFixture builds a single sqlc row with synthetic but
 // realistic values. Used to assemble the slices that
 // ListQuizzesByStudyGuide returns in the happy-path tests below.
@@ -703,8 +708,8 @@ func listQuizFixture(t *testing.T, title string, questionCount int64) db.ListQui
 		ID:               utils.UUID(uuid.New()),
 		Title:            title,
 		Description:      pgtype.Text{String: "desc", Valid: true},
-		CreatedAt:        pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
-		UpdatedAt:        pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		CreatedAt:        pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+		UpdatedAt:        pgtype.Timestamptz{Time: fixtureTime, Valid: true},
 		CreatorID:        utils.UUID(uuid.New()),
 		CreatorFirstName: "Ada",
 		CreatorLastName:  "Lovelace",
