@@ -783,7 +783,8 @@ func (s *Service) DeleteStudyGuide(ctx context.Context, p DeleteStudyGuideParams
 // different user that lands between the upsert and the recompute is
 // fine to be reflected in the response.
 func (s *Service) CastVote(ctx context.Context, p CastVoteParams) (CastVoteResult, error) {
-	if !isValidGuideVote(p.Vote) {
+	dbVote, ok := guideVoteToDB(p.Vote)
+	if !ok {
 		return CastVoteResult{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
 			"vote": "must be 'up' or 'down'",
 		})
@@ -801,7 +802,7 @@ func (s *Service) CastVote(ctx context.Context, p CastVoteParams) (CastVoteResul
 	if err := s.repo.UpsertStudyGuideVote(ctx, db.UpsertStudyGuideVoteParams{
 		UserID:       utils.UUID(p.ViewerID),
 		StudyGuideID: guidePgxID,
-		Vote:         db.VoteDirection(p.Vote),
+		Vote:         dbVote,
 	}); err != nil {
 		return CastVoteResult{}, fmt.Errorf("CastVote: upsert: %w", err)
 	}
@@ -844,9 +845,21 @@ func (s *Service) RemoveVote(ctx context.Context, p RemoveVoteParams) error {
 	return nil
 }
 
-// isValidGuideVote is the service-layer enum guard. openapi enforces
-// the same set at the wrapper layer in production; this re-check
-// keeps direct Go callers honest.
-func isValidGuideVote(v GuideVote) bool {
-	return v == GuideVoteUp || v == GuideVoteDown
+// guideVoteToDB maps the domain GuideVote enum onto the sqlc-generated
+// db.VoteDirection enum. Returns ok=false on unknown values; the
+// service translates that to a 400 'must be up or down'. The switch
+// is exhaustive against the GuideVote constants -- adding a new
+// domain value (e.g. GuideVoteAbstain) without updating both this
+// switch AND the SQL vote_direction enum is a compile-time
+// regression rather than a silent invalid-enum injection at the cast
+// site (see PR #139 review M1).
+func guideVoteToDB(v GuideVote) (db.VoteDirection, bool) {
+	switch v {
+	case GuideVoteUp:
+		return db.VoteDirectionUp, true
+	case GuideVoteDown:
+		return db.VoteDirectionDown, true
+	default:
+		return "", false
+	}
 }
