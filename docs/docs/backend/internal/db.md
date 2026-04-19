@@ -8,7 +8,20 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
 
 ## Index
 
+- [type Course](<#Course>)
+- [type CourseFavorite](<#CourseFavorite>)
+- [type CourseFile](<#CourseFile>)
+- [type CourseLastViewed](<#CourseLastViewed>)
+- [type CourseMember](<#CourseMember>)
+- [type CourseResource](<#CourseResource>)
+- [type CourseRole](<#CourseRole>)
+  - [func \(e \*CourseRole\) Scan\(src interface\{\}\) error](<#CourseRole.Scan>)
+- [type CourseSection](<#CourseSection>)
 - [type DBTX](<#DBTX>)
+- [type DeleteGuideFileParams](<#DeleteGuideFileParams>)
+- [type DeleteGuideResourceParams](<#DeleteGuideResourceParams>)
+- [type DeleteStudyGuideRecommendationParams](<#DeleteStudyGuideRecommendationParams>)
+- [type DeleteStudyGuideVoteParams](<#DeleteStudyGuideVoteParams>)
 - [type File](<#File>)
 - [type FileDeletionStatus](<#FileDeletionStatus>)
   - [func \(e \*FileDeletionStatus\) Scan\(src interface\{\}\) error](<#FileDeletionStatus.Scan>)
@@ -16,11 +29,59 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
 - [type FileGrant](<#FileGrant>)
 - [type FileLastViewed](<#FileLastViewed>)
 - [type FileView](<#FileView>)
+- [type GetCourseRow](<#GetCourseRow>)
 - [type GetFileByOwnerParams](<#GetFileByOwnerParams>)
 - [type GetFileByOwnerRow](<#GetFileByOwnerRow>)
+- [type GetFileForAttachRow](<#GetFileForAttachRow>)
 - [type GetFileIfViewableParams](<#GetFileIfViewableParams>)
+- [type GetGuideResourceAttacherParams](<#GetGuideResourceAttacherParams>)
+- [type GetMembershipParams](<#GetMembershipParams>)
+- [type GetMembershipRow](<#GetMembershipRow>)
+- [type GetQuizDetailRow](<#GetQuizDetailRow>)
+- [type GetResourceByCreatorURLParams](<#GetResourceByCreatorURLParams>)
+- [type GetResourceByCreatorURLRow](<#GetResourceByCreatorURLRow>)
+- [type GetStudyGuideByIDForUpdateRow](<#GetStudyGuideByIDForUpdateRow>)
+- [type GetStudyGuideDetailRow](<#GetStudyGuideDetailRow>)
+- [type GetUserVoteForGuideParams](<#GetUserVoteForGuideParams>)
 - [type GranteeType](<#GranteeType>)
   - [func \(e \*GranteeType\) Scan\(src interface\{\}\) error](<#GranteeType.Scan>)
+- [type GuideFileAttachedParams](<#GuideFileAttachedParams>)
+- [type InsertFileParams](<#InsertFileParams>)
+- [type InsertGuideFileParams](<#InsertGuideFileParams>)
+- [type InsertGuideResourceParams](<#InsertGuideResourceParams>)
+- [type InsertQuizAnswerOptionParams](<#InsertQuizAnswerOptionParams>)
+- [type InsertQuizParams](<#InsertQuizParams>)
+- [type InsertQuizQuestionParams](<#InsertQuizQuestionParams>)
+- [type InsertQuizRow](<#InsertQuizRow>)
+- [type InsertStudyGuideParams](<#InsertStudyGuideParams>)
+- [type InsertStudyGuideRecommendationParams](<#InsertStudyGuideRecommendationParams>)
+- [type InsertStudyGuideRecommendationRow](<#InsertStudyGuideRecommendationRow>)
+- [type InsertStudyGuideRow](<#InsertStudyGuideRow>)
+- [type JoinSectionParams](<#JoinSectionParams>)
+- [type LeaveSectionParams](<#LeaveSectionParams>)
+- [type ListCourseSectionsRow](<#ListCourseSectionsRow>)
+- [type ListCoursesCreatedAtAscParams](<#ListCoursesCreatedAtAscParams>)
+- [type ListCoursesCreatedAtAscRow](<#ListCoursesCreatedAtAscRow>)
+- [type ListCoursesCreatedAtDescParams](<#ListCoursesCreatedAtDescParams>)
+- [type ListCoursesCreatedAtDescRow](<#ListCoursesCreatedAtDescRow>)
+- [type ListCoursesDepartmentAscParams](<#ListCoursesDepartmentAscParams>)
+- [type ListCoursesDepartmentAscRow](<#ListCoursesDepartmentAscRow>)
+- [type ListCoursesDepartmentDescParams](<#ListCoursesDepartmentDescParams>)
+- [type ListCoursesDepartmentDescRow](<#ListCoursesDepartmentDescRow>)
+- [type ListCoursesNumberAscParams](<#ListCoursesNumberAscParams>)
+- [type ListCoursesNumberAscRow](<#ListCoursesNumberAscRow>)
+- [type ListCoursesNumberDescParams](<#ListCoursesNumberDescParams>)
+- [type ListCoursesNumberDescRow](<#ListCoursesNumberDescRow>)
+- [type ListCoursesTitleAscParams](<#ListCoursesTitleAscParams>)
+- [type ListCoursesTitleAscRow](<#ListCoursesTitleAscRow>)
+- [type ListCoursesTitleDescParams](<#ListCoursesTitleDescParams>)
+- [type ListCoursesTitleDescRow](<#ListCoursesTitleDescRow>)
+- [type ListGuideFilesRow](<#ListGuideFilesRow>)
+- [type ListGuideQuizzesWithQuestionCountRow](<#ListGuideQuizzesWithQuestionCountRow>)
+- [type ListGuideRecommendersRow](<#ListGuideRecommendersRow>)
+- [type ListGuideResourcesRow](<#ListGuideResourcesRow>)
+- [type ListMyEnrollmentsParams](<#ListMyEnrollmentsParams>)
+- [type ListMyEnrollmentsRow](<#ListMyEnrollmentsRow>)
 - [type ListOwnedFilesCreatedAscParams](<#ListOwnedFilesCreatedAscParams>)
 - [type ListOwnedFilesCreatedAscRow](<#ListOwnedFilesCreatedAscRow>)
 - [type ListOwnedFilesCreatedDescParams](<#ListOwnedFilesCreatedDescParams>)
@@ -45,31 +106,105 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
 - [type ListOwnedFilesUpdatedAscRow](<#ListOwnedFilesUpdatedAscRow>)
 - [type ListOwnedFilesUpdatedDescParams](<#ListOwnedFilesUpdatedDescParams>)
 - [type ListOwnedFilesUpdatedDescRow](<#ListOwnedFilesUpdatedDescRow>)
-- [type MimeType](<#MimeType>)
-  - [func \(e \*MimeType\) Scan\(src interface\{\}\) error](<#MimeType.Scan>)
+- [type ListQuizQuestionsByQuizRow](<#ListQuizQuestionsByQuizRow>)
+- [type ListSchoolsParams](<#ListSchoolsParams>)
+- [type ListSectionMembersParams](<#ListSectionMembersParams>)
+- [type ListSectionMembersRow](<#ListSectionMembersRow>)
+- [type ListStudyGuidesNewestAscParams](<#ListStudyGuidesNewestAscParams>)
+- [type ListStudyGuidesNewestAscRow](<#ListStudyGuidesNewestAscRow>)
+- [type ListStudyGuidesNewestDescParams](<#ListStudyGuidesNewestDescParams>)
+- [type ListStudyGuidesNewestDescRow](<#ListStudyGuidesNewestDescRow>)
+- [type ListStudyGuidesScoreAscParams](<#ListStudyGuidesScoreAscParams>)
+- [type ListStudyGuidesScoreAscRow](<#ListStudyGuidesScoreAscRow>)
+- [type ListStudyGuidesScoreDescParams](<#ListStudyGuidesScoreDescParams>)
+- [type ListStudyGuidesScoreDescRow](<#ListStudyGuidesScoreDescRow>)
+- [type ListStudyGuidesUpdatedAscParams](<#ListStudyGuidesUpdatedAscParams>)
+- [type ListStudyGuidesUpdatedAscRow](<#ListStudyGuidesUpdatedAscRow>)
+- [type ListStudyGuidesUpdatedDescParams](<#ListStudyGuidesUpdatedDescParams>)
+- [type ListStudyGuidesUpdatedDescRow](<#ListStudyGuidesUpdatedDescRow>)
+- [type ListStudyGuidesViewsAscParams](<#ListStudyGuidesViewsAscParams>)
+- [type ListStudyGuidesViewsAscRow](<#ListStudyGuidesViewsAscRow>)
+- [type ListStudyGuidesViewsDescParams](<#ListStudyGuidesViewsDescParams>)
+- [type ListStudyGuidesViewsDescRow](<#ListStudyGuidesViewsDescRow>)
+- [type NullCourseRole](<#NullCourseRole>)
+  - [func \(ns \*NullCourseRole\) Scan\(value interface\{\}\) error](<#NullCourseRole.Scan>)
+  - [func \(ns NullCourseRole\) Value\(\) \(driver.Value, error\)](<#NullCourseRole.Value>)
 - [type NullFileDeletionStatus](<#NullFileDeletionStatus>)
   - [func \(ns \*NullFileDeletionStatus\) Scan\(value interface\{\}\) error](<#NullFileDeletionStatus.Scan>)
   - [func \(ns NullFileDeletionStatus\) Value\(\) \(driver.Value, error\)](<#NullFileDeletionStatus.Value>)
 - [type NullGranteeType](<#NullGranteeType>)
   - [func \(ns \*NullGranteeType\) Scan\(value interface\{\}\) error](<#NullGranteeType.Scan>)
   - [func \(ns NullGranteeType\) Value\(\) \(driver.Value, error\)](<#NullGranteeType.Value>)
-- [type NullMimeType](<#NullMimeType>)
-  - [func \(ns \*NullMimeType\) Scan\(value interface\{\}\) error](<#NullMimeType.Scan>)
-  - [func \(ns NullMimeType\) Value\(\) \(driver.Value, error\)](<#NullMimeType.Value>)
 - [type NullPermission](<#NullPermission>)
   - [func \(ns \*NullPermission\) Scan\(value interface\{\}\) error](<#NullPermission.Scan>)
   - [func \(ns NullPermission\) Value\(\) \(driver.Value, error\)](<#NullPermission.Value>)
+- [type NullQuestionType](<#NullQuestionType>)
+  - [func \(ns \*NullQuestionType\) Scan\(value interface\{\}\) error](<#NullQuestionType.Scan>)
+  - [func \(ns NullQuestionType\) Value\(\) \(driver.Value, error\)](<#NullQuestionType.Value>)
+- [type NullResourceType](<#NullResourceType>)
+  - [func \(ns \*NullResourceType\) Scan\(value interface\{\}\) error](<#NullResourceType.Scan>)
+  - [func \(ns NullResourceType\) Value\(\) \(driver.Value, error\)](<#NullResourceType.Value>)
 - [type NullUploadStatus](<#NullUploadStatus>)
   - [func \(ns \*NullUploadStatus\) Scan\(value interface\{\}\) error](<#NullUploadStatus.Scan>)
   - [func \(ns NullUploadStatus\) Value\(\) \(driver.Value, error\)](<#NullUploadStatus.Value>)
+- [type NullVoteDirection](<#NullVoteDirection>)
+  - [func \(ns \*NullVoteDirection\) Scan\(value interface\{\}\) error](<#NullVoteDirection.Scan>)
+  - [func \(ns NullVoteDirection\) Value\(\) \(driver.Value, error\)](<#NullVoteDirection.Value>)
 - [type Permission](<#Permission>)
   - [func \(e \*Permission\) Scan\(src interface\{\}\) error](<#Permission.Scan>)
+- [type PracticeAnswer](<#PracticeAnswer>)
+- [type PracticeSession](<#PracticeSession>)
+- [type PracticeSessionQuestion](<#PracticeSessionQuestion>)
 - [type Querier](<#Querier>)
 - [type Queries](<#Queries>)
   - [func New\(db DBTX\) \*Queries](<#New>)
+  - [func \(q \*Queries\) ComputeGuideVoteScore\(ctx context.Context, studyGuideID pgtype.UUID\) \(int64, error\)](<#Queries.ComputeGuideVoteScore>)
+  - [func \(q \*Queries\) CourseExists\(ctx context.Context, id pgtype.UUID\) \(bool, error\)](<#Queries.CourseExists>)
+  - [func \(q \*Queries\) CourseExistsForGuides\(ctx context.Context, id pgtype.UUID\) \(bool, error\)](<#Queries.CourseExistsForGuides>)
+  - [func \(q \*Queries\) DeleteGuideFile\(ctx context.Context, arg DeleteGuideFileParams\) \(int64, error\)](<#Queries.DeleteGuideFile>)
+  - [func \(q \*Queries\) DeleteGuideResource\(ctx context.Context, arg DeleteGuideResourceParams\) \(int64, error\)](<#Queries.DeleteGuideResource>)
+  - [func \(q \*Queries\) DeleteStudyGuideRecommendation\(ctx context.Context, arg DeleteStudyGuideRecommendationParams\) \(int64, error\)](<#Queries.DeleteStudyGuideRecommendation>)
+  - [func \(q \*Queries\) DeleteStudyGuideVote\(ctx context.Context, arg DeleteStudyGuideVoteParams\) \(int64, error\)](<#Queries.DeleteStudyGuideVote>)
+  - [func \(q \*Queries\) GetCourse\(ctx context.Context, id pgtype.UUID\) \(GetCourseRow, error\)](<#Queries.GetCourse>)
   - [func \(q \*Queries\) GetFileByOwner\(ctx context.Context, arg GetFileByOwnerParams\) \(GetFileByOwnerRow, error\)](<#Queries.GetFileByOwner>)
+  - [func \(q \*Queries\) GetFileForAttach\(ctx context.Context, id pgtype.UUID\) \(GetFileForAttachRow, error\)](<#Queries.GetFileForAttach>)
   - [func \(q \*Queries\) GetFileIfViewable\(ctx context.Context, arg GetFileIfViewableParams\) \(File, error\)](<#Queries.GetFileIfViewable>)
+  - [func \(q \*Queries\) GetGuideResourceAttacher\(ctx context.Context, arg GetGuideResourceAttacherParams\) \(pgtype.UUID, error\)](<#Queries.GetGuideResourceAttacher>)
+  - [func \(q \*Queries\) GetMembership\(ctx context.Context, arg GetMembershipParams\) \(GetMembershipRow, error\)](<#Queries.GetMembership>)
+  - [func \(q \*Queries\) GetQuizDetail\(ctx context.Context, id pgtype.UUID\) \(GetQuizDetailRow, error\)](<#Queries.GetQuizDetail>)
+  - [func \(q \*Queries\) GetResourceByCreatorURL\(ctx context.Context, arg GetResourceByCreatorURLParams\) \(GetResourceByCreatorURLRow, error\)](<#Queries.GetResourceByCreatorURL>)
+  - [func \(q \*Queries\) GetSchool\(ctx context.Context, id pgtype.UUID\) \(School, error\)](<#Queries.GetSchool>)
+  - [func \(q \*Queries\) GetStudyGuideByIDForUpdate\(ctx context.Context, id pgtype.UUID\) \(GetStudyGuideByIDForUpdateRow, error\)](<#Queries.GetStudyGuideByIDForUpdate>)
+  - [func \(q \*Queries\) GetStudyGuideDetail\(ctx context.Context, id pgtype.UUID\) \(GetStudyGuideDetailRow, error\)](<#Queries.GetStudyGuideDetail>)
   - [func \(q \*Queries\) GetUserIDByClerkID\(ctx context.Context, clerkID string\) \(pgtype.UUID, error\)](<#Queries.GetUserIDByClerkID>)
+  - [func \(q \*Queries\) GetUserVoteForGuide\(ctx context.Context, arg GetUserVoteForGuideParams\) \(VoteDirection, error\)](<#Queries.GetUserVoteForGuide>)
+  - [func \(q \*Queries\) GuideExistsAndLive\(ctx context.Context, id pgtype.UUID\) \(bool, error\)](<#Queries.GuideExistsAndLive>)
+  - [func \(q \*Queries\) GuideExistsAndLiveForQuizzes\(ctx context.Context, id pgtype.UUID\) \(bool, error\)](<#Queries.GuideExistsAndLiveForQuizzes>)
+  - [func \(q \*Queries\) GuideFileAttached\(ctx context.Context, arg GuideFileAttachedParams\) \(bool, error\)](<#Queries.GuideFileAttached>)
+  - [func \(q \*Queries\) InsertFile\(ctx context.Context, arg InsertFileParams\) \(File, error\)](<#Queries.InsertFile>)
+  - [func \(q \*Queries\) InsertGuideFile\(ctx context.Context, arg InsertGuideFileParams\) \(pgtype.Timestamptz, error\)](<#Queries.InsertGuideFile>)
+  - [func \(q \*Queries\) InsertGuideResource\(ctx context.Context, arg InsertGuideResourceParams\) error](<#Queries.InsertGuideResource>)
+  - [func \(q \*Queries\) InsertQuiz\(ctx context.Context, arg InsertQuizParams\) \(InsertQuizRow, error\)](<#Queries.InsertQuiz>)
+  - [func \(q \*Queries\) InsertQuizAnswerOption\(ctx context.Context, arg InsertQuizAnswerOptionParams\) error](<#Queries.InsertQuizAnswerOption>)
+  - [func \(q \*Queries\) InsertQuizQuestion\(ctx context.Context, arg InsertQuizQuestionParams\) \(pgtype.UUID, error\)](<#Queries.InsertQuizQuestion>)
+  - [func \(q \*Queries\) InsertStudyGuide\(ctx context.Context, arg InsertStudyGuideParams\) \(InsertStudyGuideRow, error\)](<#Queries.InsertStudyGuide>)
+  - [func \(q \*Queries\) InsertStudyGuideRecommendation\(ctx context.Context, arg InsertStudyGuideRecommendationParams\) \(InsertStudyGuideRecommendationRow, error\)](<#Queries.InsertStudyGuideRecommendation>)
+  - [func \(q \*Queries\) JoinSection\(ctx context.Context, arg JoinSectionParams\) \(CourseMember, error\)](<#Queries.JoinSection>)
+  - [func \(q \*Queries\) LeaveSection\(ctx context.Context, arg LeaveSectionParams\) \(pgtype.UUID, error\)](<#Queries.LeaveSection>)
+  - [func \(q \*Queries\) ListCourseSections\(ctx context.Context, courseID pgtype.UUID\) \(\[\]ListCourseSectionsRow, error\)](<#Queries.ListCourseSections>)
+  - [func \(q \*Queries\) ListCoursesCreatedAtAsc\(ctx context.Context, arg ListCoursesCreatedAtAscParams\) \(\[\]ListCoursesCreatedAtAscRow, error\)](<#Queries.ListCoursesCreatedAtAsc>)
+  - [func \(q \*Queries\) ListCoursesCreatedAtDesc\(ctx context.Context, arg ListCoursesCreatedAtDescParams\) \(\[\]ListCoursesCreatedAtDescRow, error\)](<#Queries.ListCoursesCreatedAtDesc>)
+  - [func \(q \*Queries\) ListCoursesDepartmentAsc\(ctx context.Context, arg ListCoursesDepartmentAscParams\) \(\[\]ListCoursesDepartmentAscRow, error\)](<#Queries.ListCoursesDepartmentAsc>)
+  - [func \(q \*Queries\) ListCoursesDepartmentDesc\(ctx context.Context, arg ListCoursesDepartmentDescParams\) \(\[\]ListCoursesDepartmentDescRow, error\)](<#Queries.ListCoursesDepartmentDesc>)
+  - [func \(q \*Queries\) ListCoursesNumberAsc\(ctx context.Context, arg ListCoursesNumberAscParams\) \(\[\]ListCoursesNumberAscRow, error\)](<#Queries.ListCoursesNumberAsc>)
+  - [func \(q \*Queries\) ListCoursesNumberDesc\(ctx context.Context, arg ListCoursesNumberDescParams\) \(\[\]ListCoursesNumberDescRow, error\)](<#Queries.ListCoursesNumberDesc>)
+  - [func \(q \*Queries\) ListCoursesTitleAsc\(ctx context.Context, arg ListCoursesTitleAscParams\) \(\[\]ListCoursesTitleAscRow, error\)](<#Queries.ListCoursesTitleAsc>)
+  - [func \(q \*Queries\) ListCoursesTitleDesc\(ctx context.Context, arg ListCoursesTitleDescParams\) \(\[\]ListCoursesTitleDescRow, error\)](<#Queries.ListCoursesTitleDesc>)
+  - [func \(q \*Queries\) ListGuideFiles\(ctx context.Context, studyGuideID pgtype.UUID\) \(\[\]ListGuideFilesRow, error\)](<#Queries.ListGuideFiles>)
+  - [func \(q \*Queries\) ListGuideQuizzesWithQuestionCount\(ctx context.Context, studyGuideID pgtype.UUID\) \(\[\]ListGuideQuizzesWithQuestionCountRow, error\)](<#Queries.ListGuideQuizzesWithQuestionCount>)
+  - [func \(q \*Queries\) ListGuideRecommenders\(ctx context.Context, studyGuideID pgtype.UUID\) \(\[\]ListGuideRecommendersRow, error\)](<#Queries.ListGuideRecommenders>)
+  - [func \(q \*Queries\) ListGuideResources\(ctx context.Context, studyGuideID pgtype.UUID\) \(\[\]ListGuideResourcesRow, error\)](<#Queries.ListGuideResources>)
+  - [func \(q \*Queries\) ListMyEnrollments\(ctx context.Context, arg ListMyEnrollmentsParams\) \(\[\]ListMyEnrollmentsRow, error\)](<#Queries.ListMyEnrollments>)
   - [func \(q \*Queries\) ListOwnedFilesCreatedAsc\(ctx context.Context, arg ListOwnedFilesCreatedAscParams\) \(\[\]ListOwnedFilesCreatedAscRow, error\)](<#Queries.ListOwnedFilesCreatedAsc>)
   - [func \(q \*Queries\) ListOwnedFilesCreatedDesc\(ctx context.Context, arg ListOwnedFilesCreatedDescParams\) \(\[\]ListOwnedFilesCreatedDescRow, error\)](<#Queries.ListOwnedFilesCreatedDesc>)
   - [func \(q \*Queries\) ListOwnedFilesMimeAsc\(ctx context.Context, arg ListOwnedFilesMimeAscParams\) \(\[\]ListOwnedFilesMimeAscRow, error\)](<#Queries.ListOwnedFilesMimeAsc>)
@@ -82,22 +217,205 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
   - [func \(q \*Queries\) ListOwnedFilesStatusDesc\(ctx context.Context, arg ListOwnedFilesStatusDescParams\) \(\[\]ListOwnedFilesStatusDescRow, error\)](<#Queries.ListOwnedFilesStatusDesc>)
   - [func \(q \*Queries\) ListOwnedFilesUpdatedAsc\(ctx context.Context, arg ListOwnedFilesUpdatedAscParams\) \(\[\]ListOwnedFilesUpdatedAscRow, error\)](<#Queries.ListOwnedFilesUpdatedAsc>)
   - [func \(q \*Queries\) ListOwnedFilesUpdatedDesc\(ctx context.Context, arg ListOwnedFilesUpdatedDescParams\) \(\[\]ListOwnedFilesUpdatedDescRow, error\)](<#Queries.ListOwnedFilesUpdatedDesc>)
+  - [func \(q \*Queries\) ListQuizAnswerOptionsByQuiz\(ctx context.Context, quizID pgtype.UUID\) \(\[\]QuizAnswerOption, error\)](<#Queries.ListQuizAnswerOptionsByQuiz>)
+  - [func \(q \*Queries\) ListQuizQuestionsByQuiz\(ctx context.Context, quizID pgtype.UUID\) \(\[\]ListQuizQuestionsByQuizRow, error\)](<#Queries.ListQuizQuestionsByQuiz>)
+  - [func \(q \*Queries\) ListSchools\(ctx context.Context, arg ListSchoolsParams\) \(\[\]School, error\)](<#Queries.ListSchools>)
+  - [func \(q \*Queries\) ListSectionMembers\(ctx context.Context, arg ListSectionMembersParams\) \(\[\]ListSectionMembersRow, error\)](<#Queries.ListSectionMembers>)
+  - [func \(q \*Queries\) ListStudyGuidesNewestAsc\(ctx context.Context, arg ListStudyGuidesNewestAscParams\) \(\[\]ListStudyGuidesNewestAscRow, error\)](<#Queries.ListStudyGuidesNewestAsc>)
+  - [func \(q \*Queries\) ListStudyGuidesNewestDesc\(ctx context.Context, arg ListStudyGuidesNewestDescParams\) \(\[\]ListStudyGuidesNewestDescRow, error\)](<#Queries.ListStudyGuidesNewestDesc>)
+  - [func \(q \*Queries\) ListStudyGuidesScoreAsc\(ctx context.Context, arg ListStudyGuidesScoreAscParams\) \(\[\]ListStudyGuidesScoreAscRow, error\)](<#Queries.ListStudyGuidesScoreAsc>)
+  - [func \(q \*Queries\) ListStudyGuidesScoreDesc\(ctx context.Context, arg ListStudyGuidesScoreDescParams\) \(\[\]ListStudyGuidesScoreDescRow, error\)](<#Queries.ListStudyGuidesScoreDesc>)
+  - [func \(q \*Queries\) ListStudyGuidesUpdatedAsc\(ctx context.Context, arg ListStudyGuidesUpdatedAscParams\) \(\[\]ListStudyGuidesUpdatedAscRow, error\)](<#Queries.ListStudyGuidesUpdatedAsc>)
+  - [func \(q \*Queries\) ListStudyGuidesUpdatedDesc\(ctx context.Context, arg ListStudyGuidesUpdatedDescParams\) \(\[\]ListStudyGuidesUpdatedDescRow, error\)](<#Queries.ListStudyGuidesUpdatedDesc>)
+  - [func \(q \*Queries\) ListStudyGuidesViewsAsc\(ctx context.Context, arg ListStudyGuidesViewsAscParams\) \(\[\]ListStudyGuidesViewsAscRow, error\)](<#Queries.ListStudyGuidesViewsAsc>)
+  - [func \(q \*Queries\) ListStudyGuidesViewsDesc\(ctx context.Context, arg ListStudyGuidesViewsDescParams\) \(\[\]ListStudyGuidesViewsDescRow, error\)](<#Queries.ListStudyGuidesViewsDesc>)
   - [func \(q \*Queries\) MarkFileDeleted\(ctx context.Context, fileID pgtype.UUID\) error](<#Queries.MarkFileDeleted>)
+  - [func \(q \*Queries\) RevokeFileGrant\(ctx context.Context, arg RevokeFileGrantParams\) error](<#Queries.RevokeFileGrant>)
+  - [func \(q \*Queries\) SectionInCourseExists\(ctx context.Context, arg SectionInCourseExistsParams\) \(bool, error\)](<#Queries.SectionInCourseExists>)
   - [func \(q \*Queries\) SetFileDeletionJobID\(ctx context.Context, arg SetFileDeletionJobIDParams\) error](<#Queries.SetFileDeletionJobID>)
   - [func \(q \*Queries\) SoftDeleteFile\(ctx context.Context, arg SoftDeleteFileParams\) \(int64, error\)](<#Queries.SoftDeleteFile>)
+  - [func \(q \*Queries\) SoftDeleteQuizzesForGuide\(ctx context.Context, studyGuideID pgtype.UUID\) error](<#Queries.SoftDeleteQuizzesForGuide>)
+  - [func \(q \*Queries\) SoftDeleteStudyGuide\(ctx context.Context, id pgtype.UUID\) error](<#Queries.SoftDeleteStudyGuide>)
   - [func \(q \*Queries\) SoftDeleteUserByClerkID\(ctx context.Context, clerkID string\) \(int64, error\)](<#Queries.SoftDeleteUserByClerkID>)
+  - [func \(q \*Queries\) URLAlreadyAttachedToGuide\(ctx context.Context, arg URLAlreadyAttachedToGuideParams\) \(bool, error\)](<#Queries.URLAlreadyAttachedToGuide>)
   - [func \(q \*Queries\) UpdateFile\(ctx context.Context, arg UpdateFileParams\) \(UpdateFileRow, error\)](<#Queries.UpdateFile>)
+  - [func \(q \*Queries\) UpdateFileStatus\(ctx context.Context, arg UpdateFileStatusParams\) error](<#Queries.UpdateFileStatus>)
+  - [func \(q \*Queries\) UpdateStudyGuide\(ctx context.Context, arg UpdateStudyGuideParams\) error](<#Queries.UpdateStudyGuide>)
   - [func \(q \*Queries\) UpsertClerkUser\(ctx context.Context, arg UpsertClerkUserParams\) \(User, error\)](<#Queries.UpsertClerkUser>)
+  - [func \(q \*Queries\) UpsertFileGrant\(ctx context.Context, arg UpsertFileGrantParams\) \(FileGrant, error\)](<#Queries.UpsertFileGrant>)
+  - [func \(q \*Queries\) UpsertResource\(ctx context.Context, arg UpsertResourceParams\) error](<#Queries.UpsertResource>)
+  - [func \(q \*Queries\) UpsertStudyGuideVote\(ctx context.Context, arg UpsertStudyGuideVoteParams\) error](<#Queries.UpsertStudyGuideVote>)
+  - [func \(q \*Queries\) ViewerCanRecommendForGuide\(ctx context.Context, arg ViewerCanRecommendForGuideParams\) \(ViewerCanRecommendForGuideRow, error\)](<#Queries.ViewerCanRecommendForGuide>)
   - [func \(q \*Queries\) WithTx\(tx pgx.Tx\) \*Queries](<#Queries.WithTx>)
+- [type QuestionType](<#QuestionType>)
+  - [func \(e \*QuestionType\) Scan\(src interface\{\}\) error](<#QuestionType.Scan>)
+- [type Quiz](<#Quiz>)
+- [type QuizAnswerOption](<#QuizAnswerOption>)
+- [type QuizQuestion](<#QuizQuestion>)
+- [type Resource](<#Resource>)
+- [type ResourceType](<#ResourceType>)
+  - [func \(e \*ResourceType\) Scan\(src interface\{\}\) error](<#ResourceType.Scan>)
+- [type RevokeFileGrantParams](<#RevokeFileGrantParams>)
+- [type School](<#School>)
+- [type SectionInCourseExistsParams](<#SectionInCourseExistsParams>)
 - [type SetFileDeletionJobIDParams](<#SetFileDeletionJobIDParams>)
 - [type SoftDeleteFileParams](<#SoftDeleteFileParams>)
+- [type StudyGuide](<#StudyGuide>)
+- [type StudyGuideFavorite](<#StudyGuideFavorite>)
+- [type StudyGuideFile](<#StudyGuideFile>)
+- [type StudyGuideLastViewed](<#StudyGuideLastViewed>)
+- [type StudyGuideRecommendation](<#StudyGuideRecommendation>)
+- [type StudyGuideResource](<#StudyGuideResource>)
+- [type StudyGuideVote](<#StudyGuideVote>)
+- [type URLAlreadyAttachedToGuideParams](<#URLAlreadyAttachedToGuideParams>)
 - [type UpdateFileParams](<#UpdateFileParams>)
 - [type UpdateFileRow](<#UpdateFileRow>)
+- [type UpdateFileStatusParams](<#UpdateFileStatusParams>)
+- [type UpdateStudyGuideParams](<#UpdateStudyGuideParams>)
 - [type UploadStatus](<#UploadStatus>)
   - [func \(e \*UploadStatus\) Scan\(src interface\{\}\) error](<#UploadStatus.Scan>)
 - [type UpsertClerkUserParams](<#UpsertClerkUserParams>)
+- [type UpsertFileGrantParams](<#UpsertFileGrantParams>)
+- [type UpsertResourceParams](<#UpsertResourceParams>)
+- [type UpsertStudyGuideVoteParams](<#UpsertStudyGuideVoteParams>)
 - [type User](<#User>)
+- [type ViewerCanRecommendForGuideParams](<#ViewerCanRecommendForGuideParams>)
+- [type ViewerCanRecommendForGuideRow](<#ViewerCanRecommendForGuideRow>)
+- [type VoteDirection](<#VoteDirection>)
+  - [func \(e \*VoteDirection\) Scan\(src interface\{\}\) error](<#VoteDirection.Scan>)
 
+
+<a name="Course"></a>
+## type [Course](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L357-L366>)
+
+
+
+```go
+type Course struct {
+    ID          pgtype.UUID        `json:"id"`
+    SchoolID    pgtype.UUID        `json:"school_id"`
+    Department  string             `json:"department"`
+    Number      string             `json:"number"`
+    Title       string             `json:"title"`
+    Description pgtype.Text        `json:"description"`
+    CreatedAt   pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+```
+
+<a name="CourseFavorite"></a>
+## type [CourseFavorite](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L368-L372>)
+
+
+
+```go
+type CourseFavorite struct {
+    UserID    pgtype.UUID        `json:"user_id"`
+    CourseID  pgtype.UUID        `json:"course_id"`
+    CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+```
+
+<a name="CourseFile"></a>
+## type [CourseFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L374-L378>)
+
+
+
+```go
+type CourseFile struct {
+    FileID    pgtype.UUID        `json:"file_id"`
+    CourseID  pgtype.UUID        `json:"course_id"`
+    CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+```
+
+<a name="CourseLastViewed"></a>
+## type [CourseLastViewed](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L380-L384>)
+
+
+
+```go
+type CourseLastViewed struct {
+    UserID   pgtype.UUID        `json:"user_id"`
+    CourseID pgtype.UUID        `json:"course_id"`
+    ViewedAt pgtype.Timestamptz `json:"viewed_at"`
+}
+```
+
+<a name="CourseMember"></a>
+## type [CourseMember](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L386-L391>)
+
+
+
+```go
+type CourseMember struct {
+    UserID    pgtype.UUID        `json:"user_id"`
+    SectionID pgtype.UUID        `json:"section_id"`
+    Role      CourseRole         `json:"role"`
+    JoinedAt  pgtype.Timestamptz `json:"joined_at"`
+}
+```
+
+<a name="CourseResource"></a>
+## type [CourseResource](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L393-L398>)
+
+
+
+```go
+type CourseResource struct {
+    ResourceID pgtype.UUID        `json:"resource_id"`
+    CourseID   pgtype.UUID        `json:"course_id"`
+    AttachedBy pgtype.UUID        `json:"attached_by"`
+    CreatedAt  pgtype.Timestamptz `json:"created_at"`
+}
+```
+
+<a name="CourseRole"></a>
+## type [CourseRole](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L14>)
+
+
+
+```go
+type CourseRole string
+```
+
+<a name="CourseRoleStudent"></a>
+
+```go
+const (
+    CourseRoleStudent    CourseRole = "student"
+    CourseRoleInstructor CourseRole = "instructor"
+    CourseRoleTa         CourseRole = "ta"
+)
+```
+
+<a name="CourseRole.Scan"></a>
+### func \(\*CourseRole\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L22>)
+
+```go
+func (e *CourseRole) Scan(src interface{}) error
+```
+
+
+
+<a name="CourseSection"></a>
+## type [CourseSection](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L400-L410>)
+
+
+
+```go
+type CourseSection struct {
+    ID             pgtype.UUID        `json:"id"`
+    CourseID       pgtype.UUID        `json:"course_id"`
+    Term           string             `json:"term"`
+    SectionCode    pgtype.Text        `json:"section_code"`
+    InstructorName pgtype.Text        `json:"instructor_name"`
+    StartDate      pgtype.Date        `json:"start_date"`
+    EndDate        pgtype.Date        `json:"end_date"`
+    CreatedAt      pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+```
 
 <a name="DBTX"></a>
 ## type [DBTX](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/db.go#L14-L18>)
@@ -112,8 +430,56 @@ type DBTX interface {
 }
 ```
 
+<a name="DeleteGuideFileParams"></a>
+## type [DeleteGuideFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L57-L60>)
+
+
+
+```go
+type DeleteGuideFileParams struct {
+    FileID       pgtype.UUID `json:"file_id"`
+    StudyGuideID pgtype.UUID `json:"study_guide_id"`
+}
+```
+
+<a name="DeleteGuideResourceParams"></a>
+## type [DeleteGuideResourceParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L83-L86>)
+
+
+
+```go
+type DeleteGuideResourceParams struct {
+    ResourceID   pgtype.UUID `json:"resource_id"`
+    StudyGuideID pgtype.UUID `json:"study_guide_id"`
+}
+```
+
+<a name="DeleteStudyGuideRecommendationParams"></a>
+## type [DeleteStudyGuideRecommendationParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L107-L110>)
+
+
+
+```go
+type DeleteStudyGuideRecommendationParams struct {
+    StudyGuideID  pgtype.UUID `json:"study_guide_id"`
+    RecommendedBy pgtype.UUID `json:"recommended_by"`
+}
+```
+
+<a name="DeleteStudyGuideVoteParams"></a>
+## type [DeleteStudyGuideVoteParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L132-L135>)
+
+
+
+```go
+type DeleteStudyGuideVoteParams struct {
+    UserID       pgtype.UUID `json:"user_id"`
+    StudyGuideID pgtype.UUID `json:"study_guide_id"`
+}
+```
+
 <a name="File"></a>
-## type [File](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L229-L244>)
+## type [File](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L412-L427>)
 
 
 
@@ -123,7 +489,7 @@ type File struct {
     UserID         pgtype.UUID            `json:"user_id"`
     S3Key          string                 `json:"s3_key"`
     Name           string                 `json:"name"`
-    MimeType       MimeType               `json:"mime_type"`
+    MimeType       string                 `json:"mime_type"`
     Size           int64                  `json:"size"`
     Checksum       pgtype.Text            `json:"checksum"`
     Status         UploadStatus           `json:"status"`
@@ -137,7 +503,7 @@ type File struct {
 ```
 
 <a name="FileDeletionStatus"></a>
-## type [FileDeletionStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L14>)
+## type [FileDeletionStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L57>)
 
 
 
@@ -155,7 +521,7 @@ const (
 ```
 
 <a name="FileDeletionStatus.Scan"></a>
-### func \(\*FileDeletionStatus\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L21>)
+### func \(\*FileDeletionStatus\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L64>)
 
 ```go
 func (e *FileDeletionStatus) Scan(src interface{}) error
@@ -164,7 +530,7 @@ func (e *FileDeletionStatus) Scan(src interface{}) error
 
 
 <a name="FileFavorite"></a>
-## type [FileFavorite](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L246-L250>)
+## type [FileFavorite](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L429-L433>)
 
 
 
@@ -177,7 +543,7 @@ type FileFavorite struct {
 ```
 
 <a name="FileGrant"></a>
-## type [FileGrant](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L252-L260>)
+## type [FileGrant](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L435-L443>)
 
 
 
@@ -194,7 +560,7 @@ type FileGrant struct {
 ```
 
 <a name="FileLastViewed"></a>
-## type [FileLastViewed](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L262-L266>)
+## type [FileLastViewed](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L445-L449>)
 
 
 
@@ -207,7 +573,7 @@ type FileLastViewed struct {
 ```
 
 <a name="FileView"></a>
-## type [FileView](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L268-L273>)
+## type [FileView](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L451-L456>)
 
 
 
@@ -217,6 +583,30 @@ type FileView struct {
     FileID   pgtype.UUID        `json:"file_id"`
     UserID   pgtype.UUID        `json:"user_id"`
     ViewedAt pgtype.Timestamptz `json:"viewed_at"`
+}
+```
+
+<a name="GetCourseRow"></a>
+## type [GetCourseRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L41-L56>)
+
+
+
+```go
+type GetCourseRow struct {
+    ID          pgtype.UUID        `json:"id"`
+    SchoolID    pgtype.UUID        `json:"school_id"`
+    Department  string             `json:"department"`
+    Number      string             `json:"number"`
+    Title       string             `json:"title"`
+    Description pgtype.Text        `json:"description"`
+    CreatedAt   pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+    SID         pgtype.UUID        `json:"s_id"`
+    SName       string             `json:"s_name"`
+    SAcronym    string             `json:"s_acronym"`
+    SCity       pgtype.Text        `json:"s_city"`
+    SState      pgtype.Text        `json:"s_state"`
+    SCountry    pgtype.Text        `json:"s_country"`
 }
 ```
 
@@ -243,7 +633,7 @@ type GetFileByOwnerRow struct {
     UserID         pgtype.UUID            `json:"user_id"`
     S3Key          string                 `json:"s3_key"`
     Name           string                 `json:"name"`
-    MimeType       MimeType               `json:"mime_type"`
+    MimeType       string                 `json:"mime_type"`
     Size           int64                  `json:"size"`
     Checksum       pgtype.Text            `json:"checksum"`
     Status         UploadStatus           `json:"status"`
@@ -253,6 +643,21 @@ type GetFileByOwnerRow struct {
     DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
     CreatedAt      pgtype.Timestamptz     `json:"created_at"`
     UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
+}
+```
+
+<a name="GetFileForAttachRow"></a>
+## type [GetFileForAttachRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L157-L163>)
+
+
+
+```go
+type GetFileForAttachRow struct {
+    ID             pgtype.UUID            `json:"id"`
+    UserID         pgtype.UUID            `json:"user_id"`
+    Status         UploadStatus           `json:"status"`
+    DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+    DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
 }
 ```
 
@@ -270,8 +675,143 @@ type GetFileIfViewableParams struct {
 }
 ```
 
+<a name="GetGuideResourceAttacherParams"></a>
+## type [GetGuideResourceAttacherParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L196-L199>)
+
+
+
+```go
+type GetGuideResourceAttacherParams struct {
+    ResourceID   pgtype.UUID `json:"resource_id"`
+    StudyGuideID pgtype.UUID `json:"study_guide_id"`
+}
+```
+
+<a name="GetMembershipParams"></a>
+## type [GetMembershipParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L87-L90>)
+
+
+
+```go
+type GetMembershipParams struct {
+    UserID    pgtype.UUID `json:"user_id"`
+    SectionID pgtype.UUID `json:"section_id"`
+}
+```
+
+<a name="GetMembershipRow"></a>
+## type [GetMembershipRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L92-L95>)
+
+
+
+```go
+type GetMembershipRow struct {
+    Role     CourseRole         `json:"role"`
+    JoinedAt pgtype.Timestamptz `json:"joined_at"`
+}
+```
+
+<a name="GetQuizDetailRow"></a>
+## type [GetQuizDetailRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L30-L40>)
+
+
+
+```go
+type GetQuizDetailRow struct {
+    ID               pgtype.UUID        `json:"id"`
+    StudyGuideID     pgtype.UUID        `json:"study_guide_id"`
+    Title            string             `json:"title"`
+    Description      pgtype.Text        `json:"description"`
+    CreatedAt        pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+    CreatorID        pgtype.UUID        `json:"creator_id"`
+    CreatorFirstName string             `json:"creator_first_name"`
+    CreatorLastName  string             `json:"creator_last_name"`
+}
+```
+
+<a name="GetResourceByCreatorURLParams"></a>
+## type [GetResourceByCreatorURLParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L220-L223>)
+
+
+
+```go
+type GetResourceByCreatorURLParams struct {
+    CreatorID pgtype.UUID `json:"creator_id"`
+    Url       string      `json:"url"`
+}
+```
+
+<a name="GetResourceByCreatorURLRow"></a>
+## type [GetResourceByCreatorURLRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L225-L232>)
+
+
+
+```go
+type GetResourceByCreatorURLRow struct {
+    ID          pgtype.UUID        `json:"id"`
+    Title       string             `json:"title"`
+    Url         string             `json:"url"`
+    Type        ResourceType       `json:"type"`
+    Description pgtype.Text        `json:"description"`
+    CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+```
+
+<a name="GetStudyGuideByIDForUpdateRow"></a>
+## type [GetStudyGuideByIDForUpdateRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L259-L263>)
+
+
+
+```go
+type GetStudyGuideByIDForUpdateRow struct {
+    ID        pgtype.UUID        `json:"id"`
+    CreatorID pgtype.UUID        `json:"creator_id"`
+    DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+}
+```
+
+<a name="GetStudyGuideDetailRow"></a>
+## type [GetStudyGuideDetailRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L306-L324>)
+
+
+
+```go
+type GetStudyGuideDetailRow struct {
+    ID               pgtype.UUID        `json:"id"`
+    Title            string             `json:"title"`
+    Description      pgtype.Text        `json:"description"`
+    Content          pgtype.Text        `json:"content"`
+    Tags             []string           `json:"tags"`
+    ViewCount        int32              `json:"view_count"`
+    CreatedAt        pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+    CourseID         pgtype.UUID        `json:"course_id"`
+    CourseDepartment string             `json:"course_department"`
+    CourseNumber     string             `json:"course_number"`
+    CourseTitle      string             `json:"course_title"`
+    CreatorID        pgtype.UUID        `json:"creator_id"`
+    CreatorFirstName string             `json:"creator_first_name"`
+    CreatorLastName  string             `json:"creator_last_name"`
+    VoteScore        int64              `json:"vote_score"`
+    IsRecommended    bool               `json:"is_recommended"`
+}
+```
+
+<a name="GetUserVoteForGuideParams"></a>
+## type [GetUserVoteForGuideParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L378-L381>)
+
+
+
+```go
+type GetUserVoteForGuideParams struct {
+    StudyGuideID pgtype.UUID `json:"study_guide_id"`
+    ViewerID     pgtype.UUID `json:"viewer_id"`
+}
+```
+
 <a name="GranteeType"></a>
-## type [GranteeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L56>)
+## type [GranteeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L99>)
 
 
 
@@ -290,7 +830,7 @@ const (
 ```
 
 <a name="GranteeType.Scan"></a>
-### func \(\*GranteeType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L64>)
+### func \(\*GranteeType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L107>)
 
 ```go
 func (e *GranteeType) Scan(src interface{}) error
@@ -298,8 +838,628 @@ func (e *GranteeType) Scan(src interface{}) error
 
 
 
+<a name="GuideFileAttachedParams"></a>
+## type [GuideFileAttachedParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L423-L426>)
+
+
+
+```go
+type GuideFileAttachedParams struct {
+    FileID       pgtype.UUID `json:"file_id"`
+    StudyGuideID pgtype.UUID `json:"study_guide_id"`
+}
+```
+
+<a name="InsertFileParams"></a>
+## type [InsertFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L161-L168>)
+
+
+
+```go
+type InsertFileParams struct {
+    ID       pgtype.UUID `json:"id"`
+    UserID   pgtype.UUID `json:"user_id"`
+    S3Key    string      `json:"s3_key"`
+    Name     string      `json:"name"`
+    MimeType string      `json:"mime_type"`
+    Size     int64       `json:"size"`
+}
+```
+
+<a name="InsertGuideFileParams"></a>
+## type [InsertGuideFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L450-L453>)
+
+
+
+```go
+type InsertGuideFileParams struct {
+    FileID       pgtype.UUID `json:"file_id"`
+    StudyGuideID pgtype.UUID `json:"study_guide_id"`
+}
+```
+
+<a name="InsertGuideResourceParams"></a>
+## type [InsertGuideResourceParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L481-L485>)
+
+
+
+```go
+type InsertGuideResourceParams struct {
+    ResourceID   pgtype.UUID `json:"resource_id"`
+    StudyGuideID pgtype.UUID `json:"study_guide_id"`
+    AttachedBy   pgtype.UUID `json:"attached_by"`
+}
+```
+
+<a name="InsertQuizAnswerOptionParams"></a>
+## type [InsertQuizAnswerOptionParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L158-L163>)
+
+
+
+```go
+type InsertQuizAnswerOptionParams struct {
+    QuestionID pgtype.UUID `json:"question_id"`
+    Text       string      `json:"text"`
+    IsCorrect  bool        `json:"is_correct"`
+    SortOrder  int32       `json:"sort_order"`
+}
+```
+
+<a name="InsertQuizParams"></a>
+## type [InsertQuizParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L118-L123>)
+
+
+
+```go
+type InsertQuizParams struct {
+    StudyGuideID pgtype.UUID `json:"study_guide_id"`
+    CreatorID    pgtype.UUID `json:"creator_id"`
+    Title        string      `json:"title"`
+    Description  pgtype.Text `json:"description"`
+}
+```
+
+<a name="InsertQuizQuestionParams"></a>
+## type [InsertQuizQuestionParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L197-L206>)
+
+
+
+```go
+type InsertQuizQuestionParams struct {
+    QuizID            pgtype.UUID  `json:"quiz_id"`
+    Type              QuestionType `json:"type"`
+    QuestionText      string       `json:"question_text"`
+    Hint              pgtype.Text  `json:"hint"`
+    FeedbackCorrect   pgtype.Text  `json:"feedback_correct"`
+    FeedbackIncorrect pgtype.Text  `json:"feedback_incorrect"`
+    ReferenceAnswer   pgtype.Text  `json:"reference_answer"`
+    SortOrder         int32        `json:"sort_order"`
+}
+```
+
+<a name="InsertQuizRow"></a>
+## type [InsertQuizRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L125-L129>)
+
+
+
+```go
+type InsertQuizRow struct {
+    ID        pgtype.UUID        `json:"id"`
+    CreatedAt pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+```
+
+<a name="InsertStudyGuideParams"></a>
+## type [InsertStudyGuideParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L514-L521>)
+
+
+
+```go
+type InsertStudyGuideParams struct {
+    CourseID    pgtype.UUID `json:"course_id"`
+    CreatorID   pgtype.UUID `json:"creator_id"`
+    Title       string      `json:"title"`
+    Description pgtype.Text `json:"description"`
+    Content     pgtype.Text `json:"content"`
+    Tags        []string    `json:"tags"`
+}
+```
+
+<a name="InsertStudyGuideRecommendationParams"></a>
+## type [InsertStudyGuideRecommendationParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L594-L597>)
+
+
+
+```go
+type InsertStudyGuideRecommendationParams struct {
+    RecommendedBy pgtype.UUID `json:"recommended_by"`
+    StudyGuideID  pgtype.UUID `json:"study_guide_id"`
+}
+```
+
+<a name="InsertStudyGuideRecommendationRow"></a>
+## type [InsertStudyGuideRecommendationRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L599-L603>)
+
+
+
+```go
+type InsertStudyGuideRecommendationRow struct {
+    CreatedAt pgtype.Timestamptz `json:"created_at"`
+    FirstName string             `json:"first_name"`
+    LastName  string             `json:"last_name"`
+}
+```
+
+<a name="InsertStudyGuideRow"></a>
+## type [InsertStudyGuideRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L523-L528>)
+
+
+
+```go
+type InsertStudyGuideRow struct {
+    ID        pgtype.UUID        `json:"id"`
+    ViewCount int32              `json:"view_count"`
+    CreatedAt pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+```
+
+<a name="JoinSectionParams"></a>
+## type [JoinSectionParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L115-L118>)
+
+
+
+```go
+type JoinSectionParams struct {
+    UserID    pgtype.UUID `json:"user_id"`
+    SectionID pgtype.UUID `json:"section_id"`
+}
+```
+
+<a name="LeaveSectionParams"></a>
+## type [LeaveSectionParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L143-L146>)
+
+
+
+```go
+type LeaveSectionParams struct {
+    UserID    pgtype.UUID `json:"user_id"`
+    SectionID pgtype.UUID `json:"section_id"`
+}
+```
+
+<a name="ListCourseSectionsRow"></a>
+## type [ListCourseSectionsRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L169-L176>)
+
+
+
+```go
+type ListCourseSectionsRow struct {
+    ID             pgtype.UUID `json:"id"`
+    Term           string      `json:"term"`
+    SectionCode    pgtype.Text `json:"section_code"`
+    InstructorName pgtype.Text `json:"instructor_name"`
+    StartDate      pgtype.Date `json:"start_date"`
+    MemberCount    int64       `json:"member_count"`
+}
+```
+
+<a name="ListCoursesCreatedAtAscParams"></a>
+## type [ListCoursesCreatedAtAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L234-L241>)
+
+
+
+```go
+type ListCoursesCreatedAtAscParams struct {
+    SchoolID        pgtype.UUID        `json:"school_id"`
+    Department      pgtype.Text        `json:"department"`
+    Q               pgtype.Text        `json:"q"`
+    CursorCreatedAt pgtype.Timestamptz `json:"cursor_created_at"`
+    CursorID        pgtype.UUID        `json:"cursor_id"`
+    PageLimit       int32              `json:"page_limit"`
+}
+```
+
+<a name="ListCoursesCreatedAtAscRow"></a>
+## type [ListCoursesCreatedAtAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L243-L258>)
+
+
+
+```go
+type ListCoursesCreatedAtAscRow struct {
+    ID          pgtype.UUID        `json:"id"`
+    SchoolID    pgtype.UUID        `json:"school_id"`
+    Department  string             `json:"department"`
+    Number      string             `json:"number"`
+    Title       string             `json:"title"`
+    Description pgtype.Text        `json:"description"`
+    CreatedAt   pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+    SID         pgtype.UUID        `json:"s_id"`
+    SName       string             `json:"s_name"`
+    SAcronym    string             `json:"s_acronym"`
+    SCity       pgtype.Text        `json:"s_city"`
+    SState      pgtype.Text        `json:"s_state"`
+    SCountry    pgtype.Text        `json:"s_country"`
+}
+```
+
+<a name="ListCoursesCreatedAtDescParams"></a>
+## type [ListCoursesCreatedAtDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L327-L334>)
+
+
+
+```go
+type ListCoursesCreatedAtDescParams struct {
+    SchoolID        pgtype.UUID        `json:"school_id"`
+    Department      pgtype.Text        `json:"department"`
+    Q               pgtype.Text        `json:"q"`
+    CursorCreatedAt pgtype.Timestamptz `json:"cursor_created_at"`
+    CursorID        pgtype.UUID        `json:"cursor_id"`
+    PageLimit       int32              `json:"page_limit"`
+}
+```
+
+<a name="ListCoursesCreatedAtDescRow"></a>
+## type [ListCoursesCreatedAtDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L336-L351>)
+
+
+
+```go
+type ListCoursesCreatedAtDescRow struct {
+    ID          pgtype.UUID        `json:"id"`
+    SchoolID    pgtype.UUID        `json:"school_id"`
+    Department  string             `json:"department"`
+    Number      string             `json:"number"`
+    Title       string             `json:"title"`
+    Description pgtype.Text        `json:"description"`
+    CreatedAt   pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+    SID         pgtype.UUID        `json:"s_id"`
+    SName       string             `json:"s_name"`
+    SAcronym    string             `json:"s_acronym"`
+    SCity       pgtype.Text        `json:"s_city"`
+    SState      pgtype.Text        `json:"s_state"`
+    SCountry    pgtype.Text        `json:"s_country"`
+}
+```
+
+<a name="ListCoursesDepartmentAscParams"></a>
+## type [ListCoursesDepartmentAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L425-L433>)
+
+
+
+```go
+type ListCoursesDepartmentAscParams struct {
+    SchoolID         pgtype.UUID `json:"school_id"`
+    Department       pgtype.Text `json:"department"`
+    Q                pgtype.Text `json:"q"`
+    CursorDepartment pgtype.Text `json:"cursor_department"`
+    CursorNumber     pgtype.Text `json:"cursor_number"`
+    CursorID         pgtype.UUID `json:"cursor_id"`
+    PageLimit        int32       `json:"page_limit"`
+}
+```
+
+<a name="ListCoursesDepartmentAscRow"></a>
+## type [ListCoursesDepartmentAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L435-L450>)
+
+
+
+```go
+type ListCoursesDepartmentAscRow struct {
+    ID          pgtype.UUID        `json:"id"`
+    SchoolID    pgtype.UUID        `json:"school_id"`
+    Department  string             `json:"department"`
+    Number      string             `json:"number"`
+    Title       string             `json:"title"`
+    Description pgtype.Text        `json:"description"`
+    CreatedAt   pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+    SID         pgtype.UUID        `json:"s_id"`
+    SName       string             `json:"s_name"`
+    SAcronym    string             `json:"s_acronym"`
+    SCity       pgtype.Text        `json:"s_city"`
+    SState      pgtype.Text        `json:"s_state"`
+    SCountry    pgtype.Text        `json:"s_country"`
+}
+```
+
+<a name="ListCoursesDepartmentDescParams"></a>
+## type [ListCoursesDepartmentDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L534-L542>)
+
+
+
+```go
+type ListCoursesDepartmentDescParams struct {
+    SchoolID         pgtype.UUID `json:"school_id"`
+    Department       pgtype.Text `json:"department"`
+    Q                pgtype.Text `json:"q"`
+    CursorDepartment pgtype.Text `json:"cursor_department"`
+    CursorNumber     pgtype.Text `json:"cursor_number"`
+    CursorID         pgtype.UUID `json:"cursor_id"`
+    PageLimit        int32       `json:"page_limit"`
+}
+```
+
+<a name="ListCoursesDepartmentDescRow"></a>
+## type [ListCoursesDepartmentDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L544-L559>)
+
+
+
+```go
+type ListCoursesDepartmentDescRow struct {
+    ID          pgtype.UUID        `json:"id"`
+    SchoolID    pgtype.UUID        `json:"school_id"`
+    Department  string             `json:"department"`
+    Number      string             `json:"number"`
+    Title       string             `json:"title"`
+    Description pgtype.Text        `json:"description"`
+    CreatedAt   pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+    SID         pgtype.UUID        `json:"s_id"`
+    SName       string             `json:"s_name"`
+    SAcronym    string             `json:"s_acronym"`
+    SCity       pgtype.Text        `json:"s_city"`
+    SState      pgtype.Text        `json:"s_state"`
+    SCountry    pgtype.Text        `json:"s_country"`
+}
+```
+
+<a name="ListCoursesNumberAscParams"></a>
+## type [ListCoursesNumberAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L629-L636>)
+
+
+
+```go
+type ListCoursesNumberAscParams struct {
+    SchoolID     pgtype.UUID `json:"school_id"`
+    Department   pgtype.Text `json:"department"`
+    Q            pgtype.Text `json:"q"`
+    CursorNumber pgtype.Text `json:"cursor_number"`
+    CursorID     pgtype.UUID `json:"cursor_id"`
+    PageLimit    int32       `json:"page_limit"`
+}
+```
+
+<a name="ListCoursesNumberAscRow"></a>
+## type [ListCoursesNumberAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L638-L653>)
+
+
+
+```go
+type ListCoursesNumberAscRow struct {
+    ID          pgtype.UUID        `json:"id"`
+    SchoolID    pgtype.UUID        `json:"school_id"`
+    Department  string             `json:"department"`
+    Number      string             `json:"number"`
+    Title       string             `json:"title"`
+    Description pgtype.Text        `json:"description"`
+    CreatedAt   pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+    SID         pgtype.UUID        `json:"s_id"`
+    SName       string             `json:"s_name"`
+    SAcronym    string             `json:"s_acronym"`
+    SCity       pgtype.Text        `json:"s_city"`
+    SState      pgtype.Text        `json:"s_state"`
+    SCountry    pgtype.Text        `json:"s_country"`
+}
+```
+
+<a name="ListCoursesNumberDescParams"></a>
+## type [ListCoursesNumberDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L722-L729>)
+
+
+
+```go
+type ListCoursesNumberDescParams struct {
+    SchoolID     pgtype.UUID `json:"school_id"`
+    Department   pgtype.Text `json:"department"`
+    Q            pgtype.Text `json:"q"`
+    CursorNumber pgtype.Text `json:"cursor_number"`
+    CursorID     pgtype.UUID `json:"cursor_id"`
+    PageLimit    int32       `json:"page_limit"`
+}
+```
+
+<a name="ListCoursesNumberDescRow"></a>
+## type [ListCoursesNumberDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L731-L746>)
+
+
+
+```go
+type ListCoursesNumberDescRow struct {
+    ID          pgtype.UUID        `json:"id"`
+    SchoolID    pgtype.UUID        `json:"school_id"`
+    Department  string             `json:"department"`
+    Number      string             `json:"number"`
+    Title       string             `json:"title"`
+    Description pgtype.Text        `json:"description"`
+    CreatedAt   pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+    SID         pgtype.UUID        `json:"s_id"`
+    SName       string             `json:"s_name"`
+    SAcronym    string             `json:"s_acronym"`
+    SCity       pgtype.Text        `json:"s_city"`
+    SState      pgtype.Text        `json:"s_state"`
+    SCountry    pgtype.Text        `json:"s_country"`
+}
+```
+
+<a name="ListCoursesTitleAscParams"></a>
+## type [ListCoursesTitleAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L815-L822>)
+
+
+
+```go
+type ListCoursesTitleAscParams struct {
+    SchoolID    pgtype.UUID `json:"school_id"`
+    Department  pgtype.Text `json:"department"`
+    Q           pgtype.Text `json:"q"`
+    CursorTitle pgtype.Text `json:"cursor_title"`
+    CursorID    pgtype.UUID `json:"cursor_id"`
+    PageLimit   int32       `json:"page_limit"`
+}
+```
+
+<a name="ListCoursesTitleAscRow"></a>
+## type [ListCoursesTitleAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L824-L839>)
+
+
+
+```go
+type ListCoursesTitleAscRow struct {
+    ID          pgtype.UUID        `json:"id"`
+    SchoolID    pgtype.UUID        `json:"school_id"`
+    Department  string             `json:"department"`
+    Number      string             `json:"number"`
+    Title       string             `json:"title"`
+    Description pgtype.Text        `json:"description"`
+    CreatedAt   pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+    SID         pgtype.UUID        `json:"s_id"`
+    SName       string             `json:"s_name"`
+    SAcronym    string             `json:"s_acronym"`
+    SCity       pgtype.Text        `json:"s_city"`
+    SState      pgtype.Text        `json:"s_state"`
+    SCountry    pgtype.Text        `json:"s_country"`
+}
+```
+
+<a name="ListCoursesTitleDescParams"></a>
+## type [ListCoursesTitleDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L908-L915>)
+
+
+
+```go
+type ListCoursesTitleDescParams struct {
+    SchoolID    pgtype.UUID `json:"school_id"`
+    Department  pgtype.Text `json:"department"`
+    Q           pgtype.Text `json:"q"`
+    CursorTitle pgtype.Text `json:"cursor_title"`
+    CursorID    pgtype.UUID `json:"cursor_id"`
+    PageLimit   int32       `json:"page_limit"`
+}
+```
+
+<a name="ListCoursesTitleDescRow"></a>
+## type [ListCoursesTitleDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L917-L932>)
+
+
+
+```go
+type ListCoursesTitleDescRow struct {
+    ID          pgtype.UUID        `json:"id"`
+    SchoolID    pgtype.UUID        `json:"school_id"`
+    Department  string             `json:"department"`
+    Number      string             `json:"number"`
+    Title       string             `json:"title"`
+    Description pgtype.Text        `json:"description"`
+    CreatedAt   pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+    SID         pgtype.UUID        `json:"s_id"`
+    SName       string             `json:"s_name"`
+    SAcronym    string             `json:"s_acronym"`
+    SCity       pgtype.Text        `json:"s_city"`
+    SState      pgtype.Text        `json:"s_state"`
+    SCountry    pgtype.Text        `json:"s_country"`
+}
+```
+
+<a name="ListGuideFilesRow"></a>
+## type [ListGuideFilesRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L631-L636>)
+
+
+
+```go
+type ListGuideFilesRow struct {
+    ID       pgtype.UUID `json:"id"`
+    Name     string      `json:"name"`
+    MimeType string      `json:"mime_type"`
+    Size     int64       `json:"size"`
+}
+```
+
+<a name="ListGuideQuizzesWithQuestionCountRow"></a>
+## type [ListGuideQuizzesWithQuestionCountRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L685-L689>)
+
+
+
+```go
+type ListGuideQuizzesWithQuestionCountRow struct {
+    ID            pgtype.UUID `json:"id"`
+    Title         string      `json:"title"`
+    QuestionCount int64       `json:"question_count"`
+}
+```
+
+<a name="ListGuideRecommendersRow"></a>
+## type [ListGuideRecommendersRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L723-L727>)
+
+
+
+```go
+type ListGuideRecommendersRow struct {
+    ID        pgtype.UUID `json:"id"`
+    FirstName string      `json:"first_name"`
+    LastName  string      `json:"last_name"`
+}
+```
+
+<a name="ListGuideResourcesRow"></a>
+## type [ListGuideResourcesRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L760-L767>)
+
+
+
+```go
+type ListGuideResourcesRow struct {
+    ID          pgtype.UUID        `json:"id"`
+    Title       string             `json:"title"`
+    Url         string             `json:"url"`
+    Type        ResourceType       `json:"type"`
+    Description pgtype.Text        `json:"description"`
+    CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+```
+
+<a name="ListMyEnrollmentsParams"></a>
+## type [ListMyEnrollmentsParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L1000-L1004>)
+
+
+
+```go
+type ListMyEnrollmentsParams struct {
+    UserID pgtype.UUID    `json:"user_id"`
+    Term   pgtype.Text    `json:"term"`
+    Role   NullCourseRole `json:"role"`
+}
+```
+
+<a name="ListMyEnrollmentsRow"></a>
+## type [ListMyEnrollmentsRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L1006-L1019>)
+
+
+
+```go
+type ListMyEnrollmentsRow struct {
+    SectionID             pgtype.UUID        `json:"section_id"`
+    SectionTerm           string             `json:"section_term"`
+    SectionSectionCode    pgtype.Text        `json:"section_section_code"`
+    SectionInstructorName pgtype.Text        `json:"section_instructor_name"`
+    CourseID              pgtype.UUID        `json:"course_id"`
+    CourseDepartment      string             `json:"course_department"`
+    CourseNumber          string             `json:"course_number"`
+    CourseTitle           string             `json:"course_title"`
+    SchoolID              pgtype.UUID        `json:"school_id"`
+    SchoolAcronym         string             `json:"school_acronym"`
+    MemberRole            CourseRole         `json:"member_role"`
+    MemberJoinedAt        pgtype.Timestamptz `json:"member_joined_at"`
+}
+```
+
 <a name="ListOwnedFilesCreatedAscParams"></a>
-## type [ListOwnedFilesCreatedAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L184-L199>)
+## type [ListOwnedFilesCreatedAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L228-L243>)
 
 
 
@@ -308,7 +1468,7 @@ type ListOwnedFilesCreatedAscParams struct {
     ViewerID        pgtype.UUID        `json:"viewer_id"`
     OwnerID         pgtype.UUID        `json:"owner_id"`
     Status          NullUploadStatus   `json:"status"`
-    MimeType        NullMimeType       `json:"mime_type"`
+    MimeType        pgtype.Text        `json:"mime_type"`
     MinSize         pgtype.Int8        `json:"min_size"`
     MaxSize         pgtype.Int8        `json:"max_size"`
     CreatedFrom     pgtype.Timestamptz `json:"created_from"`
@@ -323,7 +1483,7 @@ type ListOwnedFilesCreatedAscParams struct {
 ```
 
 <a name="ListOwnedFilesCreatedAscRow"></a>
-## type [ListOwnedFilesCreatedAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L201-L218>)
+## type [ListOwnedFilesCreatedAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L245-L262>)
 
 
 
@@ -333,7 +1493,7 @@ type ListOwnedFilesCreatedAscRow struct {
     UserID         pgtype.UUID            `json:"user_id"`
     S3Key          string                 `json:"s3_key"`
     Name           string                 `json:"name"`
-    MimeType       MimeType               `json:"mime_type"`
+    MimeType       string                 `json:"mime_type"`
     Size           int64                  `json:"size"`
     Checksum       pgtype.Text            `json:"checksum"`
     Status         UploadStatus           `json:"status"`
@@ -349,7 +1509,7 @@ type ListOwnedFilesCreatedAscRow struct {
 ```
 
 <a name="ListOwnedFilesCreatedDescParams"></a>
-## type [ListOwnedFilesCreatedDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L301-L316>)
+## type [ListOwnedFilesCreatedDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L345-L360>)
 
 
 
@@ -358,7 +1518,7 @@ type ListOwnedFilesCreatedDescParams struct {
     ViewerID        pgtype.UUID        `json:"viewer_id"`
     OwnerID         pgtype.UUID        `json:"owner_id"`
     Status          NullUploadStatus   `json:"status"`
-    MimeType        NullMimeType       `json:"mime_type"`
+    MimeType        pgtype.Text        `json:"mime_type"`
     MinSize         pgtype.Int8        `json:"min_size"`
     MaxSize         pgtype.Int8        `json:"max_size"`
     CreatedFrom     pgtype.Timestamptz `json:"created_from"`
@@ -373,7 +1533,7 @@ type ListOwnedFilesCreatedDescParams struct {
 ```
 
 <a name="ListOwnedFilesCreatedDescRow"></a>
-## type [ListOwnedFilesCreatedDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L318-L335>)
+## type [ListOwnedFilesCreatedDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L362-L379>)
 
 
 
@@ -383,7 +1543,7 @@ type ListOwnedFilesCreatedDescRow struct {
     UserID         pgtype.UUID            `json:"user_id"`
     S3Key          string                 `json:"s3_key"`
     Name           string                 `json:"name"`
-    MimeType       MimeType               `json:"mime_type"`
+    MimeType       string                 `json:"mime_type"`
     Size           int64                  `json:"size"`
     Checksum       pgtype.Text            `json:"checksum"`
     Status         UploadStatus           `json:"status"`
@@ -399,7 +1559,7 @@ type ListOwnedFilesCreatedDescRow struct {
 ```
 
 <a name="ListOwnedFilesMimeAscParams"></a>
-## type [ListOwnedFilesMimeAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L418-L433>)
+## type [ListOwnedFilesMimeAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L462-L477>)
 
 
 
@@ -408,7 +1568,7 @@ type ListOwnedFilesMimeAscParams struct {
     ViewerID       pgtype.UUID        `json:"viewer_id"`
     OwnerID        pgtype.UUID        `json:"owner_id"`
     Status         NullUploadStatus   `json:"status"`
-    MimeType       NullMimeType       `json:"mime_type"`
+    MimeType       pgtype.Text        `json:"mime_type"`
     MinSize        pgtype.Int8        `json:"min_size"`
     MaxSize        pgtype.Int8        `json:"max_size"`
     CreatedFrom    pgtype.Timestamptz `json:"created_from"`
@@ -416,14 +1576,14 @@ type ListOwnedFilesMimeAscParams struct {
     UpdatedFrom    pgtype.Timestamptz `json:"updated_from"`
     UpdatedTo      pgtype.Timestamptz `json:"updated_to"`
     Q              pgtype.Text        `json:"q"`
-    CursorMimeType NullMimeType       `json:"cursor_mime_type"`
+    CursorMimeType pgtype.Text        `json:"cursor_mime_type"`
     CursorID       pgtype.UUID        `json:"cursor_id"`
     PageLimit      int32              `json:"page_limit"`
 }
 ```
 
 <a name="ListOwnedFilesMimeAscRow"></a>
-## type [ListOwnedFilesMimeAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L435-L452>)
+## type [ListOwnedFilesMimeAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L479-L496>)
 
 
 
@@ -433,7 +1593,7 @@ type ListOwnedFilesMimeAscRow struct {
     UserID         pgtype.UUID            `json:"user_id"`
     S3Key          string                 `json:"s3_key"`
     Name           string                 `json:"name"`
-    MimeType       MimeType               `json:"mime_type"`
+    MimeType       string                 `json:"mime_type"`
     Size           int64                  `json:"size"`
     Checksum       pgtype.Text            `json:"checksum"`
     Status         UploadStatus           `json:"status"`
@@ -449,7 +1609,7 @@ type ListOwnedFilesMimeAscRow struct {
 ```
 
 <a name="ListOwnedFilesMimeDescParams"></a>
-## type [ListOwnedFilesMimeDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L535-L550>)
+## type [ListOwnedFilesMimeDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L579-L594>)
 
 
 
@@ -458,7 +1618,7 @@ type ListOwnedFilesMimeDescParams struct {
     ViewerID       pgtype.UUID        `json:"viewer_id"`
     OwnerID        pgtype.UUID        `json:"owner_id"`
     Status         NullUploadStatus   `json:"status"`
-    MimeType       NullMimeType       `json:"mime_type"`
+    MimeType       pgtype.Text        `json:"mime_type"`
     MinSize        pgtype.Int8        `json:"min_size"`
     MaxSize        pgtype.Int8        `json:"max_size"`
     CreatedFrom    pgtype.Timestamptz `json:"created_from"`
@@ -466,14 +1626,14 @@ type ListOwnedFilesMimeDescParams struct {
     UpdatedFrom    pgtype.Timestamptz `json:"updated_from"`
     UpdatedTo      pgtype.Timestamptz `json:"updated_to"`
     Q              pgtype.Text        `json:"q"`
-    CursorMimeType NullMimeType       `json:"cursor_mime_type"`
+    CursorMimeType pgtype.Text        `json:"cursor_mime_type"`
     CursorID       pgtype.UUID        `json:"cursor_id"`
     PageLimit      int32              `json:"page_limit"`
 }
 ```
 
 <a name="ListOwnedFilesMimeDescRow"></a>
-## type [ListOwnedFilesMimeDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L552-L569>)
+## type [ListOwnedFilesMimeDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L596-L613>)
 
 
 
@@ -483,7 +1643,7 @@ type ListOwnedFilesMimeDescRow struct {
     UserID         pgtype.UUID            `json:"user_id"`
     S3Key          string                 `json:"s3_key"`
     Name           string                 `json:"name"`
-    MimeType       MimeType               `json:"mime_type"`
+    MimeType       string                 `json:"mime_type"`
     Size           int64                  `json:"size"`
     Checksum       pgtype.Text            `json:"checksum"`
     Status         UploadStatus           `json:"status"`
@@ -499,7 +1659,7 @@ type ListOwnedFilesMimeDescRow struct {
 ```
 
 <a name="ListOwnedFilesNameAscParams"></a>
-## type [ListOwnedFilesNameAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L652-L667>)
+## type [ListOwnedFilesNameAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L696-L711>)
 
 
 
@@ -508,7 +1668,7 @@ type ListOwnedFilesNameAscParams struct {
     ViewerID        pgtype.UUID        `json:"viewer_id"`
     OwnerID         pgtype.UUID        `json:"owner_id"`
     Status          NullUploadStatus   `json:"status"`
-    MimeType        NullMimeType       `json:"mime_type"`
+    MimeType        pgtype.Text        `json:"mime_type"`
     MinSize         pgtype.Int8        `json:"min_size"`
     MaxSize         pgtype.Int8        `json:"max_size"`
     CreatedFrom     pgtype.Timestamptz `json:"created_from"`
@@ -523,7 +1683,7 @@ type ListOwnedFilesNameAscParams struct {
 ```
 
 <a name="ListOwnedFilesNameAscRow"></a>
-## type [ListOwnedFilesNameAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L669-L686>)
+## type [ListOwnedFilesNameAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L713-L730>)
 
 
 
@@ -533,7 +1693,7 @@ type ListOwnedFilesNameAscRow struct {
     UserID         pgtype.UUID            `json:"user_id"`
     S3Key          string                 `json:"s3_key"`
     Name           string                 `json:"name"`
-    MimeType       MimeType               `json:"mime_type"`
+    MimeType       string                 `json:"mime_type"`
     Size           int64                  `json:"size"`
     Checksum       pgtype.Text            `json:"checksum"`
     Status         UploadStatus           `json:"status"`
@@ -549,7 +1709,7 @@ type ListOwnedFilesNameAscRow struct {
 ```
 
 <a name="ListOwnedFilesNameDescParams"></a>
-## type [ListOwnedFilesNameDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L769-L784>)
+## type [ListOwnedFilesNameDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L813-L828>)
 
 
 
@@ -558,7 +1718,7 @@ type ListOwnedFilesNameDescParams struct {
     ViewerID        pgtype.UUID        `json:"viewer_id"`
     OwnerID         pgtype.UUID        `json:"owner_id"`
     Status          NullUploadStatus   `json:"status"`
-    MimeType        NullMimeType       `json:"mime_type"`
+    MimeType        pgtype.Text        `json:"mime_type"`
     MinSize         pgtype.Int8        `json:"min_size"`
     MaxSize         pgtype.Int8        `json:"max_size"`
     CreatedFrom     pgtype.Timestamptz `json:"created_from"`
@@ -573,7 +1733,7 @@ type ListOwnedFilesNameDescParams struct {
 ```
 
 <a name="ListOwnedFilesNameDescRow"></a>
-## type [ListOwnedFilesNameDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L786-L803>)
+## type [ListOwnedFilesNameDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L830-L847>)
 
 
 
@@ -583,7 +1743,7 @@ type ListOwnedFilesNameDescRow struct {
     UserID         pgtype.UUID            `json:"user_id"`
     S3Key          string                 `json:"s3_key"`
     Name           string                 `json:"name"`
-    MimeType       MimeType               `json:"mime_type"`
+    MimeType       string                 `json:"mime_type"`
     Size           int64                  `json:"size"`
     Checksum       pgtype.Text            `json:"checksum"`
     Status         UploadStatus           `json:"status"`
@@ -599,7 +1759,7 @@ type ListOwnedFilesNameDescRow struct {
 ```
 
 <a name="ListOwnedFilesSizeAscParams"></a>
-## type [ListOwnedFilesSizeAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L886-L901>)
+## type [ListOwnedFilesSizeAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L930-L945>)
 
 
 
@@ -608,7 +1768,7 @@ type ListOwnedFilesSizeAscParams struct {
     ViewerID    pgtype.UUID        `json:"viewer_id"`
     OwnerID     pgtype.UUID        `json:"owner_id"`
     Status      NullUploadStatus   `json:"status"`
-    MimeType    NullMimeType       `json:"mime_type"`
+    MimeType    pgtype.Text        `json:"mime_type"`
     MinSize     pgtype.Int8        `json:"min_size"`
     MaxSize     pgtype.Int8        `json:"max_size"`
     CreatedFrom pgtype.Timestamptz `json:"created_from"`
@@ -623,7 +1783,7 @@ type ListOwnedFilesSizeAscParams struct {
 ```
 
 <a name="ListOwnedFilesSizeAscRow"></a>
-## type [ListOwnedFilesSizeAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L903-L920>)
+## type [ListOwnedFilesSizeAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L947-L964>)
 
 
 
@@ -633,7 +1793,7 @@ type ListOwnedFilesSizeAscRow struct {
     UserID         pgtype.UUID            `json:"user_id"`
     S3Key          string                 `json:"s3_key"`
     Name           string                 `json:"name"`
-    MimeType       MimeType               `json:"mime_type"`
+    MimeType       string                 `json:"mime_type"`
     Size           int64                  `json:"size"`
     Checksum       pgtype.Text            `json:"checksum"`
     Status         UploadStatus           `json:"status"`
@@ -649,7 +1809,7 @@ type ListOwnedFilesSizeAscRow struct {
 ```
 
 <a name="ListOwnedFilesSizeDescParams"></a>
-## type [ListOwnedFilesSizeDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1003-L1018>)
+## type [ListOwnedFilesSizeDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1047-L1062>)
 
 
 
@@ -658,7 +1818,7 @@ type ListOwnedFilesSizeDescParams struct {
     ViewerID    pgtype.UUID        `json:"viewer_id"`
     OwnerID     pgtype.UUID        `json:"owner_id"`
     Status      NullUploadStatus   `json:"status"`
-    MimeType    NullMimeType       `json:"mime_type"`
+    MimeType    pgtype.Text        `json:"mime_type"`
     MinSize     pgtype.Int8        `json:"min_size"`
     MaxSize     pgtype.Int8        `json:"max_size"`
     CreatedFrom pgtype.Timestamptz `json:"created_from"`
@@ -673,7 +1833,7 @@ type ListOwnedFilesSizeDescParams struct {
 ```
 
 <a name="ListOwnedFilesSizeDescRow"></a>
-## type [ListOwnedFilesSizeDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1020-L1037>)
+## type [ListOwnedFilesSizeDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1064-L1081>)
 
 
 
@@ -683,7 +1843,7 @@ type ListOwnedFilesSizeDescRow struct {
     UserID         pgtype.UUID            `json:"user_id"`
     S3Key          string                 `json:"s3_key"`
     Name           string                 `json:"name"`
-    MimeType       MimeType               `json:"mime_type"`
+    MimeType       string                 `json:"mime_type"`
     Size           int64                  `json:"size"`
     Checksum       pgtype.Text            `json:"checksum"`
     Status         UploadStatus           `json:"status"`
@@ -699,7 +1859,7 @@ type ListOwnedFilesSizeDescRow struct {
 ```
 
 <a name="ListOwnedFilesStatusAscParams"></a>
-## type [ListOwnedFilesStatusAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1120-L1135>)
+## type [ListOwnedFilesStatusAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1164-L1179>)
 
 
 
@@ -708,7 +1868,7 @@ type ListOwnedFilesStatusAscParams struct {
     ViewerID     pgtype.UUID        `json:"viewer_id"`
     OwnerID      pgtype.UUID        `json:"owner_id"`
     Status       NullUploadStatus   `json:"status"`
-    MimeType     NullMimeType       `json:"mime_type"`
+    MimeType     pgtype.Text        `json:"mime_type"`
     MinSize      pgtype.Int8        `json:"min_size"`
     MaxSize      pgtype.Int8        `json:"max_size"`
     CreatedFrom  pgtype.Timestamptz `json:"created_from"`
@@ -723,7 +1883,7 @@ type ListOwnedFilesStatusAscParams struct {
 ```
 
 <a name="ListOwnedFilesStatusAscRow"></a>
-## type [ListOwnedFilesStatusAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1137-L1154>)
+## type [ListOwnedFilesStatusAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1181-L1198>)
 
 
 
@@ -733,7 +1893,7 @@ type ListOwnedFilesStatusAscRow struct {
     UserID         pgtype.UUID            `json:"user_id"`
     S3Key          string                 `json:"s3_key"`
     Name           string                 `json:"name"`
-    MimeType       MimeType               `json:"mime_type"`
+    MimeType       string                 `json:"mime_type"`
     Size           int64                  `json:"size"`
     Checksum       pgtype.Text            `json:"checksum"`
     Status         UploadStatus           `json:"status"`
@@ -749,7 +1909,7 @@ type ListOwnedFilesStatusAscRow struct {
 ```
 
 <a name="ListOwnedFilesStatusDescParams"></a>
-## type [ListOwnedFilesStatusDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1237-L1252>)
+## type [ListOwnedFilesStatusDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1281-L1296>)
 
 
 
@@ -758,7 +1918,7 @@ type ListOwnedFilesStatusDescParams struct {
     ViewerID     pgtype.UUID        `json:"viewer_id"`
     OwnerID      pgtype.UUID        `json:"owner_id"`
     Status       NullUploadStatus   `json:"status"`
-    MimeType     NullMimeType       `json:"mime_type"`
+    MimeType     pgtype.Text        `json:"mime_type"`
     MinSize      pgtype.Int8        `json:"min_size"`
     MaxSize      pgtype.Int8        `json:"max_size"`
     CreatedFrom  pgtype.Timestamptz `json:"created_from"`
@@ -773,7 +1933,7 @@ type ListOwnedFilesStatusDescParams struct {
 ```
 
 <a name="ListOwnedFilesStatusDescRow"></a>
-## type [ListOwnedFilesStatusDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1254-L1271>)
+## type [ListOwnedFilesStatusDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1298-L1315>)
 
 
 
@@ -783,7 +1943,7 @@ type ListOwnedFilesStatusDescRow struct {
     UserID         pgtype.UUID            `json:"user_id"`
     S3Key          string                 `json:"s3_key"`
     Name           string                 `json:"name"`
-    MimeType       MimeType               `json:"mime_type"`
+    MimeType       string                 `json:"mime_type"`
     Size           int64                  `json:"size"`
     Checksum       pgtype.Text            `json:"checksum"`
     Status         UploadStatus           `json:"status"`
@@ -799,7 +1959,7 @@ type ListOwnedFilesStatusDescRow struct {
 ```
 
 <a name="ListOwnedFilesUpdatedAscParams"></a>
-## type [ListOwnedFilesUpdatedAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1354-L1369>)
+## type [ListOwnedFilesUpdatedAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1398-L1413>)
 
 
 
@@ -808,7 +1968,7 @@ type ListOwnedFilesUpdatedAscParams struct {
     ViewerID        pgtype.UUID        `json:"viewer_id"`
     OwnerID         pgtype.UUID        `json:"owner_id"`
     Status          NullUploadStatus   `json:"status"`
-    MimeType        NullMimeType       `json:"mime_type"`
+    MimeType        pgtype.Text        `json:"mime_type"`
     MinSize         pgtype.Int8        `json:"min_size"`
     MaxSize         pgtype.Int8        `json:"max_size"`
     CreatedFrom     pgtype.Timestamptz `json:"created_from"`
@@ -823,7 +1983,7 @@ type ListOwnedFilesUpdatedAscParams struct {
 ```
 
 <a name="ListOwnedFilesUpdatedAscRow"></a>
-## type [ListOwnedFilesUpdatedAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1371-L1388>)
+## type [ListOwnedFilesUpdatedAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1415-L1432>)
 
 
 
@@ -833,7 +1993,7 @@ type ListOwnedFilesUpdatedAscRow struct {
     UserID         pgtype.UUID            `json:"user_id"`
     S3Key          string                 `json:"s3_key"`
     Name           string                 `json:"name"`
-    MimeType       MimeType               `json:"mime_type"`
+    MimeType       string                 `json:"mime_type"`
     Size           int64                  `json:"size"`
     Checksum       pgtype.Text            `json:"checksum"`
     Status         UploadStatus           `json:"status"`
@@ -849,7 +2009,7 @@ type ListOwnedFilesUpdatedAscRow struct {
 ```
 
 <a name="ListOwnedFilesUpdatedDescParams"></a>
-## type [ListOwnedFilesUpdatedDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1471-L1486>)
+## type [ListOwnedFilesUpdatedDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1515-L1530>)
 
 
 
@@ -858,7 +2018,7 @@ type ListOwnedFilesUpdatedDescParams struct {
     ViewerID        pgtype.UUID        `json:"viewer_id"`
     OwnerID         pgtype.UUID        `json:"owner_id"`
     Status          NullUploadStatus   `json:"status"`
-    MimeType        NullMimeType       `json:"mime_type"`
+    MimeType        pgtype.Text        `json:"mime_type"`
     MinSize         pgtype.Int8        `json:"min_size"`
     MaxSize         pgtype.Int8        `json:"max_size"`
     CreatedFrom     pgtype.Timestamptz `json:"created_from"`
@@ -873,7 +2033,7 @@ type ListOwnedFilesUpdatedDescParams struct {
 ```
 
 <a name="ListOwnedFilesUpdatedDescRow"></a>
-## type [ListOwnedFilesUpdatedDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1488-L1505>)
+## type [ListOwnedFilesUpdatedDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1532-L1549>)
 
 
 
@@ -883,7 +2043,7 @@ type ListOwnedFilesUpdatedDescRow struct {
     UserID         pgtype.UUID            `json:"user_id"`
     S3Key          string                 `json:"s3_key"`
     Name           string                 `json:"name"`
-    MimeType       MimeType               `json:"mime_type"`
+    MimeType       string                 `json:"mime_type"`
     Size           int64                  `json:"size"`
     Checksum       pgtype.Text            `json:"checksum"`
     Status         UploadStatus           `json:"status"`
@@ -898,37 +2058,426 @@ type ListOwnedFilesUpdatedDescRow struct {
 }
 ```
 
-<a name="MimeType"></a>
-## type [MimeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L99>)
+<a name="ListQuizQuestionsByQuizRow"></a>
+## type [ListQuizQuestionsByQuizRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L276-L285>)
 
 
 
 ```go
-type MimeType string
+type ListQuizQuestionsByQuizRow struct {
+    ID                pgtype.UUID  `json:"id"`
+    Type              QuestionType `json:"type"`
+    QuestionText      string       `json:"question_text"`
+    Hint              pgtype.Text  `json:"hint"`
+    FeedbackCorrect   pgtype.Text  `json:"feedback_correct"`
+    FeedbackIncorrect pgtype.Text  `json:"feedback_incorrect"`
+    ReferenceAnswer   pgtype.Text  `json:"reference_answer"`
+    SortOrder         int32        `json:"sort_order"`
+}
 ```
 
-<a name="MimeTypeImageJpeg"></a>
+<a name="ListSchoolsParams"></a>
+## type [ListSchoolsParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/schools.sql.go#L55-L60>)
+
+
 
 ```go
-const (
-    MimeTypeImageJpeg      MimeType = "image/jpeg"
-    MimeTypeImagePng       MimeType = "image/png"
-    MimeTypeImageWebp      MimeType = "image/webp"
-    MimeTypeApplicationPdf MimeType = "application/pdf"
-)
+type ListSchoolsParams struct {
+    Q          pgtype.Text `json:"q"`
+    CursorName pgtype.Text `json:"cursor_name"`
+    CursorID   pgtype.UUID `json:"cursor_id"`
+    PageLimit  int32       `json:"page_limit"`
+}
 ```
 
-<a name="MimeType.Scan"></a>
-### func \(\*MimeType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L108>)
+<a name="ListSectionMembersParams"></a>
+## type [ListSectionMembersParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L1083-L1089>)
+
+
 
 ```go
-func (e *MimeType) Scan(src interface{}) error
+type ListSectionMembersParams struct {
+    SectionID      pgtype.UUID        `json:"section_id"`
+    Role           NullCourseRole     `json:"role"`
+    CursorJoinedAt pgtype.Timestamptz `json:"cursor_joined_at"`
+    CursorUserID   pgtype.UUID        `json:"cursor_user_id"`
+    PageLimit      int32              `json:"page_limit"`
+}
 ```
 
+<a name="ListSectionMembersRow"></a>
+## type [ListSectionMembersRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L1091-L1097>)
 
+
+
+```go
+type ListSectionMembersRow struct {
+    UserID    pgtype.UUID        `json:"user_id"`
+    FirstName string             `json:"first_name"`
+    LastName  string             `json:"last_name"`
+    Role      CourseRole         `json:"role"`
+    JoinedAt  pgtype.Timestamptz `json:"joined_at"`
+}
+```
+
+<a name="ListStudyGuidesNewestAscParams"></a>
+## type [ListStudyGuidesNewestAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L849-L856>)
+
+
+
+```go
+type ListStudyGuidesNewestAscParams struct {
+    CursorCreatedAt pgtype.Timestamptz `json:"cursor_created_at"`
+    CursorID        pgtype.UUID        `json:"cursor_id"`
+    PageLimit       int32              `json:"page_limit"`
+    CourseID        pgtype.UUID        `json:"course_id"`
+    Q               pgtype.Text        `json:"q"`
+    Tags            []string           `json:"tags"`
+}
+```
+
+<a name="ListStudyGuidesNewestAscRow"></a>
+## type [ListStudyGuidesNewestAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L858-L873>)
+
+
+
+```go
+type ListStudyGuidesNewestAscRow struct {
+    ID               pgtype.UUID        `json:"id"`
+    Title            string             `json:"title"`
+    Description      pgtype.Text        `json:"description"`
+    Tags             []string           `json:"tags"`
+    CourseID         pgtype.UUID        `json:"course_id"`
+    ViewCount        int32              `json:"view_count"`
+    CreatedAt        pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+    CreatorID        pgtype.UUID        `json:"creator_id"`
+    CreatorFirstName string             `json:"creator_first_name"`
+    CreatorLastName  string             `json:"creator_last_name"`
+    VoteScore        int64              `json:"vote_score"`
+    IsRecommended    bool               `json:"is_recommended"`
+    QuizCount        int64              `json:"quiz_count"`
+}
+```
+
+<a name="ListStudyGuidesNewestDescParams"></a>
+## type [ListStudyGuidesNewestDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L967-L974>)
+
+
+
+```go
+type ListStudyGuidesNewestDescParams struct {
+    CursorCreatedAt pgtype.Timestamptz `json:"cursor_created_at"`
+    CursorID        pgtype.UUID        `json:"cursor_id"`
+    PageLimit       int32              `json:"page_limit"`
+    CourseID        pgtype.UUID        `json:"course_id"`
+    Q               pgtype.Text        `json:"q"`
+    Tags            []string           `json:"tags"`
+}
+```
+
+<a name="ListStudyGuidesNewestDescRow"></a>
+## type [ListStudyGuidesNewestDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L976-L991>)
+
+
+
+```go
+type ListStudyGuidesNewestDescRow struct {
+    ID               pgtype.UUID        `json:"id"`
+    Title            string             `json:"title"`
+    Description      pgtype.Text        `json:"description"`
+    Tags             []string           `json:"tags"`
+    CourseID         pgtype.UUID        `json:"course_id"`
+    ViewCount        int32              `json:"view_count"`
+    CreatedAt        pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+    CreatorID        pgtype.UUID        `json:"creator_id"`
+    CreatorFirstName string             `json:"creator_first_name"`
+    CreatorLastName  string             `json:"creator_last_name"`
+    VoteScore        int64              `json:"vote_score"`
+    IsRecommended    bool               `json:"is_recommended"`
+    QuizCount        int64              `json:"quiz_count"`
+}
+```
+
+<a name="ListStudyGuidesScoreAscParams"></a>
+## type [ListStudyGuidesScoreAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1087-L1096>)
+
+
+
+```go
+type ListStudyGuidesScoreAscParams struct {
+    CursorVoteScore pgtype.Int8        `json:"cursor_vote_score"`
+    CursorViewCount pgtype.Int8        `json:"cursor_view_count"`
+    CursorUpdatedAt pgtype.Timestamptz `json:"cursor_updated_at"`
+    CursorID        pgtype.UUID        `json:"cursor_id"`
+    PageLimit       int32              `json:"page_limit"`
+    CourseID        pgtype.UUID        `json:"course_id"`
+    Q               pgtype.Text        `json:"q"`
+    Tags            []string           `json:"tags"`
+}
+```
+
+<a name="ListStudyGuidesScoreAscRow"></a>
+## type [ListStudyGuidesScoreAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1098-L1113>)
+
+
+
+```go
+type ListStudyGuidesScoreAscRow struct {
+    ID               pgtype.UUID        `json:"id"`
+    Title            string             `json:"title"`
+    Description      pgtype.Text        `json:"description"`
+    Tags             []string           `json:"tags"`
+    CourseID         pgtype.UUID        `json:"course_id"`
+    ViewCount        int32              `json:"view_count"`
+    CreatedAt        pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+    CreatorID        pgtype.UUID        `json:"creator_id"`
+    CreatorFirstName string             `json:"creator_first_name"`
+    CreatorLastName  string             `json:"creator_last_name"`
+    VoteScore        int64              `json:"vote_score"`
+    IsRecommended    bool               `json:"is_recommended"`
+    QuizCount        int64              `json:"quiz_count"`
+}
+```
+
+<a name="ListStudyGuidesScoreDescParams"></a>
+## type [ListStudyGuidesScoreDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1212-L1221>)
+
+
+
+```go
+type ListStudyGuidesScoreDescParams struct {
+    CursorVoteScore pgtype.Int8        `json:"cursor_vote_score"`
+    CursorViewCount pgtype.Int8        `json:"cursor_view_count"`
+    CursorUpdatedAt pgtype.Timestamptz `json:"cursor_updated_at"`
+    CursorID        pgtype.UUID        `json:"cursor_id"`
+    PageLimit       int32              `json:"page_limit"`
+    CourseID        pgtype.UUID        `json:"course_id"`
+    Q               pgtype.Text        `json:"q"`
+    Tags            []string           `json:"tags"`
+}
+```
+
+<a name="ListStudyGuidesScoreDescRow"></a>
+## type [ListStudyGuidesScoreDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1223-L1238>)
+
+
+
+```go
+type ListStudyGuidesScoreDescRow struct {
+    ID               pgtype.UUID        `json:"id"`
+    Title            string             `json:"title"`
+    Description      pgtype.Text        `json:"description"`
+    Tags             []string           `json:"tags"`
+    CourseID         pgtype.UUID        `json:"course_id"`
+    ViewCount        int32              `json:"view_count"`
+    CreatedAt        pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+    CreatorID        pgtype.UUID        `json:"creator_id"`
+    CreatorFirstName string             `json:"creator_first_name"`
+    CreatorLastName  string             `json:"creator_last_name"`
+    VoteScore        int64              `json:"vote_score"`
+    IsRecommended    bool               `json:"is_recommended"`
+    QuizCount        int64              `json:"quiz_count"`
+}
+```
+
+<a name="ListStudyGuidesUpdatedAscParams"></a>
+## type [ListStudyGuidesUpdatedAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1337-L1344>)
+
+
+
+```go
+type ListStudyGuidesUpdatedAscParams struct {
+    CursorUpdatedAt pgtype.Timestamptz `json:"cursor_updated_at"`
+    CursorID        pgtype.UUID        `json:"cursor_id"`
+    PageLimit       int32              `json:"page_limit"`
+    CourseID        pgtype.UUID        `json:"course_id"`
+    Q               pgtype.Text        `json:"q"`
+    Tags            []string           `json:"tags"`
+}
+```
+
+<a name="ListStudyGuidesUpdatedAscRow"></a>
+## type [ListStudyGuidesUpdatedAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1346-L1361>)
+
+
+
+```go
+type ListStudyGuidesUpdatedAscRow struct {
+    ID               pgtype.UUID        `json:"id"`
+    Title            string             `json:"title"`
+    Description      pgtype.Text        `json:"description"`
+    Tags             []string           `json:"tags"`
+    CourseID         pgtype.UUID        `json:"course_id"`
+    ViewCount        int32              `json:"view_count"`
+    CreatedAt        pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+    CreatorID        pgtype.UUID        `json:"creator_id"`
+    CreatorFirstName string             `json:"creator_first_name"`
+    CreatorLastName  string             `json:"creator_last_name"`
+    VoteScore        int64              `json:"vote_score"`
+    IsRecommended    bool               `json:"is_recommended"`
+    QuizCount        int64              `json:"quiz_count"`
+}
+```
+
+<a name="ListStudyGuidesUpdatedDescParams"></a>
+## type [ListStudyGuidesUpdatedDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1455-L1462>)
+
+
+
+```go
+type ListStudyGuidesUpdatedDescParams struct {
+    CursorUpdatedAt pgtype.Timestamptz `json:"cursor_updated_at"`
+    CursorID        pgtype.UUID        `json:"cursor_id"`
+    PageLimit       int32              `json:"page_limit"`
+    CourseID        pgtype.UUID        `json:"course_id"`
+    Q               pgtype.Text        `json:"q"`
+    Tags            []string           `json:"tags"`
+}
+```
+
+<a name="ListStudyGuidesUpdatedDescRow"></a>
+## type [ListStudyGuidesUpdatedDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1464-L1479>)
+
+
+
+```go
+type ListStudyGuidesUpdatedDescRow struct {
+    ID               pgtype.UUID        `json:"id"`
+    Title            string             `json:"title"`
+    Description      pgtype.Text        `json:"description"`
+    Tags             []string           `json:"tags"`
+    CourseID         pgtype.UUID        `json:"course_id"`
+    ViewCount        int32              `json:"view_count"`
+    CreatedAt        pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+    CreatorID        pgtype.UUID        `json:"creator_id"`
+    CreatorFirstName string             `json:"creator_first_name"`
+    CreatorLastName  string             `json:"creator_last_name"`
+    VoteScore        int64              `json:"vote_score"`
+    IsRecommended    bool               `json:"is_recommended"`
+    QuizCount        int64              `json:"quiz_count"`
+}
+```
+
+<a name="ListStudyGuidesViewsAscParams"></a>
+## type [ListStudyGuidesViewsAscParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1574-L1582>)
+
+
+
+```go
+type ListStudyGuidesViewsAscParams struct {
+    CursorViewCount pgtype.Int8        `json:"cursor_view_count"`
+    CursorUpdatedAt pgtype.Timestamptz `json:"cursor_updated_at"`
+    CursorID        pgtype.UUID        `json:"cursor_id"`
+    PageLimit       int32              `json:"page_limit"`
+    CourseID        pgtype.UUID        `json:"course_id"`
+    Q               pgtype.Text        `json:"q"`
+    Tags            []string           `json:"tags"`
+}
+```
+
+<a name="ListStudyGuidesViewsAscRow"></a>
+## type [ListStudyGuidesViewsAscRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1584-L1599>)
+
+
+
+```go
+type ListStudyGuidesViewsAscRow struct {
+    ID               pgtype.UUID        `json:"id"`
+    Title            string             `json:"title"`
+    Description      pgtype.Text        `json:"description"`
+    Tags             []string           `json:"tags"`
+    CourseID         pgtype.UUID        `json:"course_id"`
+    ViewCount        int32              `json:"view_count"`
+    CreatedAt        pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+    CreatorID        pgtype.UUID        `json:"creator_id"`
+    CreatorFirstName string             `json:"creator_first_name"`
+    CreatorLastName  string             `json:"creator_last_name"`
+    VoteScore        int64              `json:"vote_score"`
+    IsRecommended    bool               `json:"is_recommended"`
+    QuizCount        int64              `json:"quiz_count"`
+}
+```
+
+<a name="ListStudyGuidesViewsDescParams"></a>
+## type [ListStudyGuidesViewsDescParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1695-L1703>)
+
+
+
+```go
+type ListStudyGuidesViewsDescParams struct {
+    CursorViewCount pgtype.Int8        `json:"cursor_view_count"`
+    CursorUpdatedAt pgtype.Timestamptz `json:"cursor_updated_at"`
+    CursorID        pgtype.UUID        `json:"cursor_id"`
+    PageLimit       int32              `json:"page_limit"`
+    CourseID        pgtype.UUID        `json:"course_id"`
+    Q               pgtype.Text        `json:"q"`
+    Tags            []string           `json:"tags"`
+}
+```
+
+<a name="ListStudyGuidesViewsDescRow"></a>
+## type [ListStudyGuidesViewsDescRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1705-L1720>)
+
+
+
+```go
+type ListStudyGuidesViewsDescRow struct {
+    ID               pgtype.UUID        `json:"id"`
+    Title            string             `json:"title"`
+    Description      pgtype.Text        `json:"description"`
+    Tags             []string           `json:"tags"`
+    CourseID         pgtype.UUID        `json:"course_id"`
+    ViewCount        int32              `json:"view_count"`
+    CreatedAt        pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+    CreatorID        pgtype.UUID        `json:"creator_id"`
+    CreatorFirstName string             `json:"creator_first_name"`
+    CreatorLastName  string             `json:"creator_last_name"`
+    VoteScore        int64              `json:"vote_score"`
+    IsRecommended    bool               `json:"is_recommended"`
+    QuizCount        int64              `json:"quiz_count"`
+}
+```
+
+<a name="NullCourseRole"></a>
+## type [NullCourseRole](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L34-L37>)
+
+
+
+```go
+type NullCourseRole struct {
+    CourseRole CourseRole `json:"course_role"`
+    Valid      bool       `json:"valid"` // Valid is true if CourseRole is not NULL
+}
+```
+
+<a name="NullCourseRole.Scan"></a>
+### func \(\*NullCourseRole\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L40>)
+
+```go
+func (ns *NullCourseRole) Scan(value interface{}) error
+```
+
+Scan implements the Scanner interface.
+
+<a name="NullCourseRole.Value"></a>
+### func \(NullCourseRole\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L50>)
+
+```go
+func (ns NullCourseRole) Value() (driver.Value, error)
+```
+
+Value implements the driver Valuer interface.
 
 <a name="NullFileDeletionStatus"></a>
-## type [NullFileDeletionStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L33-L36>)
+## type [NullFileDeletionStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L76-L79>)
 
 
 
@@ -940,7 +2489,7 @@ type NullFileDeletionStatus struct {
 ```
 
 <a name="NullFileDeletionStatus.Scan"></a>
-### func \(\*NullFileDeletionStatus\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L39>)
+### func \(\*NullFileDeletionStatus\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L82>)
 
 ```go
 func (ns *NullFileDeletionStatus) Scan(value interface{}) error
@@ -949,7 +2498,7 @@ func (ns *NullFileDeletionStatus) Scan(value interface{}) error
 Scan implements the Scanner interface.
 
 <a name="NullFileDeletionStatus.Value"></a>
-### func \(NullFileDeletionStatus\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L49>)
+### func \(NullFileDeletionStatus\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L92>)
 
 ```go
 func (ns NullFileDeletionStatus) Value() (driver.Value, error)
@@ -958,7 +2507,7 @@ func (ns NullFileDeletionStatus) Value() (driver.Value, error)
 Value implements the driver Valuer interface.
 
 <a name="NullGranteeType"></a>
-## type [NullGranteeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L76-L79>)
+## type [NullGranteeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L119-L122>)
 
 
 
@@ -970,7 +2519,7 @@ type NullGranteeType struct {
 ```
 
 <a name="NullGranteeType.Scan"></a>
-### func \(\*NullGranteeType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L82>)
+### func \(\*NullGranteeType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L125>)
 
 ```go
 func (ns *NullGranteeType) Scan(value interface{}) error
@@ -979,7 +2528,7 @@ func (ns *NullGranteeType) Scan(value interface{}) error
 Scan implements the Scanner interface.
 
 <a name="NullGranteeType.Value"></a>
-### func \(NullGranteeType\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L92>)
+### func \(NullGranteeType\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L135>)
 
 ```go
 func (ns NullGranteeType) Value() (driver.Value, error)
@@ -987,38 +2536,8 @@ func (ns NullGranteeType) Value() (driver.Value, error)
 
 Value implements the driver Valuer interface.
 
-<a name="NullMimeType"></a>
-## type [NullMimeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L120-L123>)
-
-
-
-```go
-type NullMimeType struct {
-    MimeType MimeType `json:"mime_type"`
-    Valid    bool     `json:"valid"` // Valid is true if MimeType is not NULL
-}
-```
-
-<a name="NullMimeType.Scan"></a>
-### func \(\*NullMimeType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L126>)
-
-```go
-func (ns *NullMimeType) Scan(value interface{}) error
-```
-
-Scan implements the Scanner interface.
-
-<a name="NullMimeType.Value"></a>
-### func \(NullMimeType\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L136>)
-
-```go
-func (ns NullMimeType) Value() (driver.Value, error)
-```
-
-Value implements the driver Valuer interface.
-
 <a name="NullPermission"></a>
-## type [NullPermission](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L163-L166>)
+## type [NullPermission](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L162-L165>)
 
 
 
@@ -1030,7 +2549,7 @@ type NullPermission struct {
 ```
 
 <a name="NullPermission.Scan"></a>
-### func \(\*NullPermission\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L169>)
+### func \(\*NullPermission\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L168>)
 
 ```go
 func (ns *NullPermission) Scan(value interface{}) error
@@ -1039,7 +2558,7 @@ func (ns *NullPermission) Scan(value interface{}) error
 Scan implements the Scanner interface.
 
 <a name="NullPermission.Value"></a>
-### func \(NullPermission\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L179>)
+### func \(NullPermission\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L178>)
 
 ```go
 func (ns NullPermission) Value() (driver.Value, error)
@@ -1047,8 +2566,68 @@ func (ns NullPermission) Value() (driver.Value, error)
 
 Value implements the driver Valuer interface.
 
+<a name="NullQuestionType"></a>
+## type [NullQuestionType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L205-L208>)
+
+
+
+```go
+type NullQuestionType struct {
+    QuestionType QuestionType `json:"question_type"`
+    Valid        bool         `json:"valid"` // Valid is true if QuestionType is not NULL
+}
+```
+
+<a name="NullQuestionType.Scan"></a>
+### func \(\*NullQuestionType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L211>)
+
+```go
+func (ns *NullQuestionType) Scan(value interface{}) error
+```
+
+Scan implements the Scanner interface.
+
+<a name="NullQuestionType.Value"></a>
+### func \(NullQuestionType\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L221>)
+
+```go
+func (ns NullQuestionType) Value() (driver.Value, error)
+```
+
+Value implements the driver Valuer interface.
+
+<a name="NullResourceType"></a>
+## type [NullResourceType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L249-L252>)
+
+
+
+```go
+type NullResourceType struct {
+    ResourceType ResourceType `json:"resource_type"`
+    Valid        bool         `json:"valid"` // Valid is true if ResourceType is not NULL
+}
+```
+
+<a name="NullResourceType.Scan"></a>
+### func \(\*NullResourceType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L255>)
+
+```go
+func (ns *NullResourceType) Scan(value interface{}) error
+```
+
+Scan implements the Scanner interface.
+
+<a name="NullResourceType.Value"></a>
+### func \(NullResourceType\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L265>)
+
+```go
+func (ns NullResourceType) Value() (driver.Value, error)
+```
+
+Value implements the driver Valuer interface.
+
 <a name="NullUploadStatus"></a>
-## type [NullUploadStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L206-L209>)
+## type [NullUploadStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L292-L295>)
 
 
 
@@ -1060,7 +2639,7 @@ type NullUploadStatus struct {
 ```
 
 <a name="NullUploadStatus.Scan"></a>
-### func \(\*NullUploadStatus\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L212>)
+### func \(\*NullUploadStatus\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L298>)
 
 ```go
 func (ns *NullUploadStatus) Scan(value interface{}) error
@@ -1069,7 +2648,7 @@ func (ns *NullUploadStatus) Scan(value interface{}) error
 Scan implements the Scanner interface.
 
 <a name="NullUploadStatus.Value"></a>
-### func \(NullUploadStatus\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L222>)
+### func \(NullUploadStatus\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L308>)
 
 ```go
 func (ns NullUploadStatus) Value() (driver.Value, error)
@@ -1077,8 +2656,38 @@ func (ns NullUploadStatus) Value() (driver.Value, error)
 
 Value implements the driver Valuer interface.
 
+<a name="NullVoteDirection"></a>
+## type [NullVoteDirection](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L334-L337>)
+
+
+
+```go
+type NullVoteDirection struct {
+    VoteDirection VoteDirection `json:"vote_direction"`
+    Valid         bool          `json:"valid"` // Valid is true if VoteDirection is not NULL
+}
+```
+
+<a name="NullVoteDirection.Scan"></a>
+### func \(\*NullVoteDirection\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L340>)
+
+```go
+func (ns *NullVoteDirection) Scan(value interface{}) error
+```
+
+Scan implements the Scanner interface.
+
+<a name="NullVoteDirection.Value"></a>
+### func \(NullVoteDirection\) [Value](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L350>)
+
+```go
+func (ns NullVoteDirection) Value() (driver.Value, error)
+```
+
+Value implements the driver Valuer interface.
+
 <a name="Permission"></a>
-## type [Permission](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L143>)
+## type [Permission](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L142>)
 
 
 
@@ -1097,7 +2706,7 @@ const (
 ```
 
 <a name="Permission.Scan"></a>
-### func \(\*Permission\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L151>)
+### func \(\*Permission\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L150>)
 
 ```go
 func (e *Permission) Scan(src interface{}) error
@@ -1105,18 +2714,353 @@ func (e *Permission) Scan(src interface{}) error
 
 
 
+<a name="PracticeAnswer"></a>
+## type [PracticeAnswer](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L458-L466>)
+
+
+
+```go
+type PracticeAnswer struct {
+    ID         pgtype.UUID        `json:"id"`
+    SessionID  pgtype.UUID        `json:"session_id"`
+    QuestionID pgtype.UUID        `json:"question_id"`
+    UserAnswer pgtype.Text        `json:"user_answer"`
+    IsCorrect  pgtype.Bool        `json:"is_correct"`
+    Verified   bool               `json:"verified"`
+    AnsweredAt pgtype.Timestamptz `json:"answered_at"`
+}
+```
+
+<a name="PracticeSession"></a>
+## type [PracticeSession](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L468-L476>)
+
+
+
+```go
+type PracticeSession struct {
+    ID             pgtype.UUID        `json:"id"`
+    UserID         pgtype.UUID        `json:"user_id"`
+    QuizID         pgtype.UUID        `json:"quiz_id"`
+    StartedAt      pgtype.Timestamptz `json:"started_at"`
+    CompletedAt    pgtype.Timestamptz `json:"completed_at"`
+    TotalQuestions int32              `json:"total_questions"`
+    CorrectAnswers int32              `json:"correct_answers"`
+}
+```
+
+<a name="PracticeSessionQuestion"></a>
+## type [PracticeSessionQuestion](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L478-L483>)
+
+
+
+```go
+type PracticeSessionQuestion struct {
+    ID         pgtype.UUID `json:"id"`
+    SessionID  pgtype.UUID `json:"session_id"`
+    QuestionID pgtype.UUID `json:"question_id"`
+    SortOrder  int32       `json:"sort_order"`
+}
+```
+
 <a name="Querier"></a>
-## type [Querier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/querier.go#L13-L43>)
+## type [Querier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/querier.go#L13-L473>)
 
 
 
 ```go
 type Querier interface {
+    // Recomputes the guide's vote_score from study_guide_votes. Returned
+    // as int64 to match the wire shape on CastVoteResponse. Run after
+    // the upsert in the same logical request so the response reflects the
+    // post-mutation state.
+    ComputeGuideVoteScore(ctx context.Context, studyGuideID pgtype.UUID) (int64, error)
+    // Single-row existence probe used by join/leave to disambiguate the
+    // "Course not found" 404 from the "Section not found" 404 the spec
+    // requires (see ASK-132 / ASK-138).
+    CourseExists(ctx context.Context, id pgtype.UUID) (bool, error)
+    // Single-row probe used by the list handler to disambiguate "course
+    // missing" (404) from "course exists but has no guides" (200 empty
+    // array). Separate from courses.CourseExists only because sqlc-generated
+    // queriers are per-file; the predicate is identical.
+    CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error)
+    // Removes the (file_id, study_guide_id) join row. Returns rows-
+    // affected so the service can detect the concurrency-race case
+    // (0 rows = a parallel detach already removed it, still maps to
+    // 404 to match the get-then-delete contract). The file row is
+    // preserved -- it may be attached to other guides + courses, and
+    // the spec explicitly forbids cascading the file delete from a
+    // single detach.
+    DeleteGuideFile(ctx context.Context, arg DeleteGuideFileParams) (int64, error)
+    // Removes the join row only. The resources row is preserved -- it
+    // may be attached to other guides + courses, and the spec
+    // explicitly forbids cascading the resource delete from a single
+    // detach. Returns rows-affected so the service can detect
+    // already-detached races (0 rows -> 404) vs success (1 row -> nil).
+    DeleteGuideResource(ctx context.Context, arg DeleteGuideResourceParams) (int64, error)
+    // Hard-delete the (viewer, guide) recommendation row. Returns the
+    // rows-affected count so the service can distinguish "viewer never
+    // recommended this guide" (0 rows -> 404 'Recommendation not found')
+    // from a successful delete (1 row -> 204). The guide-existence +
+    // role gate runs FIRST in the service so 'Study guide not found' /
+    // 403 win over 'Recommendation not found' when applicable.
+    DeleteStudyGuideRecommendation(ctx context.Context, arg DeleteStudyGuideRecommendationParams) (int64, error)
+    // Hard-delete the (viewer, guide) vote row (ASK-141). Returns the
+    // rows-affected count so the service can distinguish "no existing
+    // vote" (0 rows -> 404 'Vote not found') from a successful delete
+    // (1 row -> 204). The guide-existence check happens BEFORE this
+    // runs in the service so a missing guide doesn't leak through as
+    // "vote not found".
+    DeleteStudyGuideVote(ctx context.Context, arg DeleteStudyGuideVoteParams) (int64, error)
+    GetCourse(ctx context.Context, id pgtype.UUID) (GetCourseRow, error)
     // Fetches a file only if it belongs to the given user and has not been soft-deleted.
     // Returns sql.ErrNoRows if not found or already in a deletion state.
     GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) (GetFileByOwnerRow, error)
+    // File-side gate for AttachFile (ASK-121). Returns the file's
+    // ownership + status fields so the service can choose 403 (not
+    // owner) vs 404 (missing / not 'complete' / soft-deleted) without
+    // a second round trip. Filters NOTHING -- the service inspects
+    // status + deleted_at + deletion_status to decide vs returning
+    // pre-filtered for "is the row attachable" since the messages
+    // differ (403 vs 404) and we want to give the right one.
+    //
+    // The columns mirror files.GetFileByOwner -- this is intentional;
+    // the cross-package read keeps the service layer aware of file
+    // ownership without reaching into the files package.
+    GetFileForAttach(ctx context.Context, id pgtype.UUID) (GetFileForAttachRow, error)
     GetFileIfViewable(ctx context.Context, arg GetFileIfViewableParams) (File, error)
+    // Lookup for DetachResource (ASK-116). Returns the attached_by user
+    // on the join row so the service can run the dual-authz check
+    // (viewer is guide creator OR viewer is attached_by). sql.ErrNoRows
+    // maps to 'Resource attachment not found' 404 -- the resource may
+    // exist but isn't attached to THIS guide.
+    GetGuideResourceAttacher(ctx context.Context, arg GetGuideResourceAttacherParams) (pgtype.UUID, error)
+    // Single-row membership lookup powering the per-section
+    // enrolled/not-enrolled probe (ASK-148). Returns sql.ErrNoRows when the
+    // viewer is not a member; the service translates that into the 200
+    // {enrolled:false} response, NOT a 404.
+    GetMembership(ctx context.Context, arg GetMembershipParams) (GetMembershipRow, error)
+    // Load the quiz row + privacy-floor creator info for the detail
+    // payload. The study guide is NOT joined back -- the caller already
+    // knows the study_guide_id (it's in the URL on POST and on the
+    // quiz row itself). Excludes soft-deleted quizzes (deleted_at IS
+    // NULL), soft-deleted creators (u.deleted_at IS NULL), and
+    // soft-deleted parent guides (sg.deleted_at IS NULL) so a hydration
+    // that races with a parent-cascade soft-delete reports 'not found'
+    // rather than rendering an orphaned quiz.
+    GetQuizDetail(ctx context.Context, id pgtype.UUID) (GetQuizDetailRow, error)
+    // Lookup pair for UpsertResource above. Returns the resources row
+    // the viewer owns for this URL; always succeeds because the upsert
+    // runs immediately before this in the same tx (either the INSERT
+    // wrote the row or it was already there).
+    GetResourceByCreatorURL(ctx context.Context, arg GetResourceByCreatorURLParams) (GetResourceByCreatorURLRow, error)
+    GetSchool(ctx context.Context, id pgtype.UUID) (School, error)
+    // Locked SELECT used at the start of DeleteStudyGuide. SELECT FOR
+    // UPDATE prevents concurrent deletes from racing on the same guide
+    // (one wins with 204, the other sees the row already-deleted in its
+    // transaction's snapshot and returns 404). Filters NOTHING -- the
+    // service inspects deleted_at + creator_id to choose 404 vs 403 vs
+    // proceed.
+    GetStudyGuideByIDForUpdate(ctx context.Context, id pgtype.UUID) (GetStudyGuideByIDForUpdateRow, error)
+    // The detail endpoint's main query (ASK-114). Returns the guide's own
+    // columns + a compact course payload + a compact creator payload
+    // + two inline aggregates as subqueries:
+    //   * vote_score    -- SUM(up/down votes)
+    //   * is_recommended -- EXISTS in study_guide_recommendations
+    //
+    // The viewer's own vote (user_vote) ships in a separate query
+    // (GetUserVoteForGuide) because sqlc does not infer nullable output
+    // columns from LEFT JOIN / subquery expressions on enum-typed columns
+    // -- it reads the schema's NOT NULL constraint and types the output
+    // non-nullable. An extra round trip is cheaper than fighting sqlc's
+    // type inference; the PRD's "batching as separate queries" guidance
+    // explicitly allows it.
+    //
+    // Soft-delete invariants:
+    //   * sg.deleted_at IS NULL  -- excludes deleted guides (→ 404)
+    //   * u.deleted_at IS NULL   -- creator must be live (ASK-143 convention)
+    //
+    // Privacy floor: no email, no clerk_id. Creator exposes only
+    // id/first_name/last_name.
+    GetStudyGuideDetail(ctx context.Context, id pgtype.UUID) (GetStudyGuideDetailRow, error)
     GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtype.UUID, error)
+    // Returns the viewer's own vote on the guide, or sql.ErrNoRows when
+    // the viewer has not voted. The service maps ErrNoRows to a nil
+    // user_vote in the response (JSON null, not omitted).
+    GetUserVoteForGuide(ctx context.Context, arg GetUserVoteForGuideParams) (VoteDirection, error)
+    // Live-presence probe used by both vote endpoints. Returns TRUE only
+    // when the guide row exists AND is not soft-deleted. The vote service
+    // gates on this before the upsert/delete so a missing-or-deleted
+    // guide returns 404 with a clear message rather than e.g. trampling
+    // through to the SQL layer and surfacing a generic FK error.
+    GuideExistsAndLive(ctx context.Context, id pgtype.UUID) (bool, error)
+    // Quizzes write + read queries (ASK-150 / ASK-136).
+    //
+    // The create flow is wrapped in a single InTx in the service layer:
+    // InsertQuiz -> N x InsertQuizQuestion -> M x InsertQuizAnswerOption.
+    // A failure at any step rolls everything back, so a partial quiz can
+    // never be observed by another reader.
+    //
+    // The post-insert hydration runs OUTSIDE the transaction (commit
+    // happens first) using GetQuizDetail + ListQuizQuestionsByQuiz +
+    // ListQuizAnswerOptionsByQuiz. The two-list fan-out matches the
+    // studyguides detail pattern -- mapping options back onto questions
+    // happens in Go because pgx returns flat rowsets and the question
+    // count is small (<=100 per quiz).
+    //
+    // Privacy floor on the creator payload mirrors studyguides: id +
+    // first_name + last_name only. No email, no clerk_id.
+    // Live-presence probe for the create-quiz endpoint. Returns TRUE
+    // only when the guide row exists AND is not soft-deleted. The
+    // studyguides package has an identical query (GuideExistsAndLive);
+    // duplicated here so the quizzes service can stay decoupled from
+    // the studyguides Repository interface (sqlc generates queriers
+    // per package -- both call the same row but live in different
+    // generated method tables).
+    GuideExistsAndLiveForQuizzes(ctx context.Context, id pgtype.UUID) (bool, error)
+    // Lookup for DetachFile (ASK-124). Returns TRUE when the (file,
+    // guide) join row exists. Used as the 404 short-circuit before the
+    // delete fires -- we want a clean 'File attachment not found' rather
+    // than relying on DeleteGuideFile :execrows which can't distinguish
+    // 'never existed' from 'concurrent detach happened first'.
+    GuideFileAttached(ctx context.Context, arg GuideFileAttachedParams) (bool, error)
+    InsertFile(ctx context.Context, arg InsertFileParams) (File, error)
+    // Creates the (file_id, study_guide_id) join row. Uses ON CONFLICT
+    // DO NOTHING + RETURNING so a duplicate attach surfaces as
+    // sql.ErrNoRows in Go, which the service maps to a 409 'File is
+    // already attached to this study guide'. Same pattern as
+    // recommendations + JoinSection.
+    //
+    // No attached_by column on this join table (unlike
+    // study_guide_resources) -- file ownership is determined from
+    // files.user_id instead, and the dual-authz check on detach
+    // compares against guide.creator_id + file.user_id.
+    InsertGuideFile(ctx context.Context, arg InsertGuideFileParams) (pgtype.Timestamptz, error)
+    // Creates the (resource_id, study_guide_id, attached_by) join row.
+    // The PK is (resource_id, study_guide_id) so a same-resource-and-guide
+    // duplicate raises a unique_violation -- but the user-facing 409
+    // conflict on a duplicate URL is detected EARLIER by
+    // URLAlreadyAttachedToGuide (which catches across resource rows
+    // with the same URL but different creators). This INSERT's PK
+    // failure mode is the narrow concurrency-race: two attachers slip
+    // through the pre-check between query 1 and query 4.
+    InsertGuideResource(ctx context.Context, arg InsertGuideResourceParams) error
+    // Insert a new quiz row. Returns the columns the service needs to
+    // build the QuizDetailResponse without an extra round trip on the
+    // write side -- the read-side hydration still happens via
+    // GetQuizDetail because the creator's first_name + last_name come
+    // from a join to users (and would inflate this RETURNING clause).
+    InsertQuiz(ctx context.Context, arg InsertQuizParams) (InsertQuizRow, error)
+    // Insert one option row. The service has already validated that
+    // exactly one option per MCQ has is_correct=true; for true-false
+    // questions the service synthesises two options (`True` + `False`)
+    // with the matching is_correct flag.
+    InsertQuizAnswerOption(ctx context.Context, arg InsertQuizAnswerOptionParams) error
+    // Insert a single question row. reference_answer is only meaningful
+    // for `freeform` questions; the service passes NULL for the other
+    // two types. sort_order is required (the service sets a stable
+    // value -- either the user-supplied integer or the array index).
+    InsertQuizQuestion(ctx context.Context, arg InsertQuizQuestionParams) (pgtype.UUID, error)
+    // Study guide list queries (ASK-104).
+    //
+    // Every ListStudyGuides* variant uses the same CTE structure so the
+    // per-row aggregates (vote_score, is_recommended, quiz_count) are
+    // computed once and can be referenced from the outer WHERE clause
+    // (e.g. for the score-sorted cursor predicate). The CTE pattern also
+    // keeps the 8 named variants near-identical apart from ORDER BY + the
+    // cursor predicate, which makes future maintenance (e.g. adding a new
+    // sort field) a mechanical edit.
+    //
+    // Soft-delete invariants enforced everywhere:
+    //   * sg.deleted_at IS NULL       — excludes guides marked for deletion
+    //   * u.deleted_at IS NULL        — excludes guides authored by a
+    //                                   soft-deleted user; matches the
+    //                                   convention established by ASK-143's
+    //                                   section roster (a soft-deleted user
+    //                                   disappears from public surfaces)
+    //   * quizzes.deleted_at IS NULL  — quiz_count excludes deleted quizzes
+    //
+    // Privacy floor on the creator payload: only id + first_name + last_name
+    // are selected. No email, no clerk_id -- same rule as
+    // SectionMemberResponse in ASK-143.
+    // Insert a new guide and return all the columns the service needs to
+    // construct the StudyGuideDetail response without an extra round trip.
+    // The course preflight (in service.go) gates on AssertCourseExists so
+    // the FK violation is unreachable in normal flow; the FK still acts
+    // as a backstop if a course is hard-deleted between preflight + insert.
+    InsertStudyGuide(ctx context.Context, arg InsertStudyGuideParams) (InsertStudyGuideRow, error)
+    // Inserts the (study_guide_id, recommended_by) row and returns the
+    // created_at PLUS the recommender's privacy-floor identity
+    // (first_name + last_name) via a CTE join to users. One round trip
+    // builds the entire RecommendationResponse payload; without the
+    // CTE the service would need a second SELECT against users just to
+    // pull the recommender's name.
+    //
+    // The (study_guide_id, recommended_by) PK from the schema makes a
+    // duplicate insert raise unique_violation (Postgres SQLSTATE 23505),
+    // which the service catches and maps to apperrors.ErrConflict (409).
+    InsertStudyGuideRecommendation(ctx context.Context, arg InsertStudyGuideRecommendationParams) (InsertStudyGuideRecommendationRow, error)
+    // Adds the user to the section as a 'student'. ON CONFLICT DO NOTHING
+    // keeps duplicate joins atomic (no PK violation surfacing) and concurrency
+    // safe; the service layer treats an empty result as the 409 "Already a
+    // member of this section" case.
+    JoinSection(ctx context.Context, arg JoinSectionParams) (CourseMember, error)
+    // Hard-deletes the membership row. RETURNING lets the service detect a
+    // no-op delete (sql.ErrNoRows) and map it to the 404 "Not a member of
+    // this section" response.
+    LeaveSection(ctx context.Context, arg LeaveSectionParams) (pgtype.UUID, error)
+    // Returns sections with a live member_count via LEFT JOIN (so sections
+    // with zero members still appear). Ordered most-recent term first using
+    // start_date when present, falling back to section_code. NULLS LAST keeps
+    // sections without a known start_date at the bottom.
+    ListCourseSections(ctx context.Context, courseID pgtype.UUID) ([]ListCourseSectionsRow, error)
+    ListCoursesCreatedAtAsc(ctx context.Context, arg ListCoursesCreatedAtAscParams) ([]ListCoursesCreatedAtAscRow, error)
+    ListCoursesCreatedAtDesc(ctx context.Context, arg ListCoursesCreatedAtDescParams) ([]ListCoursesCreatedAtDescRow, error)
+    // All ListCourses* variants share the same WHERE template
+    // (school_id, department, q filters + sort-specific cursor) and only
+    // differ in ORDER BY direction and the cursor field shape. This mirrors
+    // the per-sort-variant pattern in files.sql -- sqlc cannot parameterize
+    // ORDER BY, so each direction gets its own named query.
+    //
+    // The default sort (by department) uses a composite (department, number, id)
+    // cursor because (department) alone is not unique; the other sort fields
+    // use a simpler (field, id) cursor since the field is paired with the
+    // primary key as a tiebreaker.
+    ListCoursesDepartmentAsc(ctx context.Context, arg ListCoursesDepartmentAscParams) ([]ListCoursesDepartmentAscRow, error)
+    ListCoursesDepartmentDesc(ctx context.Context, arg ListCoursesDepartmentDescParams) ([]ListCoursesDepartmentDescRow, error)
+    ListCoursesNumberAsc(ctx context.Context, arg ListCoursesNumberAscParams) ([]ListCoursesNumberAscRow, error)
+    ListCoursesNumberDesc(ctx context.Context, arg ListCoursesNumberDescParams) ([]ListCoursesNumberDescRow, error)
+    ListCoursesTitleAsc(ctx context.Context, arg ListCoursesTitleAscParams) ([]ListCoursesTitleAscRow, error)
+    ListCoursesTitleDesc(ctx context.Context, arg ListCoursesTitleDescParams) ([]ListCoursesTitleDescRow, error)
+    // Attached files for the guide detail payload. Privacy floor: no
+    // user_id, no s3_key, no checksum. The file list shows only what a
+    // viewer needs to see: what's attached, what type, and how big.
+    //
+    // Filters f.status = 'complete' so files mid-upload (pending) or
+    // failed don't surface in the guide detail -- a frontend that tried
+    // to download such a file would get a broken link. Only successfully
+    // uploaded files are visible to non-owners; the upload author's own
+    // file list (via the files endpoints) shows all statuses so they can
+    // retry or remove.
+    ListGuideFiles(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideFilesRow, error)
+    // Non-deleted quizzes for the guide + question_count per quiz. The
+    // LEFT JOIN ensures quizzes with zero questions still appear with
+    // question_count = 0.
+    ListGuideQuizzesWithQuestionCount(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideQuizzesWithQuestionCountRow, error)
+    // Recommenders list for the guide detail payload. Same privacy floor
+    // as CreatorSummary -- id + first_name + last_name only. Excludes
+    // recommenders whose user record is soft-deleted.
+    ListGuideRecommenders(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideRecommendersRow, error)
+    // Attached resources for the guide detail payload. No creator info
+    // in the SELECT list -- the caller doesn't need to know who attached
+    // the resource.
+    ListGuideResources(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideResourcesRow, error)
+    // Returns every section a user is enrolled in with the compact
+    // course + school payload the dashboard renders. Optional term + role
+    // filters use sqlc.narg so the WHERE branch short-circuits when
+    // they're absent. Sort is fixed: most-recent term first (lexicographic
+    // "Spring 2026" > "Fall 2025" is acceptable for MVP per the spec),
+    // then department + number for stable in-term ordering.
+    ListMyEnrollments(ctx context.Context, arg ListMyEnrollmentsParams) ([]ListMyEnrollmentsRow, error)
     ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFilesCreatedAscParams) ([]ListOwnedFilesCreatedAscRow, error)
     ListOwnedFilesCreatedDesc(ctx context.Context, arg ListOwnedFilesCreatedDescParams) ([]ListOwnedFilesCreatedDescRow, error)
     ListOwnedFilesMimeAsc(ctx context.Context, arg ListOwnedFilesMimeAscParams) ([]ListOwnedFilesMimeAscRow, error)
@@ -1129,18 +3073,161 @@ type Querier interface {
     ListOwnedFilesStatusDesc(ctx context.Context, arg ListOwnedFilesStatusDescParams) ([]ListOwnedFilesStatusDescRow, error)
     ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFilesUpdatedAscParams) ([]ListOwnedFilesUpdatedAscRow, error)
     ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFilesUpdatedDescParams) ([]ListOwnedFilesUpdatedDescRow, error)
+    // All answer options for every question in a quiz, ordered by
+    // question_id then sort_order then id. The mapper groups by
+    // question_id in Go to attach options to their parent question.
+    // The triple-key ordering keeps the option list deterministic.
+    ListQuizAnswerOptionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]QuizAnswerOption, error)
+    // All questions for a quiz, ordered by sort_order then id (the id
+    // tiebreaker keeps the response deterministic when two questions
+    // happen to share a sort_order -- the spec doesn't enforce
+    // uniqueness on sort_order). Returns reference_answer so the
+    // mapper can emit it as `correct_answer` on freeform questions.
+    ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]ListQuizQuestionsByQuizRow, error)
+    ListSchools(ctx context.Context, arg ListSchoolsParams) ([]School, error)
+    // Returns the section roster joined against users for first/last name.
+    // Privacy floor: SELECT lists ONLY the five fields exposed in the
+    // SectionMemberResponse schema (user_id, first_name, last_name, role,
+    // joined_at). DO NOT add email, clerk_id, or any other user column to
+    // this list -- the endpoint is reachable by any authenticated user.
+    //
+    // Soft-deleted users (users.deleted_at IS NOT NULL) are excluded -- the
+    // codebase's soft-delete convention is enforced by the partial indexes
+    // idx_users_deleted_at and idx_users_active_email. A user's soft-delete
+    // is the signal that they want to disappear from the product, so they
+    // must not surface in a public-by-design roster. The cursor still
+    // advances past them in the (joined_at, user_id) keyset, so removing
+    // them mid-iteration just shrinks the page rather than skipping live
+    // members.
+    //
+    // Optional role filter via sqlc.narg short-circuits when absent. Keyset
+    // pagination on (joined_at, user_id) -- joined_at alone isn't unique
+    // (multiple users can join in the same second on a busy section), so
+    // user_id is the tiebreaker that keeps the keyset a strict total order.
+    ListSectionMembers(ctx context.Context, arg ListSectionMembersParams) ([]ListSectionMembersRow, error)
+    ListStudyGuidesNewestAsc(ctx context.Context, arg ListStudyGuidesNewestAscParams) ([]ListStudyGuidesNewestAscRow, error)
+    ListStudyGuidesNewestDesc(ctx context.Context, arg ListStudyGuidesNewestDescParams) ([]ListStudyGuidesNewestDescRow, error)
+    ListStudyGuidesScoreAsc(ctx context.Context, arg ListStudyGuidesScoreAscParams) ([]ListStudyGuidesScoreAscRow, error)
+    // Default sort. Multi-column keyset on (vote_score, view_count,
+    // updated_at, id) -- each column after vote_score is a tiebreaker for
+    // the previous one; id is the final strict-total-order tiebreaker.
+    ListStudyGuidesScoreDesc(ctx context.Context, arg ListStudyGuidesScoreDescParams) ([]ListStudyGuidesScoreDescRow, error)
+    ListStudyGuidesUpdatedAsc(ctx context.Context, arg ListStudyGuidesUpdatedAscParams) ([]ListStudyGuidesUpdatedAscRow, error)
+    ListStudyGuidesUpdatedDesc(ctx context.Context, arg ListStudyGuidesUpdatedDescParams) ([]ListStudyGuidesUpdatedDescRow, error)
+    ListStudyGuidesViewsAsc(ctx context.Context, arg ListStudyGuidesViewsAscParams) ([]ListStudyGuidesViewsAscRow, error)
+    ListStudyGuidesViewsDesc(ctx context.Context, arg ListStudyGuidesViewsDescParams) ([]ListStudyGuidesViewsDescRow, error)
     // Called by the cleanup job handler once S3 deletion is confirmed.
     MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
+    // Deletes a file grant matching the exact composite key. No-op if the grant
+    // does not exist (idempotent).
+    RevokeFileGrant(ctx context.Context, arg RevokeFileGrantParams) error
+    // Verifies the section exists AND belongs to the supplied course. A
+    // section UUID that targets a different course is treated as not found
+    // to avoid leaking the existence of unrelated sections via the URL path.
+    SectionInCourseExists(ctx context.Context, arg SectionInCourseExistsParams) (bool, error)
     // Records the QStash message ID after publishing the async cleanup job.
     SetFileDeletionJobID(ctx context.Context, arg SetFileDeletionJobIDParams) error
     // Marks a file as pending deletion. Only applies if the file is owned by the caller
     // and has not already entered a deletion state (idempotency-safe).
     SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)
+    // Application-level cascade: soft-delete every non-deleted quiz on
+    // the guide. WHERE deleted_at IS NULL preserves the deleted_at
+    // timestamp on quizzes that were already soft-deleted before the
+    // guide was -- the spec explicitly requires that an already-deleted
+    // quiz's deleted_at is NOT updated by this cascade.
+    SoftDeleteQuizzesForGuide(ctx context.Context, studyGuideID pgtype.UUID) error
+    // Set deleted_at = now() on the guide. The service has already
+    // verified the row exists, isn't already deleted, and the viewer is
+    // the creator -- so this is a blind UPDATE. The DeleteStudyGuide
+    // transaction wraps this + SoftDeleteQuizzesForGuide.
+    SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUID) error
     SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
+    // Pre-flight conflict check for AttachResource (ASK-111). Returns
+    // TRUE when ANY resource with this URL is already attached to the
+    // given guide -- regardless of who created the resource row. Lets
+    // the service short-circuit to 409 BEFORE the resource upsert, so a
+    // duplicate attempt doesn't create or touch a resources row only to
+    // discard it on the join PK violation.
+    //
+    // Why "regardless of creator": the join PK is (resource_id,
+    // study_guide_id), so two distinct resource rows (different creators
+    // but same URL) could both attach to the same guide without raising
+    // the join PK constraint. The spec treats that as a duplicate URL
+    // on the guide -- this query enforces the no-duplicate-URLs-per-guide
+    // contract at the application layer.
+    URLAlreadyAttachedToGuide(ctx context.Context, arg URLAlreadyAttachedToGuideParams) (bool, error)
     // Renames a file. Only applies if owned by the caller and not in a deletion state.
     // Returns sql.ErrNoRows when file is not found, not owned, or in deletion.
     UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateFileRow, error)
+    UpdateFileStatus(ctx context.Context, arg UpdateFileStatusParams) error
+    // Partial update for ASK-129. Each updatable column uses COALESCE(narg,
+    // current) so a nil arg from Go means "leave this column alone" and a
+    // non-nil arg means "replace with the supplied value". The service is
+    // responsible for:
+    //   * 404 / 403 gating (via GetStudyGuideByIDForUpdate before this).
+    //   * Validating the at-least-one-field rule (an empty body is a 400
+    //     before this query runs).
+    //   * Tag normalization (trim + lowercase + dedupe) -- the array
+    //     written here is the final canonical form.
+    //
+    // The service runs the locked SELECT + this UPDATE in a single
+    // transaction so a concurrent delete can't slip in between. updated_at
+    // is bumped to now() on every successful call (the UPDATE sees at
+    // least the updated_at change even when every other narg is NULL,
+    // which matches the spec's "updated_at reflects the latest" guarantee
+    // but also means a no-op PATCH still bumps updated_at -- the service's
+    // empty-body 400 check prevents that case from reaching SQL).
+    UpdateStudyGuide(ctx context.Context, arg UpdateStudyGuideParams) error
     UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
+    // Inserts a new file grant, returning the row. If the grant already exists
+    // (same file_id, grantee_type, grantee_id, permission), updates granted_by
+    // and returns the row. Using DO UPDATE SET avoids a race window where
+    // concurrent inserts could cause both INSERT and fallback SELECT to miss.
+    UpsertFileGrant(ctx context.Context, arg UpsertFileGrantParams) (FileGrant, error)
+    // Inserts a new resources row for the (creator_id, url) pair. The
+    // ON CONFLICT DO NOTHING preserves the existing row's title /
+    // description / type when the viewer has used this URL before -- a
+    // silent overwrite would mutate state visible to the resource's
+    // other attachments (the same row may be attached to other guides
+    // + courses).
+    //
+    // Paired with GetResourceByCreatorURL: the service runs both calls
+    // in sequence, then uses the SELECT'd row regardless of whether the
+    // INSERT actually wrote.
+    UpsertResource(ctx context.Context, arg UpsertResourceParams) error
+    // Cast or change a vote (ASK-139). Inserts a new (user_id,
+    // study_guide_id, vote) row when the viewer has not voted, or
+    // updates the existing row's vote when the direction changes. Same-
+    // direction re-submits hit the WHERE clause on the DO UPDATE branch
+    // and become a true no-op (no row touched, no trigger fired,
+    // updated_at preserved). The (user_id, study_guide_id) PK from the
+    // schema is what makes ON CONFLICT resolve correctly.
+    UpsertStudyGuideVote(ctx context.Context, arg UpsertStudyGuideVoteParams) error
+    // Combined live-presence + role-gate probe for the recommend
+    // endpoints (ASK-147 + ASK-101). Returns one row when the viewer
+    // holds instructor or ta role in AT LEAST ONE section of the guide's
+    // course AND the guide is live (not soft-deleted).
+    //
+    // Returns three booleans so the service can distinguish 404 from
+    // 403 with a single round trip:
+    //   * guide_exists  -- guide row present AND deleted_at IS NULL
+    //   * has_role      -- viewer is instructor/ta in some section
+    //                      of the guide's course (ignored if guide
+    //                      doesn't exist)
+    //
+    // Combining the two checks into a single query (rather than two
+    // sequential calls) keeps the recommend hot path at one DB round
+    // trip for the gate; the actual insert/delete is the second.
+    //
+    // NULL-semantics note: when the guide doesn't exist, the inner
+    // `guide` CTE returns 0 rows, so `(SELECT course_id FROM guide)` is
+    // NULL, and `cs.course_id = NULL` is always FALSE (not NULL-equal).
+    // That makes `has_role` correctly false for missing guides without
+    // needing a separate WHERE EXISTS guard. The service short-circuits
+    // on !guide_exists before inspecting has_role, so the two booleans
+    // are independent by contract even though they correlate in this
+    // edge case.
+    ViewerCanRecommendForGuide(ctx context.Context, arg ViewerCanRecommendForGuideParams) (ViewerCanRecommendForGuideRow, error)
 }
 ```
 
@@ -1164,6 +3251,78 @@ func New(db DBTX) *Queries
 
 
 
+<a name="Queries.ComputeGuideVoteScore"></a>
+### func \(\*Queries\) [ComputeGuideVoteScore](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L27>)
+
+```go
+func (q *Queries) ComputeGuideVoteScore(ctx context.Context, studyGuideID pgtype.UUID) (int64, error)
+```
+
+Recomputes the guide's vote\_score from study\_guide\_votes. Returned as int64 to match the wire shape on CastVoteResponse. Run after the upsert in the same logical request so the response reflects the post\-mutation state.
+
+<a name="Queries.CourseExists"></a>
+### func \(\*Queries\) [CourseExists](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L23>)
+
+```go
+func (q *Queries) CourseExists(ctx context.Context, id pgtype.UUID) (bool, error)
+```
+
+Single\-row existence probe used by join/leave to disambiguate the "Course not found" 404 from the "Section not found" 404 the spec requires \(see ASK\-132 / ASK\-138\).
+
+<a name="Queries.CourseExistsForGuides"></a>
+### func \(\*Queries\) [CourseExistsForGuides](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L44>)
+
+```go
+func (q *Queries) CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error)
+```
+
+Single\-row probe used by the list handler to disambiguate "course missing" \(404\) from "course exists but has no guides" \(200 empty array\). Separate from courses.CourseExists only because sqlc\-generated queriers are per\-file; the predicate is identical.
+
+<a name="Queries.DeleteGuideFile"></a>
+### func \(\*Queries\) [DeleteGuideFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L69>)
+
+```go
+func (q *Queries) DeleteGuideFile(ctx context.Context, arg DeleteGuideFileParams) (int64, error)
+```
+
+Removes the \(file\_id, study\_guide\_id\) join row. Returns rows\- affected so the service can detect the concurrency\-race case \(0 rows = a parallel detach already removed it, still maps to 404 to match the get\-then\-delete contract\). The file row is preserved \-\- it may be attached to other guides \+ courses, and the spec explicitly forbids cascading the file delete from a single detach.
+
+<a name="Queries.DeleteGuideResource"></a>
+### func \(\*Queries\) [DeleteGuideResource](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L93>)
+
+```go
+func (q *Queries) DeleteGuideResource(ctx context.Context, arg DeleteGuideResourceParams) (int64, error)
+```
+
+Removes the join row only. The resources row is preserved \-\- it may be attached to other guides \+ courses, and the spec explicitly forbids cascading the resource delete from a single detach. Returns rows\-affected so the service can detect already\-detached races \(0 rows \-\> 404\) vs success \(1 row \-\> nil\).
+
+<a name="Queries.DeleteStudyGuideRecommendation"></a>
+### func \(\*Queries\) [DeleteStudyGuideRecommendation](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L118>)
+
+```go
+func (q *Queries) DeleteStudyGuideRecommendation(ctx context.Context, arg DeleteStudyGuideRecommendationParams) (int64, error)
+```
+
+Hard\-delete the \(viewer, guide\) recommendation row. Returns the rows\-affected count so the service can distinguish "viewer never recommended this guide" \(0 rows \-\> 404 'Recommendation not found'\) from a successful delete \(1 row \-\> 204\). The guide\-existence \+ role gate runs FIRST in the service so 'Study guide not found' / 403 win over 'Recommendation not found' when applicable.
+
+<a name="Queries.DeleteStudyGuideVote"></a>
+### func \(\*Queries\) [DeleteStudyGuideVote](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L143>)
+
+```go
+func (q *Queries) DeleteStudyGuideVote(ctx context.Context, arg DeleteStudyGuideVoteParams) (int64, error)
+```
+
+Hard\-delete the \(viewer, guide\) vote row \(ASK\-141\). Returns the rows\-affected count so the service can distinguish "no existing vote" \(0 rows \-\> 404 'Vote not found'\) from a successful delete \(1 row \-\> 204\). The guide\-existence check happens BEFORE this runs in the service so a missing guide doesn't leak through as "vote not found".
+
+<a name="Queries.GetCourse"></a>
+### func \(\*Queries\) [GetCourse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L58>)
+
+```go
+func (q *Queries) GetCourse(ctx context.Context, id pgtype.UUID) (GetCourseRow, error)
+```
+
+
+
 <a name="Queries.GetFileByOwner"></a>
 ### func \(\*Queries\) [GetFileByOwner](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L48>)
 
@@ -1172,6 +3331,17 @@ func (q *Queries) GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) 
 ```
 
 Fetches a file only if it belongs to the given user and has not been soft\-deleted. Returns sql.ErrNoRows if not found or already in a deletion state.
+
+<a name="Queries.GetFileForAttach"></a>
+### func \(\*Queries\) [GetFileForAttach](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L176>)
+
+```go
+func (q *Queries) GetFileForAttach(ctx context.Context, id pgtype.UUID) (GetFileForAttachRow, error)
+```
+
+File\-side gate for AttachFile \(ASK\-121\). Returns the file's ownership \+ status fields so the service can choose 403 \(not owner\) vs 404 \(missing / not 'complete' / soft\-deleted\) without a second round trip. Filters NOTHING \-\- the service inspects status \+ deleted\_at \+ deletion\_status to decide vs returning pre\-filtered for "is the row attachable" since the messages differ \(403 vs 404\) and we want to give the right one.
+
+The columns mirror files.GetFileByOwner \-\- this is intentional; the cross\-package read keeps the service layer aware of file ownership without reaching into the files package.
 
 <a name="Queries.GetFileIfViewable"></a>
 ### func \(\*Queries\) [GetFileIfViewable](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L128>)
@@ -1182,6 +3352,81 @@ func (q *Queries) GetFileIfViewable(ctx context.Context, arg GetFileIfViewablePa
 
 
 
+<a name="Queries.GetGuideResourceAttacher"></a>
+### func \(\*Queries\) [GetGuideResourceAttacher](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L206>)
+
+```go
+func (q *Queries) GetGuideResourceAttacher(ctx context.Context, arg GetGuideResourceAttacherParams) (pgtype.UUID, error)
+```
+
+Lookup for DetachResource \(ASK\-116\). Returns the attached\_by user on the join row so the service can run the dual\-authz check \(viewer is guide creator OR viewer is attached\_by\). sql.ErrNoRows maps to 'Resource attachment not found' 404 \-\- the resource may exist but isn't attached to THIS guide.
+
+<a name="Queries.GetMembership"></a>
+### func \(\*Queries\) [GetMembership](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L101>)
+
+```go
+func (q *Queries) GetMembership(ctx context.Context, arg GetMembershipParams) (GetMembershipRow, error)
+```
+
+Single\-row membership lookup powering the per\-section enrolled/not\-enrolled probe \(ASK\-148\). Returns sql.ErrNoRows when the viewer is not a member; the service translates that into the 200 \{enrolled:false\} response, NOT a 404.
+
+<a name="Queries.GetQuizDetail"></a>
+### func \(\*Queries\) [GetQuizDetail](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L50>)
+
+```go
+func (q *Queries) GetQuizDetail(ctx context.Context, id pgtype.UUID) (GetQuizDetailRow, error)
+```
+
+Load the quiz row \+ privacy\-floor creator info for the detail payload. The study guide is NOT joined back \-\- the caller already knows the study\_guide\_id \(it's in the URL on POST and on the quiz row itself\). Excludes soft\-deleted quizzes \(deleted\_at IS NULL\), soft\-deleted creators \(u.deleted\_at IS NULL\), and soft\-deleted parent guides \(sg.deleted\_at IS NULL\) so a hydration that races with a parent\-cascade soft\-delete reports 'not found' rather than rendering an orphaned quiz.
+
+<a name="Queries.GetResourceByCreatorURL"></a>
+### func \(\*Queries\) [GetResourceByCreatorURL](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L238>)
+
+```go
+func (q *Queries) GetResourceByCreatorURL(ctx context.Context, arg GetResourceByCreatorURLParams) (GetResourceByCreatorURLRow, error)
+```
+
+Lookup pair for UpsertResource above. Returns the resources row the viewer owns for this URL; always succeeds because the upsert runs immediately before this in the same tx \(either the INSERT wrote the row or it was already there\).
+
+<a name="Queries.GetSchool"></a>
+### func \(\*Queries\) [GetSchool](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/schools.sql.go#L20>)
+
+```go
+func (q *Queries) GetSchool(ctx context.Context, id pgtype.UUID) (School, error)
+```
+
+
+
+<a name="Queries.GetStudyGuideByIDForUpdate"></a>
+### func \(\*Queries\) [GetStudyGuideByIDForUpdate](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L271>)
+
+```go
+func (q *Queries) GetStudyGuideByIDForUpdate(ctx context.Context, id pgtype.UUID) (GetStudyGuideByIDForUpdateRow, error)
+```
+
+Locked SELECT used at the start of DeleteStudyGuide. SELECT FOR UPDATE prevents concurrent deletes from racing on the same guide \(one wins with 204, the other sees the row already\-deleted in its transaction's snapshot and returns 404\). Filters NOTHING \-\- the service inspects deleted\_at \+ creator\_id to choose 404 vs 403 vs proceed.
+
+<a name="Queries.GetStudyGuideDetail"></a>
+### func \(\*Queries\) [GetStudyGuideDetail](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L346>)
+
+```go
+func (q *Queries) GetStudyGuideDetail(ctx context.Context, id pgtype.UUID) (GetStudyGuideDetailRow, error)
+```
+
+The detail endpoint's main query \(ASK\-114\). Returns the guide's own columns \+ a compact course payload \+ a compact creator payload \+ two inline aggregates as subqueries:
+
+- vote\_score \-\- SUM\(up/down votes\)
+- is\_recommended \-\- EXISTS in study\_guide\_recommendations
+
+The viewer's own vote \(user\_vote\) ships in a separate query \(GetUserVoteForGuide\) because sqlc does not infer nullable output columns from LEFT JOIN / subquery expressions on enum\-typed columns \-\- it reads the schema's NOT NULL constraint and types the output non\-nullable. An extra round trip is cheaper than fighting sqlc's type inference; the PRD's "batching as separate queries" guidance explicitly allows it.
+
+Soft\-delete invariants:
+
+- sg.deleted\_at IS NULL \-\- excludes deleted guides \(→ 404\)
+- u.deleted\_at IS NULL \-\- creator must be live \(ASK\-143 convention\)
+
+Privacy floor: no email, no clerk\_id. Creator exposes only id/first\_name/last\_name.
+
 <a name="Queries.GetUserIDByClerkID"></a>
 ### func \(\*Queries\) [GetUserIDByClerkID](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/users.sql.go#L18>)
 
@@ -1191,8 +3436,284 @@ func (q *Queries) GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtyp
 
 
 
+<a name="Queries.GetUserVoteForGuide"></a>
+### func \(\*Queries\) [GetUserVoteForGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L386>)
+
+```go
+func (q *Queries) GetUserVoteForGuide(ctx context.Context, arg GetUserVoteForGuideParams) (VoteDirection, error)
+```
+
+Returns the viewer's own vote on the guide, or sql.ErrNoRows when the viewer has not voted. The service maps ErrNoRows to a nil user\_vote in the response \(JSON null, not omitted\).
+
+<a name="Queries.GuideExistsAndLive"></a>
+### func \(\*Queries\) [GuideExistsAndLive](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L407>)
+
+```go
+func (q *Queries) GuideExistsAndLive(ctx context.Context, id pgtype.UUID) (bool, error)
+```
+
+Live\-presence probe used by both vote endpoints. Returns TRUE only when the guide row exists AND is not soft\-deleted. The vote service gates on this before the upsert/delete so a missing\-or\-deleted guide returns 404 with a clear message rather than e.g. trampling through to the SQL layer and surfacing a generic FK error.
+
+<a name="Queries.GuideExistsAndLiveForQuizzes"></a>
+### func \(\*Queries\) [GuideExistsAndLiveForQuizzes](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L100>)
+
+```go
+func (q *Queries) GuideExistsAndLiveForQuizzes(ctx context.Context, id pgtype.UUID) (bool, error)
+```
+
+Quizzes write \+ read queries \(ASK\-150 / ASK\-136\).
+
+The create flow is wrapped in a single InTx in the service layer: InsertQuiz \-\> N x InsertQuizQuestion \-\> M x InsertQuizAnswerOption. A failure at any step rolls everything back, so a partial quiz can never be observed by another reader.
+
+The post\-insert hydration runs OUTSIDE the transaction \(commit happens first\) using GetQuizDetail \+ ListQuizQuestionsByQuiz \+ ListQuizAnswerOptionsByQuiz. The two\-list fan\-out matches the studyguides detail pattern \-\- mapping options back onto questions happens in Go because pgx returns flat rowsets and the question count is small \(\<=100 per quiz\).
+
+Privacy floor on the creator payload mirrors studyguides: id \+ first\_name \+ last\_name only. No email, no clerk\_id. Live\-presence probe for the create\-quiz endpoint. Returns TRUE only when the guide row exists AND is not soft\-deleted. The studyguides package has an identical query \(GuideExistsAndLive\); duplicated here so the quizzes service can stay decoupled from the studyguides Repository interface \(sqlc generates queriers per package \-\- both call the same row but live in different generated method tables\).
+
+<a name="Queries.GuideFileAttached"></a>
+### func \(\*Queries\) [GuideFileAttached](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L433>)
+
+```go
+func (q *Queries) GuideFileAttached(ctx context.Context, arg GuideFileAttachedParams) (bool, error)
+```
+
+Lookup for DetachFile \(ASK\-124\). Returns TRUE when the \(file, guide\) join row exists. Used as the 404 short\-circuit before the delete fires \-\- we want a clean 'File attachment not found' rather than relying on DeleteGuideFile :execrows which can't distinguish 'never existed' from 'concurrent detach happened first'.
+
+<a name="Queries.InsertFile"></a>
+### func \(\*Queries\) [InsertFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L170>)
+
+```go
+func (q *Queries) InsertFile(ctx context.Context, arg InsertFileParams) (File, error)
+```
+
+
+
+<a name="Queries.InsertGuideFile"></a>
+### func \(\*Queries\) [InsertGuideFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L465>)
+
+```go
+func (q *Queries) InsertGuideFile(ctx context.Context, arg InsertGuideFileParams) (pgtype.Timestamptz, error)
+```
+
+Creates the \(file\_id, study\_guide\_id\) join row. Uses ON CONFLICT DO NOTHING \+ RETURNING so a duplicate attach surfaces as sql.ErrNoRows in Go, which the service maps to a 409 'File is already attached to this study guide'. Same pattern as recommendations \+ JoinSection.
+
+No attached\_by column on this join table \(unlike study\_guide\_resources\) \-\- file ownership is determined from files.user\_id instead, and the dual\-authz check on detach compares against guide.creator\_id \+ file.user\_id.
+
+<a name="Queries.InsertGuideResource"></a>
+### func \(\*Queries\) [InsertGuideResource](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L495>)
+
+```go
+func (q *Queries) InsertGuideResource(ctx context.Context, arg InsertGuideResourceParams) error
+```
+
+Creates the \(resource\_id, study\_guide\_id, attached\_by\) join row. The PK is \(resource\_id, study\_guide\_id\) so a same\-resource\-and\-guide duplicate raises a unique\_violation \-\- but the user\-facing 409 conflict on a duplicate URL is detected EARLIER by URLAlreadyAttachedToGuide \(which catches across resource rows with the same URL but different creators\). This INSERT's PK failure mode is the narrow concurrency\-race: two attachers slip through the pre\-check between query 1 and query 4.
+
+<a name="Queries.InsertQuiz"></a>
+### func \(\*Queries\) [InsertQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L136>)
+
+```go
+func (q *Queries) InsertQuiz(ctx context.Context, arg InsertQuizParams) (InsertQuizRow, error)
+```
+
+Insert a new quiz row. Returns the columns the service needs to build the QuizDetailResponse without an extra round trip on the write side \-\- the read\-side hydration still happens via GetQuizDetail because the creator's first\_name \+ last\_name come from a join to users \(and would inflate this RETURNING clause\).
+
+<a name="Queries.InsertQuizAnswerOption"></a>
+### func \(\*Queries\) [InsertQuizAnswerOption](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L169>)
+
+```go
+func (q *Queries) InsertQuizAnswerOption(ctx context.Context, arg InsertQuizAnswerOptionParams) error
+```
+
+Insert one option row. The service has already validated that exactly one option per MCQ has is\_correct=true; for true\-false questions the service synthesises two options \(\`True\` \+ \`False\`\) with the matching is\_correct flag.
+
+<a name="Queries.InsertQuizQuestion"></a>
+### func \(\*Queries\) [InsertQuizQuestion](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L212>)
+
+```go
+func (q *Queries) InsertQuizQuestion(ctx context.Context, arg InsertQuizQuestionParams) (pgtype.UUID, error)
+```
+
+Insert a single question row. reference\_answer is only meaningful for \`freeform\` questions; the service passes NULL for the other two types. sort\_order is required \(the service sets a stable value \-\- either the user\-supplied integer or the array index\).
+
+<a name="Queries.InsertStudyGuide"></a>
+### func \(\*Queries\) [InsertStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L557>)
+
+```go
+func (q *Queries) InsertStudyGuide(ctx context.Context, arg InsertStudyGuideParams) (InsertStudyGuideRow, error)
+```
+
+Study guide list queries \(ASK\-104\).
+
+Every ListStudyGuides\* variant uses the same CTE structure so the per\-row aggregates \(vote\_score, is\_recommended, quiz\_count\) are computed once and can be referenced from the outer WHERE clause \(e.g. for the score\-sorted cursor predicate\). The CTE pattern also keeps the 8 named variants near\-identical apart from ORDER BY \+ the cursor predicate, which makes future maintenance \(e.g. adding a new sort field\) a mechanical edit.
+
+Soft\-delete invariants enforced everywhere:
+
+- sg.deleted\_at IS NULL — excludes guides marked for deletion
+- u.deleted\_at IS NULL — excludes guides authored by a soft\-deleted user; matches the convention established by ASK\-143's section roster \(a soft\-deleted user disappears from public surfaces\)
+- quizzes.deleted\_at IS NULL — quiz\_count excludes deleted quizzes
+
+Privacy floor on the creator payload: only id \+ first\_name \+ last\_name are selected. No email, no clerk\_id \-\- same rule as SectionMemberResponse in ASK\-143. Insert a new guide and return all the columns the service needs to construct the StudyGuideDetail response without an extra round trip. The course preflight \(in service.go\) gates on AssertCourseExists so the FK violation is unreachable in normal flow; the FK still acts as a backstop if a course is hard\-deleted between preflight \+ insert.
+
+<a name="Queries.InsertStudyGuideRecommendation"></a>
+### func \(\*Queries\) [InsertStudyGuideRecommendation](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L615>)
+
+```go
+func (q *Queries) InsertStudyGuideRecommendation(ctx context.Context, arg InsertStudyGuideRecommendationParams) (InsertStudyGuideRecommendationRow, error)
+```
+
+Inserts the \(study\_guide\_id, recommended\_by\) row and returns the created\_at PLUS the recommender's privacy\-floor identity \(first\_name \+ last\_name\) via a CTE join to users. One round trip builds the entire RecommendationResponse payload; without the CTE the service would need a second SELECT against users just to pull the recommender's name.
+
+The \(study\_guide\_id, recommended\_by\) PK from the schema makes a duplicate insert raise unique\_violation \(Postgres SQLSTATE 23505\), which the service catches and maps to apperrors.ErrConflict \(409\).
+
+<a name="Queries.JoinSection"></a>
+### func \(\*Queries\) [JoinSection](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L124>)
+
+```go
+func (q *Queries) JoinSection(ctx context.Context, arg JoinSectionParams) (CourseMember, error)
+```
+
+Adds the user to the section as a 'student'. ON CONFLICT DO NOTHING keeps duplicate joins atomic \(no PK violation surfacing\) and concurrency safe; the service layer treats an empty result as the 409 "Already a member of this section" case.
+
+<a name="Queries.LeaveSection"></a>
+### func \(\*Queries\) [LeaveSection](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L151>)
+
+```go
+func (q *Queries) LeaveSection(ctx context.Context, arg LeaveSectionParams) (pgtype.UUID, error)
+```
+
+Hard\-deletes the membership row. RETURNING lets the service detect a no\-op delete \(sql.ErrNoRows\) and map it to the 404 "Not a member of this section" response.
+
+<a name="Queries.ListCourseSections"></a>
+### func \(\*Queries\) [ListCourseSections](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L182>)
+
+```go
+func (q *Queries) ListCourseSections(ctx context.Context, courseID pgtype.UUID) ([]ListCourseSectionsRow, error)
+```
+
+Returns sections with a live member\_count via LEFT JOIN \(so sections with zero members still appear\). Ordered most\-recent term first using start\_date when present, falling back to section\_code. NULLS LAST keeps sections without a known start\_date at the bottom.
+
+<a name="Queries.ListCoursesCreatedAtAsc"></a>
+### func \(\*Queries\) [ListCoursesCreatedAtAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L260>)
+
+```go
+func (q *Queries) ListCoursesCreatedAtAsc(ctx context.Context, arg ListCoursesCreatedAtAscParams) ([]ListCoursesCreatedAtAscRow, error)
+```
+
+
+
+<a name="Queries.ListCoursesCreatedAtDesc"></a>
+### func \(\*Queries\) [ListCoursesCreatedAtDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L353>)
+
+```go
+func (q *Queries) ListCoursesCreatedAtDesc(ctx context.Context, arg ListCoursesCreatedAtDescParams) ([]ListCoursesCreatedAtDescRow, error)
+```
+
+
+
+<a name="Queries.ListCoursesDepartmentAsc"></a>
+### func \(\*Queries\) [ListCoursesDepartmentAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L462>)
+
+```go
+func (q *Queries) ListCoursesDepartmentAsc(ctx context.Context, arg ListCoursesDepartmentAscParams) ([]ListCoursesDepartmentAscRow, error)
+```
+
+All ListCourses\* variants share the same WHERE template \(school\_id, department, q filters \+ sort\-specific cursor\) and only differ in ORDER BY direction and the cursor field shape. This mirrors the per\-sort\-variant pattern in files.sql \-\- sqlc cannot parameterize ORDER BY, so each direction gets its own named query.
+
+The default sort \(by department\) uses a composite \(department, number, id\) cursor because \(department\) alone is not unique; the other sort fields use a simpler \(field, id\) cursor since the field is paired with the primary key as a tiebreaker.
+
+<a name="Queries.ListCoursesDepartmentDesc"></a>
+### func \(\*Queries\) [ListCoursesDepartmentDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L561>)
+
+```go
+func (q *Queries) ListCoursesDepartmentDesc(ctx context.Context, arg ListCoursesDepartmentDescParams) ([]ListCoursesDepartmentDescRow, error)
+```
+
+
+
+<a name="Queries.ListCoursesNumberAsc"></a>
+### func \(\*Queries\) [ListCoursesNumberAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L655>)
+
+```go
+func (q *Queries) ListCoursesNumberAsc(ctx context.Context, arg ListCoursesNumberAscParams) ([]ListCoursesNumberAscRow, error)
+```
+
+
+
+<a name="Queries.ListCoursesNumberDesc"></a>
+### func \(\*Queries\) [ListCoursesNumberDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L748>)
+
+```go
+func (q *Queries) ListCoursesNumberDesc(ctx context.Context, arg ListCoursesNumberDescParams) ([]ListCoursesNumberDescRow, error)
+```
+
+
+
+<a name="Queries.ListCoursesTitleAsc"></a>
+### func \(\*Queries\) [ListCoursesTitleAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L841>)
+
+```go
+func (q *Queries) ListCoursesTitleAsc(ctx context.Context, arg ListCoursesTitleAscParams) ([]ListCoursesTitleAscRow, error)
+```
+
+
+
+<a name="Queries.ListCoursesTitleDesc"></a>
+### func \(\*Queries\) [ListCoursesTitleDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L934>)
+
+```go
+func (q *Queries) ListCoursesTitleDesc(ctx context.Context, arg ListCoursesTitleDescParams) ([]ListCoursesTitleDescRow, error)
+```
+
+
+
+<a name="Queries.ListGuideFiles"></a>
+### func \(\*Queries\) [ListGuideFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L648>)
+
+```go
+func (q *Queries) ListGuideFiles(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideFilesRow, error)
+```
+
+Attached files for the guide detail payload. Privacy floor: no user\_id, no s3\_key, no checksum. The file list shows only what a viewer needs to see: what's attached, what type, and how big.
+
+Filters f.status = 'complete' so files mid\-upload \(pending\) or failed don't surface in the guide detail \-\- a frontend that tried to download such a file would get a broken link. Only successfully uploaded files are visible to non\-owners; the upload author's own file list \(via the files endpoints\) shows all statuses so they can retry or remove.
+
+<a name="Queries.ListGuideQuizzesWithQuestionCount"></a>
+### func \(\*Queries\) [ListGuideQuizzesWithQuestionCount](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L694>)
+
+```go
+func (q *Queries) ListGuideQuizzesWithQuestionCount(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideQuizzesWithQuestionCountRow, error)
+```
+
+Non\-deleted quizzes for the guide \+ question\_count per quiz. The LEFT JOIN ensures quizzes with zero questions still appear with question\_count = 0.
+
+<a name="Queries.ListGuideRecommenders"></a>
+### func \(\*Queries\) [ListGuideRecommenders](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L732>)
+
+```go
+func (q *Queries) ListGuideRecommenders(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideRecommendersRow, error)
+```
+
+Recommenders list for the guide detail payload. Same privacy floor as CreatorSummary \-\- id \+ first\_name \+ last\_name only. Excludes recommenders whose user record is soft\-deleted.
+
+<a name="Queries.ListGuideResources"></a>
+### func \(\*Queries\) [ListGuideResources](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L772>)
+
+```go
+func (q *Queries) ListGuideResources(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideResourcesRow, error)
+```
+
+Attached resources for the guide detail payload. No creator info in the SELECT list \-\- the caller doesn't need to know who attached the resource.
+
+<a name="Queries.ListMyEnrollments"></a>
+### func \(\*Queries\) [ListMyEnrollments](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L1027>)
+
+```go
+func (q *Queries) ListMyEnrollments(ctx context.Context, arg ListMyEnrollmentsParams) ([]ListMyEnrollmentsRow, error)
+```
+
+Returns every section a user is enrolled in with the compact course \+ school payload the dashboard renders. Optional term \+ role filters use sqlc.narg so the WHERE branch short\-circuits when they're absent. Sort is fixed: most\-recent term first \(lexicographic "Spring 2026" \> "Fall 2025" is acceptable for MVP per the spec\), then department \+ number for stable in\-term ordering.
+
 <a name="Queries.ListOwnedFilesCreatedAsc"></a>
-### func \(\*Queries\) [ListOwnedFilesCreatedAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L220>)
+### func \(\*Queries\) [ListOwnedFilesCreatedAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L264>)
 
 ```go
 func (q *Queries) ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFilesCreatedAscParams) ([]ListOwnedFilesCreatedAscRow, error)
@@ -1201,7 +3722,7 @@ func (q *Queries) ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFil
 
 
 <a name="Queries.ListOwnedFilesCreatedDesc"></a>
-### func \(\*Queries\) [ListOwnedFilesCreatedDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L337>)
+### func \(\*Queries\) [ListOwnedFilesCreatedDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L381>)
 
 ```go
 func (q *Queries) ListOwnedFilesCreatedDesc(ctx context.Context, arg ListOwnedFilesCreatedDescParams) ([]ListOwnedFilesCreatedDescRow, error)
@@ -1210,7 +3731,7 @@ func (q *Queries) ListOwnedFilesCreatedDesc(ctx context.Context, arg ListOwnedFi
 
 
 <a name="Queries.ListOwnedFilesMimeAsc"></a>
-### func \(\*Queries\) [ListOwnedFilesMimeAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L454>)
+### func \(\*Queries\) [ListOwnedFilesMimeAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L498>)
 
 ```go
 func (q *Queries) ListOwnedFilesMimeAsc(ctx context.Context, arg ListOwnedFilesMimeAscParams) ([]ListOwnedFilesMimeAscRow, error)
@@ -1219,7 +3740,7 @@ func (q *Queries) ListOwnedFilesMimeAsc(ctx context.Context, arg ListOwnedFilesM
 
 
 <a name="Queries.ListOwnedFilesMimeDesc"></a>
-### func \(\*Queries\) [ListOwnedFilesMimeDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L571>)
+### func \(\*Queries\) [ListOwnedFilesMimeDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L615>)
 
 ```go
 func (q *Queries) ListOwnedFilesMimeDesc(ctx context.Context, arg ListOwnedFilesMimeDescParams) ([]ListOwnedFilesMimeDescRow, error)
@@ -1228,7 +3749,7 @@ func (q *Queries) ListOwnedFilesMimeDesc(ctx context.Context, arg ListOwnedFiles
 
 
 <a name="Queries.ListOwnedFilesNameAsc"></a>
-### func \(\*Queries\) [ListOwnedFilesNameAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L688>)
+### func \(\*Queries\) [ListOwnedFilesNameAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L732>)
 
 ```go
 func (q *Queries) ListOwnedFilesNameAsc(ctx context.Context, arg ListOwnedFilesNameAscParams) ([]ListOwnedFilesNameAscRow, error)
@@ -1237,7 +3758,7 @@ func (q *Queries) ListOwnedFilesNameAsc(ctx context.Context, arg ListOwnedFilesN
 
 
 <a name="Queries.ListOwnedFilesNameDesc"></a>
-### func \(\*Queries\) [ListOwnedFilesNameDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L805>)
+### func \(\*Queries\) [ListOwnedFilesNameDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L849>)
 
 ```go
 func (q *Queries) ListOwnedFilesNameDesc(ctx context.Context, arg ListOwnedFilesNameDescParams) ([]ListOwnedFilesNameDescRow, error)
@@ -1246,7 +3767,7 @@ func (q *Queries) ListOwnedFilesNameDesc(ctx context.Context, arg ListOwnedFiles
 
 
 <a name="Queries.ListOwnedFilesSizeAsc"></a>
-### func \(\*Queries\) [ListOwnedFilesSizeAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L922>)
+### func \(\*Queries\) [ListOwnedFilesSizeAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L966>)
 
 ```go
 func (q *Queries) ListOwnedFilesSizeAsc(ctx context.Context, arg ListOwnedFilesSizeAscParams) ([]ListOwnedFilesSizeAscRow, error)
@@ -1255,7 +3776,7 @@ func (q *Queries) ListOwnedFilesSizeAsc(ctx context.Context, arg ListOwnedFilesS
 
 
 <a name="Queries.ListOwnedFilesSizeDesc"></a>
-### func \(\*Queries\) [ListOwnedFilesSizeDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1039>)
+### func \(\*Queries\) [ListOwnedFilesSizeDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1083>)
 
 ```go
 func (q *Queries) ListOwnedFilesSizeDesc(ctx context.Context, arg ListOwnedFilesSizeDescParams) ([]ListOwnedFilesSizeDescRow, error)
@@ -1264,7 +3785,7 @@ func (q *Queries) ListOwnedFilesSizeDesc(ctx context.Context, arg ListOwnedFiles
 
 
 <a name="Queries.ListOwnedFilesStatusAsc"></a>
-### func \(\*Queries\) [ListOwnedFilesStatusAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1156>)
+### func \(\*Queries\) [ListOwnedFilesStatusAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1200>)
 
 ```go
 func (q *Queries) ListOwnedFilesStatusAsc(ctx context.Context, arg ListOwnedFilesStatusAscParams) ([]ListOwnedFilesStatusAscRow, error)
@@ -1273,7 +3794,7 @@ func (q *Queries) ListOwnedFilesStatusAsc(ctx context.Context, arg ListOwnedFile
 
 
 <a name="Queries.ListOwnedFilesStatusDesc"></a>
-### func \(\*Queries\) [ListOwnedFilesStatusDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1273>)
+### func \(\*Queries\) [ListOwnedFilesStatusDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1317>)
 
 ```go
 func (q *Queries) ListOwnedFilesStatusDesc(ctx context.Context, arg ListOwnedFilesStatusDescParams) ([]ListOwnedFilesStatusDescRow, error)
@@ -1282,7 +3803,7 @@ func (q *Queries) ListOwnedFilesStatusDesc(ctx context.Context, arg ListOwnedFil
 
 
 <a name="Queries.ListOwnedFilesUpdatedAsc"></a>
-### func \(\*Queries\) [ListOwnedFilesUpdatedAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1390>)
+### func \(\*Queries\) [ListOwnedFilesUpdatedAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1434>)
 
 ```go
 func (q *Queries) ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFilesUpdatedAscParams) ([]ListOwnedFilesUpdatedAscRow, error)
@@ -1291,7 +3812,7 @@ func (q *Queries) ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFil
 
 
 <a name="Queries.ListOwnedFilesUpdatedDesc"></a>
-### func \(\*Queries\) [ListOwnedFilesUpdatedDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1507>)
+### func \(\*Queries\) [ListOwnedFilesUpdatedDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1551>)
 
 ```go
 func (q *Queries) ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFilesUpdatedDescParams) ([]ListOwnedFilesUpdatedDescRow, error)
@@ -1299,8 +3820,120 @@ func (q *Queries) ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFi
 
 
 
+<a name="Queries.ListQuizAnswerOptionsByQuiz"></a>
+### func \(\*Queries\) [ListQuizAnswerOptionsByQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L241>)
+
+```go
+func (q *Queries) ListQuizAnswerOptionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]QuizAnswerOption, error)
+```
+
+All answer options for every question in a quiz, ordered by question\_id then sort\_order then id. The mapper groups by question\_id in Go to attach options to their parent question. The triple\-key ordering keeps the option list deterministic.
+
+<a name="Queries.ListQuizQuestionsByQuiz"></a>
+### func \(\*Queries\) [ListQuizQuestionsByQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L292>)
+
+```go
+func (q *Queries) ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]ListQuizQuestionsByQuizRow, error)
+```
+
+All questions for a quiz, ordered by sort\_order then id \(the id tiebreaker keeps the response deterministic when two questions happen to share a sort\_order \-\- the spec doesn't enforce uniqueness on sort\_order\). Returns reference\_answer so the mapper can emit it as \`correct\_answer\` on freeform questions.
+
+<a name="Queries.ListSchools"></a>
+### func \(\*Queries\) [ListSchools](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/schools.sql.go#L62>)
+
+```go
+func (q *Queries) ListSchools(ctx context.Context, arg ListSchoolsParams) ([]School, error)
+```
+
+
+
+<a name="Queries.ListSectionMembers"></a>
+### func \(\*Queries\) [ListSectionMembers](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L1118>)
+
+```go
+func (q *Queries) ListSectionMembers(ctx context.Context, arg ListSectionMembersParams) ([]ListSectionMembersRow, error)
+```
+
+Returns the section roster joined against users for first/last name. Privacy floor: SELECT lists ONLY the five fields exposed in the SectionMemberResponse schema \(user\_id, first\_name, last\_name, role, joined\_at\). DO NOT add email, clerk\_id, or any other user column to this list \-\- the endpoint is reachable by any authenticated user.
+
+Soft\-deleted users \(users.deleted\_at IS NOT NULL\) are excluded \-\- the codebase's soft\-delete convention is enforced by the partial indexes idx\_users\_deleted\_at and idx\_users\_active\_email. A user's soft\-delete is the signal that they want to disappear from the product, so they must not surface in a public\-by\-design roster. The cursor still advances past them in the \(joined\_at, user\_id\) keyset, so removing them mid\-iteration just shrinks the page rather than skipping live members.
+
+Optional role filter via sqlc.narg short\-circuits when absent. Keyset pagination on \(joined\_at, user\_id\) \-\- joined\_at alone isn't unique \(multiple users can join in the same second on a busy section\), so user\_id is the tiebreaker that keeps the keyset a strict total order.
+
+<a name="Queries.ListStudyGuidesNewestAsc"></a>
+### func \(\*Queries\) [ListStudyGuidesNewestAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L875>)
+
+```go
+func (q *Queries) ListStudyGuidesNewestAsc(ctx context.Context, arg ListStudyGuidesNewestAscParams) ([]ListStudyGuidesNewestAscRow, error)
+```
+
+
+
+<a name="Queries.ListStudyGuidesNewestDesc"></a>
+### func \(\*Queries\) [ListStudyGuidesNewestDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L993>)
+
+```go
+func (q *Queries) ListStudyGuidesNewestDesc(ctx context.Context, arg ListStudyGuidesNewestDescParams) ([]ListStudyGuidesNewestDescRow, error)
+```
+
+
+
+<a name="Queries.ListStudyGuidesScoreAsc"></a>
+### func \(\*Queries\) [ListStudyGuidesScoreAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1115>)
+
+```go
+func (q *Queries) ListStudyGuidesScoreAsc(ctx context.Context, arg ListStudyGuidesScoreAscParams) ([]ListStudyGuidesScoreAscRow, error)
+```
+
+
+
+<a name="Queries.ListStudyGuidesScoreDesc"></a>
+### func \(\*Queries\) [ListStudyGuidesScoreDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1243>)
+
+```go
+func (q *Queries) ListStudyGuidesScoreDesc(ctx context.Context, arg ListStudyGuidesScoreDescParams) ([]ListStudyGuidesScoreDescRow, error)
+```
+
+Default sort. Multi\-column keyset on \(vote\_score, view\_count, updated\_at, id\) \-\- each column after vote\_score is a tiebreaker for the previous one; id is the final strict\-total\-order tiebreaker.
+
+<a name="Queries.ListStudyGuidesUpdatedAsc"></a>
+### func \(\*Queries\) [ListStudyGuidesUpdatedAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1363>)
+
+```go
+func (q *Queries) ListStudyGuidesUpdatedAsc(ctx context.Context, arg ListStudyGuidesUpdatedAscParams) ([]ListStudyGuidesUpdatedAscRow, error)
+```
+
+
+
+<a name="Queries.ListStudyGuidesUpdatedDesc"></a>
+### func \(\*Queries\) [ListStudyGuidesUpdatedDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1481>)
+
+```go
+func (q *Queries) ListStudyGuidesUpdatedDesc(ctx context.Context, arg ListStudyGuidesUpdatedDescParams) ([]ListStudyGuidesUpdatedDescRow, error)
+```
+
+
+
+<a name="Queries.ListStudyGuidesViewsAsc"></a>
+### func \(\*Queries\) [ListStudyGuidesViewsAsc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1601>)
+
+```go
+func (q *Queries) ListStudyGuidesViewsAsc(ctx context.Context, arg ListStudyGuidesViewsAscParams) ([]ListStudyGuidesViewsAscRow, error)
+```
+
+
+
+<a name="Queries.ListStudyGuidesViewsDesc"></a>
+### func \(\*Queries\) [ListStudyGuidesViewsDesc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1722>)
+
+```go
+func (q *Queries) ListStudyGuidesViewsDesc(ctx context.Context, arg ListStudyGuidesViewsDescParams) ([]ListStudyGuidesViewsDescRow, error)
+```
+
+
+
 <a name="Queries.MarkFileDeleted"></a>
-### func \(\*Queries\) [MarkFileDeleted](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1570>)
+### func \(\*Queries\) [MarkFileDeleted](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1614>)
 
 ```go
 func (q *Queries) MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
@@ -1308,8 +3941,26 @@ func (q *Queries) MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
 
 Called by the cleanup job handler once S3 deletion is confirmed.
 
+<a name="Queries.RevokeFileGrant"></a>
+### func \(\*Queries\) [RevokeFileGrant](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1636>)
+
+```go
+func (q *Queries) RevokeFileGrant(ctx context.Context, arg RevokeFileGrantParams) error
+```
+
+Deletes a file grant matching the exact composite key. No\-op if the grant does not exist \(idempotent\).
+
+<a name="Queries.SectionInCourseExists"></a>
+### func \(\*Queries\) [SectionInCourseExists](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L1166>)
+
+```go
+func (q *Queries) SectionInCourseExists(ctx context.Context, arg SectionInCourseExistsParams) (bool, error)
+```
+
+Verifies the section exists AND belongs to the supplied course. A section UUID that targets a different course is treated as not found to avoid leaking the existence of unrelated sections via the URL path.
+
 <a name="Queries.SetFileDeletionJobID"></a>
-### func \(\*Queries\) [SetFileDeletionJobID](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1590>)
+### func \(\*Queries\) [SetFileDeletionJobID](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1661>)
 
 ```go
 func (q *Queries) SetFileDeletionJobID(ctx context.Context, arg SetFileDeletionJobIDParams) error
@@ -1318,13 +3969,31 @@ func (q *Queries) SetFileDeletionJobID(ctx context.Context, arg SetFileDeletionJ
 Records the QStash message ID after publishing the async cleanup job.
 
 <a name="Queries.SoftDeleteFile"></a>
-### func \(\*Queries\) [SoftDeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1613>)
+### func \(\*Queries\) [SoftDeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1684>)
 
 ```go
 func (q *Queries) SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)
 ```
 
 Marks a file as pending deletion. Only applies if the file is owned by the caller and has not already entered a deletion state \(idempotency\-safe\).
+
+<a name="Queries.SoftDeleteQuizzesForGuide"></a>
+### func \(\*Queries\) [SoftDeleteQuizzesForGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1777>)
+
+```go
+func (q *Queries) SoftDeleteQuizzesForGuide(ctx context.Context, studyGuideID pgtype.UUID) error
+```
+
+Application\-level cascade: soft\-delete every non\-deleted quiz on the guide. WHERE deleted\_at IS NULL preserves the deleted\_at timestamp on quizzes that were already soft\-deleted before the guide was \-\- the spec explicitly requires that an already\-deleted quiz's deleted\_at is NOT updated by this cascade.
+
+<a name="Queries.SoftDeleteStudyGuide"></a>
+### func \(\*Queries\) [SoftDeleteStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1792>)
+
+```go
+func (q *Queries) SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUID) error
+```
+
+Set deleted\_at = now\(\) on the guide. The service has already verified the row exists, isn't already deleted, and the viewer is the creator \-\- so this is a blind UPDATE. The DeleteStudyGuide transaction wraps this \+ SoftDeleteQuizzesForGuide.
 
 <a name="Queries.SoftDeleteUserByClerkID"></a>
 ### func \(\*Queries\) [SoftDeleteUserByClerkID](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/users.sql.go#L35>)
@@ -1335,14 +4004,49 @@ func (q *Queries) SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (
 
 
 
+<a name="Queries.URLAlreadyAttachedToGuide"></a>
+### func \(\*Queries\) [URLAlreadyAttachedToGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1825>)
+
+```go
+func (q *Queries) URLAlreadyAttachedToGuide(ctx context.Context, arg URLAlreadyAttachedToGuideParams) (bool, error)
+```
+
+Pre\-flight conflict check for AttachResource \(ASK\-111\). Returns TRUE when ANY resource with this URL is already attached to the given guide \-\- regardless of who created the resource row. Lets the service short\-circuit to 409 BEFORE the resource upsert, so a duplicate attempt doesn't create or touch a resources row only to discard it on the join PK violation.
+
+Why "regardless of creator": the join PK is \(resource\_id, study\_guide\_id\), so two distinct resource rows \(different creators but same URL\) could both attach to the same guide without raising the join PK constraint. The spec treats that as a duplicate URL on the guide \-\- this query enforces the no\-duplicate\-URLs\-per\-guide contract at the application layer.
+
 <a name="Queries.UpdateFile"></a>
-### func \(\*Queries\) [UpdateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1651>)
+### func \(\*Queries\) [UpdateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1722>)
 
 ```go
 func (q *Queries) UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateFileRow, error)
 ```
 
 Renames a file. Only applies if owned by the caller and not in a deletion state. Returns sql.ErrNoRows when file is not found, not owned, or in deletion.
+
+<a name="Queries.UpdateFileStatus"></a>
+### func \(\*Queries\) [UpdateFileStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1753>)
+
+```go
+func (q *Queries) UpdateFileStatus(ctx context.Context, arg UpdateFileStatusParams) error
+```
+
+
+
+<a name="Queries.UpdateStudyGuide"></a>
+### func \(\*Queries\) [UpdateStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1868>)
+
+```go
+func (q *Queries) UpdateStudyGuide(ctx context.Context, arg UpdateStudyGuideParams) error
+```
+
+Partial update for ASK\-129. Each updatable column uses COALESCE\(narg, current\) so a nil arg from Go means "leave this column alone" and a non\-nil arg means "replace with the supplied value". The service is responsible for:
+
+- 404 / 403 gating \(via GetStudyGuideByIDForUpdate before this\).
+- Validating the at\-least\-one\-field rule \(an empty body is a 400 before this query runs\).
+- Tag normalization \(trim \+ lowercase \+ dedupe\) \-\- the array written here is the final canonical form.
+
+The service runs the locked SELECT \+ this UPDATE in a single transaction so a concurrent delete can't slip in between. updated\_at is bumped to now\(\) on every successful call \(the UPDATE sees at least the updated\_at change even when every other narg is NULL, which matches the spec's "updated\_at reflects the latest" guarantee but also means a no\-op PATCH still bumps updated\_at \-\- the service's empty\-body 400 check prevents that case from reaching SQL\).
 
 <a name="Queries.UpsertClerkUser"></a>
 ### func \(\*Queries\) [UpsertClerkUser](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/users.sql.go#L75>)
@@ -1353,6 +4057,53 @@ func (q *Queries) UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams
 
 
 
+<a name="Queries.UpsertFileGrant"></a>
+### func \(\*Queries\) [UpsertFileGrant](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1784>)
+
+```go
+func (q *Queries) UpsertFileGrant(ctx context.Context, arg UpsertFileGrantParams) (FileGrant, error)
+```
+
+Inserts a new file grant, returning the row. If the grant already exists \(same file\_id, grantee\_type, grantee\_id, permission\), updates granted\_by and returns the row. Using DO UPDATE SET avoids a race window where concurrent inserts could cause both INSERT and fallback SELECT to miss.
+
+<a name="Queries.UpsertResource"></a>
+### func \(\*Queries\) [UpsertResource](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1909>)
+
+```go
+func (q *Queries) UpsertResource(ctx context.Context, arg UpsertResourceParams) error
+```
+
+Inserts a new resources row for the \(creator\_id, url\) pair. The ON CONFLICT DO NOTHING preserves the existing row's title / description / type when the viewer has used this URL before \-\- a silent overwrite would mutate state visible to the resource's other attachments \(the same row may be attached to other guides \+ courses\).
+
+Paired with GetResourceByCreatorURL: the service runs both calls in sequence, then uses the SELECT'd row regardless of whether the INSERT actually wrote.
+
+<a name="Queries.UpsertStudyGuideVote"></a>
+### func \(\*Queries\) [UpsertStudyGuideVote](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1946>)
+
+```go
+func (q *Queries) UpsertStudyGuideVote(ctx context.Context, arg UpsertStudyGuideVoteParams) error
+```
+
+Cast or change a vote \(ASK\-139\). Inserts a new \(user\_id, study\_guide\_id, vote\) row when the viewer has not voted, or updates the existing row's vote when the direction changes. Same\- direction re\-submits hit the WHERE clause on the DO UPDATE branch and become a true no\-op \(no row touched, no trigger fired, updated\_at preserved\). The \(user\_id, study\_guide\_id\) PK from the schema is what makes ON CONFLICT resolve correctly.
+
+<a name="Queries.ViewerCanRecommendForGuide"></a>
+### func \(\*Queries\) [ViewerCanRecommendForGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L2004>)
+
+```go
+func (q *Queries) ViewerCanRecommendForGuide(ctx context.Context, arg ViewerCanRecommendForGuideParams) (ViewerCanRecommendForGuideRow, error)
+```
+
+Combined live\-presence \+ role\-gate probe for the recommend endpoints \(ASK\-147 \+ ASK\-101\). Returns one row when the viewer holds instructor or ta role in AT LEAST ONE section of the guide's course AND the guide is live \(not soft\-deleted\).
+
+Returns three booleans so the service can distinguish 404 from 403 with a single round trip:
+
+- guide\_exists \-\- guide row present AND deleted\_at IS NULL
+- has\_role \-\- viewer is instructor/ta in some section of the guide's course \(ignored if guide doesn't exist\)
+
+Combining the two checks into a single query \(rather than two sequential calls\) keeps the recommend hot path at one DB round trip for the gate; the actual insert/delete is the second.
+
+NULL\-semantics note: when the guide doesn't exist, the inner \`guide\` CTE returns 0 rows, so \`\(SELECT course\_id FROM guide\)\` is NULL, and \`cs.course\_id = NULL\` is always FALSE \(not NULL\-equal\). That makes \`has\_role\` correctly false for missing guides without needing a separate WHERE EXISTS guard. The service short\-circuits on \!guide\_exists before inspecting has\_role, so the two booleans are independent by contract even though they correlate in this edge case.
+
 <a name="Queries.WithTx"></a>
 ### func \(\*Queries\) [WithTx](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/db.go#L28>)
 
@@ -1362,8 +4113,185 @@ func (q *Queries) WithTx(tx pgx.Tx) *Queries
 
 
 
+<a name="QuestionType"></a>
+## type [QuestionType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L185>)
+
+
+
+```go
+type QuestionType string
+```
+
+<a name="QuestionTypeMultipleChoice"></a>
+
+```go
+const (
+    QuestionTypeMultipleChoice QuestionType = "multiple_choice"
+    QuestionTypeTrueFalse      QuestionType = "true_false"
+    QuestionTypeFreeform       QuestionType = "freeform"
+)
+```
+
+<a name="QuestionType.Scan"></a>
+### func \(\*QuestionType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L193>)
+
+```go
+func (e *QuestionType) Scan(src interface{}) error
+```
+
+
+
+<a name="Quiz"></a>
+## type [Quiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L485-L494>)
+
+
+
+```go
+type Quiz struct {
+    ID           pgtype.UUID        `json:"id"`
+    StudyGuideID pgtype.UUID        `json:"study_guide_id"`
+    CreatorID    pgtype.UUID        `json:"creator_id"`
+    Title        string             `json:"title"`
+    Description  pgtype.Text        `json:"description"`
+    CreatedAt    pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+    DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
+}
+```
+
+<a name="QuizAnswerOption"></a>
+## type [QuizAnswerOption](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L496-L502>)
+
+
+
+```go
+type QuizAnswerOption struct {
+    ID         pgtype.UUID `json:"id"`
+    QuestionID pgtype.UUID `json:"question_id"`
+    Text       string      `json:"text"`
+    IsCorrect  bool        `json:"is_correct"`
+    SortOrder  int32       `json:"sort_order"`
+}
+```
+
+<a name="QuizQuestion"></a>
+## type [QuizQuestion](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L504-L517>)
+
+
+
+```go
+type QuizQuestion struct {
+    ID                pgtype.UUID        `json:"id"`
+    QuizID            pgtype.UUID        `json:"quiz_id"`
+    Type              QuestionType       `json:"type"`
+    QuestionText      string             `json:"question_text"`
+    Hint              pgtype.Text        `json:"hint"`
+    FeedbackCorrect   pgtype.Text        `json:"feedback_correct"`
+    FeedbackIncorrect pgtype.Text        `json:"feedback_incorrect"`
+    ReferenceAnswer   pgtype.Text        `json:"reference_answer"`
+    IsProtected       bool               `json:"is_protected"`
+    SortOrder         int32              `json:"sort_order"`
+    CreatedAt         pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+```
+
+<a name="Resource"></a>
+## type [Resource](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L519-L528>)
+
+
+
+```go
+type Resource struct {
+    ID          pgtype.UUID        `json:"id"`
+    CreatorID   pgtype.UUID        `json:"creator_id"`
+    Title       string             `json:"title"`
+    Url         string             `json:"url"`
+    Description pgtype.Text        `json:"description"`
+    Type        ResourceType       `json:"type"`
+    CreatedAt   pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+```
+
+<a name="ResourceType"></a>
+## type [ResourceType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L228>)
+
+
+
+```go
+type ResourceType string
+```
+
+<a name="ResourceTypeLink"></a>
+
+```go
+const (
+    ResourceTypeLink    ResourceType = "link"
+    ResourceTypeVideo   ResourceType = "video"
+    ResourceTypeArticle ResourceType = "article"
+    ResourceTypePdf     ResourceType = "pdf"
+)
+```
+
+<a name="ResourceType.Scan"></a>
+### func \(\*ResourceType\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L237>)
+
+```go
+func (e *ResourceType) Scan(src interface{}) error
+```
+
+
+
+<a name="RevokeFileGrantParams"></a>
+## type [RevokeFileGrantParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1627-L1632>)
+
+
+
+```go
+type RevokeFileGrantParams struct {
+    FileID      pgtype.UUID `json:"file_id"`
+    GranteeType GranteeType `json:"grantee_type"`
+    GranteeID   pgtype.UUID `json:"grantee_id"`
+    Permission  Permission  `json:"permission"`
+}
+```
+
+<a name="School"></a>
+## type [School](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L530-L542>)
+
+
+
+```go
+type School struct {
+    ID        pgtype.UUID        `json:"id"`
+    Name      string             `json:"name"`
+    Acronym   string             `json:"acronym"`
+    Domain    pgtype.Text        `json:"domain"`
+    Url       pgtype.Text        `json:"url"`
+    City      pgtype.Text        `json:"city"`
+    State     pgtype.Text        `json:"state"`
+    Country   pgtype.Text        `json:"country"`
+    IpedsID   pgtype.Text        `json:"ipeds_id"`
+    CreatedAt pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+```
+
+<a name="SectionInCourseExistsParams"></a>
+## type [SectionInCourseExistsParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/courses.sql.go#L1158-L1161>)
+
+
+
+```go
+type SectionInCourseExistsParams struct {
+    SectionID pgtype.UUID `json:"section_id"`
+    CourseID  pgtype.UUID `json:"course_id"`
+}
+```
+
 <a name="SetFileDeletionJobIDParams"></a>
-## type [SetFileDeletionJobIDParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1584-L1587>)
+## type [SetFileDeletionJobIDParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1655-L1658>)
 
 
 
@@ -1375,7 +4303,7 @@ type SetFileDeletionJobIDParams struct {
 ```
 
 <a name="SoftDeleteFileParams"></a>
-## type [SoftDeleteFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1606-L1609>)
+## type [SoftDeleteFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1677-L1680>)
 
 
 
@@ -1386,8 +4314,122 @@ type SoftDeleteFileParams struct {
 }
 ```
 
+<a name="StudyGuide"></a>
+## type [StudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L544-L556>)
+
+
+
+```go
+type StudyGuide struct {
+    ID          pgtype.UUID        `json:"id"`
+    CourseID    pgtype.UUID        `json:"course_id"`
+    CreatorID   pgtype.UUID        `json:"creator_id"`
+    Title       string             `json:"title"`
+    Description pgtype.Text        `json:"description"`
+    Content     pgtype.Text        `json:"content"`
+    Tags        []string           `json:"tags"`
+    ViewCount   int32              `json:"view_count"`
+    CreatedAt   pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+    DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
+}
+```
+
+<a name="StudyGuideFavorite"></a>
+## type [StudyGuideFavorite](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L558-L562>)
+
+
+
+```go
+type StudyGuideFavorite struct {
+    UserID       pgtype.UUID        `json:"user_id"`
+    StudyGuideID pgtype.UUID        `json:"study_guide_id"`
+    CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+```
+
+<a name="StudyGuideFile"></a>
+## type [StudyGuideFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L564-L568>)
+
+
+
+```go
+type StudyGuideFile struct {
+    FileID       pgtype.UUID        `json:"file_id"`
+    StudyGuideID pgtype.UUID        `json:"study_guide_id"`
+    CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+```
+
+<a name="StudyGuideLastViewed"></a>
+## type [StudyGuideLastViewed](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L570-L574>)
+
+
+
+```go
+type StudyGuideLastViewed struct {
+    UserID       pgtype.UUID        `json:"user_id"`
+    StudyGuideID pgtype.UUID        `json:"study_guide_id"`
+    ViewedAt     pgtype.Timestamptz `json:"viewed_at"`
+}
+```
+
+<a name="StudyGuideRecommendation"></a>
+## type [StudyGuideRecommendation](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L576-L580>)
+
+
+
+```go
+type StudyGuideRecommendation struct {
+    StudyGuideID  pgtype.UUID        `json:"study_guide_id"`
+    RecommendedBy pgtype.UUID        `json:"recommended_by"`
+    CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+```
+
+<a name="StudyGuideResource"></a>
+## type [StudyGuideResource](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L582-L587>)
+
+
+
+```go
+type StudyGuideResource struct {
+    ResourceID   pgtype.UUID        `json:"resource_id"`
+    StudyGuideID pgtype.UUID        `json:"study_guide_id"`
+    AttachedBy   pgtype.UUID        `json:"attached_by"`
+    CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+```
+
+<a name="StudyGuideVote"></a>
+## type [StudyGuideVote](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L589-L595>)
+
+
+
+```go
+type StudyGuideVote struct {
+    UserID       pgtype.UUID        `json:"user_id"`
+    StudyGuideID pgtype.UUID        `json:"study_guide_id"`
+    Vote         VoteDirection      `json:"vote"`
+    CreatedAt    pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+```
+
+<a name="URLAlreadyAttachedToGuideParams"></a>
+## type [URLAlreadyAttachedToGuideParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1807-L1810>)
+
+
+
+```go
+type URLAlreadyAttachedToGuideParams struct {
+    StudyGuideID pgtype.UUID `json:"study_guide_id"`
+    Url          string      `json:"url"`
+}
+```
+
 <a name="UpdateFileParams"></a>
-## type [UpdateFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1632-L1636>)
+## type [UpdateFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1703-L1707>)
 
 
 
@@ -1400,7 +4442,7 @@ type UpdateFileParams struct {
 ```
 
 <a name="UpdateFileRow"></a>
-## type [UpdateFileRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1638-L1647>)
+## type [UpdateFileRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1709-L1718>)
 
 
 
@@ -1410,15 +4452,43 @@ type UpdateFileRow struct {
     UserID    pgtype.UUID        `json:"user_id"`
     Name      string             `json:"name"`
     Size      int64              `json:"size"`
-    MimeType  MimeType           `json:"mime_type"`
+    MimeType  string             `json:"mime_type"`
     Status    UploadStatus       `json:"status"`
     CreatedAt pgtype.Timestamptz `json:"created_at"`
     UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 ```
 
+<a name="UpdateFileStatusParams"></a>
+## type [UpdateFileStatusParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1747-L1751>)
+
+
+
+```go
+type UpdateFileStatusParams struct {
+    Status  UploadStatus `json:"status"`
+    FileID  pgtype.UUID  `json:"file_id"`
+    OwnerID pgtype.UUID  `json:"owner_id"`
+}
+```
+
+<a name="UpdateStudyGuideParams"></a>
+## type [UpdateStudyGuideParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1843-L1849>)
+
+
+
+```go
+type UpdateStudyGuideParams struct {
+    Title       pgtype.Text `json:"title"`
+    Description pgtype.Text `json:"description"`
+    Content     pgtype.Text `json:"content"`
+    Tags        []string    `json:"tags"`
+    ID          pgtype.UUID `json:"id"`
+}
+```
+
 <a name="UploadStatus"></a>
-## type [UploadStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L186>)
+## type [UploadStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L272>)
 
 
 
@@ -1437,7 +4507,7 @@ const (
 ```
 
 <a name="UploadStatus.Scan"></a>
-### func \(\*UploadStatus\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L194>)
+### func \(\*UploadStatus\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L280>)
 
 ```go
 func (e *UploadStatus) Scan(src interface{}) error
@@ -1461,8 +4531,51 @@ type UpsertClerkUserParams struct {
 }
 ```
 
+<a name="UpsertFileGrantParams"></a>
+## type [UpsertFileGrantParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/files.sql.go#L1772-L1778>)
+
+
+
+```go
+type UpsertFileGrantParams struct {
+    FileID      pgtype.UUID `json:"file_id"`
+    GranteeType GranteeType `json:"grantee_type"`
+    GranteeID   pgtype.UUID `json:"grantee_id"`
+    Permission  Permission  `json:"permission"`
+    GrantedBy   pgtype.UUID `json:"granted_by"`
+}
+```
+
+<a name="UpsertResourceParams"></a>
+## type [UpsertResourceParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1891-L1897>)
+
+
+
+```go
+type UpsertResourceParams struct {
+    CreatorID   pgtype.UUID  `json:"creator_id"`
+    Title       string       `json:"title"`
+    Url         string       `json:"url"`
+    Description pgtype.Text  `json:"description"`
+    Type        ResourceType `json:"type"`
+}
+```
+
+<a name="UpsertStudyGuideVoteParams"></a>
+## type [UpsertStudyGuideVoteParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1933-L1937>)
+
+
+
+```go
+type UpsertStudyGuideVoteParams struct {
+    UserID       pgtype.UUID   `json:"user_id"`
+    StudyGuideID pgtype.UUID   `json:"study_guide_id"`
+    Vote         VoteDirection `json:"vote"`
+}
+```
+
 <a name="User"></a>
-## type [User](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L275-L286>)
+## type [User](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L597-L608>)
 
 
 
@@ -1480,5 +4593,56 @@ type User struct {
     Metadata   []byte             `json:"metadata"`
 }
 ```
+
+<a name="ViewerCanRecommendForGuideParams"></a>
+## type [ViewerCanRecommendForGuideParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1970-L1973>)
+
+
+
+```go
+type ViewerCanRecommendForGuideParams struct {
+    ViewerID     pgtype.UUID `json:"viewer_id"`
+    StudyGuideID pgtype.UUID `json:"study_guide_id"`
+}
+```
+
+<a name="ViewerCanRecommendForGuideRow"></a>
+## type [ViewerCanRecommendForGuideRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1975-L1978>)
+
+
+
+```go
+type ViewerCanRecommendForGuideRow struct {
+    GuideExists bool `json:"guide_exists"`
+    HasRole     bool `json:"has_role"`
+}
+```
+
+<a name="VoteDirection"></a>
+## type [VoteDirection](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L315>)
+
+
+
+```go
+type VoteDirection string
+```
+
+<a name="VoteDirectionUp"></a>
+
+```go
+const (
+    VoteDirectionUp   VoteDirection = "up"
+    VoteDirectionDown VoteDirection = "down"
+)
+```
+
+<a name="VoteDirection.Scan"></a>
+### func \(\*VoteDirection\) [Scan](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/models.go#L322>)
+
+```go
+func (e *VoteDirection) Scan(src interface{}) error
+```
+
+
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

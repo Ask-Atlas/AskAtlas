@@ -17,15 +17,16 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/clerk"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/config"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/courses"
-	"github.com/Ask-Atlas/AskAtlas/api/internal/studyguides"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/files"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/handlers"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/logging"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/middleware"
 	qstashclient "github.com/Ask-Atlas/AskAtlas/api/internal/qstash"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/quizzes"
 	s3client "github.com/Ask-Atlas/AskAtlas/api/internal/s3"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/schools"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/studyguides"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/user"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/go-chi/chi/v5"
@@ -98,6 +99,10 @@ func main() {
 	studyGuidesService := studyguides.NewService(studyGuidesRepo)
 	studyGuidesHandler := handlers.NewStudyGuideHandler(studyGuidesService)
 
+	quizzesRepo := quizzes.NewSQLCRepository(connPool, queries)
+	quizzesService := quizzes.NewService(quizzesRepo)
+	quizzesHandler := handlers.NewQuizzesHandler(quizzesService)
+
 	clerkAuth := middleware.ClerkAuth(userService)
 
 	r.Use(chiMiddleware.Timeout(60 * time.Second))
@@ -127,7 +132,7 @@ func main() {
 		},
 	}
 
-	compositeHandler := handlers.NewCompositeHandler(fileHandler, grantHandler, schoolsHandler, coursesHandler, studyGuidesHandler)
+	compositeHandler := handlers.NewCompositeHandler(fileHandler, grantHandler, schoolsHandler, coursesHandler, studyGuidesHandler, quizzesHandler)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(clerkAuth)

@@ -14,17 +14,60 @@ Package handlers contains the HTTP handlers and routes for the API endpoints.
   - [func NewClerkWebhookHandler\(clerkService ClerkService\) \*ClerkHandler](<#NewClerkWebhookHandler>)
   - [func \(ch \*ClerkHandler\) Webhook\(w http.ResponseWriter, r \*http.Request\)](<#ClerkHandler.Webhook>)
 - [type ClerkService](<#ClerkService>)
+- [type CompositeHandler](<#CompositeHandler>)
+  - [func NewCompositeHandler\(fh \*FileHandler, gh \*GrantHandler, sh \*SchoolsHandler, ch \*CoursesHandler, sgh \*StudyGuideHandler, qh \*QuizzesHandler\) \*CompositeHandler](<#NewCompositeHandler>)
+- [type CourseService](<#CourseService>)
+- [type CoursesHandler](<#CoursesHandler>)
+  - [func NewCoursesHandler\(service CourseService\) \*CoursesHandler](<#NewCoursesHandler>)
+  - [func \(h \*CoursesHandler\) CheckMembership\(w http.ResponseWriter, r \*http.Request, courseId openapi\_types.UUID, sectionId openapi\_types.UUID\)](<#CoursesHandler.CheckMembership>)
+  - [func \(h \*CoursesHandler\) GetCourse\(w http.ResponseWriter, r \*http.Request, courseID openapi\_types.UUID\)](<#CoursesHandler.GetCourse>)
+  - [func \(h \*CoursesHandler\) JoinSection\(w http.ResponseWriter, r \*http.Request, courseId openapi\_types.UUID, sectionId openapi\_types.UUID\)](<#CoursesHandler.JoinSection>)
+  - [func \(h \*CoursesHandler\) LeaveSection\(w http.ResponseWriter, r \*http.Request, courseId openapi\_types.UUID, sectionId openapi\_types.UUID\)](<#CoursesHandler.LeaveSection>)
+  - [func \(h \*CoursesHandler\) ListCourses\(w http.ResponseWriter, r \*http.Request, params api.ListCoursesParams\)](<#CoursesHandler.ListCourses>)
+  - [func \(h \*CoursesHandler\) ListMyEnrollments\(w http.ResponseWriter, r \*http.Request, params api.ListMyEnrollmentsParams\)](<#CoursesHandler.ListMyEnrollments>)
+  - [func \(h \*CoursesHandler\) ListSectionMembers\(w http.ResponseWriter, r \*http.Request, courseId openapi\_types.UUID, sectionId openapi\_types.UUID, params api.ListSectionMembersParams\)](<#CoursesHandler.ListSectionMembers>)
 - [type FileHandler](<#FileHandler>)
   - [func NewFileHandler\(service FileService, publisher files.QStashPublisher\) \*FileHandler](<#NewFileHandler>)
+  - [func \(h \*FileHandler\) CreateFile\(w http.ResponseWriter, r \*http.Request\)](<#FileHandler.CreateFile>)
   - [func \(h \*FileHandler\) DeleteFile\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#FileHandler.DeleteFile>)
   - [func \(h \*FileHandler\) GetFile\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#FileHandler.GetFile>)
   - [func \(h \*FileHandler\) ListFiles\(w http.ResponseWriter, r \*http.Request, params api.ListFilesParams\)](<#FileHandler.ListFiles>)
   - [func \(h \*FileHandler\) UpdateFile\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#FileHandler.UpdateFile>)
 - [type FileService](<#FileService>)
+- [type GrantHandler](<#GrantHandler>)
+  - [func NewGrantHandler\(service GrantService\) \*GrantHandler](<#NewGrantHandler>)
+  - [func \(h \*GrantHandler\) CreateGrant\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#GrantHandler.CreateGrant>)
+  - [func \(h \*GrantHandler\) RevokeGrant\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#GrantHandler.RevokeGrant>)
+- [type GrantService](<#GrantService>)
 - [type JobHandler](<#JobHandler>)
   - [func NewJobHandler\(s3 \*s3client.Client, queries \*db.Queries\) \*JobHandler](<#NewJobHandler>)
   - [func \(h \*JobHandler\) DeleteFileFailedJob\(w http.ResponseWriter, r \*http.Request\)](<#JobHandler.DeleteFileFailedJob>)
   - [func \(h \*JobHandler\) DeleteFileJob\(w http.ResponseWriter, r \*http.Request\)](<#JobHandler.DeleteFileJob>)
+- [type QuizService](<#QuizService>)
+- [type QuizzesHandler](<#QuizzesHandler>)
+  - [func NewQuizzesHandler\(service QuizService\) \*QuizzesHandler](<#NewQuizzesHandler>)
+  - [func \(h \*QuizzesHandler\) CreateQuiz\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#QuizzesHandler.CreateQuiz>)
+- [type SchoolService](<#SchoolService>)
+- [type SchoolsHandler](<#SchoolsHandler>)
+  - [func NewSchoolsHandler\(service SchoolService\) \*SchoolsHandler](<#NewSchoolsHandler>)
+  - [func \(h \*SchoolsHandler\) GetSchool\(w http.ResponseWriter, r \*http.Request, schoolID openapi\_types.UUID\)](<#SchoolsHandler.GetSchool>)
+  - [func \(h \*SchoolsHandler\) ListSchools\(w http.ResponseWriter, r \*http.Request, params api.ListSchoolsParams\)](<#SchoolsHandler.ListSchools>)
+- [type StudyGuideHandler](<#StudyGuideHandler>)
+  - [func NewStudyGuideHandler\(service StudyGuideService\) \*StudyGuideHandler](<#NewStudyGuideHandler>)
+  - [func \(h \*StudyGuideHandler\) AttachFile\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID, fileId openapi\_types.UUID\)](<#StudyGuideHandler.AttachFile>)
+  - [func \(h \*StudyGuideHandler\) AttachResource\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#StudyGuideHandler.AttachResource>)
+  - [func \(h \*StudyGuideHandler\) CastStudyGuideVote\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#StudyGuideHandler.CastStudyGuideVote>)
+  - [func \(h \*StudyGuideHandler\) CreateStudyGuide\(w http.ResponseWriter, r \*http.Request, courseId openapi\_types.UUID\)](<#StudyGuideHandler.CreateStudyGuide>)
+  - [func \(h \*StudyGuideHandler\) DeleteStudyGuide\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#StudyGuideHandler.DeleteStudyGuide>)
+  - [func \(h \*StudyGuideHandler\) DetachFile\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID, fileId openapi\_types.UUID\)](<#StudyGuideHandler.DetachFile>)
+  - [func \(h \*StudyGuideHandler\) DetachResource\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID, resourceId openapi\_types.UUID\)](<#StudyGuideHandler.DetachResource>)
+  - [func \(h \*StudyGuideHandler\) GetStudyGuide\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#StudyGuideHandler.GetStudyGuide>)
+  - [func \(h \*StudyGuideHandler\) ListStudyGuides\(w http.ResponseWriter, r \*http.Request, courseId openapi\_types.UUID, params api.ListStudyGuidesParams\)](<#StudyGuideHandler.ListStudyGuides>)
+  - [func \(h \*StudyGuideHandler\) RecommendStudyGuide\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#StudyGuideHandler.RecommendStudyGuide>)
+  - [func \(h \*StudyGuideHandler\) RemoveStudyGuideRecommendation\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#StudyGuideHandler.RemoveStudyGuideRecommendation>)
+  - [func \(h \*StudyGuideHandler\) RemoveStudyGuideVote\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#StudyGuideHandler.RemoveStudyGuideVote>)
+  - [func \(h \*StudyGuideHandler\) UpdateStudyGuide\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#StudyGuideHandler.UpdateStudyGuide>)
+- [type StudyGuideService](<#StudyGuideService>)
 
 
 <a name="ClerkHandler"></a>
@@ -67,8 +110,133 @@ type ClerkService interface {
 }
 ```
 
+<a name="CompositeHandler"></a>
+## type [CompositeHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/composite.go#L5-L12>)
+
+CompositeHandler combines multiple handler structs into a single value that satisfies the generated api.ServerInterface.
+
+```go
+type CompositeHandler struct {
+    *FileHandler
+    *GrantHandler
+    *SchoolsHandler
+    *CoursesHandler
+    *StudyGuideHandler
+    *QuizzesHandler
+}
+```
+
+<a name="NewCompositeHandler"></a>
+### func [NewCompositeHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/composite.go#L17>)
+
+```go
+func NewCompositeHandler(fh *FileHandler, gh *GrantHandler, sh *SchoolsHandler, ch *CoursesHandler, sgh *StudyGuideHandler, qh *QuizzesHandler) *CompositeHandler
+```
+
+NewCompositeHandler creates a handler that delegates to FileHandler, GrantHandler, SchoolsHandler, CoursesHandler, StudyGuideHandler, and QuizzesHandler.
+
+<a name="CourseService"></a>
+## type [CourseService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/courses.go#L19-L27>)
+
+CourseService defines the application logic required by the CoursesHandler.
+
+```go
+type CourseService interface {
+    ListCourses(ctx context.Context, params courses.ListCoursesParams) (courses.ListCoursesResult, error)
+    GetCourse(ctx context.Context, params courses.GetCourseParams) (courses.CourseDetail, error)
+    JoinSection(ctx context.Context, params courses.JoinSectionParams) (courses.Membership, error)
+    LeaveSection(ctx context.Context, params courses.LeaveSectionParams) error
+    ListMyEnrollments(ctx context.Context, params courses.ListMyEnrollmentsParams) ([]courses.Enrollment, error)
+    CheckMembership(ctx context.Context, params courses.CheckMembershipParams) (courses.MembershipCheck, error)
+    ListSectionMembers(ctx context.Context, params courses.ListSectionMembersParams) (courses.ListSectionMembersResult, error)
+}
+```
+
+<a name="CoursesHandler"></a>
+## type [CoursesHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/courses.go#L30-L32>)
+
+CoursesHandler manages incoming HTTP requests relating to course operations.
+
+```go
+type CoursesHandler struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewCoursesHandler"></a>
+### func [NewCoursesHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/courses.go#L35>)
+
+```go
+func NewCoursesHandler(service CourseService) *CoursesHandler
+```
+
+NewCoursesHandler creates a new CoursesHandler backed by the given CourseService.
+
+<a name="CoursesHandler.CheckMembership"></a>
+### func \(\*CoursesHandler\) [CheckMembership](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/courses.go#L278>)
+
+```go
+func (h *CoursesHandler) CheckMembership(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID)
+```
+
+CheckMembership handles GET /courses/\{course\_id\}/sections/\{section\_id\}/members/me. Always returns 200 \-\- non\-membership is enrolled=false with null role/joined\_at, NOT 404. 404 is reserved for missing course/section \(so the frontend can distinguish "not enrolled" from "section deleted"\).
+
+<a name="CoursesHandler.GetCourse"></a>
+### func \(\*CoursesHandler\) [GetCourse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/courses.go#L112>)
+
+```go
+func (h *CoursesHandler) GetCourse(w http.ResponseWriter, r *http.Request, courseID openapi_types.UUID)
+```
+
+GetCourse handles GET /courses/\{course\_id\}, returning a single course with its embedded school summary and inline sections array.
+
+<a name="CoursesHandler.JoinSection"></a>
+### func \(\*CoursesHandler\) [JoinSection](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/courses.go#L146>)
+
+```go
+func (h *CoursesHandler) JoinSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID)
+```
+
+JoinSection handles POST /courses/\{course\_id\}/sections/\{section\_id\}/members. The viewer joins the section as a 'student'. Any \*fields\* in the request body are intentionally ignored \-\- the role is enforced by the service \+ SQL layer to prevent privilege escalation via \{"role": "instructor"\} \-\- but malformed JSON is still rejected with 400 per the spec, so we shallow\-parse the body when one is provided.
+
+<a name="CoursesHandler.LeaveSection"></a>
+### func \(\*CoursesHandler\) [LeaveSection](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/courses.go#L305>)
+
+```go
+func (h *CoursesHandler) LeaveSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID)
+```
+
+LeaveSection handles DELETE /courses/\{course\_id\}/sections/\{section\_id\}/members/me. The viewer leaves the section. The /me path segment makes self\-only scope explicit; there is no path parameter for the user being removed.
+
+<a name="CoursesHandler.ListCourses"></a>
+### func \(\*CoursesHandler\) [ListCourses](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/courses.go#L42>)
+
+```go
+func (h *CoursesHandler) ListCourses(w http.ResponseWriter, r *http.Request, params api.ListCoursesParams)
+```
+
+ListCourses handles GET /courses, returning a paginated list of courses \(with embedded school summaries\) optionally filtered by school\_id, department, or a q search term.
+
+<a name="CoursesHandler.ListMyEnrollments"></a>
+### func \(\*CoursesHandler\) [ListMyEnrollments](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/courses.go#L248>)
+
+```go
+func (h *CoursesHandler) ListMyEnrollments(w http.ResponseWriter, r *http.Request, params api.ListMyEnrollmentsParams)
+```
+
+ListMyEnrollments handles GET /me/courses, returning every section the authenticated viewer is enrolled in. Filters on term \+ role come from the query string; the openapi layer enforces role enum membership and term maxLength so the service path\-validation is defense in depth.
+
+<a name="CoursesHandler.ListSectionMembers"></a>
+### func \(\*CoursesHandler\) [ListSectionMembers](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/courses.go#L203>)
+
+```go
+func (h *CoursesHandler) ListSectionMembers(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID, params api.ListSectionMembersParams)
+```
+
+ListSectionMembers handles GET /courses/\{course\_id\}/sections/\{section\_id\}/members. Any authenticated user can list \-\- no membership check on the caller \(course pages are public within the app\). The response payload is the privacy floor: 5 fields, no email, no clerk\_id.
+
 <a name="FileHandler"></a>
-## type [FileHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L26-L29>)
+## type [FileHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L31-L34>)
 
 FileHandler manages incoming HTTP requests relating to File operations.
 
@@ -79,7 +247,7 @@ type FileHandler struct {
 ```
 
 <a name="NewFileHandler"></a>
-### func [NewFileHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L32>)
+### func [NewFileHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L37>)
 
 ```go
 func NewFileHandler(service FileService, publisher files.QStashPublisher) *FileHandler
@@ -87,8 +255,17 @@ func NewFileHandler(service FileService, publisher files.QStashPublisher) *FileH
 
 NewFileHandler creates a new FileHandler backed by the given FileService.
 
+<a name="FileHandler.CreateFile"></a>
+### func \(\*FileHandler\) [CreateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L42>)
+
+```go
+func (h *FileHandler) CreateFile(w http.ResponseWriter, r *http.Request)
+```
+
+CreateFile handles requests to create a new file reference and get a presigned upload URL.
+
 <a name="FileHandler.DeleteFile"></a>
-### func \(\*FileHandler\) [DeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L37>)
+### func \(\*FileHandler\) [DeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L98>)
 
 ```go
 func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
@@ -97,7 +274,7 @@ func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request, fileId 
 DeleteFile handles requests to delete a single file by its unique identifier.
 
 <a name="FileHandler.GetFile"></a>
-### func \(\*FileHandler\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L95>)
+### func \(\*FileHandler\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L156>)
 
 ```go
 func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
@@ -106,7 +283,7 @@ func (h *FileHandler) GetFile(w http.ResponseWriter, r *http.Request, fileId ope
 GetFile handles requests to retrieve a single file by its unique identifier.
 
 <a name="FileHandler.ListFiles"></a>
-### func \(\*FileHandler\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L121>)
+### func \(\*FileHandler\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L182>)
 
 ```go
 func (h *FileHandler) ListFiles(w http.ResponseWriter, r *http.Request, params api.ListFilesParams)
@@ -115,7 +292,7 @@ func (h *FileHandler) ListFiles(w http.ResponseWriter, r *http.Request, params a
 ListFiles handles requests to retrieve a paginated list of files accessible to the viewer.
 
 <a name="FileHandler.UpdateFile"></a>
-### func \(\*FileHandler\) [UpdateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L62>)
+### func \(\*FileHandler\) [UpdateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L123>)
 
 ```go
 func (h *FileHandler) UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
@@ -124,16 +301,67 @@ func (h *FileHandler) UpdateFile(w http.ResponseWriter, r *http.Request, fileId 
 UpdateFile handles requests to rename a file.
 
 <a name="FileService"></a>
-## type [FileService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L18-L23>)
+## type [FileService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/files.go#L22-L28>)
 
 FileService defines the application logic required by the FileHandler.
 
 ```go
 type FileService interface {
+    CreateFile(ctx context.Context, params files.CreateFileParams) (files.CreateFileResult, error)
     GetFile(ctx context.Context, params files.GetFileParams) (files.File, error)
     ListFiles(ctx context.Context, params files.ListFilesParams) ([]files.File, *string, error)
     DeleteFile(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher) error
     UpdateFile(ctx context.Context, params files.UpdateFileParams) (files.File, error)
+}
+```
+
+<a name="GrantHandler"></a>
+## type [GrantHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/grants.go#L23-L25>)
+
+GrantHandler manages incoming HTTP requests relating to file grant operations.
+
+```go
+type GrantHandler struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewGrantHandler"></a>
+### func [NewGrantHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/grants.go#L28>)
+
+```go
+func NewGrantHandler(service GrantService) *GrantHandler
+```
+
+NewGrantHandler creates a new GrantHandler backed by the given GrantService.
+
+<a name="GrantHandler.CreateGrant"></a>
+### func \(\*GrantHandler\) [CreateGrant](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/grants.go#L33>)
+
+```go
+func (h *GrantHandler) CreateGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+```
+
+CreateGrant handles requests to create a permission grant on a file.
+
+<a name="GrantHandler.RevokeGrant"></a>
+### func \(\*GrantHandler\) [RevokeGrant](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/grants.go#L68>)
+
+```go
+func (h *GrantHandler) RevokeGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+```
+
+RevokeGrant handles requests to revoke a permission grant on a file.
+
+<a name="GrantService"></a>
+## type [GrantService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/grants.go#L17-L20>)
+
+GrantService defines the application logic required by the GrantHandler.
+
+```go
+type GrantService interface {
+    CreateGrant(ctx context.Context, params files.CreateGrantParams) (files.Grant, error)
+    RevokeGrant(ctx context.Context, params files.RevokeGrantParams) error
 }
 ```
 
@@ -174,5 +402,256 @@ func (h *JobHandler) DeleteFileJob(w http.ResponseWriter, r *http.Request)
 ```
 
 DeleteFileJob handles POST /jobs/delete\-file. It deletes the S3 object and marks the file as deleted in the DB.
+
+<a name="QuizService"></a>
+## type [QuizService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L19-L21>)
+
+QuizService defines the application logic required by the QuizzesHandler. Mirrors StudyGuideService: small, defined at the consumer, and mocked via mockery for handler tests.
+
+```go
+type QuizService interface {
+    CreateQuiz(ctx context.Context, params quizzes.CreateQuizParams) (quizzes.QuizDetail, error)
+}
+```
+
+<a name="QuizzesHandler"></a>
+## type [QuizzesHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L26-L28>)
+
+QuizzesHandler manages incoming HTTP requests for the quizzes surface. Embedded in CompositeHandler so a single instance satisfies the generated api.ServerInterface.
+
+```go
+type QuizzesHandler struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewQuizzesHandler"></a>
+### func [NewQuizzesHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L32>)
+
+```go
+func NewQuizzesHandler(service QuizService) *QuizzesHandler
+```
+
+NewQuizzesHandler creates a new QuizzesHandler backed by the given QuizService.
+
+<a name="QuizzesHandler.CreateQuiz"></a>
+### func \(\*QuizzesHandler\) [CreateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L43>)
+
+```go
+func (h *QuizzesHandler) CreateQuiz(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+CreateQuiz handles POST /study\-guides/\{study\_guide\_id\}/quizzes. The body is decoded into the openapi\-generated request type; the service layer applies the cross\-field validation \(per\-type correct\_answer typing, MCQ correct\-count invariant\) and runs the quiz \+ questions \+ options inserts inside one transaction. The creator id is always taken from the JWT \-\- the openapi schema explicitly forbids accepting one in the request body.
+
+<a name="SchoolService"></a>
+## type [SchoolService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/schools.go#L17-L20>)
+
+SchoolService defines the application logic required by the SchoolsHandler.
+
+```go
+type SchoolService interface {
+    ListSchools(ctx context.Context, params schools.ListSchoolsParams) (schools.ListSchoolsResult, error)
+    GetSchool(ctx context.Context, params schools.GetSchoolParams) (schools.School, error)
+}
+```
+
+<a name="SchoolsHandler"></a>
+## type [SchoolsHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/schools.go#L23-L25>)
+
+SchoolsHandler manages incoming HTTP requests relating to school operations.
+
+```go
+type SchoolsHandler struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewSchoolsHandler"></a>
+### func [NewSchoolsHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/schools.go#L28>)
+
+```go
+func NewSchoolsHandler(service SchoolService) *SchoolsHandler
+```
+
+NewSchoolsHandler creates a new SchoolsHandler backed by the given SchoolService.
+
+<a name="SchoolsHandler.GetSchool"></a>
+### func \(\*SchoolsHandler\) [GetSchool](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/schools.go#L84>)
+
+```go
+func (h *SchoolsHandler) GetSchool(w http.ResponseWriter, r *http.Request, schoolID openapi_types.UUID)
+```
+
+GetSchool handles GET /schools/\{school\_id\}, returning the school's full metadata or a 404 envelope if the ID does not match any row.
+
+<a name="SchoolsHandler.ListSchools"></a>
+### func \(\*SchoolsHandler\) [ListSchools](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/schools.go#L34>)
+
+```go
+func (h *SchoolsHandler) ListSchools(w http.ResponseWriter, r *http.Request, params api.ListSchoolsParams)
+```
+
+ListSchools handles GET /schools, returning a paginated list of schools optionally filtered by the q search term.
+
+<a name="StudyGuideHandler"></a>
+## type [StudyGuideHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/studyguides.go#L40-L42>)
+
+StudyGuideHandler manages incoming HTTP requests for the study\-guide surface. Embedded in CompositeHandler so a single instance satisfies the generated api.ServerInterface.
+
+```go
+type StudyGuideHandler struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewStudyGuideHandler"></a>
+### func [NewStudyGuideHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/studyguides.go#L46>)
+
+```go
+func NewStudyGuideHandler(service StudyGuideService) *StudyGuideHandler
+```
+
+NewStudyGuideHandler creates a new StudyGuideHandler backed by the given StudyGuideService.
+
+<a name="StudyGuideHandler.AttachFile"></a>
+### func \(\*StudyGuideHandler\) [AttachFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/studyguides.go#L447>)
+
+```go
+func (h *StudyGuideHandler) AttachFile(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, fileId openapi_types.UUID)
+```
+
+AttachFile handles POST /study\-guides/\{id\}/files/\{file\_id\}. No body. AttacherID comes from JWT. Service runs ownership \+ status checks; 201 on success with FileAttachmentResponse, 403/404/409/500 flow through ToHTTPError.
+
+<a name="StudyGuideHandler.AttachResource"></a>
+### func \(\*StudyGuideHandler\) [AttachResource](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/studyguides.go#L379>)
+
+```go
+func (h *StudyGuideHandler) AttachResource(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+AttachResource handles POST /study\-guides/\{id\}/resources. Decodes the body, takes attached\_by from JWT, delegates to service. 201 on success with ResourceSummary; 409 on duplicate URL on guide; 404 on missing guide; 400 on validation; 500 on db errors.
+
+<a name="StudyGuideHandler.CastStudyGuideVote"></a>
+### func \(\*StudyGuideHandler\) [CastStudyGuideVote](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/studyguides.go#L261>)
+
+```go
+func (h *StudyGuideHandler) CastStudyGuideVote(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+CastStudyGuideVote handles POST /study\-guides/\{id\}/votes. Decodes the body, validates that \`vote\` is one of "up" | "down" at the openapi\-validator wrapper, then delegates to the service which upserts and returns the post\-mutation vote\_score so the UI can patch its local state without a follow\-up GET.
+
+<a name="StudyGuideHandler.CreateStudyGuide"></a>
+### func \(\*StudyGuideHandler\) [CreateStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/studyguides.go#L146>)
+
+```go
+func (h *StudyGuideHandler) CreateStudyGuide(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID)
+```
+
+CreateStudyGuide handles POST /courses/\{course\_id\}/study\-guides. The body is decoded into the openapi\-generated request type; the service layer applies tag normalization \(trim \+ lowercase \+ dedupe\) and runs the AssertCourseExists preflight so a missing course surfaces as 404 instead of an FK\-violation 500. The creator id is always taken from the JWT \-\- the openapi schema explicitly forbids accepting one in the request body to avoid privilege\-attribution forging.
+
+<a name="StudyGuideHandler.DeleteStudyGuide"></a>
+### func \(\*StudyGuideHandler\) [DeleteStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/studyguides.go#L234>)
+
+```go
+func (h *StudyGuideHandler) DeleteStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+DeleteStudyGuide handles DELETE /study\-guides/\{study\_guide\_id\}. Creator\-only \-\- the service runs the locked SELECT \+ creator check \+ soft\-delete \+ child\-quiz cascade in a single transaction. 404 covers both 'never existed' and 'already deleted' \(idempotent semantics\); 403 covers viewer\-is\-not\-creator.
+
+<a name="StudyGuideHandler.DetachFile"></a>
+### func \(\*StudyGuideHandler\) [DetachFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/studyguides.go#L478>)
+
+```go
+func (h *StudyGuideHandler) DetachFile(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, fileId openapi_types.UUID)
+```
+
+DetachFile handles DELETE /study\-guides/\{id\}/files/\{file\_id\}. 204 on success. Dual\-authz \(file owner OR guide creator\) lives in the service; 403/404 from the service flow through ToHTTPError.
+
+<a name="StudyGuideHandler.DetachResource"></a>
+### func \(\*StudyGuideHandler\) [DetachResource](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/studyguides.go#L420>)
+
+```go
+func (h *StudyGuideHandler) DetachResource(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, resourceId openapi_types.UUID)
+```
+
+DetachResource handles DELETE /study\-guides/\{id\}/resources/\{resource\_id\}. 204 on success; 403 when viewer is neither guide creator nor attacher; 404 when guide is missing/deleted or resource isn't attached to this guide.
+
+<a name="StudyGuideHandler.GetStudyGuide"></a>
+### func \(\*StudyGuideHandler\) [GetStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/studyguides.go#L115>)
+
+```go
+func (h *StudyGuideHandler) GetStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+GetStudyGuide handles GET /study\-guides/\{study\_guide\_id\}. Pure read per the design decision to keep GET idempotent \+ safe \(HTTP semantics\); view tracking is intentionally absent and will ship as a separate POST endpoint in a future ticket.
+
+<a name="StudyGuideHandler.ListStudyGuides"></a>
+### func \(\*StudyGuideHandler\) [ListStudyGuides](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/studyguides.go#L56>)
+
+```go
+func (h *StudyGuideHandler) ListStudyGuides(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, params api.ListStudyGuidesParams)
+```
+
+ListStudyGuides handles GET /courses/\{course\_id\}/study\-guides. Runs the AssertCourseExists preflight first so a missing course surfaces as a tailored 404 'Course not found' \(rather than an empty 200 that would be indistinguishable from 'course exists but has no guides'\). Malformed cursors are rejected at the handler with a 400 before the service is reached.
+
+<a name="StudyGuideHandler.RecommendStudyGuide"></a>
+### func \(\*StudyGuideHandler\) [RecommendStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/studyguides.go#L323>)
+
+```go
+func (h *StudyGuideHandler) RecommendStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+RecommendStudyGuide handles POST /study\-guides/\{id\}/recommendations. No request body. Service returns 403 / 404 / 409 directly via typed AppErrors; handler just maps \+ emits 201 with the recommendation payload on success.
+
+<a name="StudyGuideHandler.RemoveStudyGuideRecommendation"></a>
+### func \(\*StudyGuideHandler\) [RemoveStudyGuideRecommendation](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/studyguides.go#L353>)
+
+```go
+func (h *StudyGuideHandler) RemoveStudyGuideRecommendation(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+RemoveStudyGuideRecommendation handles DELETE /study\-guides/\{id\}/recommendations. Same role gate as POST. 204 on success; 403/404 from the service flow through ToHTTPError.
+
+<a name="StudyGuideHandler.RemoveStudyGuideVote"></a>
+### func \(\*StudyGuideHandler\) [RemoveStudyGuideVote](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/studyguides.go#L297>)
+
+```go
+func (h *StudyGuideHandler) RemoveStudyGuideVote(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+RemoveStudyGuideVote handles DELETE /study\-guides/\{id\}/votes. 404 covers both "guide missing/deleted" and "no existing vote" \-\- the service already collapses both cases to apperrors.ErrNotFound.
+
+<a name="StudyGuideHandler.UpdateStudyGuide"></a>
+### func \(\*StudyGuideHandler\) [UpdateStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/studyguides.go#L189>)
+
+```go
+func (h *StudyGuideHandler) UpdateStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+UpdateStudyGuide handles PATCH /study\-guides/\{study\_guide\_id\}. Decodes the partial\-update body into pointer\-typed params \(so 'absent' is distinct from 'empty'\), pulls viewer id from JWT, delegates to service.UpdateStudyGuide which gates on creator\-only \+ returns the freshly re\-hydrated detail. 200 on success; 400/403/404 flow through ToHTTPError unchanged.
+
+<a name="StudyGuideService"></a>
+## type [StudyGuideService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/studyguides.go#L20-L35>)
+
+StudyGuideService defines the application logic required by the StudyGuideHandler. Mirrors CourseService: small, defined at the consumer, and mocked via mockery for handler tests.
+
+```go
+type StudyGuideService interface {
+    ListStudyGuides(ctx context.Context, params studyguides.ListStudyGuidesParams) (studyguides.ListStudyGuidesResult, error)
+    AssertCourseExists(ctx context.Context, courseID uuid.UUID) error
+    GetStudyGuide(ctx context.Context, params studyguides.GetStudyGuideParams) (studyguides.StudyGuideDetail, error)
+    CreateStudyGuide(ctx context.Context, params studyguides.CreateStudyGuideParams) (studyguides.StudyGuideDetail, error)
+    UpdateStudyGuide(ctx context.Context, params studyguides.UpdateStudyGuideParams) (studyguides.StudyGuideDetail, error)
+    DeleteStudyGuide(ctx context.Context, params studyguides.DeleteStudyGuideParams) error
+    CastVote(ctx context.Context, params studyguides.CastVoteParams) (studyguides.CastVoteResult, error)
+    RemoveVote(ctx context.Context, params studyguides.RemoveVoteParams) error
+    RecommendStudyGuide(ctx context.Context, params studyguides.RecommendStudyGuideParams) (studyguides.Recommendation, error)
+    RemoveRecommendation(ctx context.Context, params studyguides.RemoveRecommendationParams) error
+    AttachResource(ctx context.Context, params studyguides.AttachResourceParams) (studyguides.Resource, error)
+    DetachResource(ctx context.Context, params studyguides.DetachResourceParams) error
+    AttachFile(ctx context.Context, params studyguides.AttachFileParams) (studyguides.FileAttachment, error)
+    DetachFile(ctx context.Context, params studyguides.DetachFileParams) error
+}
+```
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

@@ -81,6 +81,15 @@ type Querier interface {
 	// viewer is not a member; the service translates that into the 200
 	// {enrolled:false} response, NOT a 404.
 	GetMembership(ctx context.Context, arg GetMembershipParams) (GetMembershipRow, error)
+	// Load the quiz row + privacy-floor creator info for the detail
+	// payload. The study guide is NOT joined back -- the caller already
+	// knows the study_guide_id (it's in the URL on POST and on the
+	// quiz row itself). Excludes soft-deleted quizzes (deleted_at IS
+	// NULL), soft-deleted creators (u.deleted_at IS NULL), and
+	// soft-deleted parent guides (sg.deleted_at IS NULL) so a hydration
+	// that races with a parent-cascade soft-delete reports 'not found'
+	// rather than rendering an orphaned quiz.
+	GetQuizDetail(ctx context.Context, id pgtype.UUID) (GetQuizDetailRow, error)
 	// Lookup pair for UpsertResource above. Returns the resources row
 	// the viewer owns for this URL; always succeeds because the upsert
 	// runs immediately before this in the same tx (either the INSERT
@@ -126,6 +135,30 @@ type Querier interface {
 	// guide returns 404 with a clear message rather than e.g. trampling
 	// through to the SQL layer and surfacing a generic FK error.
 	GuideExistsAndLive(ctx context.Context, id pgtype.UUID) (bool, error)
+	// Quizzes write + read queries (ASK-150 / ASK-136).
+	//
+	// The create flow is wrapped in a single InTx in the service layer:
+	// InsertQuiz -> N x InsertQuizQuestion -> M x InsertQuizAnswerOption.
+	// A failure at any step rolls everything back, so a partial quiz can
+	// never be observed by another reader.
+	//
+	// The post-insert hydration runs OUTSIDE the transaction (commit
+	// happens first) using GetQuizDetail + ListQuizQuestionsByQuiz +
+	// ListQuizAnswerOptionsByQuiz. The two-list fan-out matches the
+	// studyguides detail pattern -- mapping options back onto questions
+	// happens in Go because pgx returns flat rowsets and the question
+	// count is small (<=100 per quiz).
+	//
+	// Privacy floor on the creator payload mirrors studyguides: id +
+	// first_name + last_name only. No email, no clerk_id.
+	// Live-presence probe for the create-quiz endpoint. Returns TRUE
+	// only when the guide row exists AND is not soft-deleted. The
+	// studyguides package has an identical query (GuideExistsAndLive);
+	// duplicated here so the quizzes service can stay decoupled from
+	// the studyguides Repository interface (sqlc generates queriers
+	// per package -- both call the same row but live in different
+	// generated method tables).
+	GuideExistsAndLiveForQuizzes(ctx context.Context, id pgtype.UUID) (bool, error)
 	// Lookup for DetachFile (ASK-124). Returns TRUE when the (file,
 	// guide) join row exists. Used as the 404 short-circuit before the
 	// delete fires -- we want a clean 'File attachment not found' rather
@@ -153,6 +186,22 @@ type Querier interface {
 	// failure mode is the narrow concurrency-race: two attachers slip
 	// through the pre-check between query 1 and query 4.
 	InsertGuideResource(ctx context.Context, arg InsertGuideResourceParams) error
+	// Insert a new quiz row. Returns the columns the service needs to
+	// build the QuizDetailResponse without an extra round trip on the
+	// write side -- the read-side hydration still happens via
+	// GetQuizDetail because the creator's first_name + last_name come
+	// from a join to users (and would inflate this RETURNING clause).
+	InsertQuiz(ctx context.Context, arg InsertQuizParams) (InsertQuizRow, error)
+	// Insert one option row. The service has already validated that
+	// exactly one option per MCQ has is_correct=true; for true-false
+	// questions the service synthesises two options (`True` + `False`)
+	// with the matching is_correct flag.
+	InsertQuizAnswerOption(ctx context.Context, arg InsertQuizAnswerOptionParams) error
+	// Insert a single question row. reference_answer is only meaningful
+	// for `freeform` questions; the service passes NULL for the other
+	// two types. sort_order is required (the service sets a stable
+	// value -- either the user-supplied integer or the array index).
+	InsertQuizQuestion(ctx context.Context, arg InsertQuizQuestionParams) (pgtype.UUID, error)
 	// Study guide list queries (ASK-104).
 	//
 	// Every ListStudyGuides* variant uses the same CTE structure so the
@@ -266,6 +315,17 @@ type Querier interface {
 	ListOwnedFilesStatusDesc(ctx context.Context, arg ListOwnedFilesStatusDescParams) ([]ListOwnedFilesStatusDescRow, error)
 	ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFilesUpdatedAscParams) ([]ListOwnedFilesUpdatedAscRow, error)
 	ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFilesUpdatedDescParams) ([]ListOwnedFilesUpdatedDescRow, error)
+	// All answer options for every question in a quiz, ordered by
+	// question_id then sort_order then id. The mapper groups by
+	// question_id in Go to attach options to their parent question.
+	// The triple-key ordering keeps the option list deterministic.
+	ListQuizAnswerOptionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]QuizAnswerOption, error)
+	// All questions for a quiz, ordered by sort_order then id (the id
+	// tiebreaker keeps the response deterministic when two questions
+	// happen to share a sort_order -- the spec doesn't enforce
+	// uniqueness on sort_order). Returns reference_answer so the
+	// mapper can emit it as `correct_answer` on freeform questions.
+	ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]ListQuizQuestionsByQuizRow, error)
 	ListSchools(ctx context.Context, arg ListSchoolsParams) ([]School, error)
 	// Returns the section roster joined against users for first/last name.
 	// Privacy floor: SELECT lists ONLY the five fields exposed in the

@@ -12,21 +12,30 @@ Package files contains the business logic, models, and data access layer for man
 
 - [Constants](<#constants>)
 - [func EncodeCursor\(c Cursor\) \(string, error\)](<#EncodeCursor>)
+- [type CreateFileParams](<#CreateFileParams>)
+- [type CreateFileResult](<#CreateFileResult>)
+- [type CreateGrantParams](<#CreateGrantParams>)
 - [type Cursor](<#Cursor>)
   - [func DecodeCursor\(s string\) \(Cursor, error\)](<#DecodeCursor>)
 - [type DeleteFileParams](<#DeleteFileParams>)
 - [type File](<#File>)
 - [type FileScope](<#FileScope>)
 - [type GetFileParams](<#GetFileParams>)
+- [type Grant](<#Grant>)
 - [type ListFilesParams](<#ListFilesParams>)
 - [type QStashPublisher](<#QStashPublisher>)
 - [type Repository](<#Repository>)
   - [func NewSQLCRepository\(pool \*pgxpool.Pool, queries \*db.Queries\) Repository](<#NewSQLCRepository>)
+- [type RevokeGrantParams](<#RevokeGrantParams>)
+- [type S3Uploader](<#S3Uploader>)
 - [type Service](<#Service>)
-  - [func NewService\(repo Repository\) \*Service](<#NewService>)
+  - [func NewService\(repo Repository, s3 S3Uploader\) \*Service](<#NewService>)
+  - [func \(s \*Service\) CreateFile\(ctx context.Context, p CreateFileParams\) \(CreateFileResult, error\)](<#Service.CreateFile>)
+  - [func \(s \*Service\) CreateGrant\(ctx context.Context, p CreateGrantParams\) \(Grant, error\)](<#Service.CreateGrant>)
   - [func \(s \*Service\) DeleteFile\(ctx context.Context, p DeleteFileParams, publisher QStashPublisher\) error](<#Service.DeleteFile>)
   - [func \(s \*Service\) GetFile\(ctx context.Context, p GetFileParams\) \(File, error\)](<#Service.GetFile>)
   - [func \(s \*Service\) ListFiles\(ctx context.Context, p ListFilesParams\) \(\[\]File, \*string, error\)](<#Service.ListFiles>)
+  - [func \(s \*Service\) RevokeGrant\(ctx context.Context, p RevokeGrantParams\) error](<#Service.RevokeGrant>)
   - [func \(s \*Service\) UpdateFile\(ctx context.Context, p UpdateFileParams\) \(File, error\)](<#Service.UpdateFile>)
 - [type SortDir](<#SortDir>)
 - [type SortField](<#SortField>)
@@ -65,6 +74,47 @@ func EncodeCursor(c Cursor) (string, error)
 
 EncodeCursor serializes a Cursor struct into a base64\-encoded string token.
 
+<a name="CreateFileParams"></a>
+## type [CreateFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/params.go#L123-L128>)
+
+CreateFileParams contains the validated inputs for creating a new file reference.
+
+```go
+type CreateFileParams struct {
+    UserID   uuid.UUID
+    Name     string
+    MimeType string
+    Size     int64
+}
+```
+
+<a name="CreateFileResult"></a>
+## type [CreateFileResult](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/params.go#L131-L134>)
+
+CreateFileResult holds the created file record and the presigned upload URL.
+
+```go
+type CreateFileResult struct {
+    File      File
+    UploadURL string
+}
+```
+
+<a name="CreateGrantParams"></a>
+## type [CreateGrantParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/params.go#L105-L111>)
+
+CreateGrantParams holds the validated inputs for creating a file grant.
+
+```go
+type CreateGrantParams struct {
+    FileID      uuid.UUID
+    OwnerID     uuid.UUID
+    GranteeType string
+    GranteeID   uuid.UUID
+    Permission  string
+}
+```
+
 <a name="Cursor"></a>
 ## type [Cursor](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/params.go#L40-L48>)
 
@@ -92,7 +142,7 @@ func DecodeCursor(s string) (Cursor, error)
 DecodeCursor parses a base64\-encoded string token back into a Cursor struct.
 
 <a name="DeleteFileParams"></a>
-## type [DeleteFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L180-L183>)
+## type [DeleteFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L233-L236>)
 
 DeleteFileParams holds the inputs required to initiate file deletion.
 
@@ -146,6 +196,23 @@ type GetFileParams struct {
 }
 ```
 
+<a name="Grant"></a>
+## type [Grant](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/model.go#L24-L32>)
+
+Grant represents a permission granted on a file to a specific grantee.
+
+```go
+type Grant struct {
+    ID          uuid.UUID
+    FileID      uuid.UUID
+    GranteeType string
+    GranteeID   uuid.UUID
+    Permission  string
+    GrantedBy   uuid.UUID
+    CreatedAt   time.Time
+}
+```
+
 <a name="ListFilesParams"></a>
 ## type [ListFilesParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/params.go#L73-L94>)
 
@@ -177,7 +244,7 @@ type ListFilesParams struct {
 ```
 
 <a name="QStashPublisher"></a>
-## type [QStashPublisher](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L187-L189>)
+## type [QStashPublisher](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L240-L242>)
 
 QStashPublisher is the interface the service uses to publish async jobs. Allows the concrete qstashclient.Client to be swapped for a test double.
 
@@ -188,7 +255,7 @@ type QStashPublisher interface {
 ```
 
 <a name="Repository"></a>
-## type [Repository](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L19-L41>)
+## type [Repository](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L22-L49>)
 
 Repository defines the data\-access interface required by the files Service.
 
@@ -196,12 +263,17 @@ Repository defines the data\-access interface required by the files Service.
 type Repository interface {
     InTx(ctx context.Context, fn func(Repository) error) error
 
+    InsertFile(ctx context.Context, arg db.InsertFileParams) (db.File, error)
+    UpdateFileStatus(ctx context.Context, arg db.UpdateFileStatusParams) error
     GetFileIfViewable(ctx context.Context, arg db.GetFileIfViewableParams) (db.File, error)
     GetFileByOwner(ctx context.Context, arg db.GetFileByOwnerParams) (db.GetFileByOwnerRow, error)
     SoftDeleteFile(ctx context.Context, arg db.SoftDeleteFileParams) (int64, error)
     SetFileDeletionJobID(ctx context.Context, arg db.SetFileDeletionJobIDParams) error
     MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
     UpdateFile(ctx context.Context, arg db.UpdateFileParams) (db.UpdateFileRow, error)
+
+    UpsertFileGrant(ctx context.Context, arg db.UpsertFileGrantParams) (db.FileGrant, error)
+    RevokeFileGrant(ctx context.Context, arg db.RevokeFileGrantParams) error
 
     ListOwnedFilesUpdatedDesc(ctx context.Context, arg db.ListOwnedFilesUpdatedDescParams) ([]db.ListOwnedFilesUpdatedDescRow, error)
     ListOwnedFilesUpdatedAsc(ctx context.Context, arg db.ListOwnedFilesUpdatedAscParams) ([]db.ListOwnedFilesUpdatedAscRow, error)
@@ -227,8 +299,34 @@ func NewSQLCRepository(pool *pgxpool.Pool, queries *db.Queries) Repository
 
 NewSQLCRepository creates a postgres\-backed db Repository instance.
 
+<a name="RevokeGrantParams"></a>
+## type [RevokeGrantParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/params.go#L114-L120>)
+
+RevokeGrantParams holds the validated inputs for revoking a file grant.
+
+```go
+type RevokeGrantParams struct {
+    FileID      uuid.UUID
+    OwnerID     uuid.UUID
+    GranteeType string
+    GranteeID   uuid.UUID
+    Permission  string
+}
+```
+
+<a name="S3Uploader"></a>
+## type [S3Uploader](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L52-L54>)
+
+S3Uploader is the interface the service uses to generate presigned upload URLs.
+
+```go
+type S3Uploader interface {
+    GeneratePresignedPutURL(ctx context.Context, key, contentType string, contentLength int64) (string, error)
+}
+```
+
 <a name="Service"></a>
-## type [Service](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L44-L47>)
+## type [Service](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L57-L61>)
 
 Service is the business\-logic layer for the files feature.
 
@@ -239,16 +337,34 @@ type Service struct {
 ```
 
 <a name="NewService"></a>
-### func [NewService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L50>)
+### func [NewService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L64>)
 
 ```go
-func NewService(repo Repository) *Service
+func NewService(repo Repository, s3 S3Uploader) *Service
 ```
 
 NewService creates a new Service instance configured with the given repository.
 
+<a name="Service.CreateFile"></a>
+### func \(\*Service\) [CreateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L99>)
+
+```go
+func (s *Service) CreateFile(ctx context.Context, p CreateFileParams) (CreateFileResult, error)
+```
+
+CreateFile inserts a pending file record in the database, generates a presigned S3 PUT URL, and returns both the file reference and the upload URL.
+
+<a name="Service.CreateGrant"></a>
+### func \(\*Service\) [CreateGrant](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L297>)
+
+```go
+func (s *Service) CreateGrant(ctx context.Context, p CreateGrantParams) (Grant, error)
+```
+
+CreateGrant creates a file permission grant. The caller must own the file. If the grant already exists the existing row is returned \(idempotent\).
+
 <a name="Service.DeleteFile"></a>
-### func \(\*Service\) [DeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L194>)
+### func \(\*Service\) [DeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L247>)
 
 ```go
 func (s *Service) DeleteFile(ctx context.Context, p DeleteFileParams, publisher QStashPublisher) error
@@ -257,7 +373,7 @@ func (s *Service) DeleteFile(ctx context.Context, p DeleteFileParams, publisher 
 DeleteFile soft\-deletes the file within a transaction, then publishes an async S3 cleanup job via QStash. Returns apperrors.ErrNotFound if the file does not belong to the caller or is already in a deletion state.
 
 <a name="Service.GetFile"></a>
-### func \(\*Service\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L70>)
+### func \(\*Service\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L84>)
 
 ```go
 func (s *Service) GetFile(ctx context.Context, p GetFileParams) (File, error)
@@ -266,7 +382,7 @@ func (s *Service) GetFile(ctx context.Context, p GetFileParams) (File, error)
 GetFile retrieves a single file, verifying that the requesting user has access to it.
 
 <a name="Service.ListFiles"></a>
-### func \(\*Service\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L84>)
+### func \(\*Service\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L137>)
 
 ```go
 func (s *Service) ListFiles(ctx context.Context, p ListFilesParams) ([]File, *string, error)
@@ -274,8 +390,17 @@ func (s *Service) ListFiles(ctx context.Context, p ListFilesParams) ([]File, *st
 
 ListFiles queries the repository for a paginated list of files matching the given parameters.
 
+<a name="Service.RevokeGrant"></a>
+### func \(\*Service\) [RevokeGrant](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L322>)
+
+```go
+func (s *Service) RevokeGrant(ctx context.Context, p RevokeGrantParams) error
+```
+
+RevokeGrant revokes a file permission grant. The caller must own the file. If the grant does not exist the call is a no\-op \(idempotent\).
+
 <a name="Service.UpdateFile"></a>
-### func \(\*Service\) [UpdateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L116>)
+### func \(\*Service\) [UpdateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/service.go#L169>)
 
 ```go
 func (s *Service) UpdateFile(ctx context.Context, p UpdateFileParams) (File, error)
@@ -302,7 +427,7 @@ type SortField string
 ```
 
 <a name="UpdateFileParams"></a>
-## type [UpdateFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/params.go#L105-L109>)
+## type [UpdateFileParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/files/params.go#L137-L141>)
 
 UpdateFileParams contains the required inputs for renaming a file.
 

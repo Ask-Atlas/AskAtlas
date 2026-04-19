@@ -757,6 +757,66 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}/quizzes:
+    post:
+      operationId: CreateQuiz
+      summary: Create a quiz attached to a study guide
+      description: |
+        Creates a new quiz with all of its questions and answer options
+        in a single atomic request. The frontend quiz builder submits the
+        entire quiz at once: if any question fails validation, nothing is
+        created (the entire write runs in one transaction).
+
+        Authorization: any authenticated user can create a quiz on any
+        study guide. AskAtlas explicitly encourages collaborative quiz
+        contribution; ownership of the underlying guide is not required.
+        `creator_id` is set from the JWT and any value supplied in the
+        body is ignored.
+
+        Per-question validation:
+          * `multiple-choice` -- 2-10 options. Each option has `text`
+            (1-500 chars) and `is_correct` (boolean). Exactly one option
+            must have `is_correct: true`. The request's `correct_answer`
+            field is ignored on MCQ.
+          * `true-false` -- `correct_answer` MUST be a boolean. The API
+            internally creates two `quiz_answer_options` rows (`True`
+            and `False`) with the matching `is_correct` flag.
+          * `freeform` -- `correct_answer` MUST be a non-empty string
+            (max 500 chars). Stored as `quiz_questions.reference_answer`.
+            No `quiz_answer_options` rows are created.
+
+        The response mirrors GET /quizzes/{quiz_id} (future ticket) so
+        the frontend can render the freshly-created quiz without a
+        follow-up GET.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide to attach the quiz to
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuizRequest'
+      responses:
+        '201':
+          description: The freshly-created quiz with all questions and options.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /study-guides/{study_guide_id}/recommendations:
     post:
       operationId: RecommendStudyGuide
@@ -2237,6 +2297,202 @@ components:
         - enrolled
         - role
         - joined_at
+    CreateQuizMCQOption:
+      type: object
+      description: |
+        A single option for a `multiple-choice` question on the create
+        request. Exactly one option per MCQ question must have
+        `is_correct: true`. The text is rendered to the student
+        verbatim; no normalization is applied server-side.
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+        is_correct:
+          type: boolean
+      required:
+        - text
+        - is_correct
+    CreateQuizQuestion:
+      type: object
+      description: |
+        A single question on the create-quiz request. The `type` field
+        discriminates which other fields are meaningful:
+          * `multiple-choice` -- requires `options`; ignores
+            `correct_answer`.
+          * `true-false` -- requires `correct_answer` as a boolean;
+            ignores `options`.
+          * `freeform` -- requires `correct_answer` as a non-empty
+            string; ignores `options`.
+        Cross-field validation is enforced by the service layer with
+        per-field 400 error details when the rules above are violated.
+      properties:
+        type:
+          type: string
+          enum:
+            - multiple-choice
+            - true-false
+            - freeform
+        question:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        options:
+          type: array
+          minItems: 2
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/CreateQuizMCQOption'
+        correct_answer:
+          description: |
+            For `true-false` questions this is a boolean; for `freeform`
+            questions this is a non-empty string (max 500 chars).
+            Ignored for `multiple-choice` questions (correctness is
+            embedded in `options[].is_correct`).
+          nullable: true
+        hint:
+          type: string
+          nullable: true
+          maxLength: 1000
+        feedback_correct:
+          type: string
+          nullable: true
+          maxLength: 1000
+        feedback_incorrect:
+          type: string
+          nullable: true
+          maxLength: 1000
+        sort_order:
+          type: integer
+          minimum: 0
+      required:
+        - type
+        - question
+    CreateQuizRequest:
+      type: object
+      description: |
+        Request body for POST /api/study-guides/{study_guide_id}/quizzes.
+        The entire quiz (title + N questions + each question's options)
+        is created atomically. If any question fails validation, the
+        whole request is rejected and no rows are written.
+
+        `creator_id` is set from the JWT; any value supplied here is
+        ignored (sending one is not an error to keep the wire shape
+        forgiving for frontend builders).
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+        questions:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/CreateQuizQuestion'
+      required:
+        - title
+        - questions
+    QuizQuestionResponse:
+      type: object
+      description: |
+        A single question on the quiz detail response. The `options`
+        array is present only on `multiple-choice` questions and lists
+        the option text in display order. `correct_answer` is the
+        text of the correct option for MCQ, the boolean for true-false,
+        and the reference answer string for freeform.
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - multiple-choice
+            - true-false
+            - freeform
+        question:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correct_answer:
+          description: |
+            The correct answer for this question. String for
+            multiple-choice (the winning option's text) and freeform
+            (the reference answer); boolean for true-false.
+          nullable: true
+        hint:
+          type: string
+          nullable: true
+        feedback:
+          type: object
+          properties:
+            correct:
+              type: string
+              nullable: true
+            incorrect:
+              type: string
+              nullable: true
+          required:
+            - correct
+            - incorrect
+        sort_order:
+          type: integer
+      required:
+        - id
+        - type
+        - question
+        - hint
+        - feedback
+        - sort_order
+    QuizDetailResponse:
+      type: object
+      description: |
+        Full quiz payload returned by POST /api/study-guides/{id}/quizzes
+        (and the future GET /api/quizzes/{quiz_id}). Includes the
+        embedded study guide id, the creator (privacy floor: id +
+        first_name + last_name only), and every question with its
+        options and correct answer.
+      properties:
+        id:
+          type: string
+          format: uuid
+        study_guide_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        creator:
+          $ref: '#/components/schemas/CreatorSummary'
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizQuestionResponse'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - study_guide_id
+        - title
+        - description
+        - creator
+        - questions
+        - created_at
+        - updated_at
     AppError:
       type: object
       description: Standardized error response structure matching application error domains

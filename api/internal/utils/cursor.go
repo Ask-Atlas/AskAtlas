@@ -47,4 +47,3 @@ func CursorNullUploadStatus[C any](c *C, get func(*C) *string) db.NullUploadStat
 	}
 	return NullUploadStatus(get(c))
 }
-
