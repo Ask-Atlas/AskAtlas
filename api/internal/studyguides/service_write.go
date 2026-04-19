@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
@@ -522,6 +523,249 @@ func (s *Service) UpdateStudyGuide(ctx context.Context, p UpdateStudyGuideParams
 	return s.GetStudyGuide(ctx, GetStudyGuideParams{
 		StudyGuideID: p.StudyGuideID,
 		ViewerID:     p.ViewerID,
+	})
+}
+
+// parseHTTPSURL validates a user-supplied URL: parseable by net/url
+// AND scheme is exactly http or https. Returns the canonicalized
+// string (the parser's String()) so what we persist is what we
+// validated -- not the user's raw bytes (which could include
+// stray whitespace or encoded scheme casing).
+//
+// Rejects ftp://, file://, javascript:, data:, mailto:, etc.
+func parseHTTPSURL(raw string) (string, error) {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", err
+	}
+	scheme := strings.ToLower(u.Scheme)
+	if scheme != "http" && scheme != "https" {
+		return "", fmt.Errorf("scheme %q is not http or https", u.Scheme)
+	}
+	if u.Host == "" {
+		return "", fmt.Errorf("URL has no host")
+	}
+	return u.String(), nil
+}
+
+// validateAttachResourceParams runs the service-layer defensive
+// re-validation for AttachResource. The handler+oapi-codegen layer
+// catches per-field caps in production; this re-check covers Go
+// callers and the URL-scheme rule that openapi can't express
+// directly (`format: uri` only checks general syntax).
+//
+// Returns the canonicalized URL on success so the caller can persist
+// the parser's String() rather than the raw bytes.
+func validateAttachResourceParams(p AttachResourceParams) (string, error) {
+	if strings.TrimSpace(p.Title) == "" {
+		return "", apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"title": "must not be empty",
+		})
+	}
+	if len(p.Title) > MaxResourceTitleLength {
+		return "", apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"title": fmt.Sprintf("must be %d characters or fewer", MaxResourceTitleLength),
+		})
+	}
+	if strings.TrimSpace(p.URL) == "" {
+		return "", apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"url": "must not be empty",
+		})
+	}
+	if len(p.URL) > MaxResourceURLLength {
+		return "", apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"url": fmt.Sprintf("must be %d characters or fewer", MaxResourceURLLength),
+		})
+	}
+	canonical, err := parseHTTPSURL(p.URL)
+	if err != nil {
+		return "", apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"url": "must be a valid http or https URL",
+		})
+	}
+	if p.Description != nil && len(*p.Description) > MaxResourceDescriptionLength {
+		return "", apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"description": fmt.Sprintf("must be %d characters or fewer", MaxResourceDescriptionLength),
+		})
+	}
+	if p.Type != "" && p.Type != ResourceTypeLink && p.Type != ResourceTypeVideo &&
+		p.Type != ResourceTypeArticle && p.Type != ResourceTypePDF {
+		return "", apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"type": "must be link, video, article, or pdf",
+		})
+	}
+	return canonical, nil
+}
+
+// AttachResource attaches a URL-based resource to a study guide
+// (ASK-111). Resources are community-contributed -- any authenticated
+// viewer can attach.
+//
+// Order of operations (single transaction):
+//  1. Validate input + canonicalize URL.
+//  2. GuideExistsAndLive -- 404 if missing or soft-deleted.
+//  3. URLAlreadyAttachedToGuide -- 409 if the URL is already on this
+//     guide (regardless of which resources row hosts it).
+//  4. UpsertResource (ON CONFLICT (creator_id, url) DO NOTHING) so a
+//     URL the viewer has used before reuses the existing row without
+//     overwriting its title / description / type.
+//  5. GetResourceByCreatorURL to fetch the (possibly-existing) row.
+//  6. InsertGuideResource to create the (resource_id, study_guide_id,
+//     attached_by) join row. PK violation here only fires on the narrow
+//     concurrency-race case where two attachers slip past step 3.
+//
+// Returns the resource as a domain Resource (same shape as
+// ListGuideResources rows) so the handler emits ResourceSummary
+// without a separate read.
+func (s *Service) AttachResource(ctx context.Context, p AttachResourceParams) (Resource, error) {
+	canonicalURL, err := validateAttachResourceParams(p)
+	if err != nil {
+		return Resource{}, err
+	}
+
+	resType := p.Type
+	if resType == "" {
+		resType = ResourceTypeLink
+	}
+
+	guidePgxID := utils.UUID(p.StudyGuideID)
+	attacherPgxID := utils.UUID(p.AttachedBy)
+
+	var resource Resource
+	if err := s.repo.InTx(ctx, func(tx Repository) error {
+		live, err := tx.GuideExistsAndLive(ctx, guidePgxID)
+		if err != nil {
+			return fmt.Errorf("AttachResource: live check: %w", err)
+		}
+		if !live {
+			return apperrors.NewNotFound("Study guide not found")
+		}
+
+		dup, err := tx.URLAlreadyAttachedToGuide(ctx, db.URLAlreadyAttachedToGuideParams{
+			StudyGuideID: guidePgxID,
+			Url:          canonicalURL,
+		})
+		if err != nil {
+			return fmt.Errorf("AttachResource: dup check: %w", err)
+		}
+		if dup {
+			return &apperrors.AppError{
+				Code:    http.StatusConflict,
+				Status:  "Conflict",
+				Message: "This URL is already attached to this study guide",
+			}
+		}
+
+		if err := tx.UpsertResource(ctx, db.UpsertResourceParams{
+			CreatorID:   attacherPgxID,
+			Title:       strings.TrimSpace(p.Title),
+			Url:         canonicalURL,
+			Description: utils.Text(trimmedNonEmpty(p.Description)),
+			Type:        db.ResourceType(resType),
+		}); err != nil {
+			return fmt.Errorf("AttachResource: upsert resource: %w", err)
+		}
+
+		row, err := tx.GetResourceByCreatorURL(ctx, db.GetResourceByCreatorURLParams{
+			CreatorID: attacherPgxID,
+			Url:       canonicalURL,
+		})
+		if err != nil {
+			return fmt.Errorf("AttachResource: lookup resource: %w", err)
+		}
+
+		if err := tx.InsertGuideResource(ctx, db.InsertGuideResourceParams{
+			ResourceID:   row.ID,
+			StudyGuideID: guidePgxID,
+			AttachedBy:   attacherPgxID,
+		}); err != nil {
+			return fmt.Errorf("AttachResource: insert join: %w", err)
+		}
+
+		mapped, err := mapResource(db.ListGuideResourcesRow{
+			ID:          row.ID,
+			Title:       row.Title,
+			Url:         row.Url,
+			Type:        row.Type,
+			Description: row.Description,
+			CreatedAt:   row.CreatedAt,
+		})
+		if err != nil {
+			return fmt.Errorf("AttachResource: map: %w", err)
+		}
+		resource = mapped
+		return nil
+	}); err != nil {
+		return Resource{}, err
+	}
+	return resource, nil
+}
+
+// DetachResource removes the join row between a resource and a guide
+// (ASK-116). Authorization: viewer must be EITHER the guide's creator
+// OR the user who attached this particular resource. Even the
+// resource's own creator can't detach if they didn't attach it here.
+//
+// Order of operations (single transaction):
+//  1. Lock the guide row + check live -- 404 if missing/deleted.
+//  2. Look up the join's attached_by -- 404 if not attached here.
+//  3. Dual-authz -- 403 if viewer is neither guide creator nor attacher.
+//  4. DeleteGuideResource -- 0 rows means a concurrent detach
+//     already removed the join (still a valid 'desired state
+//     reached' case but we return 404 to match the get-then-delete
+//     race contract).
+//
+// The resources row is preserved -- it may be attached to other
+// guides + courses. Detach never cascades to the resource itself.
+func (s *Service) DetachResource(ctx context.Context, p DetachResourceParams) error {
+	guidePgxID := utils.UUID(p.StudyGuideID)
+	resourcePgxID := utils.UUID(p.ResourceID)
+	return s.repo.InTx(ctx, func(tx Repository) error {
+		row, err := tx.GetStudyGuideByIDForUpdate(ctx, guidePgxID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return apperrors.NewNotFound("Study guide not found")
+			}
+			return fmt.Errorf("DetachResource: lock guide: %w", err)
+		}
+		if row.DeletedAt.Valid {
+			return apperrors.NewNotFound("Study guide not found")
+		}
+		guideCreatorID, err := utils.PgxToGoogleUUID(row.CreatorID)
+		if err != nil {
+			return fmt.Errorf("DetachResource: guide creator id: %w", err)
+		}
+
+		attacherPgx, err := tx.GetGuideResourceAttacher(ctx, db.GetGuideResourceAttacherParams{
+			ResourceID:   resourcePgxID,
+			StudyGuideID: guidePgxID,
+		})
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return apperrors.NewNotFound("Resource attachment not found")
+			}
+			return fmt.Errorf("DetachResource: lookup attacher: %w", err)
+		}
+		attachedBy, err := utils.PgxToGoogleUUID(attacherPgx)
+		if err != nil {
+			return fmt.Errorf("DetachResource: attacher id: %w", err)
+		}
+
+		if p.ViewerID != guideCreatorID && p.ViewerID != attachedBy {
+			return apperrors.NewForbidden()
+		}
+
+		rows, err := tx.DeleteGuideResource(ctx, db.DeleteGuideResourceParams{
+			ResourceID:   resourcePgxID,
+			StudyGuideID: guidePgxID,
+		})
+		if err != nil {
+			return fmt.Errorf("DetachResource: delete: %w", err)
+		}
+		if rows == 0 {
+			return apperrors.NewNotFound("Resource attachment not found")
+		}
+		return nil
 	})
 }
 
