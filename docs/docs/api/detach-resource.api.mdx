@@ -1,0 +1,80 @@
+---
+id: detach-resource
+title: "Detach a resource from a study guide"
+description: "Removes the link between a resource and a guide. Does NOT"
+sidebar_label: "Detach a resource from a study guide"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV0tv20YQ/iuDuchBaUlpnQtzcmAHcFEkgWOjB0twVtyRuDY5S+8O7SoE/3uxS0qmLSEo0gIGCp9EcefxzWv5TYO2IqfEWD7TmOIJicryc/K2dhlhgpp85kwVBDDFcyrtPXmQnKAwfAsLkgciBgWu1wHFGhSsaqNpDCeWPHz6fDFjTQUJRc2tqBFPxRIOD4f6pVrDgkBJQEIaxM64rAsxVUGdWQ+/QGZr58mPZzzj41py68z3GEYaXUS5kYfMkRLr4PN5fF17cvCQ2631GT8BdPBtc3C9WH8Dy1HrxhoGZx/eQKYYdEzRGC5ymvFGc+TBPvDW3YFZgjbLJTligaWzJSys5NEAW+ltzPghp+hiDdpoHkmPC4xATo5idEfTI8jsPTkfbcAoxgal8d7watLlVY9i3kfbSNjKjAc5BMmN79MynjEmWCmnShJyHtOrBlmVhCl6qfX6OspdG40JmlD3Skm+0wwXIaFs7mqCy8uzE7DLmK1oofOECTq6q40jjam4mhL0WU6lwrRBWVedQ2d4hQkurSuVYIp1bTS2bbLFtAnqJwFtcyK2T/y/wjUPyr6y7MkH+V+nR+Hn+aD0PjuHpN8DW9jowcLq9RjbBI+m013lD0pDwEdeMMHMshBLEFNVVZgstvnkxgfZZhe4XdxQJjvJ+SqKtXLafCcN5Jx1j3C8uDqT2oXhkyw3vIKBq15a21IZ9qFzXLg0xHTxZ1bTwL1hoRW5EJwXJbXfzWmbYEneqxXtPQspM4XfF5LS2gRIqvjyBMMzG207LPBVB3GL59H7PEExUgTV46o6DWEG5ViXt7t1uWTV3zSkXwvzUoX5bbcwH61bGK2JX6vyUlXZcwd+sgJLW/PrrLxQVd7t+7icsZBjVYAnd0+uy8trhV6iQhGg5DYQ747GRVomOaY4iTTqsOO7k+YpLWsnG07jJ82AHbXBeyxrx+lqVwRTqjIYaIunrHZG1vHsAylHLlBnTK/mw+OvodRdwEOhbfi5SIU9Ywr/F1EIk/7h44Yv/f7nRaBxaHhpo/omB/72WArl4fjLGSYY0Ha983Y8HU9DaSrrpVSx73oK2O0lwzUhkmr1jG0+6cXmsadfF5f/0eLSt6HQXzKpCmU4tExs9aafniscTg8mmO6sNdsBCqfDBWOeYG69BCNNs1CeLl3RtuH1XU0uzM48wXvljFqEbr5qUBsfnjWmS1V4+kEXHpz3t8Ub+EfL095I+5eK12F4VFGHf5jgLa1397ewRf2X+PbuUj8Bc5jxdt4mmJPS5GI+O4njLKNKBro7X6VwZ23vz5PTP04vTrFt/wa4h+zE
+sidebar_class_name: "delete api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Detach a resource from a study guide"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"delete"}
+  path={"/study-guides/{study_guide_id}/resources/{resource_id}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Removes the link between a resource and a guide. Does NOT
+delete the resource itself -- a resource may be attached to
+multiple guides + courses.
+
+Authorization: the guide's creator OR the user who attached
+the resource (`attached_by` on the join row) can detach. The
+resource's own creator (if different from both) cannot detach
+when they didn't attach it here.
+
+404 covers both 'guide missing/deleted' and 'resource not
+attached to this guide'.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./detach-resource.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./detach-resource.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./detach-resource.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

@@ -48,6 +48,30 @@ func (q *Queries) CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bo
 	return exists, err
 }
 
+const deleteGuideResource = `-- name: DeleteGuideResource :execrows
+DELETE FROM study_guide_resources
+WHERE resource_id = $1::uuid
+  AND study_guide_id = $2::uuid
+`
+
+type DeleteGuideResourceParams struct {
+	ResourceID   pgtype.UUID `json:"resource_id"`
+	StudyGuideID pgtype.UUID `json:"study_guide_id"`
+}
+
+// Removes the join row only. The resources row is preserved -- it
+// may be attached to other guides + courses, and the spec
+// explicitly forbids cascading the resource delete from a single
+// detach. Returns rows-affected so the service can detect
+// already-detached races (0 rows -> 404) vs success (1 row -> nil).
+func (q *Queries) DeleteGuideResource(ctx context.Context, arg DeleteGuideResourceParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteGuideResource, arg.ResourceID, arg.StudyGuideID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteStudyGuideRecommendation = `-- name: DeleteStudyGuideRecommendation :execrows
 DELETE FROM study_guide_recommendations
 WHERE study_guide_id = $1::uuid
@@ -96,6 +120,69 @@ func (q *Queries) DeleteStudyGuideVote(ctx context.Context, arg DeleteStudyGuide
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const getGuideResourceAttacher = `-- name: GetGuideResourceAttacher :one
+SELECT attached_by
+FROM study_guide_resources
+WHERE resource_id = $1::uuid
+  AND study_guide_id = $2::uuid
+`
+
+type GetGuideResourceAttacherParams struct {
+	ResourceID   pgtype.UUID `json:"resource_id"`
+	StudyGuideID pgtype.UUID `json:"study_guide_id"`
+}
+
+// Lookup for DetachResource (ASK-116). Returns the attached_by user
+// on the join row so the service can run the dual-authz check
+// (viewer is guide creator OR viewer is attached_by). sql.ErrNoRows
+// maps to 'Resource attachment not found' 404 -- the resource may
+// exist but isn't attached to THIS guide.
+func (q *Queries) GetGuideResourceAttacher(ctx context.Context, arg GetGuideResourceAttacherParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, getGuideResourceAttacher, arg.ResourceID, arg.StudyGuideID)
+	var attached_by pgtype.UUID
+	err := row.Scan(&attached_by)
+	return attached_by, err
+}
+
+const getResourceByCreatorURL = `-- name: GetResourceByCreatorURL :one
+SELECT id, title, url, type, description, created_at
+FROM resources
+WHERE creator_id = $1::uuid
+  AND url = $2::text
+`
+
+type GetResourceByCreatorURLParams struct {
+	CreatorID pgtype.UUID `json:"creator_id"`
+	Url       string      `json:"url"`
+}
+
+type GetResourceByCreatorURLRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	Title       string             `json:"title"`
+	Url         string             `json:"url"`
+	Type        ResourceType       `json:"type"`
+	Description pgtype.Text        `json:"description"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+// Lookup pair for UpsertResource above. Returns the resources row
+// the viewer owns for this URL; always succeeds because the upsert
+// runs immediately before this in the same tx (either the INSERT
+// wrote the row or it was already there).
+func (q *Queries) GetResourceByCreatorURL(ctx context.Context, arg GetResourceByCreatorURLParams) (GetResourceByCreatorURLRow, error) {
+	row := q.db.QueryRow(ctx, getResourceByCreatorURL, arg.CreatorID, arg.Url)
+	var i GetResourceByCreatorURLRow
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Url,
+		&i.Type,
+		&i.Description,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const getStudyGuideByIDForUpdate = `-- name: GetStudyGuideByIDForUpdate :one
@@ -258,6 +345,34 @@ func (q *Queries) GuideExistsAndLive(ctx context.Context, id pgtype.UUID) (bool,
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const insertGuideResource = `-- name: InsertGuideResource :exec
+INSERT INTO study_guide_resources (resource_id, study_guide_id, attached_by)
+VALUES (
+  $1::uuid,
+  $2::uuid,
+  $3::uuid
+)
+`
+
+type InsertGuideResourceParams struct {
+	ResourceID   pgtype.UUID `json:"resource_id"`
+	StudyGuideID pgtype.UUID `json:"study_guide_id"`
+	AttachedBy   pgtype.UUID `json:"attached_by"`
+}
+
+// Creates the (resource_id, study_guide_id, attached_by) join row.
+// The PK is (resource_id, study_guide_id) so a same-resource-and-guide
+// duplicate raises a unique_violation -- but the user-facing 409
+// conflict on a duplicate URL is detected EARLIER by
+// URLAlreadyAttachedToGuide (which catches across resource rows
+// with the same URL but different creators). This INSERT's PK
+// failure mode is the narrow concurrency-race: two attachers slip
+// through the pre-check between query 1 and query 4.
+func (q *Queries) InsertGuideResource(ctx context.Context, arg InsertGuideResourceParams) error {
+	_, err := q.db.Exec(ctx, insertGuideResource, arg.ResourceID, arg.StudyGuideID, arg.AttachedBy)
+	return err
 }
 
 const insertStudyGuide = `-- name: InsertStudyGuide :one
@@ -1557,6 +1672,41 @@ func (q *Queries) SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUID) erro
 	return err
 }
 
+const uRLAlreadyAttachedToGuide = `-- name: URLAlreadyAttachedToGuide :one
+SELECT EXISTS (
+  SELECT 1
+  FROM study_guide_resources sgr
+  JOIN resources r ON r.id = sgr.resource_id
+  WHERE sgr.study_guide_id = $1::uuid
+    AND r.url = $2::text
+)
+`
+
+type URLAlreadyAttachedToGuideParams struct {
+	StudyGuideID pgtype.UUID `json:"study_guide_id"`
+	Url          string      `json:"url"`
+}
+
+// Pre-flight conflict check for AttachResource (ASK-111). Returns
+// TRUE when ANY resource with this URL is already attached to the
+// given guide -- regardless of who created the resource row. Lets
+// the service short-circuit to 409 BEFORE the resource upsert, so a
+// duplicate attempt doesn't create or touch a resources row only to
+// discard it on the join PK violation.
+//
+// Why "regardless of creator": the join PK is (resource_id,
+// study_guide_id), so two distinct resource rows (different creators
+// but same URL) could both attach to the same guide without raising
+// the join PK constraint. The spec treats that as a duplicate URL
+// on the guide -- this query enforces the no-duplicate-URLs-per-guide
+// contract at the application layer.
+func (q *Queries) URLAlreadyAttachedToGuide(ctx context.Context, arg URLAlreadyAttachedToGuideParams) (bool, error) {
+	row := q.db.QueryRow(ctx, uRLAlreadyAttachedToGuide, arg.StudyGuideID, arg.Url)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const updateStudyGuide = `-- name: UpdateStudyGuide :exec
 UPDATE study_guides
 SET
@@ -1600,6 +1750,47 @@ func (q *Queries) UpdateStudyGuide(ctx context.Context, arg UpdateStudyGuidePara
 		arg.Content,
 		arg.Tags,
 		arg.ID,
+	)
+	return err
+}
+
+const upsertResource = `-- name: UpsertResource :exec
+INSERT INTO resources (creator_id, title, url, description, type)
+VALUES (
+  $1::uuid,
+  $2::text,
+  $3::text,
+  $4::text,
+  $5::resource_type
+)
+ON CONFLICT (creator_id, url) DO NOTHING
+`
+
+type UpsertResourceParams struct {
+	CreatorID   pgtype.UUID  `json:"creator_id"`
+	Title       string       `json:"title"`
+	Url         string       `json:"url"`
+	Description pgtype.Text  `json:"description"`
+	Type        ResourceType `json:"type"`
+}
+
+// Inserts a new resources row for the (creator_id, url) pair. The
+// ON CONFLICT DO NOTHING preserves the existing row's title /
+// description / type when the viewer has used this URL before -- a
+// silent overwrite would mutate state visible to the resource's
+// other attachments (the same row may be attached to other guides
+// + courses).
+//
+// Paired with GetResourceByCreatorURL: the service runs both calls
+// in sequence, then uses the SELECT'd row regardless of whether the
+// INSERT actually wrote.
+func (q *Queries) UpsertResource(ctx context.Context, arg UpsertResourceParams) error {
+	_, err := q.db.Exec(ctx, upsertResource,
+		arg.CreatorID,
+		arg.Title,
+		arg.Url,
+		arg.Description,
+		arg.Type,
 	)
 	return err
 }

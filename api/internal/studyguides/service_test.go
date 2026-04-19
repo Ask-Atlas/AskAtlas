@@ -2008,3 +2008,424 @@ func TestService_UpdateStudyGuide_UpdateError_500_PropagatesAndRollsBack(t *test
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "update blew up")
 }
+
+// ---------------------------------------------------------------------
+// AttachResource (ASK-111)
+// ---------------------------------------------------------------------
+
+// inTxRunsFnReturning is the same pass-through pattern as inTxRunsFn
+// (which returns no value); kept separate so tests can chain
+// expectations after the InTx wiring without worrying about return
+// types differing.
+func inTxRunsFnReturning(repo *mock_studyguides.MockRepository) {
+	repo.EXPECT().InTx(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, fn func(studyguides.Repository) error) error {
+			return fn(repo)
+		})
+}
+
+func TestService_AttachResource_NewResource_Success(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, attacherID, resourceID := uuid.New(), uuid.New(), uuid.New()
+	now := time.Now().UTC()
+
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().URLAlreadyAttachedToGuide(mock.Anything, mock.Anything).Return(false, nil)
+
+	upsertCaptured := &db.UpsertResourceParams{}
+	repo.EXPECT().UpsertResource(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, arg db.UpsertResourceParams) {
+			*upsertCaptured = arg
+		}).Return(nil)
+
+	repo.EXPECT().GetResourceByCreatorURL(mock.Anything, mock.Anything).
+		Return(db.GetResourceByCreatorURLRow{
+			ID:        utils.UUID(resourceID),
+			Title:     "VisualGo BST",
+			Url:       "https://visualgo.net/en/bst",
+			Type:      db.ResourceTypeLink,
+			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+		}, nil)
+
+	joinCaptured := &db.InsertGuideResourceParams{}
+	repo.EXPECT().InsertGuideResource(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, arg db.InsertGuideResourceParams) {
+			*joinCaptured = arg
+		}).Return(nil)
+
+	svc := studyguides.NewService(repo)
+	got, err := svc.AttachResource(context.Background(), studyguides.AttachResourceParams{
+		StudyGuideID: guideID,
+		AttachedBy:   attacherID,
+		Title:        "VisualGo BST",
+		URL:          "https://visualgo.net/en/bst",
+		Type:         studyguides.ResourceTypeLink,
+	})
+
+	require.NoError(t, err)
+	assert.Equal(t, resourceID, got.ID)
+	assert.Equal(t, "VisualGo BST", got.Title)
+	assert.Equal(t, studyguides.ResourceTypeLink, got.Type)
+	// Capture: upsert sees the canonical URL + attacher creator id.
+	assert.Equal(t, "https://visualgo.net/en/bst", upsertCaptured.Url)
+	require.True(t, upsertCaptured.CreatorID.Valid)
+	assert.Equal(t, [16]byte(attacherID), upsertCaptured.CreatorID.Bytes)
+	// Join row gets the resource_id from the GET (not a freshly minted one).
+	require.True(t, joinCaptured.ResourceID.Valid)
+	assert.Equal(t, [16]byte(resourceID), joinCaptured.ResourceID.Bytes)
+}
+
+func TestService_AttachResource_DefaultsTypeToLink(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, attacherID := uuid.New(), uuid.New()
+
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().URLAlreadyAttachedToGuide(mock.Anything, mock.Anything).Return(false, nil)
+
+	upsertCaptured := &db.UpsertResourceParams{}
+	repo.EXPECT().UpsertResource(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, arg db.UpsertResourceParams) {
+			*upsertCaptured = arg
+		}).Return(nil)
+	repo.EXPECT().GetResourceByCreatorURL(mock.Anything, mock.Anything).
+		Return(db.GetResourceByCreatorURLRow{
+			ID:        utils.UUID(uuid.New()),
+			Type:      db.ResourceTypeLink,
+			CreatedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		}, nil)
+	repo.EXPECT().InsertGuideResource(mock.Anything, mock.Anything).Return(nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.AttachResource(context.Background(), studyguides.AttachResourceParams{
+		StudyGuideID: guideID, AttachedBy: attacherID,
+		Title: "T", URL: "https://example.com",
+		// Type intentionally empty
+	})
+	require.NoError(t, err)
+	assert.Equal(t, db.ResourceTypeLink, upsertCaptured.Type)
+}
+
+// validateAttachResourceParams runs BEFORE InTx -- so a malformed body
+// must fail without ever opening a transaction. Pin that contract.
+func TestService_AttachResource_InvalidInput_400_BeforeTx(t *testing.T) {
+	cases := map[string]struct {
+		params      studyguides.AttachResourceParams
+		expectField string
+	}{
+		"empty title": {
+			params:      studyguides.AttachResourceParams{Title: "  ", URL: "https://x.com"},
+			expectField: "title",
+		},
+		"oversize title": {
+			params:      studyguides.AttachResourceParams{Title: strings.Repeat("a", studyguides.MaxResourceTitleLength+1), URL: "https://x.com"},
+			expectField: "title",
+		},
+		"empty url": {
+			params:      studyguides.AttachResourceParams{Title: "T", URL: ""},
+			expectField: "url",
+		},
+		"oversize url": {
+			params:      studyguides.AttachResourceParams{Title: "T", URL: "https://x.com/" + strings.Repeat("a", studyguides.MaxResourceURLLength)},
+			expectField: "url",
+		},
+		"not a url": {
+			params:      studyguides.AttachResourceParams{Title: "T", URL: "not a url"},
+			expectField: "url",
+		},
+		"ftp scheme": {
+			params:      studyguides.AttachResourceParams{Title: "T", URL: "ftp://example.com"},
+			expectField: "url",
+		},
+		"javascript scheme": {
+			params:      studyguides.AttachResourceParams{Title: "T", URL: "javascript:alert(1)"},
+			expectField: "url",
+		},
+		"no host": {
+			params:      studyguides.AttachResourceParams{Title: "T", URL: "https://"},
+			expectField: "url",
+		},
+		"oversize description": {
+			params: studyguides.AttachResourceParams{
+				Title: "T", URL: "https://x.com",
+				Description: strPtr(strings.Repeat("a", studyguides.MaxResourceDescriptionLength+1)),
+			},
+			expectField: "description",
+		},
+		"invalid type": {
+			params: studyguides.AttachResourceParams{
+				Title: "T", URL: "https://x.com",
+				Type: studyguides.ResourceType("ebook"),
+			},
+			expectField: "type",
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			repo := mock_studyguides.NewMockRepository(t)
+			svc := studyguides.NewService(repo)
+			tc.params.StudyGuideID = uuid.New()
+			tc.params.AttachedBy = uuid.New()
+			_, err := svc.AttachResource(context.Background(), tc.params)
+			require.Error(t, err)
+			var appErr *apperrors.AppError
+			require.ErrorAs(t, err, &appErr)
+			assert.Equal(t, http.StatusBadRequest, appErr.Code)
+			assert.Contains(t, appErr.Details, tc.expectField)
+			repo.AssertNotCalled(t, "InTx", mock.Anything, mock.Anything)
+		})
+	}
+}
+
+func TestService_AttachResource_GuideMissing_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(false, nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.AttachResource(context.Background(), studyguides.AttachResourceParams{
+		StudyGuideID: uuid.New(), AttachedBy: uuid.New(),
+		Title: "T", URL: "https://example.com",
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Study guide not found", appErr.Message)
+	repo.AssertNotCalled(t, "URLAlreadyAttachedToGuide", mock.Anything, mock.Anything)
+	repo.AssertNotCalled(t, "UpsertResource", mock.Anything, mock.Anything)
+}
+
+func TestService_AttachResource_DuplicateURLOnGuide_409(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().URLAlreadyAttachedToGuide(mock.Anything, mock.Anything).Return(true, nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.AttachResource(context.Background(), studyguides.AttachResourceParams{
+		StudyGuideID: uuid.New(), AttachedBy: uuid.New(),
+		Title: "T", URL: "https://example.com",
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusConflict, appErr.Code)
+	assert.Equal(t, "This URL is already attached to this study guide", appErr.Message)
+	repo.AssertNotCalled(t, "UpsertResource", mock.Anything, mock.Anything)
+	repo.AssertNotCalled(t, "InsertGuideResource", mock.Anything, mock.Anything)
+}
+
+func TestService_AttachResource_LiveCheckError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).
+		Return(false, errors.New("db down"))
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.AttachResource(context.Background(), studyguides.AttachResourceParams{
+		StudyGuideID: uuid.New(), AttachedBy: uuid.New(),
+		Title: "T", URL: "https://example.com",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "db down")
+}
+
+func TestService_AttachResource_DupCheckError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().URLAlreadyAttachedToGuide(mock.Anything, mock.Anything).
+		Return(false, errors.New("dup probe blew up"))
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.AttachResource(context.Background(), studyguides.AttachResourceParams{
+		StudyGuideID: uuid.New(), AttachedBy: uuid.New(),
+		Title: "T", URL: "https://example.com",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "dup probe blew up")
+}
+
+func TestService_AttachResource_JoinInsertError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().URLAlreadyAttachedToGuide(mock.Anything, mock.Anything).Return(false, nil)
+	repo.EXPECT().UpsertResource(mock.Anything, mock.Anything).Return(nil)
+	repo.EXPECT().GetResourceByCreatorURL(mock.Anything, mock.Anything).
+		Return(db.GetResourceByCreatorURLRow{
+			ID:        utils.UUID(uuid.New()),
+			Type:      db.ResourceTypeLink,
+			CreatedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		}, nil)
+	repo.EXPECT().InsertGuideResource(mock.Anything, mock.Anything).
+		Return(errors.New("join insert blew up"))
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.AttachResource(context.Background(), studyguides.AttachResourceParams{
+		StudyGuideID: uuid.New(), AttachedBy: uuid.New(),
+		Title: "T", URL: "https://example.com",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "join insert blew up")
+}
+
+// ---------------------------------------------------------------------
+// DetachResource (ASK-116)
+// ---------------------------------------------------------------------
+
+// detachLockedFixture wires the InTx + locked-guide-SELECT for a
+// detach test. Caller picks the viewer to exercise authz cases.
+func detachLockedFixture(t *testing.T, repo *mock_studyguides.MockRepository, guideID, creatorID uuid.UUID) {
+	t.Helper()
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{
+			ID:        utils.UUID(guideID),
+			CreatorID: utils.UUID(creatorID),
+		}, nil)
+}
+
+func TestService_DetachResource_GuideCreator_Success(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID, attacherID, resourceID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+
+	detachLockedFixture(t, repo, guideID, creatorID)
+	repo.EXPECT().GetGuideResourceAttacher(mock.Anything, mock.Anything).
+		Return(utils.UUID(attacherID), nil)
+	repo.EXPECT().DeleteGuideResource(mock.Anything, mock.Anything).Return(int64(1), nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachResource(context.Background(), studyguides.DetachResourceParams{
+		StudyGuideID: guideID, ResourceID: resourceID, ViewerID: creatorID,
+	})
+	require.NoError(t, err)
+}
+
+func TestService_DetachResource_Attacher_Success(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID, attacherID, resourceID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+
+	detachLockedFixture(t, repo, guideID, creatorID)
+	repo.EXPECT().GetGuideResourceAttacher(mock.Anything, mock.Anything).
+		Return(utils.UUID(attacherID), nil)
+	repo.EXPECT().DeleteGuideResource(mock.Anything, mock.Anything).Return(int64(1), nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachResource(context.Background(), studyguides.DetachResourceParams{
+		StudyGuideID: guideID, ResourceID: resourceID, ViewerID: attacherID,
+	})
+	require.NoError(t, err)
+}
+
+func TestService_DetachResource_Stranger_403(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID, attacherID, resourceID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	stranger := uuid.New()
+
+	detachLockedFixture(t, repo, guideID, creatorID)
+	repo.EXPECT().GetGuideResourceAttacher(mock.Anything, mock.Anything).
+		Return(utils.UUID(attacherID), nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachResource(context.Background(), studyguides.DetachResourceParams{
+		StudyGuideID: guideID, ResourceID: resourceID, ViewerID: stranger,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusForbidden, appErr.Code)
+	repo.AssertNotCalled(t, "DeleteGuideResource", mock.Anything, mock.Anything)
+}
+
+func TestService_DetachResource_GuideMissing_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{}, sql.ErrNoRows)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachResource(context.Background(), studyguides.DetachResourceParams{
+		StudyGuideID: uuid.New(), ResourceID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Study guide not found", appErr.Message)
+}
+
+func TestService_DetachResource_GuideAlreadyDeleted_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{
+			ID:        utils.UUID(uuid.New()),
+			CreatorID: utils.UUID(uuid.New()),
+			DeletedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		}, nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachResource(context.Background(), studyguides.DetachResourceParams{
+		StudyGuideID: uuid.New(), ResourceID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestService_DetachResource_NotAttached_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID := uuid.New(), uuid.New()
+	detachLockedFixture(t, repo, guideID, creatorID)
+	repo.EXPECT().GetGuideResourceAttacher(mock.Anything, mock.Anything).
+		Return(pgtype.UUID{}, sql.ErrNoRows)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachResource(context.Background(), studyguides.DetachResourceParams{
+		StudyGuideID: guideID, ResourceID: uuid.New(), ViewerID: creatorID,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Resource attachment not found", appErr.Message)
+}
+
+func TestService_DetachResource_ZeroRowsAfterRace_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID, attacherID, resourceID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	detachLockedFixture(t, repo, guideID, creatorID)
+	repo.EXPECT().GetGuideResourceAttacher(mock.Anything, mock.Anything).
+		Return(utils.UUID(attacherID), nil)
+	repo.EXPECT().DeleteGuideResource(mock.Anything, mock.Anything).Return(int64(0), nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachResource(context.Background(), studyguides.DetachResourceParams{
+		StudyGuideID: guideID, ResourceID: resourceID, ViewerID: creatorID,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestService_DetachResource_DeleteError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID, attacherID, resourceID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	detachLockedFixture(t, repo, guideID, creatorID)
+	repo.EXPECT().GetGuideResourceAttacher(mock.Anything, mock.Anything).
+		Return(utils.UUID(attacherID), nil)
+	repo.EXPECT().DeleteGuideResource(mock.Anything, mock.Anything).
+		Return(int64(0), errors.New("delete blew up"))
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachResource(context.Background(), studyguides.DetachResourceParams{
+		StudyGuideID: guideID, ResourceID: resourceID, ViewerID: creatorID,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "delete blew up")
+}

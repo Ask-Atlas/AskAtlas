@@ -397,7 +397,7 @@ func TestStudyGuidesHandler_Get_Success(t *testing.T) {
 	require.Len(t, resp.Quizzes, 1)
 	assert.Equal(t, int64(10), resp.Quizzes[0].QuestionCount)
 	require.Len(t, resp.Resources, 1)
-	assert.Equal(t, api.Link, resp.Resources[0].Type)
+	assert.Equal(t, api.ResourceSummaryTypeLink, resp.Resources[0].Type)
 	require.Len(t, resp.Files, 1)
 	assert.Equal(t, int64(2048000), resp.Files[0].Size)
 }
@@ -1430,6 +1430,262 @@ func TestStudyGuidesHandler_Update_InternalError_500(t *testing.T) {
 	bodyTitle := "T"
 	req := authedRequestMethod(t, http.MethodPatch, url, updateBody(t, api.UpdateStudyGuideJSONRequestBody{Title: &bodyTitle}))
 	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// ---------------------------------------------------------------------
+// AttachResource (ASK-111)
+// ---------------------------------------------------------------------
+
+// attachBody marshals an AttachResourceRequest into a JSON body
+// reader for use with httptest. Centralized so individual tests don't
+// re-derive the JSON shape.
+func attachBody(t *testing.T, body api.AttachResourceJSONRequestBody) *strings.Reader {
+	t.Helper()
+	raw, err := json.Marshal(body)
+	require.NoError(t, err)
+	return strings.NewReader(string(raw))
+}
+
+func TestStudyGuidesHandler_Attach_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := fmt.Sprintf("/study-guides/%s/resources", uuid.NewString())
+	req := httptest.NewRequest(http.MethodPost, url, strings.NewReader(`{"title":"T","url":"https://x.com"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestStudyGuidesHandler_Attach_MalformedJSON_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := fmt.Sprintf("/study-guides/%s/resources", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, strings.NewReader(`{not json}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestStudyGuidesHandler_Attach_Success_201(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	guideID := uuid.New()
+	resourceID := uuid.New()
+	desc := "Interactive viz."
+
+	captured := &studyguides.AttachResourceParams{}
+	mockSvc.EXPECT().
+		AttachResource(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, p studyguides.AttachResourceParams) {
+			*captured = p
+		}).
+		Return(studyguides.Resource{
+			ID:          resourceID,
+			Title:       "VisualGo BST",
+			URL:         "https://visualgo.net/en/bst",
+			Type:        studyguides.ResourceTypeLink,
+			Description: &desc,
+			CreatedAt:   time.Now().UTC(),
+		}, nil)
+
+	bodyTitle := "VisualGo BST"
+	bodyURL := "https://visualgo.net/en/bst"
+	bodyType := api.AttachResourceRequestType("link")
+	url := fmt.Sprintf("/study-guides/%s/resources", guideID)
+	req := authedRequestMethod(t, http.MethodPost, url, attachBody(t, api.AttachResourceJSONRequestBody{
+		Title:       bodyTitle,
+		Url:         bodyURL,
+		Type:        &bodyType,
+		Description: &desc,
+	}))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusCreated, w.Code)
+	var resp api.ResourceSummary
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, resourceID, uuid.UUID(resp.Id))
+	assert.Equal(t, "VisualGo BST", resp.Title)
+	assert.Equal(t, "https://visualgo.net/en/bst", resp.Url)
+	assert.Equal(t, api.ResourceSummaryTypeLink, resp.Type)
+	require.NotNil(t, resp.Description)
+	assert.Equal(t, "Interactive viz.", *resp.Description)
+	assert.Equal(t, guideID, captured.StudyGuideID)
+	assert.NotEqual(t, uuid.Nil, captured.AttachedBy)
+	assert.Equal(t, "VisualGo BST", captured.Title)
+	assert.Equal(t, "https://visualgo.net/en/bst", captured.URL)
+	assert.Equal(t, studyguides.ResourceType("link"), captured.Type)
+}
+
+func TestStudyGuidesHandler_Attach_ServiceError_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		AttachResource(mock.Anything, mock.Anything).
+		Return(studyguides.Resource{}, apperrors.NewNotFound("Study guide not found"))
+
+	url := fmt.Sprintf("/study-guides/%s/resources", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, attachBody(t, api.AttachResourceJSONRequestBody{
+		Title: "T", Url: "https://example.com",
+	}))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestStudyGuidesHandler_Attach_ServiceConflict_409(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		AttachResource(mock.Anything, mock.Anything).
+		Return(studyguides.Resource{}, &apperrors.AppError{
+			Code:    http.StatusConflict,
+			Status:  "Conflict",
+			Message: "This URL is already attached to this study guide",
+		})
+
+	url := fmt.Sprintf("/study-guides/%s/resources", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, attachBody(t, api.AttachResourceJSONRequestBody{
+		Title: "T", Url: "https://example.com",
+	}))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusConflict, w.Code)
+}
+
+func TestStudyGuidesHandler_Attach_InternalError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		AttachResource(mock.Anything, mock.Anything).
+		Return(studyguides.Resource{}, errors.New("db down"))
+
+	url := fmt.Sprintf("/study-guides/%s/resources", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, attachBody(t, api.AttachResourceJSONRequestBody{
+		Title: "T", Url: "https://example.com",
+	}))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// ---------------------------------------------------------------------
+// DetachResource (ASK-116)
+// ---------------------------------------------------------------------
+
+func TestStudyGuidesHandler_Detach_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := fmt.Sprintf("/study-guides/%s/resources/%s", uuid.NewString(), uuid.NewString())
+	req := httptest.NewRequest(http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestStudyGuidesHandler_Detach_Success_204(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	guideID, resourceID := uuid.New(), uuid.New()
+	captured := &studyguides.DetachResourceParams{}
+	mockSvc.EXPECT().
+		DetachResource(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, p studyguides.DetachResourceParams) {
+			*captured = p
+		}).
+		Return(nil)
+
+	url := fmt.Sprintf("/study-guides/%s/resources/%s", guideID, resourceID)
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNoContent, w.Code)
+	assert.Empty(t, w.Body.String())
+	assert.Equal(t, guideID, captured.StudyGuideID)
+	assert.Equal(t, resourceID, captured.ResourceID)
+	assert.NotEqual(t, uuid.Nil, captured.ViewerID)
+}
+
+func TestStudyGuidesHandler_Detach_Forbidden_403(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		DetachResource(mock.Anything, mock.Anything).
+		Return(apperrors.NewForbidden())
+
+	url := fmt.Sprintf("/study-guides/%s/resources/%s", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestStudyGuidesHandler_Detach_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		DetachResource(mock.Anything, mock.Anything).
+		Return(apperrors.NewNotFound("Resource attachment not found"))
+
+	url := fmt.Sprintf("/study-guides/%s/resources/%s", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestStudyGuidesHandler_Detach_InternalError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		DetachResource(mock.Anything, mock.Anything).
+		Return(errors.New("db down"))
+
+	url := fmt.Sprintf("/study-guides/%s/resources/%s", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
 	w := httptest.NewRecorder()
 
 	r := studyGuidesTestRouter(t, h)

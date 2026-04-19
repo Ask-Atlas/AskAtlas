@@ -1,0 +1,1 @@
+{"parameters":[{"name":"study_guide_id","in":"path","description":"The unique UUID of the study guide","required":true,"schema":{"type":"string","format":"uuid"}},{"name":"resource_id","in":"path","description":"The unique UUID of the resource to detach","required":true,"schema":{"type":"string","format":"uuid"}}]}

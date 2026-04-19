@@ -751,3 +751,93 @@ SET
   tags        = COALESCE(sqlc.narg(tags)::text[],       tags),
   updated_at  = now()
 WHERE id = sqlc.arg(id)::uuid;
+
+-- name: URLAlreadyAttachedToGuide :one
+-- Pre-flight conflict check for AttachResource (ASK-111). Returns
+-- TRUE when ANY resource with this URL is already attached to the
+-- given guide -- regardless of who created the resource row. Lets
+-- the service short-circuit to 409 BEFORE the resource upsert, so a
+-- duplicate attempt doesn't create or touch a resources row only to
+-- discard it on the join PK violation.
+--
+-- Why "regardless of creator": the join PK is (resource_id,
+-- study_guide_id), so two distinct resource rows (different creators
+-- but same URL) could both attach to the same guide without raising
+-- the join PK constraint. The spec treats that as a duplicate URL
+-- on the guide -- this query enforces the no-duplicate-URLs-per-guide
+-- contract at the application layer.
+SELECT EXISTS (
+  SELECT 1
+  FROM study_guide_resources sgr
+  JOIN resources r ON r.id = sgr.resource_id
+  WHERE sgr.study_guide_id = sqlc.arg(study_guide_id)::uuid
+    AND r.url = sqlc.arg(url)::text
+);
+
+-- name: UpsertResource :exec
+-- Inserts a new resources row for the (creator_id, url) pair. The
+-- ON CONFLICT DO NOTHING preserves the existing row's title /
+-- description / type when the viewer has used this URL before -- a
+-- silent overwrite would mutate state visible to the resource's
+-- other attachments (the same row may be attached to other guides
+-- + courses).
+--
+-- Paired with GetResourceByCreatorURL: the service runs both calls
+-- in sequence, then uses the SELECT'd row regardless of whether the
+-- INSERT actually wrote.
+INSERT INTO resources (creator_id, title, url, description, type)
+VALUES (
+  sqlc.arg(creator_id)::uuid,
+  sqlc.arg(title)::text,
+  sqlc.arg(url)::text,
+  sqlc.narg(description)::text,
+  sqlc.arg(type)::resource_type
+)
+ON CONFLICT (creator_id, url) DO NOTHING;
+
+-- name: GetResourceByCreatorURL :one
+-- Lookup pair for UpsertResource above. Returns the resources row
+-- the viewer owns for this URL; always succeeds because the upsert
+-- runs immediately before this in the same tx (either the INSERT
+-- wrote the row or it was already there).
+SELECT id, title, url, type, description, created_at
+FROM resources
+WHERE creator_id = sqlc.arg(creator_id)::uuid
+  AND url = sqlc.arg(url)::text;
+
+-- name: InsertGuideResource :exec
+-- Creates the (resource_id, study_guide_id, attached_by) join row.
+-- The PK is (resource_id, study_guide_id) so a same-resource-and-guide
+-- duplicate raises a unique_violation -- but the user-facing 409
+-- conflict on a duplicate URL is detected EARLIER by
+-- URLAlreadyAttachedToGuide (which catches across resource rows
+-- with the same URL but different creators). This INSERT's PK
+-- failure mode is the narrow concurrency-race: two attachers slip
+-- through the pre-check between query 1 and query 4.
+INSERT INTO study_guide_resources (resource_id, study_guide_id, attached_by)
+VALUES (
+  sqlc.arg(resource_id)::uuid,
+  sqlc.arg(study_guide_id)::uuid,
+  sqlc.arg(attached_by)::uuid
+);
+
+-- name: GetGuideResourceAttacher :one
+-- Lookup for DetachResource (ASK-116). Returns the attached_by user
+-- on the join row so the service can run the dual-authz check
+-- (viewer is guide creator OR viewer is attached_by). sql.ErrNoRows
+-- maps to 'Resource attachment not found' 404 -- the resource may
+-- exist but isn't attached to THIS guide.
+SELECT attached_by
+FROM study_guide_resources
+WHERE resource_id = sqlc.arg(resource_id)::uuid
+  AND study_guide_id = sqlc.arg(study_guide_id)::uuid;
+
+-- name: DeleteGuideResource :execrows
+-- Removes the join row only. The resources row is preserved -- it
+-- may be attached to other guides + courses, and the spec
+-- explicitly forbids cascading the resource delete from a single
+-- detach. Returns rows-affected so the service can detect
+-- already-detached races (0 rows -> 404) vs success (1 row -> nil).
+DELETE FROM study_guide_resources
+WHERE resource_id = sqlc.arg(resource_id)::uuid
+  AND study_guide_id = sqlc.arg(study_guide_id)::uuid;

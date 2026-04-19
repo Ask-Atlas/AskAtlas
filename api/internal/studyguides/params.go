@@ -203,3 +203,37 @@ type RemoveRecommendationParams struct {
 	StudyGuideID uuid.UUID
 	ViewerID     uuid.UUID
 }
+
+const (
+	// MaxResourceTitleLength matches openapi.yaml AttachResourceRequest.title.maxLength.
+	MaxResourceTitleLength int = 500
+	// MaxResourceURLLength matches openapi.yaml AttachResourceRequest.url.maxLength.
+	MaxResourceURLLength int = 2000
+	// MaxResourceDescriptionLength matches openapi.yaml AttachResourceRequest.description.maxLength.
+	MaxResourceDescriptionLength int = 1000
+)
+
+// AttachResourceParams is the input to Service.AttachResource (ASK-111).
+// Title and URL are required. Description is optional. Type defaults
+// to ResourceTypeLink server-side when nil/empty -- the openapi schema
+// declares the same default.
+//
+// AttachedBy comes from the JWT viewer; the request body has no
+// equivalent field (would be a privilege-attribution forge vector).
+type AttachResourceParams struct {
+	StudyGuideID uuid.UUID
+	AttachedBy   uuid.UUID
+	Title        string
+	URL          string
+	Type         ResourceType
+	Description  *string
+}
+
+// DetachResourceParams is the input to Service.DetachResource
+// (ASK-116). ViewerID drives the dual-authz check (guide-creator OR
+// attached_by); the service maps a non-match to apperrors.NewForbidden.
+type DetachResourceParams struct {
+	StudyGuideID uuid.UUID
+	ResourceID   uuid.UUID
+	ViewerID     uuid.UUID
+}

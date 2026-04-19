@@ -61,6 +61,13 @@ type Repository interface {
 	InsertStudyGuideRecommendation(ctx context.Context, arg db.InsertStudyGuideRecommendationParams) (db.InsertStudyGuideRecommendationRow, error)
 	DeleteStudyGuideRecommendation(ctx context.Context, arg db.DeleteStudyGuideRecommendationParams) (int64, error)
 
+	URLAlreadyAttachedToGuide(ctx context.Context, arg db.URLAlreadyAttachedToGuideParams) (bool, error)
+	UpsertResource(ctx context.Context, arg db.UpsertResourceParams) error
+	GetResourceByCreatorURL(ctx context.Context, arg db.GetResourceByCreatorURLParams) (db.GetResourceByCreatorURLRow, error)
+	InsertGuideResource(ctx context.Context, arg db.InsertGuideResourceParams) error
+	GetGuideResourceAttacher(ctx context.Context, arg db.GetGuideResourceAttacherParams) (pgtype.UUID, error)
+	DeleteGuideResource(ctx context.Context, arg db.DeleteGuideResourceParams) (int64, error)
+
 	// InTx runs fn inside a single Postgres transaction. The Repository
 	// passed to fn is scoped to the tx; commits on a nil return,
 	// rolls back on any error. Used by DeleteStudyGuide for the

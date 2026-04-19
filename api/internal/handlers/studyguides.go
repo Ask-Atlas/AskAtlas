@@ -28,6 +28,8 @@ type StudyGuideService interface {
 	RemoveVote(ctx context.Context, params studyguides.RemoveVoteParams) error
 	RecommendStudyGuide(ctx context.Context, params studyguides.RecommendStudyGuideParams) (studyguides.Recommendation, error)
 	RemoveRecommendation(ctx context.Context, params studyguides.RemoveRecommendationParams) error
+	AttachResource(ctx context.Context, params studyguides.AttachResourceParams) (studyguides.Resource, error)
+	DetachResource(ctx context.Context, params studyguides.DetachResourceParams) error
 }
 
 // StudyGuideHandler manages incoming HTTP requests for the study-guide
@@ -360,6 +362,74 @@ func (h *StudyGuideHandler) RemoveStudyGuideRecommendation(w http.ResponseWriter
 		sysErr := apperrors.ToHTTPError(err)
 		if sysErr.Code >= 500 {
 			slog.Error("RemoveStudyGuideRecommendation failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// AttachResource handles POST /study-guides/{id}/resources.
+// Decodes the body, takes attached_by from JWT, delegates to service.
+// 201 on success with ResourceSummary; 409 on duplicate URL on guide;
+// 404 on missing guide; 400 on validation; 500 on db errors.
+func (h *StudyGuideHandler) AttachResource(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	var body api.AttachResourceJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", nil))
+		return
+	}
+
+	params := studyguides.AttachResourceParams{
+		StudyGuideID: uuid.UUID(studyGuideId),
+		AttachedBy:   viewerID,
+		Title:        body.Title,
+		URL:          body.Url,
+		Description:  body.Description,
+	}
+	if body.Type != nil {
+		params.Type = studyguides.ResourceType(*body.Type)
+	}
+
+	resource, err := h.service.AttachResource(r.Context(), params)
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("AttachResource failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, mapResourceSummaryResponse(resource))
+}
+
+// DetachResource handles DELETE /study-guides/{id}/resources/{resource_id}.
+// 204 on success; 403 when viewer is neither guide creator nor
+// attacher; 404 when guide is missing/deleted or resource isn't
+// attached to this guide.
+func (h *StudyGuideHandler) DetachResource(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, resourceId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	if err := h.service.DetachResource(r.Context(), studyguides.DetachResourceParams{
+		StudyGuideID: uuid.UUID(studyGuideId),
+		ResourceID:   uuid.UUID(resourceId),
+		ViewerID:     viewerID,
+	}); err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("DetachResource failed", "error", err)
 		}
 		apperrors.RespondWithError(w, sysErr)
 		return

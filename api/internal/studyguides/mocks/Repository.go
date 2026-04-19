@@ -172,6 +172,72 @@ func (_c *MockRepository_CourseExistsForGuides_Call) RunAndReturn(run func(ctx c
 	return _c
 }
 
+// DeleteGuideResource provides a mock function for the type MockRepository
+func (_mock *MockRepository) DeleteGuideResource(ctx context.Context, arg db.DeleteGuideResourceParams) (int64, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteGuideResource")
+	}
+
+	var r0 int64
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.DeleteGuideResourceParams) (int64, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.DeleteGuideResourceParams) int64); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.DeleteGuideResourceParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_DeleteGuideResource_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteGuideResource'
+type MockRepository_DeleteGuideResource_Call struct {
+	*mock.Call
+}
+
+// DeleteGuideResource is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.DeleteGuideResourceParams
+func (_e *MockRepository_Expecter) DeleteGuideResource(ctx interface{}, arg interface{}) *MockRepository_DeleteGuideResource_Call {
+	return &MockRepository_DeleteGuideResource_Call{Call: _e.mock.On("DeleteGuideResource", ctx, arg)}
+}
+
+func (_c *MockRepository_DeleteGuideResource_Call) Run(run func(ctx context.Context, arg db.DeleteGuideResourceParams)) *MockRepository_DeleteGuideResource_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.DeleteGuideResourceParams
+		if args[1] != nil {
+			arg1 = args[1].(db.DeleteGuideResourceParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_DeleteGuideResource_Call) Return(n int64, err error) *MockRepository_DeleteGuideResource_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockRepository_DeleteGuideResource_Call) RunAndReturn(run func(ctx context.Context, arg db.DeleteGuideResourceParams) (int64, error)) *MockRepository_DeleteGuideResource_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteStudyGuideRecommendation provides a mock function for the type MockRepository
 func (_mock *MockRepository) DeleteStudyGuideRecommendation(ctx context.Context, arg db.DeleteStudyGuideRecommendationParams) (int64, error) {
 	ret := _mock.Called(ctx, arg)
@@ -300,6 +366,138 @@ func (_c *MockRepository_DeleteStudyGuideVote_Call) Return(n int64, err error) *
 }
 
 func (_c *MockRepository_DeleteStudyGuideVote_Call) RunAndReturn(run func(ctx context.Context, arg db.DeleteStudyGuideVoteParams) (int64, error)) *MockRepository_DeleteStudyGuideVote_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetGuideResourceAttacher provides a mock function for the type MockRepository
+func (_mock *MockRepository) GetGuideResourceAttacher(ctx context.Context, arg db.GetGuideResourceAttacherParams) (pgtype.UUID, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetGuideResourceAttacher")
+	}
+
+	var r0 pgtype.UUID
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.GetGuideResourceAttacherParams) (pgtype.UUID, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.GetGuideResourceAttacherParams) pgtype.UUID); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(pgtype.UUID)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.GetGuideResourceAttacherParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_GetGuideResourceAttacher_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetGuideResourceAttacher'
+type MockRepository_GetGuideResourceAttacher_Call struct {
+	*mock.Call
+}
+
+// GetGuideResourceAttacher is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.GetGuideResourceAttacherParams
+func (_e *MockRepository_Expecter) GetGuideResourceAttacher(ctx interface{}, arg interface{}) *MockRepository_GetGuideResourceAttacher_Call {
+	return &MockRepository_GetGuideResourceAttacher_Call{Call: _e.mock.On("GetGuideResourceAttacher", ctx, arg)}
+}
+
+func (_c *MockRepository_GetGuideResourceAttacher_Call) Run(run func(ctx context.Context, arg db.GetGuideResourceAttacherParams)) *MockRepository_GetGuideResourceAttacher_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.GetGuideResourceAttacherParams
+		if args[1] != nil {
+			arg1 = args[1].(db.GetGuideResourceAttacherParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_GetGuideResourceAttacher_Call) Return(uUID pgtype.UUID, err error) *MockRepository_GetGuideResourceAttacher_Call {
+	_c.Call.Return(uUID, err)
+	return _c
+}
+
+func (_c *MockRepository_GetGuideResourceAttacher_Call) RunAndReturn(run func(ctx context.Context, arg db.GetGuideResourceAttacherParams) (pgtype.UUID, error)) *MockRepository_GetGuideResourceAttacher_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetResourceByCreatorURL provides a mock function for the type MockRepository
+func (_mock *MockRepository) GetResourceByCreatorURL(ctx context.Context, arg db.GetResourceByCreatorURLParams) (db.GetResourceByCreatorURLRow, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetResourceByCreatorURL")
+	}
+
+	var r0 db.GetResourceByCreatorURLRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.GetResourceByCreatorURLParams) (db.GetResourceByCreatorURLRow, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.GetResourceByCreatorURLParams) db.GetResourceByCreatorURLRow); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(db.GetResourceByCreatorURLRow)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.GetResourceByCreatorURLParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_GetResourceByCreatorURL_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetResourceByCreatorURL'
+type MockRepository_GetResourceByCreatorURL_Call struct {
+	*mock.Call
+}
+
+// GetResourceByCreatorURL is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.GetResourceByCreatorURLParams
+func (_e *MockRepository_Expecter) GetResourceByCreatorURL(ctx interface{}, arg interface{}) *MockRepository_GetResourceByCreatorURL_Call {
+	return &MockRepository_GetResourceByCreatorURL_Call{Call: _e.mock.On("GetResourceByCreatorURL", ctx, arg)}
+}
+
+func (_c *MockRepository_GetResourceByCreatorURL_Call) Run(run func(ctx context.Context, arg db.GetResourceByCreatorURLParams)) *MockRepository_GetResourceByCreatorURL_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.GetResourceByCreatorURLParams
+		if args[1] != nil {
+			arg1 = args[1].(db.GetResourceByCreatorURLParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_GetResourceByCreatorURL_Call) Return(getResourceByCreatorURLRow db.GetResourceByCreatorURLRow, err error) *MockRepository_GetResourceByCreatorURL_Call {
+	_c.Call.Return(getResourceByCreatorURLRow, err)
+	return _c
+}
+
+func (_c *MockRepository_GetResourceByCreatorURL_Call) RunAndReturn(run func(ctx context.Context, arg db.GetResourceByCreatorURLParams) (db.GetResourceByCreatorURLRow, error)) *MockRepository_GetResourceByCreatorURL_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -621,6 +819,63 @@ func (_c *MockRepository_InTx_Call) Return(err error) *MockRepository_InTx_Call 
 }
 
 func (_c *MockRepository_InTx_Call) RunAndReturn(run func(ctx context.Context, fn func(studyguides.Repository) error) error) *MockRepository_InTx_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// InsertGuideResource provides a mock function for the type MockRepository
+func (_mock *MockRepository) InsertGuideResource(ctx context.Context, arg db.InsertGuideResourceParams) error {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InsertGuideResource")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.InsertGuideResourceParams) error); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_InsertGuideResource_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InsertGuideResource'
+type MockRepository_InsertGuideResource_Call struct {
+	*mock.Call
+}
+
+// InsertGuideResource is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.InsertGuideResourceParams
+func (_e *MockRepository_Expecter) InsertGuideResource(ctx interface{}, arg interface{}) *MockRepository_InsertGuideResource_Call {
+	return &MockRepository_InsertGuideResource_Call{Call: _e.mock.On("InsertGuideResource", ctx, arg)}
+}
+
+func (_c *MockRepository_InsertGuideResource_Call) Run(run func(ctx context.Context, arg db.InsertGuideResourceParams)) *MockRepository_InsertGuideResource_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.InsertGuideResourceParams
+		if args[1] != nil {
+			arg1 = args[1].(db.InsertGuideResourceParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_InsertGuideResource_Call) Return(err error) *MockRepository_InsertGuideResource_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_InsertGuideResource_Call) RunAndReturn(run func(ctx context.Context, arg db.InsertGuideResourceParams) error) *MockRepository_InsertGuideResource_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1687,6 +1942,72 @@ func (_c *MockRepository_SoftDeleteStudyGuide_Call) RunAndReturn(run func(ctx co
 	return _c
 }
 
+// URLAlreadyAttachedToGuide provides a mock function for the type MockRepository
+func (_mock *MockRepository) URLAlreadyAttachedToGuide(ctx context.Context, arg db.URLAlreadyAttachedToGuideParams) (bool, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for URLAlreadyAttachedToGuide")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.URLAlreadyAttachedToGuideParams) (bool, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.URLAlreadyAttachedToGuideParams) bool); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.URLAlreadyAttachedToGuideParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_URLAlreadyAttachedToGuide_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'URLAlreadyAttachedToGuide'
+type MockRepository_URLAlreadyAttachedToGuide_Call struct {
+	*mock.Call
+}
+
+// URLAlreadyAttachedToGuide is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.URLAlreadyAttachedToGuideParams
+func (_e *MockRepository_Expecter) URLAlreadyAttachedToGuide(ctx interface{}, arg interface{}) *MockRepository_URLAlreadyAttachedToGuide_Call {
+	return &MockRepository_URLAlreadyAttachedToGuide_Call{Call: _e.mock.On("URLAlreadyAttachedToGuide", ctx, arg)}
+}
+
+func (_c *MockRepository_URLAlreadyAttachedToGuide_Call) Run(run func(ctx context.Context, arg db.URLAlreadyAttachedToGuideParams)) *MockRepository_URLAlreadyAttachedToGuide_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.URLAlreadyAttachedToGuideParams
+		if args[1] != nil {
+			arg1 = args[1].(db.URLAlreadyAttachedToGuideParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_URLAlreadyAttachedToGuide_Call) Return(b bool, err error) *MockRepository_URLAlreadyAttachedToGuide_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *MockRepository_URLAlreadyAttachedToGuide_Call) RunAndReturn(run func(ctx context.Context, arg db.URLAlreadyAttachedToGuideParams) (bool, error)) *MockRepository_URLAlreadyAttachedToGuide_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateStudyGuide provides a mock function for the type MockRepository
 func (_mock *MockRepository) UpdateStudyGuide(ctx context.Context, arg db.UpdateStudyGuideParams) error {
 	ret := _mock.Called(ctx, arg)
@@ -1740,6 +2061,63 @@ func (_c *MockRepository_UpdateStudyGuide_Call) Return(err error) *MockRepositor
 }
 
 func (_c *MockRepository_UpdateStudyGuide_Call) RunAndReturn(run func(ctx context.Context, arg db.UpdateStudyGuideParams) error) *MockRepository_UpdateStudyGuide_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpsertResource provides a mock function for the type MockRepository
+func (_mock *MockRepository) UpsertResource(ctx context.Context, arg db.UpsertResourceParams) error {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertResource")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.UpsertResourceParams) error); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_UpsertResource_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpsertResource'
+type MockRepository_UpsertResource_Call struct {
+	*mock.Call
+}
+
+// UpsertResource is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.UpsertResourceParams
+func (_e *MockRepository_Expecter) UpsertResource(ctx interface{}, arg interface{}) *MockRepository_UpsertResource_Call {
+	return &MockRepository_UpsertResource_Call{Call: _e.mock.On("UpsertResource", ctx, arg)}
+}
+
+func (_c *MockRepository_UpsertResource_Call) Run(run func(ctx context.Context, arg db.UpsertResourceParams)) *MockRepository_UpsertResource_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.UpsertResourceParams
+		if args[1] != nil {
+			arg1 = args[1].(db.UpsertResourceParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_UpsertResource_Call) Return(err error) *MockRepository_UpsertResource_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_UpsertResource_Call) RunAndReturn(run func(ctx context.Context, arg db.UpsertResourceParams) error) *MockRepository_UpsertResource_Call {
 	_c.Call.Return(run)
 	return _c
 }
