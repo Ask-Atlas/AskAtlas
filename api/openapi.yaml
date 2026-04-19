@@ -2993,9 +2993,13 @@ components:
         (ASK-137). The client supplies only the question being
         answered and the raw user input -- the backend is the sole
         source of truth for `is_correct` and `verified` on the
-        response. Sending those fields here is forbidden and they
-        would be ignored by the openapi validator (additional
-        properties not declared on the schema).
+        response. Any extra fields a client sends (including
+        attempts to forge `is_correct` or `verified`) are silently
+        dropped by the Go JSON decoder because the
+        SubmitAnswerRequest struct has no fields for them; the
+        scoring path inside the service ignores client input
+        entirely on those two fields, so a forged value cannot
+        flow into the persisted row.
 
         Per-type expectations on `user_answer`:
           * `multiple-choice` -- the exact text of the chosen

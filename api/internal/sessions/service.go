@@ -413,7 +413,24 @@ func (s *Service) validateAndScoreAnswer(ctx context.Context, tx Repository, qro
 		// sessions->quizzes package import; the package init in
 		// params.go has a runtime guard against drift between
 		// the lowercase wire labels and the option-text labels.
-		correctBool := correctText == trueFalseOptionTextTrue
+		//
+		// Defensive: explicitly validate the stored text matches
+		// one of the two expected labels. A bare equality check
+		// would silently treat ANY unexpected value (data
+		// corruption, future schema change) as "false" -- which
+		// could quietly mis-score real submissions. Surface as
+		// 500 instead so the integrity issue is visible
+		// (copilot PR #155 feedback).
+		var correctBool bool
+		switch correctText {
+		case trueFalseOptionTextTrue:
+			correctBool = true
+		case trueFalseOptionTextFalse:
+			correctBool = false
+		default:
+			return false, false, fmt.Errorf("TF correct option has unexpected text %q (want %q or %q): question_id=%v",
+				correctText, trueFalseOptionTextTrue, trueFalseOptionTextFalse, qrow.ID)
+		}
 		return userBool == correctBool, true, nil
 
 	case db.QuestionTypeFreeform:

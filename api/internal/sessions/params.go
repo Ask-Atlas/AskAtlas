@@ -55,10 +55,12 @@ const (
 	trueFalseOptionTextFalse = "False"
 )
 
-// Compile-time guard: ensure the lowercase wire labels and the
-// option-text labels are case-insensitive matches. If anyone ever
-// renames one without the other, this falls out at runtime in
-// the package init below.
+// Init-time guard: ensure the lowercase wire labels and the
+// option-text labels are case-insensitive matches. The check
+// runs once at package init via the var initializer below; if
+// the constants ever drift out of sync, the binary panics on
+// startup with a clear message (NOT a compile-time error -- the
+// strings are runtime values).
 var _ = func() bool {
 	if !strings.EqualFold(TrueFalseAnswerTrue, trueFalseOptionTextTrue) {
 		panic("sessions: TF label drift -- TrueFalseAnswerTrue must case-insensitively match trueFalseOptionTextTrue")
