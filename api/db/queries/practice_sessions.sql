@@ -208,6 +208,25 @@ UPDATE practice_sessions
 SET correct_answers = correct_answers + 1
 WHERE id = sqlc.arg(id)::uuid;
 
+-- name: GetSessionByID :one
+-- Reads a session row by id. Used by GetPracticeSession (ASK-152)
+-- to render the session detail. Unlike LockSessionForCompletion
+-- this does NOT FOR UPDATE -- it's a pure read so concurrent
+-- writers (SubmitAnswer, CompleteSession) shouldn't block.
+--
+-- Returns ALL session fields so the service can build the wire
+-- response (including the nullable completed_at the score
+-- calculator gates on).
+--
+-- No parent quiz / study_guide deletion check: sessions are
+-- historical data and remain accessible even after the parent
+-- quiz or guide is soft-deleted (ASK-152 spec AC6 + technical
+-- note: "sessions must remain accessible even after the quiz is
+-- removed").
+SELECT id, user_id, quiz_id, started_at, completed_at, total_questions, correct_answers
+FROM practice_sessions
+WHERE id = sqlc.arg(id)::uuid;
+
 -- name: LockSessionForCompletion :one
 -- Locks the session row and returns ALL fields the
 -- CompleteSession endpoint (ASK-140) needs to assemble its

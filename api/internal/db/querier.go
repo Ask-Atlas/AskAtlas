@@ -200,6 +200,21 @@ type Querier interface {
 	// wrote the row or it was already there).
 	GetResourceByCreatorURL(ctx context.Context, arg GetResourceByCreatorURLParams) (GetResourceByCreatorURLRow, error)
 	GetSchool(ctx context.Context, id pgtype.UUID) (School, error)
+	// Reads a session row by id. Used by GetPracticeSession (ASK-152)
+	// to render the session detail. Unlike LockSessionForCompletion
+	// this does NOT FOR UPDATE -- it's a pure read so concurrent
+	// writers (SubmitAnswer, CompleteSession) shouldn't block.
+	//
+	// Returns ALL session fields so the service can build the wire
+	// response (including the nullable completed_at the score
+	// calculator gates on).
+	//
+	// No parent quiz / study_guide deletion check: sessions are
+	// historical data and remain accessible even after the parent
+	// quiz or guide is soft-deleted (ASK-152 spec AC6 + technical
+	// note: "sessions must remain accessible even after the quiz is
+	// removed").
+	GetSessionByID(ctx context.Context, id pgtype.UUID) (PracticeSession, error)
 	// Locks the session row and returns ownership + completion state
 	// for the answer-submit endpoint (ASK-137). FOR UPDATE serializes
 	// against a concurrent SessionComplete (ASK-140 future) so the

@@ -112,3 +112,7 @@ func (r *sqlcRepository) LockSessionForCompletion(ctx context.Context, id pgtype
 func (r *sqlcRepository) MarkSessionCompleted(ctx context.Context, id pgtype.UUID) (pgtype.Timestamptz, error) {
 	return r.queries.MarkSessionCompleted(ctx, id)
 }
+
+func (r *sqlcRepository) GetSessionByID(ctx context.Context, id pgtype.UUID) (db.PracticeSession, error) {
+	return r.queries.GetSessionByID(ctx, id)
+}

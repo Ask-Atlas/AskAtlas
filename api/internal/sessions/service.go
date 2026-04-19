@@ -44,6 +44,11 @@ type Repository interface {
 	LockSessionForCompletion(ctx context.Context, id pgtype.UUID) (db.PracticeSession, error)
 	MarkSessionCompleted(ctx context.Context, id pgtype.UUID) (pgtype.Timestamptz, error)
 
+	// GetSession-related (ASK-152). GetSessionByID is a non-locking
+	// read; the lock-equivalent on the writer side is
+	// LockSessionForCompletion + GetSessionForAnswerSubmission.
+	GetSessionByID(ctx context.Context, id pgtype.UUID) (db.PracticeSession, error)
+
 	// InTx runs fn inside a single Postgres transaction. The
 	// Repository passed to fn is scoped to the tx via Queries.WithTx,
 	// so any sqlc call made through it participates in the same tx.
@@ -596,4 +601,74 @@ func computeScorePercentage(correct, total int32) int32 {
 		return 0
 	}
 	return int32(math.Round(float64(correct) / float64(total) * 100))
+}
+
+// GetSession returns the full session payload for the practice
+// player's results view (ASK-152). Auth-only -- the session must
+// belong to the authenticated user (403 otherwise).
+//
+// Order of operations (no transaction needed -- pure read):
+//  1. GetSessionByID -- 404 if missing.
+//  2. 403 if user_id != viewer.
+//  3. ListSessionAnswers -- chronological list of submitted
+//     answers; an empty list is rendered as `[]` on the wire.
+//  4. Compute ScorePercentage when completed_at is set; leave nil
+//     for in-progress sessions so the wire renders `null`.
+//
+// No parent quiz / study_guide deletion check (per spec AC6 +
+// technical note): sessions are historical data. A completed
+// session for a quiz the creator later soft-deleted MUST still
+// be readable by its owner -- the user owns their session
+// history, not the quiz.
+func (s *Service) GetSession(ctx context.Context, p GetSessionParams) (SessionDetail, error) {
+	sessionPgxID := utils.UUID(p.SessionID)
+
+	row, err := s.repo.GetSessionByID(ctx, sessionPgxID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return SessionDetail{}, apperrors.NewNotFound("Session not found")
+		}
+		return SessionDetail{}, fmt.Errorf("GetSession: load: %w", err)
+	}
+	ownerID, err := utils.PgxToGoogleUUID(row.UserID)
+	if err != nil {
+		return SessionDetail{}, fmt.Errorf("GetSession: owner id: %w", err)
+	}
+	if ownerID != p.UserID {
+		return SessionDetail{}, apperrors.NewForbidden()
+	}
+
+	answers, err := s.repo.ListSessionAnswers(ctx, sessionPgxID)
+	if err != nil {
+		return SessionDetail{}, fmt.Errorf("GetSession: list answers: %w", err)
+	}
+
+	// Convert db.PracticeSession to the FindIncompleteSessionRow
+	// shape the existing mapFoundSession mapper expects. The two
+	// types diverge by one field -- PracticeSession includes
+	// UserID, FindIncompleteSessionRow does not -- so a struct
+	// cast won't compile; build explicitly. The mapper doesn't
+	// need UserID (ownership was already enforced above).
+	detail, err := mapFoundSession(db.FindIncompleteSessionRow{
+		ID:             row.ID,
+		QuizID:         row.QuizID,
+		StartedAt:      row.StartedAt,
+		CompletedAt:    row.CompletedAt,
+		TotalQuestions: row.TotalQuestions,
+		CorrectAnswers: row.CorrectAnswers,
+	}, answers)
+	if err != nil {
+		return SessionDetail{}, fmt.Errorf("GetSession: map: %w", err)
+	}
+
+	// ScorePercentage is the GetSession-specific field on
+	// SessionDetail -- StartSession leaves it nil, GetSession sets
+	// it for completed sessions only. In-progress sessions render
+	// as `null` on the wire per spec.
+	if detail.CompletedAt != nil {
+		score := computeScorePercentage(detail.CorrectAnswers, detail.TotalQuestions)
+		detail.ScorePercentage = &score
+	}
+
+	return detail, nil
 }

@@ -1160,6 +1160,69 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /sessions/{session_id}:
+    get:
+      operationId: GetPracticeSession
+      summary: Get a practice session detail including all submitted answers
+      description: |
+        Returns the full session payload: metadata + all submitted
+        answers in chronological order. Used by the practice player
+        to render post-completion review and to restore in-progress
+        state on return visits (the start endpoint also returns the
+        same data on resume, so this endpoint exists primarily for
+        the post-complete results view).
+
+        Response shape vs sibling sessions endpoints:
+          * Like PracticeSessionResponse (POST /quizzes/{id}/sessions):
+            includes id, quiz_id, started_at, completed_at,
+            total_questions, correct_answers, answers.
+          * Like CompletedSessionResponse (POST /sessions/{id}/complete):
+            includes a server-computed score_percentage.
+          * Unique to this endpoint: score_percentage is nullable
+            (null while the session is in-progress; set once the
+            user calls complete).
+
+        Authorization: session-owner only (403 otherwise). 404 for
+        missing sessions.
+
+        Historical preservation: a session whose parent quiz or
+        study guide has been soft-deleted is STILL returned --
+        sessions are append-only history that survives parent
+        deletion. This is opposite to the read endpoints on the
+        quizzes surface (which 404 on a deleted parent) because
+        sessions have a different lifecycle: once finalised, they
+        belong to the user, not the quiz.
+
+        Answers with `question_id: null` (the underlying quiz
+        question was hard-deleted via ON DELETE SET NULL after the
+        answer was submitted) are INCLUDED in the response, not
+        filtered. The frontend should render those as orphaned
+        answer rows rather than silently dropping them.
+      parameters:
+        - name: session_id
+          in: path
+          description: The unique UUID of the practice session
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session detail with all submitted answers.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /sessions/{session_id}/complete:
     post:
       operationId: CompletePracticeSession
@@ -3050,6 +3113,59 @@ components:
           type: string
           nullable: true
           maxLength: 2000
+    SessionDetailResponse:
+      type: object
+      description: |
+        Returned by GET /api/sessions/{session_id} (ASK-152). The
+        response shape is the union of PracticeSessionResponse +
+        a nullable score_percentage:
+          * `score_percentage` is null while the session is
+            in-progress (`completed_at` is null too) and an integer
+            0-100 once the session is completed.
+          * `answers` is identical to the PracticeSessionResponse
+            field -- chronological list of submitted answers,
+            with nullable question_id for answers whose underlying
+            question was hard-deleted (ON DELETE SET NULL).
+          * `completed_at` is nullable -- distinguishes in-progress
+            from completed sessions on the wire.
+      properties:
+        id:
+          type: string
+          format: uuid
+        quiz_id:
+          type: string
+          format: uuid
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        total_questions:
+          type: integer
+          minimum: 0
+        correct_answers:
+          type: integer
+          minimum: 0
+        score_percentage:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 100
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PracticeAnswerResponse'
+      required:
+        - id
+        - quiz_id
+        - started_at
+        - completed_at
+        - total_questions
+        - correct_answers
+        - score_percentage
+        - answers
     CompletedSessionResponse:
       type: object
       description: |
