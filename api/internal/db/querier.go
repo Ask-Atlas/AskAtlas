@@ -11,6 +11,12 @@ import (
 )
 
 type Querier interface {
+	// Returns TRUE when the question_id is part of this session's
+	// frozen practice_session_questions snapshot. Used by ASK-137 to
+	// enforce the spec's "question must be in this session's
+	// snapshot" rule (400 otherwise -- the user can only answer
+	// questions that were in the quiz at session-start time).
+	CheckQuestionInSessionSnapshot(ctx context.Context, arg CheckQuestionInSessionSnapshotParams) (bool, error)
 	// Practice session queries (ASK-128 start/resume).
 	//
 	// The StartPracticeSession service flow stitches these together:
@@ -114,6 +120,17 @@ type Querier interface {
 	// Returns sql.ErrNoRows when no incomplete session exists; the
 	// service treats that as the "create new" signal.
 	FindIncompleteSession(ctx context.Context, arg FindIncompleteSessionParams) (FindIncompleteSessionRow, error)
+	// Returns the text of the option marked is_correct for an MCQ or
+	// TF question. Used by ASK-137 to compare against user_answer:
+	//   * multiple-choice -- exact string equality with this text
+	//   * true-false -- this text is "True" or "False" (the canonical
+	//     labels written by the create-quiz path); the service maps
+	//     it to a boolean and compares against the user's parsed
+	//     "true"/"false" input.
+	// Returns sql.ErrNoRows if no option is marked correct, which
+	// the service treats as a data-integrity 500 (write-side
+	// validation should have prevented it).
+	GetCorrectOptionText(ctx context.Context, questionID pgtype.UUID) (string, error)
 	GetCourse(ctx context.Context, id pgtype.UUID) (GetCourseRow, error)
 	// Fetches a file only if it belongs to the given user and has not been soft-deleted.
 	// Returns sql.ErrNoRows if not found or already in a deletion state.
@@ -183,6 +200,14 @@ type Querier interface {
 	// wrote the row or it was already there).
 	GetResourceByCreatorURL(ctx context.Context, arg GetResourceByCreatorURLParams) (GetResourceByCreatorURLRow, error)
 	GetSchool(ctx context.Context, id pgtype.UUID) (School, error)
+	// Locks the session row and returns ownership + completion state
+	// for the answer-submit endpoint (ASK-137). FOR UPDATE serializes
+	// against a concurrent SessionComplete (ASK-140 future) so the
+	// answer either commits before the completion (recorded) or
+	// after (rejected with 409). Filters NOTHING -- the service
+	// inspects user_id + completed_at to choose 404 / 403 / 409 /
+	// proceed.
+	GetSessionForAnswerSubmission(ctx context.Context, id pgtype.UUID) (GetSessionForAnswerSubmissionRow, error)
 	// Locked SELECT used at the start of DeleteStudyGuide. SELECT FOR
 	// UPDATE prevents concurrent deletes from racing on the same guide
 	// (one wins with 204, the other sees the row already-deleted in its
@@ -252,6 +277,12 @@ type Querier interface {
 	// than relying on DeleteGuideFile :execrows which can't distinguish
 	// 'never existed' from 'concurrent detach happened first'.
 	GuideFileAttached(ctx context.Context, arg GuideFileAttachedParams) (bool, error)
+	// Bumps practice_sessions.correct_answers by 1. Called only when
+	// the inserted answer was correct (ASK-137 AC8). Wrapped in the
+	// same tx as InsertPracticeAnswer so a failure rolls back the
+	// answer row too -- the counter and the underlying answer can
+	// never disagree.
+	IncrementSessionCorrectAnswers(ctx context.Context, id pgtype.UUID) error
 	InsertFile(ctx context.Context, arg InsertFileParams) (File, error)
 	// Creates the (file_id, study_guide_id) join row. Uses ON CONFLICT
 	// DO NOTHING + RETURNING so a duplicate attach surfaces as
@@ -273,6 +304,16 @@ type Querier interface {
 	// failure mode is the narrow concurrency-race: two attachers slip
 	// through the pre-check between query 1 and query 4.
 	InsertGuideResource(ctx context.Context, arg InsertGuideResourceParams) error
+	// Records the user's answer with the backend-determined
+	// is_correct + verified flags (ASK-137). The unique constraint
+	// uq_practice_answers_session_question on (session_id,
+	// question_id) catches duplicate submissions; the service
+	// detects the unique-violation pgconn error and surfaces a
+	// typed 400 with details {"question_id": "already answered"}.
+	//
+	// Returns the persisted columns so the handler can render the
+	// PracticeAnswerResponse without a re-fetch.
+	InsertPracticeAnswer(ctx context.Context, arg InsertPracticeAnswerParams) (InsertPracticeAnswerRow, error)
 	// Race-safe insert backed by the partial unique index from migration
 	// 20260419083647. ON CONFLICT DO NOTHING means a concurrent start by
 	// the same user on the same quiz collapses to "no row inserted"

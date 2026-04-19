@@ -14,6 +14,8 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -461,4 +463,557 @@ func TestStartSession_StaleCleanupOrdering(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, got.Created, "stale-cleanup -> empty probe -> create path must yield 201")
 	assert.Equal(t, int32(2), got.Session.TotalQuestions, "snapshot CTE return value must flow through")
+}
+
+// ============================================================
+// SubmitAnswer (ASK-137)
+// ============================================================
+
+// validSubmitParams returns a baseline SubmitAnswerParams for tests
+// that don't need to override the wire fields.
+func validSubmitParams(t *testing.T) sessions.SubmitAnswerParams {
+	t.Helper()
+	return sessions.SubmitAnswerParams{
+		SessionID:  uuid.New(),
+		UserID:     uuid.New(),
+		QuestionID: uuid.New(),
+		UserAnswer: "Sorted ascending",
+	}
+}
+
+// expectAnswerTxLockSuccess wires the locked SELECT + snapshot
+// membership check to the happy-path values. Used by per-type
+// happy-path tests so per-test setup focuses on the type-specific
+// scoring.
+func expectAnswerTxLockSuccess(repo *mock_sessions.MockRepository, sessionID, userID uuid.UUID) {
+	repo.EXPECT().GetSessionForAnswerSubmission(mock.Anything, mock.Anything).
+		Return(db.GetSessionForAnswerSubmissionRow{
+			ID:     utils.UUID(sessionID),
+			UserID: utils.UUID(userID),
+		}, nil)
+	repo.EXPECT().CheckQuestionInSessionSnapshot(mock.Anything, mock.Anything).Return(true, nil)
+}
+
+// ---------- Pre-tx validation ----------
+
+func TestSubmitAnswer_EmptyUserAnswer_400(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	svc := sessions.NewService(repo)
+
+	p := validSubmitParams(t)
+	p.UserAnswer = "   "
+	_, err := svc.SubmitAnswer(context.Background(), p)
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusBadRequest, sysErr.Code)
+	assert.Contains(t, sysErr.Details, "user_answer")
+}
+
+// ---------- Session-level checks ----------
+
+// TestSubmitAnswer_SessionNotFound_404 covers the missing-session
+// path: GetSessionForAnswerSubmission returns sql.ErrNoRows.
+func TestSubmitAnswer_SessionNotFound_404(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+	repo.EXPECT().GetSessionForAnswerSubmission(mock.Anything, mock.Anything).
+		Return(db.GetSessionForAnswerSubmissionRow{}, sql.ErrNoRows)
+
+	svc := sessions.NewService(repo)
+	_, err := svc.SubmitAnswer(context.Background(), validSubmitParams(t))
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusNotFound, sysErr.Code)
+}
+
+// TestSubmitAnswer_NotOwner_403 covers AC13: a session belonging
+// to user A cannot be answered by user B.
+func TestSubmitAnswer_NotOwner_403(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+	owner := uuid.New()
+	other := uuid.New()
+	repo.EXPECT().GetSessionForAnswerSubmission(mock.Anything, mock.Anything).
+		Return(db.GetSessionForAnswerSubmissionRow{
+			ID:     utils.UUID(uuid.New()),
+			UserID: utils.UUID(owner),
+		}, nil)
+
+	svc := sessions.NewService(repo)
+	p := validSubmitParams(t)
+	p.UserID = other
+	_, err := svc.SubmitAnswer(context.Background(), p)
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusForbidden, sysErr.Code)
+}
+
+// TestSubmitAnswer_SessionCompleted_409 covers AC11: a completed
+// session rejects new submissions with 409.
+func TestSubmitAnswer_SessionCompleted_409(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+	owner := uuid.New()
+	repo.EXPECT().GetSessionForAnswerSubmission(mock.Anything, mock.Anything).
+		Return(db.GetSessionForAnswerSubmissionRow{
+			ID:          utils.UUID(uuid.New()),
+			UserID:      utils.UUID(owner),
+			CompletedAt: pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+		}, nil)
+
+	svc := sessions.NewService(repo)
+	p := validSubmitParams(t)
+	p.UserID = owner
+	_, err := svc.SubmitAnswer(context.Background(), p)
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusConflict, sysErr.Code)
+}
+
+// TestSubmitAnswer_QuestionNotInSnapshot_400 covers AC12: a
+// question_id that is not in the session's frozen snapshot is a
+// 400 (not a 404 -- the question exists, it's just not part of
+// THIS session).
+func TestSubmitAnswer_QuestionNotInSnapshot_400(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+	owner := uuid.New()
+	repo.EXPECT().GetSessionForAnswerSubmission(mock.Anything, mock.Anything).
+		Return(db.GetSessionForAnswerSubmissionRow{
+			ID:     utils.UUID(uuid.New()),
+			UserID: utils.UUID(owner),
+		}, nil)
+	repo.EXPECT().CheckQuestionInSessionSnapshot(mock.Anything, mock.Anything).Return(false, nil)
+
+	svc := sessions.NewService(repo)
+	p := validSubmitParams(t)
+	p.UserID = owner
+	_, err := svc.SubmitAnswer(context.Background(), p)
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusBadRequest, sysErr.Code)
+	assert.Contains(t, sysErr.Details["question_id"], "not part of this session")
+}
+
+// ---------- Per-type happy paths ----------
+
+// TestSubmitAnswer_MCQ_Correct covers AC1 + AC8: correct MCQ
+// answer -> is_correct=true, verified=true, and the
+// IncrementSessionCorrectAnswers UPDATE fires.
+func TestSubmitAnswer_MCQ_Correct(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+	questionID := uuid.New()
+
+	expectAnswerTxLockSuccess(repo, sessionID, userID)
+	repo.EXPECT().GetQuizQuestionByID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionByIDRow{
+			ID:   utils.UUID(questionID),
+			Type: db.QuestionTypeMultipleChoice,
+		}, nil)
+	repo.EXPECT().GetCorrectOptionText(mock.Anything, mock.Anything).Return("Sorted ascending", nil)
+	repo.EXPECT().InsertPracticeAnswer(mock.Anything, mock.MatchedBy(func(arg db.InsertPracticeAnswerParams) bool {
+		return arg.IsCorrect == true && arg.Verified == true && arg.UserAnswer == "Sorted ascending"
+	})).Return(db.InsertPracticeAnswerRow{
+		QuestionID: utils.UUID(questionID),
+		UserAnswer: pgtype.Text{String: "Sorted ascending", Valid: true},
+		IsCorrect:  pgtype.Bool{Bool: true, Valid: true},
+		Verified:   true,
+		AnsweredAt: pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+	}, nil)
+	repo.EXPECT().IncrementSessionCorrectAnswers(mock.Anything, mock.Anything).Return(nil)
+
+	svc := sessions.NewService(repo)
+	p := sessions.SubmitAnswerParams{
+		SessionID:  sessionID,
+		UserID:     userID,
+		QuestionID: questionID,
+		UserAnswer: "Sorted ascending",
+	}
+	got, err := svc.SubmitAnswer(context.Background(), p)
+	require.NoError(t, err)
+	require.NotNil(t, got.IsCorrect)
+	assert.True(t, *got.IsCorrect)
+	assert.True(t, got.Verified)
+}
+
+// TestSubmitAnswer_MCQ_Incorrect covers AC2 + AC9: wrong MCQ
+// answer -> is_correct=false, verified=true, NO counter increment.
+func TestSubmitAnswer_MCQ_Incorrect(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+	questionID := uuid.New()
+
+	expectAnswerTxLockSuccess(repo, sessionID, userID)
+	repo.EXPECT().GetQuizQuestionByID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionByIDRow{
+			ID:   utils.UUID(questionID),
+			Type: db.QuestionTypeMultipleChoice,
+		}, nil)
+	repo.EXPECT().GetCorrectOptionText(mock.Anything, mock.Anything).Return("Sorted ascending", nil)
+	repo.EXPECT().InsertPracticeAnswer(mock.Anything, mock.MatchedBy(func(arg db.InsertPracticeAnswerParams) bool {
+		return arg.IsCorrect == false && arg.Verified == true
+	})).Return(db.InsertPracticeAnswerRow{
+		QuestionID: utils.UUID(questionID),
+		UserAnswer: pgtype.Text{String: "Random order", Valid: true},
+		IsCorrect:  pgtype.Bool{Bool: false, Valid: true},
+		Verified:   true,
+		AnsweredAt: pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+	}, nil)
+	// Crucially: NO IncrementSessionCorrectAnswers expectation.
+	// mockery's Cleanup-time AssertExpectations fails if the
+	// service touches it for an incorrect answer.
+
+	svc := sessions.NewService(repo)
+	p := sessions.SubmitAnswerParams{
+		SessionID:  sessionID,
+		UserID:     userID,
+		QuestionID: questionID,
+		UserAnswer: "Random order",
+	}
+	got, err := svc.SubmitAnswer(context.Background(), p)
+	require.NoError(t, err)
+	require.NotNil(t, got.IsCorrect)
+	assert.False(t, *got.IsCorrect)
+	assert.True(t, got.Verified)
+}
+
+// TestSubmitAnswer_TF_True_Correct covers AC3.
+func TestSubmitAnswer_TF_True_Correct(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+	questionID := uuid.New()
+
+	expectAnswerTxLockSuccess(repo, sessionID, userID)
+	repo.EXPECT().GetQuizQuestionByID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionByIDRow{
+			ID:   utils.UUID(questionID),
+			Type: db.QuestionTypeTrueFalse,
+		}, nil)
+	repo.EXPECT().GetCorrectOptionText(mock.Anything, mock.Anything).Return("True", nil)
+	repo.EXPECT().InsertPracticeAnswer(mock.Anything, mock.MatchedBy(func(arg db.InsertPracticeAnswerParams) bool {
+		return arg.IsCorrect == true && arg.Verified == true && arg.UserAnswer == "true"
+	})).Return(db.InsertPracticeAnswerRow{
+		QuestionID: utils.UUID(questionID),
+		UserAnswer: pgtype.Text{String: "true", Valid: true},
+		IsCorrect:  pgtype.Bool{Bool: true, Valid: true},
+		Verified:   true,
+		AnsweredAt: pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+	}, nil)
+	repo.EXPECT().IncrementSessionCorrectAnswers(mock.Anything, mock.Anything).Return(nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.SubmitAnswer(context.Background(), sessions.SubmitAnswerParams{
+		SessionID:  sessionID,
+		UserID:     userID,
+		QuestionID: questionID,
+		UserAnswer: "true",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, got.IsCorrect)
+	assert.True(t, *got.IsCorrect)
+}
+
+// TestSubmitAnswer_TF_False_AgainstTrueCorrect covers AC4: the
+// correct answer is true ("True" in the option text); user submits
+// "false" -> is_correct=false.
+func TestSubmitAnswer_TF_False_AgainstTrueCorrect(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+	questionID := uuid.New()
+
+	expectAnswerTxLockSuccess(repo, sessionID, userID)
+	repo.EXPECT().GetQuizQuestionByID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionByIDRow{
+			ID:   utils.UUID(questionID),
+			Type: db.QuestionTypeTrueFalse,
+		}, nil)
+	repo.EXPECT().GetCorrectOptionText(mock.Anything, mock.Anything).Return("True", nil)
+	repo.EXPECT().InsertPracticeAnswer(mock.Anything, mock.MatchedBy(func(arg db.InsertPracticeAnswerParams) bool {
+		return arg.IsCorrect == false && arg.Verified == true
+	})).Return(db.InsertPracticeAnswerRow{
+		QuestionID: utils.UUID(questionID),
+		UserAnswer: pgtype.Text{String: "false", Valid: true},
+		IsCorrect:  pgtype.Bool{Bool: false, Valid: true},
+		Verified:   true,
+		AnsweredAt: pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+	}, nil)
+	// No counter increment for incorrect.
+
+	svc := sessions.NewService(repo)
+	got, err := svc.SubmitAnswer(context.Background(), sessions.SubmitAnswerParams{
+		SessionID:  sessionID,
+		UserID:     userID,
+		QuestionID: questionID,
+		UserAnswer: "false",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, got.IsCorrect)
+	assert.False(t, *got.IsCorrect)
+}
+
+// TestSubmitAnswer_TF_NonBoolean_400 covers the per-type
+// validation: TF user_answer must be lowercase "true"/"false". A
+// capitalized "True" or anything else is a 400.
+func TestSubmitAnswer_TF_NonBoolean_400(t *testing.T) {
+	for _, bad := range []string{"yes", "True", "FALSE", "1", "0"} {
+		t.Run(bad, func(t *testing.T) {
+			repo := mock_sessions.NewMockRepository(t)
+			inTxRunsFn(repo)
+
+			sessionID := uuid.New()
+			userID := uuid.New()
+			expectAnswerTxLockSuccess(repo, sessionID, userID)
+			repo.EXPECT().GetQuizQuestionByID(mock.Anything, mock.Anything).
+				Return(db.GetQuizQuestionByIDRow{
+					ID:   utils.UUID(uuid.New()),
+					Type: db.QuestionTypeTrueFalse,
+				}, nil)
+			// No GetCorrectOptionText / Insert expectations -- the
+			// per-type validation short-circuits before either.
+
+			svc := sessions.NewService(repo)
+			_, err := svc.SubmitAnswer(context.Background(), sessions.SubmitAnswerParams{
+				SessionID:  sessionID,
+				UserID:     userID,
+				QuestionID: uuid.New(),
+				UserAnswer: bad,
+			})
+			require.Error(t, err)
+			sysErr := apperrors.ToHTTPError(err)
+			assert.Equal(t, http.StatusBadRequest, sysErr.Code)
+			assert.Contains(t, sysErr.Details["user_answer"], "true")
+		})
+	}
+}
+
+// TestSubmitAnswer_Freeform_CaseInsensitive covers AC5: case
+// difference between user input and reference -> still correct.
+func TestSubmitAnswer_Freeform_CaseInsensitive(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+	questionID := uuid.New()
+
+	expectAnswerTxLockSuccess(repo, sessionID, userID)
+	repo.EXPECT().GetQuizQuestionByID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionByIDRow{
+			ID:              utils.UUID(questionID),
+			Type:            db.QuestionTypeFreeform,
+			ReferenceAnswer: pgtype.Text{String: "O(log n)", Valid: true},
+		}, nil)
+	// No GetCorrectOptionText for freeform -- the answer comes from
+	// reference_answer on the question row.
+	repo.EXPECT().InsertPracticeAnswer(mock.Anything, mock.MatchedBy(func(arg db.InsertPracticeAnswerParams) bool {
+		// Freeform: verified must be false.
+		return arg.IsCorrect == true && arg.Verified == false
+	})).Return(db.InsertPracticeAnswerRow{
+		QuestionID: utils.UUID(questionID),
+		UserAnswer: pgtype.Text{String: "o(log n)", Valid: true},
+		IsCorrect:  pgtype.Bool{Bool: true, Valid: true},
+		Verified:   false,
+		AnsweredAt: pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+	}, nil)
+	repo.EXPECT().IncrementSessionCorrectAnswers(mock.Anything, mock.Anything).Return(nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.SubmitAnswer(context.Background(), sessions.SubmitAnswerParams{
+		SessionID:  sessionID,
+		UserID:     userID,
+		QuestionID: questionID,
+		UserAnswer: "o(log n)",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, got.IsCorrect)
+	assert.True(t, *got.IsCorrect)
+	assert.False(t, got.Verified, "freeform must report verified=false")
+}
+
+// TestSubmitAnswer_Freeform_TrimmedMatch covers AC6: leading/
+// trailing whitespace in user input is trimmed before comparison.
+func TestSubmitAnswer_Freeform_TrimmedMatch(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+
+	expectAnswerTxLockSuccess(repo, sessionID, userID)
+	repo.EXPECT().GetQuizQuestionByID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionByIDRow{
+			ID:              utils.UUID(uuid.New()),
+			Type:            db.QuestionTypeFreeform,
+			ReferenceAnswer: pgtype.Text{String: "O(log n)", Valid: true},
+		}, nil)
+	repo.EXPECT().InsertPracticeAnswer(mock.Anything, mock.MatchedBy(func(arg db.InsertPracticeAnswerParams) bool {
+		return arg.IsCorrect == true && arg.UserAnswer == " O(log n) "
+	})).Return(db.InsertPracticeAnswerRow{
+		QuestionID: utils.UUID(uuid.New()),
+		UserAnswer: pgtype.Text{String: " O(log n) ", Valid: true},
+		IsCorrect:  pgtype.Bool{Bool: true, Valid: true},
+		Verified:   false,
+		AnsweredAt: pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+	}, nil)
+	repo.EXPECT().IncrementSessionCorrectAnswers(mock.Anything, mock.Anything).Return(nil)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.SubmitAnswer(context.Background(), sessions.SubmitAnswerParams{
+		SessionID:  sessionID,
+		UserID:     userID,
+		QuestionID: uuid.New(),
+		UserAnswer: " O(log n) ",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, got.IsCorrect)
+	assert.True(t, *got.IsCorrect)
+}
+
+// TestSubmitAnswer_Freeform_Wrong covers AC7: wrong freeform
+// answer -> is_correct=false, verified=false.
+func TestSubmitAnswer_Freeform_Wrong(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+
+	expectAnswerTxLockSuccess(repo, sessionID, userID)
+	repo.EXPECT().GetQuizQuestionByID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionByIDRow{
+			ID:              utils.UUID(uuid.New()),
+			Type:            db.QuestionTypeFreeform,
+			ReferenceAnswer: pgtype.Text{String: "O(log n)", Valid: true},
+		}, nil)
+	repo.EXPECT().InsertPracticeAnswer(mock.Anything, mock.MatchedBy(func(arg db.InsertPracticeAnswerParams) bool {
+		return arg.IsCorrect == false && arg.Verified == false
+	})).Return(db.InsertPracticeAnswerRow{
+		QuestionID: utils.UUID(uuid.New()),
+		UserAnswer: pgtype.Text{String: "O(n)", Valid: true},
+		IsCorrect:  pgtype.Bool{Bool: false, Valid: true},
+		Verified:   false,
+		AnsweredAt: pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+	}, nil)
+	// No counter increment for incorrect.
+
+	svc := sessions.NewService(repo)
+	got, err := svc.SubmitAnswer(context.Background(), sessions.SubmitAnswerParams{
+		SessionID:  sessionID,
+		UserID:     userID,
+		QuestionID: uuid.New(),
+		UserAnswer: "O(n)",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, got.IsCorrect)
+	assert.False(t, *got.IsCorrect)
+}
+
+// ---------- Concurrency / unique violation ----------
+
+// TestSubmitAnswer_DuplicateSubmission_400 covers AC10: a second
+// submission for the same (session, question) hits the unique
+// constraint. pgx surfaces it as *pgconn.PgError code 23505; the
+// service maps it to a typed 400 with the spec-mandated detail
+// key.
+func TestSubmitAnswer_DuplicateSubmission_400(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+
+	expectAnswerTxLockSuccess(repo, sessionID, userID)
+	repo.EXPECT().GetQuizQuestionByID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionByIDRow{
+			ID:              utils.UUID(uuid.New()),
+			Type:            db.QuestionTypeFreeform,
+			ReferenceAnswer: pgtype.Text{String: "anything", Valid: true},
+		}, nil)
+	repo.EXPECT().InsertPracticeAnswer(mock.Anything, mock.Anything).
+		Return(db.InsertPracticeAnswerRow{}, &pgconn.PgError{Code: pgerrcode.UniqueViolation})
+	// No counter increment -- the insert failed.
+
+	svc := sessions.NewService(repo)
+	_, err := svc.SubmitAnswer(context.Background(), sessions.SubmitAnswerParams{
+		SessionID:  sessionID,
+		UserID:     userID,
+		QuestionID: uuid.New(),
+		UserAnswer: "anything",
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusBadRequest, sysErr.Code)
+	assert.Equal(t, "already answered", sysErr.Details["question_id"])
+}
+
+// TestSubmitAnswer_InsertGenericError_500 surfaces a non-unique-
+// violation insert error as 500.
+func TestSubmitAnswer_InsertGenericError_500(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+
+	expectAnswerTxLockSuccess(repo, sessionID, userID)
+	repo.EXPECT().GetQuizQuestionByID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionByIDRow{
+			ID:              utils.UUID(uuid.New()),
+			Type:            db.QuestionTypeFreeform,
+			ReferenceAnswer: pgtype.Text{String: "x", Valid: true},
+		}, nil)
+	repo.EXPECT().InsertPracticeAnswer(mock.Anything, mock.Anything).
+		Return(db.InsertPracticeAnswerRow{}, errors.New("connection refused"))
+
+	svc := sessions.NewService(repo)
+	_, err := svc.SubmitAnswer(context.Background(), sessions.SubmitAnswerParams{
+		SessionID:  sessionID,
+		UserID:     userID,
+		QuestionID: uuid.New(),
+		UserAnswer: "x",
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}
+
+// TestSubmitAnswer_QuestionDeletedAfterSnapshotCheck_400 covers
+// the rare race where a question is hard-deleted between the
+// snapshot membership check and the GetQuizQuestionByID load.
+// The service surfaces this as 400 (the question is no longer
+// answerable) rather than 500.
+func TestSubmitAnswer_QuestionDeletedAfterSnapshotCheck_400(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+
+	expectAnswerTxLockSuccess(repo, sessionID, userID)
+	repo.EXPECT().GetQuizQuestionByID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionByIDRow{}, sql.ErrNoRows)
+
+	svc := sessions.NewService(repo)
+	_, err := svc.SubmitAnswer(context.Background(), sessions.SubmitAnswerParams{
+		SessionID:  sessionID,
+		UserID:     userID,
+		QuestionID: uuid.New(),
+		UserAnswer: "x",
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusBadRequest, sysErr.Code)
 }

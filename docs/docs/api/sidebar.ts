@@ -162,6 +162,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/submit-practice-answer",
+          label: "Submit an answer for one question in a practice session",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "api/recommend-study-guide",
           label: "Recommend a study guide",
           className: "api-method post",

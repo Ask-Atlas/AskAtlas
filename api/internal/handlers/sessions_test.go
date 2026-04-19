@@ -1,6 +1,7 @@
 package handlers_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -254,4 +256,200 @@ func TestSessionsHandler_Start_NullableAnswers(t *testing.T) {
 	assert.Nil(t, answer["user_answer"], "null user_answer must serialize as JSON null")
 	assert.Nil(t, answer["is_correct"], "null is_correct must serialize as JSON null")
 	assert.Equal(t, false, answer["verified"])
+}
+
+// ---- SubmitPracticeAnswer (ASK-137) ----
+
+// validSubmitAnswerBody returns a wire-shaped SubmitAnswerRequest.
+func validSubmitAnswerBody() api.SubmitPracticeAnswerJSONRequestBody {
+	return api.SubmitPracticeAnswerJSONRequestBody{
+		QuestionId: openapi_types.UUID(uuid.New()),
+		UserAnswer: "Sorted ascending",
+	}
+}
+
+func TestSessionsHandler_SubmitAnswer_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	body, err := json.Marshal(validSubmitAnswerBody())
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("/sessions/%s/answers", uuid.NewString())
+	req := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestSessionsHandler_SubmitAnswer_InvalidJSON_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	url := fmt.Sprintf("/sessions/%s/answers", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, bytes.NewReader([]byte("{not-json")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestSessionsHandler_SubmitAnswer_InvalidUUID_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	body, err := json.Marshal(validSubmitAnswerBody())
+	require.NoError(t, err)
+
+	req := authedRequestMethod(t, http.MethodPost, "/sessions/not-a-uuid/answers", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestSessionsHandler_SubmitAnswer_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().SubmitAnswer(mock.Anything, mock.Anything).
+		Return(sessions.AnswerSummary{}, apperrors.NewNotFound("Session not found"))
+
+	body, err := json.Marshal(validSubmitAnswerBody())
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("/sessions/%s/answers", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestSessionsHandler_SubmitAnswer_NotOwner_403(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().SubmitAnswer(mock.Anything, mock.Anything).
+		Return(sessions.AnswerSummary{}, apperrors.NewForbidden())
+
+	body, err := json.Marshal(validSubmitAnswerBody())
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("/sessions/%s/answers", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestSessionsHandler_SubmitAnswer_SessionCompleted_409(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().SubmitAnswer(mock.Anything, mock.Anything).
+		Return(sessions.AnswerSummary{}, apperrors.NewConflict("Session already completed"))
+
+	body, err := json.Marshal(validSubmitAnswerBody())
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("/sessions/%s/answers", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusConflict, w.Code)
+}
+
+func TestSessionsHandler_SubmitAnswer_ServiceError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().SubmitAnswer(mock.Anything, mock.Anything).
+		Return(sessions.AnswerSummary{}, errors.New("connection refused"))
+
+	body, err := json.Marshal(validSubmitAnswerBody())
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("/sessions/%s/answers", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// TestSessionsHandler_SubmitAnswer_Success exercises the happy
+// path: handler decodes the body, plumbs UserID from JWT context,
+// renders 201 with PracticeAnswerResponse including
+// backend-determined is_correct + verified.
+func TestSessionsHandler_SubmitAnswer_Success(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	sessionID := uuid.New()
+	questionID := uuid.New()
+	now := time.Date(2026, 4, 19, 10, 0, 0, 0, time.UTC)
+	answer := "Sorted ascending"
+	correct := true
+
+	mockSvc.EXPECT().SubmitAnswer(mock.Anything, mock.MatchedBy(func(p sessions.SubmitAnswerParams) bool {
+		return p.SessionID == sessionID &&
+			p.QuestionID == questionID &&
+			p.UserAnswer == "Sorted ascending"
+	})).Return(sessions.AnswerSummary{
+		QuestionID: &questionID,
+		UserAnswer: &answer,
+		IsCorrect:  &correct,
+		Verified:   true,
+		AnsweredAt: now,
+	}, nil)
+
+	bodyBytes, err := json.Marshal(api.SubmitPracticeAnswerJSONRequestBody{
+		QuestionId: openapi_types.UUID(questionID),
+		UserAnswer: "Sorted ascending",
+	})
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("/sessions/%s/answers", sessionID.String())
+	req := authedRequestMethod(t, http.MethodPost, url, bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusCreated, w.Code)
+	var resp api.PracticeAnswerResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	require.NotNil(t, resp.QuestionId)
+	assert.Equal(t, questionID, uuid.UUID(*resp.QuestionId))
+	require.NotNil(t, resp.UserAnswer)
+	assert.Equal(t, "Sorted ascending", *resp.UserAnswer)
+	require.NotNil(t, resp.IsCorrect)
+	assert.True(t, *resp.IsCorrect)
+	assert.True(t, resp.Verified)
 }

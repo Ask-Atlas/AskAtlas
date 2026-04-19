@@ -11,6 +11,31 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const checkQuestionInSessionSnapshot = `-- name: CheckQuestionInSessionSnapshot :one
+SELECT EXISTS (
+  SELECT 1 FROM practice_session_questions
+  WHERE session_id = $1::uuid
+    AND question_id = $2::uuid
+) AS exists
+`
+
+type CheckQuestionInSessionSnapshotParams struct {
+	SessionID  pgtype.UUID `json:"session_id"`
+	QuestionID pgtype.UUID `json:"question_id"`
+}
+
+// Returns TRUE when the question_id is part of this session's
+// frozen practice_session_questions snapshot. Used by ASK-137 to
+// enforce the spec's "question must be in this session's
+// snapshot" rule (400 otherwise -- the user can only answer
+// questions that were in the quiz at session-start time).
+func (q *Queries) CheckQuestionInSessionSnapshot(ctx context.Context, arg CheckQuestionInSessionSnapshotParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkQuestionInSessionSnapshot, arg.SessionID, arg.QuestionID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const checkQuizLiveForSession = `-- name: CheckQuizLiveForSession :one
 
 SELECT EXISTS (
@@ -134,6 +159,131 @@ func (q *Queries) FindIncompleteSession(ctx context.Context, arg FindIncompleteS
 		&i.CompletedAt,
 		&i.TotalQuestions,
 		&i.CorrectAnswers,
+	)
+	return i, err
+}
+
+const getCorrectOptionText = `-- name: GetCorrectOptionText :one
+SELECT text
+FROM quiz_answer_options
+WHERE question_id = $1::uuid
+  AND is_correct = true
+LIMIT 1
+`
+
+// Returns the text of the option marked is_correct for an MCQ or
+// TF question. Used by ASK-137 to compare against user_answer:
+//   - multiple-choice -- exact string equality with this text
+//   - true-false -- this text is "True" or "False" (the canonical
+//     labels written by the create-quiz path); the service maps
+//     it to a boolean and compares against the user's parsed
+//     "true"/"false" input.
+//
+// Returns sql.ErrNoRows if no option is marked correct, which
+// the service treats as a data-integrity 500 (write-side
+// validation should have prevented it).
+func (q *Queries) GetCorrectOptionText(ctx context.Context, questionID pgtype.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getCorrectOptionText, questionID)
+	var text string
+	err := row.Scan(&text)
+	return text, err
+}
+
+const getSessionForAnswerSubmission = `-- name: GetSessionForAnswerSubmission :one
+SELECT id, user_id, completed_at
+FROM practice_sessions
+WHERE id = $1::uuid
+FOR UPDATE
+`
+
+type GetSessionForAnswerSubmissionRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	CompletedAt pgtype.Timestamptz `json:"completed_at"`
+}
+
+// Locks the session row and returns ownership + completion state
+// for the answer-submit endpoint (ASK-137). FOR UPDATE serializes
+// against a concurrent SessionComplete (ASK-140 future) so the
+// answer either commits before the completion (recorded) or
+// after (rejected with 409). Filters NOTHING -- the service
+// inspects user_id + completed_at to choose 404 / 403 / 409 /
+// proceed.
+func (q *Queries) GetSessionForAnswerSubmission(ctx context.Context, id pgtype.UUID) (GetSessionForAnswerSubmissionRow, error) {
+	row := q.db.QueryRow(ctx, getSessionForAnswerSubmission, id)
+	var i GetSessionForAnswerSubmissionRow
+	err := row.Scan(&i.ID, &i.UserID, &i.CompletedAt)
+	return i, err
+}
+
+const incrementSessionCorrectAnswers = `-- name: IncrementSessionCorrectAnswers :exec
+UPDATE practice_sessions
+SET correct_answers = correct_answers + 1
+WHERE id = $1::uuid
+`
+
+// Bumps practice_sessions.correct_answers by 1. Called only when
+// the inserted answer was correct (ASK-137 AC8). Wrapped in the
+// same tx as InsertPracticeAnswer so a failure rolls back the
+// answer row too -- the counter and the underlying answer can
+// never disagree.
+func (q *Queries) IncrementSessionCorrectAnswers(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, incrementSessionCorrectAnswers, id)
+	return err
+}
+
+const insertPracticeAnswer = `-- name: InsertPracticeAnswer :one
+INSERT INTO practice_answers (session_id, question_id, user_answer, is_correct, verified)
+VALUES (
+  $1::uuid,
+  $2::uuid,
+  $3::text,
+  $4::boolean,
+  $5::boolean
+)
+RETURNING question_id, user_answer, is_correct, verified, answered_at
+`
+
+type InsertPracticeAnswerParams struct {
+	SessionID  pgtype.UUID `json:"session_id"`
+	QuestionID pgtype.UUID `json:"question_id"`
+	UserAnswer string      `json:"user_answer"`
+	IsCorrect  bool        `json:"is_correct"`
+	Verified   bool        `json:"verified"`
+}
+
+type InsertPracticeAnswerRow struct {
+	QuestionID pgtype.UUID        `json:"question_id"`
+	UserAnswer pgtype.Text        `json:"user_answer"`
+	IsCorrect  pgtype.Bool        `json:"is_correct"`
+	Verified   bool               `json:"verified"`
+	AnsweredAt pgtype.Timestamptz `json:"answered_at"`
+}
+
+// Records the user's answer with the backend-determined
+// is_correct + verified flags (ASK-137). The unique constraint
+// uq_practice_answers_session_question on (session_id,
+// question_id) catches duplicate submissions; the service
+// detects the unique-violation pgconn error and surfaces a
+// typed 400 with details {"question_id": "already answered"}.
+//
+// Returns the persisted columns so the handler can render the
+// PracticeAnswerResponse without a re-fetch.
+func (q *Queries) InsertPracticeAnswer(ctx context.Context, arg InsertPracticeAnswerParams) (InsertPracticeAnswerRow, error) {
+	row := q.db.QueryRow(ctx, insertPracticeAnswer,
+		arg.SessionID,
+		arg.QuestionID,
+		arg.UserAnswer,
+		arg.IsCorrect,
+		arg.Verified,
+	)
+	var i InsertPracticeAnswerRow
+	err := row.Scan(
+		&i.QuestionID,
+		&i.UserAnswer,
+		&i.IsCorrect,
+		&i.Verified,
+		&i.AnsweredAt,
 	)
 	return i, err
 }

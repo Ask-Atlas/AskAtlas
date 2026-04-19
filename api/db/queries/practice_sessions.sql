@@ -136,6 +136,78 @@ SET total_questions = (SELECT count(*)::integer FROM inserted)
 WHERE id = sqlc.arg(session_id)::uuid
 RETURNING total_questions;
 
+-- name: GetSessionForAnswerSubmission :one
+-- Locks the session row and returns ownership + completion state
+-- for the answer-submit endpoint (ASK-137). FOR UPDATE serializes
+-- against a concurrent SessionComplete (ASK-140 future) so the
+-- answer either commits before the completion (recorded) or
+-- after (rejected with 409). Filters NOTHING -- the service
+-- inspects user_id + completed_at to choose 404 / 403 / 409 /
+-- proceed.
+SELECT id, user_id, completed_at
+FROM practice_sessions
+WHERE id = sqlc.arg(id)::uuid
+FOR UPDATE;
+
+-- name: CheckQuestionInSessionSnapshot :one
+-- Returns TRUE when the question_id is part of this session's
+-- frozen practice_session_questions snapshot. Used by ASK-137 to
+-- enforce the spec's "question must be in this session's
+-- snapshot" rule (400 otherwise -- the user can only answer
+-- questions that were in the quiz at session-start time).
+SELECT EXISTS (
+  SELECT 1 FROM practice_session_questions
+  WHERE session_id = sqlc.arg(session_id)::uuid
+    AND question_id = sqlc.arg(question_id)::uuid
+) AS exists;
+
+-- name: GetCorrectOptionText :one
+-- Returns the text of the option marked is_correct for an MCQ or
+-- TF question. Used by ASK-137 to compare against user_answer:
+--   * multiple-choice -- exact string equality with this text
+--   * true-false -- this text is "True" or "False" (the canonical
+--     labels written by the create-quiz path); the service maps
+--     it to a boolean and compares against the user's parsed
+--     "true"/"false" input.
+-- Returns sql.ErrNoRows if no option is marked correct, which
+-- the service treats as a data-integrity 500 (write-side
+-- validation should have prevented it).
+SELECT text
+FROM quiz_answer_options
+WHERE question_id = sqlc.arg(question_id)::uuid
+  AND is_correct = true
+LIMIT 1;
+
+-- name: InsertPracticeAnswer :one
+-- Records the user's answer with the backend-determined
+-- is_correct + verified flags (ASK-137). The unique constraint
+-- uq_practice_answers_session_question on (session_id,
+-- question_id) catches duplicate submissions; the service
+-- detects the unique-violation pgconn error and surfaces a
+-- typed 400 with details {"question_id": "already answered"}.
+--
+-- Returns the persisted columns so the handler can render the
+-- PracticeAnswerResponse without a re-fetch.
+INSERT INTO practice_answers (session_id, question_id, user_answer, is_correct, verified)
+VALUES (
+  sqlc.arg(session_id)::uuid,
+  sqlc.arg(question_id)::uuid,
+  sqlc.arg(user_answer)::text,
+  sqlc.arg(is_correct)::boolean,
+  sqlc.arg(verified)::boolean
+)
+RETURNING question_id, user_answer, is_correct, verified, answered_at;
+
+-- name: IncrementSessionCorrectAnswers :exec
+-- Bumps practice_sessions.correct_answers by 1. Called only when
+-- the inserted answer was correct (ASK-137 AC8). Wrapped in the
+-- same tx as InsertPracticeAnswer so a failure rolls back the
+-- answer row too -- the counter and the underlying answer can
+-- never disagree.
+UPDATE practice_sessions
+SET correct_answers = correct_answers + 1
+WHERE id = sqlc.arg(id)::uuid;
+
 -- name: ListSessionAnswers :many
 -- All answers submitted in a session, ordered by answered_at ASC so
 -- the response renders them in the order the user produced them.
