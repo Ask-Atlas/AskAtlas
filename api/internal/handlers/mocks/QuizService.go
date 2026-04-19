@@ -228,3 +228,69 @@ func (_c *MockQuizService_ListQuizzes_Call) RunAndReturn(run func(ctx context.Co
 	_c.Call.Return(run)
 	return _c
 }
+
+// UpdateQuiz provides a mock function for the type MockQuizService
+func (_mock *MockQuizService) UpdateQuiz(ctx context.Context, params quizzes.UpdateQuizParams) (quizzes.QuizDetail, error) {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateQuiz")
+	}
+
+	var r0 quizzes.QuizDetail
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, quizzes.UpdateQuizParams) (quizzes.QuizDetail, error)); ok {
+		return returnFunc(ctx, params)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, quizzes.UpdateQuizParams) quizzes.QuizDetail); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Get(0).(quizzes.QuizDetail)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, quizzes.UpdateQuizParams) error); ok {
+		r1 = returnFunc(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockQuizService_UpdateQuiz_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateQuiz'
+type MockQuizService_UpdateQuiz_Call struct {
+	*mock.Call
+}
+
+// UpdateQuiz is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params quizzes.UpdateQuizParams
+func (_e *MockQuizService_Expecter) UpdateQuiz(ctx interface{}, params interface{}) *MockQuizService_UpdateQuiz_Call {
+	return &MockQuizService_UpdateQuiz_Call{Call: _e.mock.On("UpdateQuiz", ctx, params)}
+}
+
+func (_c *MockQuizService_UpdateQuiz_Call) Run(run func(ctx context.Context, params quizzes.UpdateQuizParams)) *MockQuizService_UpdateQuiz_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 quizzes.UpdateQuizParams
+		if args[1] != nil {
+			arg1 = args[1].(quizzes.UpdateQuizParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockQuizService_UpdateQuiz_Call) Return(quizDetail quizzes.QuizDetail, err error) *MockQuizService_UpdateQuiz_Call {
+	_c.Call.Return(quizDetail, err)
+	return _c
+}
+
+func (_c *MockQuizService_UpdateQuiz_Call) RunAndReturn(run func(ctx context.Context, params quizzes.UpdateQuizParams) (quizzes.QuizDetail, error)) *MockQuizService_UpdateQuiz_Call {
+	_c.Call.Return(run)
+	return _c
+}

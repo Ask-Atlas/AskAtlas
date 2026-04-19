@@ -98,6 +98,18 @@ type Querier interface {
 	// that races with a parent-cascade soft-delete reports 'not found'
 	// rather than rendering an orphaned quiz.
 	GetQuizDetail(ctx context.Context, id pgtype.UUID) (GetQuizDetailRow, error)
+	// Locked SELECT used by UpdateQuiz (ASK-153). Like
+	// GetQuizByIDForUpdate but also joins to the parent study guide
+	// so the service can enforce the "parent guide must be live"
+	// gate (AC6) inside the same transaction without a second round
+	// trip. Locks ONLY the quiz row (FOR UPDATE OF q) -- the parent
+	// guide is read-only at this site and we don't want to hold a
+	// write lock on it for the duration of the quiz update.
+	//
+	// Filters NOTHING -- the service inspects the four fields to
+	// choose 404 (missing quiz / deleted quiz / deleted guide) vs
+	// 403 (not creator) vs proceed.
+	GetQuizForUpdateWithParentStatus(ctx context.Context, id pgtype.UUID) (GetQuizForUpdateWithParentStatusRow, error)
 	// Lookup pair for UpsertResource above. Returns the resources row
 	// the viewer owns for this URL; always succeeds because the upsert
 	// runs immediately before this in the same tx (either the INSERT
@@ -445,6 +457,26 @@ type Querier interface {
 	// Returns sql.ErrNoRows when file is not found, not owned, or in deletion.
 	UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateFileRow, error)
 	UpdateFileStatus(ctx context.Context, arg UpdateFileStatusParams) error
+	// Partial update for ASK-153. The title column uses the standard
+	// COALESCE(narg, current) pattern -- nil means "leave alone".
+	//
+	// Description uses a CASE expression because COALESCE can't
+	// distinguish "field absent in the request" from "field
+	// explicitly null in the request" (both encode as SQL NULL once
+	// they reach the query layer). The handler resolves the
+	// tri-state, sets `clear_description` true on an explicit
+	// `description: null` body, and the service drives both args
+	// accordingly:
+	//   * clear_description=false                 -> column unchanged
+	//   * clear_description=true, description=NULL -> column cleared
+	//   * clear_description=true, description="x"  -> column set to "x"
+	//
+	// The service is responsible for 404 / 403 gating before this
+	// query runs (via GetQuizForUpdateWithParentStatus). updated_at
+	// is bumped to now() on every successful call -- the at-least-
+	// one-field rule is enforced in Go so this query is never
+	// reached for an empty PATCH.
+	UpdateQuiz(ctx context.Context, arg UpdateQuizParams) error
 	// Partial update for ASK-129. Each updatable column uses COALESCE(narg,
 	// current) so a nil arg from Go means "leave this column alone" and a
 	// non-nil arg means "replace with the supplied value". The service is

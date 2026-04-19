@@ -172,6 +172,72 @@ func (_c *MockRepository_GetQuizDetail_Call) RunAndReturn(run func(ctx context.C
 	return _c
 }
 
+// GetQuizForUpdateWithParentStatus provides a mock function for the type MockRepository
+func (_mock *MockRepository) GetQuizForUpdateWithParentStatus(ctx context.Context, id pgtype.UUID) (db.GetQuizForUpdateWithParentStatusRow, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetQuizForUpdateWithParentStatus")
+	}
+
+	var r0 db.GetQuizForUpdateWithParentStatusRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) (db.GetQuizForUpdateWithParentStatusRow, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) db.GetQuizForUpdateWithParentStatusRow); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(db.GetQuizForUpdateWithParentStatusRow)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, pgtype.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_GetQuizForUpdateWithParentStatus_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetQuizForUpdateWithParentStatus'
+type MockRepository_GetQuizForUpdateWithParentStatus_Call struct {
+	*mock.Call
+}
+
+// GetQuizForUpdateWithParentStatus is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id pgtype.UUID
+func (_e *MockRepository_Expecter) GetQuizForUpdateWithParentStatus(ctx interface{}, id interface{}) *MockRepository_GetQuizForUpdateWithParentStatus_Call {
+	return &MockRepository_GetQuizForUpdateWithParentStatus_Call{Call: _e.mock.On("GetQuizForUpdateWithParentStatus", ctx, id)}
+}
+
+func (_c *MockRepository_GetQuizForUpdateWithParentStatus_Call) Run(run func(ctx context.Context, id pgtype.UUID)) *MockRepository_GetQuizForUpdateWithParentStatus_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_GetQuizForUpdateWithParentStatus_Call) Return(getQuizForUpdateWithParentStatusRow db.GetQuizForUpdateWithParentStatusRow, err error) *MockRepository_GetQuizForUpdateWithParentStatus_Call {
+	_c.Call.Return(getQuizForUpdateWithParentStatusRow, err)
+	return _c
+}
+
+func (_c *MockRepository_GetQuizForUpdateWithParentStatus_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) (db.GetQuizForUpdateWithParentStatusRow, error)) *MockRepository_GetQuizForUpdateWithParentStatus_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GuideExistsAndLiveForQuizzes provides a mock function for the type MockRepository
 func (_mock *MockRepository) GuideExistsAndLiveForQuizzes(ctx context.Context, id pgtype.UUID) (bool, error) {
 	ret := _mock.Called(ctx, id)
@@ -741,6 +807,63 @@ func (_c *MockRepository_SoftDeleteQuiz_Call) Return(err error) *MockRepository_
 }
 
 func (_c *MockRepository_SoftDeleteQuiz_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) error) *MockRepository_SoftDeleteQuiz_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateQuiz provides a mock function for the type MockRepository
+func (_mock *MockRepository) UpdateQuiz(ctx context.Context, arg db.UpdateQuizParams) error {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateQuiz")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.UpdateQuizParams) error); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_UpdateQuiz_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateQuiz'
+type MockRepository_UpdateQuiz_Call struct {
+	*mock.Call
+}
+
+// UpdateQuiz is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.UpdateQuizParams
+func (_e *MockRepository_Expecter) UpdateQuiz(ctx interface{}, arg interface{}) *MockRepository_UpdateQuiz_Call {
+	return &MockRepository_UpdateQuiz_Call{Call: _e.mock.On("UpdateQuiz", ctx, arg)}
+}
+
+func (_c *MockRepository_UpdateQuiz_Call) Run(run func(ctx context.Context, arg db.UpdateQuizParams)) *MockRepository_UpdateQuiz_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.UpdateQuizParams
+		if args[1] != nil {
+			arg1 = args[1].(db.UpdateQuizParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_UpdateQuiz_Call) Return(err error) *MockRepository_UpdateQuiz_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_UpdateQuiz_Call) RunAndReturn(run func(ctx context.Context, arg db.UpdateQuizParams) error) *MockRepository_UpdateQuiz_Call {
 	_c.Call.Return(run)
 	return _c
 }

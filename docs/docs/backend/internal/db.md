@@ -39,6 +39,7 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
 - [type GetMembershipRow](<#GetMembershipRow>)
 - [type GetQuizByIDForUpdateRow](<#GetQuizByIDForUpdateRow>)
 - [type GetQuizDetailRow](<#GetQuizDetailRow>)
+- [type GetQuizForUpdateWithParentStatusRow](<#GetQuizForUpdateWithParentStatusRow>)
 - [type GetResourceByCreatorURLParams](<#GetResourceByCreatorURLParams>)
 - [type GetResourceByCreatorURLRow](<#GetResourceByCreatorURLRow>)
 - [type GetStudyGuideByIDForUpdateRow](<#GetStudyGuideByIDForUpdateRow>)
@@ -175,6 +176,7 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
   - [func \(q \*Queries\) GetMembership\(ctx context.Context, arg GetMembershipParams\) \(GetMembershipRow, error\)](<#Queries.GetMembership>)
   - [func \(q \*Queries\) GetQuizByIDForUpdate\(ctx context.Context, id pgtype.UUID\) \(GetQuizByIDForUpdateRow, error\)](<#Queries.GetQuizByIDForUpdate>)
   - [func \(q \*Queries\) GetQuizDetail\(ctx context.Context, id pgtype.UUID\) \(GetQuizDetailRow, error\)](<#Queries.GetQuizDetail>)
+  - [func \(q \*Queries\) GetQuizForUpdateWithParentStatus\(ctx context.Context, id pgtype.UUID\) \(GetQuizForUpdateWithParentStatusRow, error\)](<#Queries.GetQuizForUpdateWithParentStatus>)
   - [func \(q \*Queries\) GetResourceByCreatorURL\(ctx context.Context, arg GetResourceByCreatorURLParams\) \(GetResourceByCreatorURLRow, error\)](<#Queries.GetResourceByCreatorURL>)
   - [func \(q \*Queries\) GetSchool\(ctx context.Context, id pgtype.UUID\) \(School, error\)](<#Queries.GetSchool>)
   - [func \(q \*Queries\) GetStudyGuideByIDForUpdate\(ctx context.Context, id pgtype.UUID\) \(GetStudyGuideByIDForUpdateRow, error\)](<#Queries.GetStudyGuideByIDForUpdate>)
@@ -245,6 +247,7 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
   - [func \(q \*Queries\) URLAlreadyAttachedToGuide\(ctx context.Context, arg URLAlreadyAttachedToGuideParams\) \(bool, error\)](<#Queries.URLAlreadyAttachedToGuide>)
   - [func \(q \*Queries\) UpdateFile\(ctx context.Context, arg UpdateFileParams\) \(UpdateFileRow, error\)](<#Queries.UpdateFile>)
   - [func \(q \*Queries\) UpdateFileStatus\(ctx context.Context, arg UpdateFileStatusParams\) error](<#Queries.UpdateFileStatus>)
+  - [func \(q \*Queries\) UpdateQuiz\(ctx context.Context, arg UpdateQuizParams\) error](<#Queries.UpdateQuiz>)
   - [func \(q \*Queries\) UpdateStudyGuide\(ctx context.Context, arg UpdateStudyGuideParams\) error](<#Queries.UpdateStudyGuide>)
   - [func \(q \*Queries\) UpsertClerkUser\(ctx context.Context, arg UpsertClerkUserParams\) \(User, error\)](<#Queries.UpsertClerkUser>)
   - [func \(q \*Queries\) UpsertFileGrant\(ctx context.Context, arg UpsertFileGrantParams\) \(FileGrant, error\)](<#Queries.UpsertFileGrant>)
@@ -276,6 +279,7 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
 - [type UpdateFileParams](<#UpdateFileParams>)
 - [type UpdateFileRow](<#UpdateFileRow>)
 - [type UpdateFileStatusParams](<#UpdateFileStatusParams>)
+- [type UpdateQuizParams](<#UpdateQuizParams>)
 - [type UpdateStudyGuideParams](<#UpdateStudyGuideParams>)
 - [type UploadStatus](<#UploadStatus>)
   - [func \(e \*UploadStatus\) Scan\(src interface\{\}\) error](<#UploadStatus.Scan>)
@@ -748,6 +752,20 @@ type GetQuizDetailRow struct {
 }
 ```
 
+<a name="GetQuizForUpdateWithParentStatusRow"></a>
+## type [GetQuizForUpdateWithParentStatusRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L103-L108>)
+
+
+
+```go
+type GetQuizForUpdateWithParentStatusRow struct {
+    ID             pgtype.UUID        `json:"id"`
+    CreatorID      pgtype.UUID        `json:"creator_id"`
+    DeletedAt      pgtype.Timestamptz `json:"deleted_at"`
+    GuideDeletedAt pgtype.Timestamptz `json:"guide_deleted_at"`
+}
+```
+
 <a name="GetResourceByCreatorURLParams"></a>
 ## type [GetResourceByCreatorURLParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L220-L223>)
 
@@ -910,7 +928,7 @@ type InsertGuideResourceParams struct {
 ```
 
 <a name="InsertQuizAnswerOptionParams"></a>
-## type [InsertQuizAnswerOptionParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L185-L190>)
+## type [InsertQuizAnswerOptionParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L224-L229>)
 
 
 
@@ -924,7 +942,7 @@ type InsertQuizAnswerOptionParams struct {
 ```
 
 <a name="InsertQuizParams"></a>
-## type [InsertQuizParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L145-L150>)
+## type [InsertQuizParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L184-L189>)
 
 
 
@@ -938,7 +956,7 @@ type InsertQuizParams struct {
 ```
 
 <a name="InsertQuizQuestionParams"></a>
-## type [InsertQuizQuestionParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L224-L233>)
+## type [InsertQuizQuestionParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L263-L272>)
 
 
 
@@ -956,7 +974,7 @@ type InsertQuizQuestionParams struct {
 ```
 
 <a name="InsertQuizRow"></a>
-## type [InsertQuizRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L152-L156>)
+## type [InsertQuizRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L191-L195>)
 
 
 
@@ -2077,7 +2095,7 @@ type ListOwnedFilesUpdatedDescRow struct {
 ```
 
 <a name="ListQuizQuestionsByQuizRow"></a>
-## type [ListQuizQuestionsByQuizRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L303-L312>)
+## type [ListQuizQuestionsByQuizRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L342-L351>)
 
 
 
@@ -2095,7 +2113,7 @@ type ListQuizQuestionsByQuizRow struct {
 ```
 
 <a name="ListQuizzesByStudyGuideRow"></a>
-## type [ListQuizzesByStudyGuideRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L365-L375>)
+## type [ListQuizzesByStudyGuideRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L404-L414>)
 
 
 
@@ -2800,7 +2818,7 @@ type PracticeSessionQuestion struct {
 ```
 
 <a name="Querier"></a>
-## type [Querier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/querier.go#L13-L516>)
+## type [Querier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/querier.go#L13-L548>)
 
 
 
@@ -2893,6 +2911,18 @@ type Querier interface {
     // that races with a parent-cascade soft-delete reports 'not found'
     // rather than rendering an orphaned quiz.
     GetQuizDetail(ctx context.Context, id pgtype.UUID) (GetQuizDetailRow, error)
+    // Locked SELECT used by UpdateQuiz (ASK-153). Like
+    // GetQuizByIDForUpdate but also joins to the parent study guide
+    // so the service can enforce the "parent guide must be live"
+    // gate (AC6) inside the same transaction without a second round
+    // trip. Locks ONLY the quiz row (FOR UPDATE OF q) -- the parent
+    // guide is read-only at this site and we don't want to hold a
+    // write lock on it for the duration of the quiz update.
+    //
+    // Filters NOTHING -- the service inspects the four fields to
+    // choose 404 (missing quiz / deleted quiz / deleted guide) vs
+    // 403 (not creator) vs proceed.
+    GetQuizForUpdateWithParentStatus(ctx context.Context, id pgtype.UUID) (GetQuizForUpdateWithParentStatusRow, error)
     // Lookup pair for UpsertResource above. Returns the resources row
     // the viewer owns for this URL; always succeeds because the upsert
     // runs immediately before this in the same tx (either the INSERT
@@ -3240,6 +3270,26 @@ type Querier interface {
     // Returns sql.ErrNoRows when file is not found, not owned, or in deletion.
     UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateFileRow, error)
     UpdateFileStatus(ctx context.Context, arg UpdateFileStatusParams) error
+    // Partial update for ASK-153. The title column uses the standard
+    // COALESCE(narg, current) pattern -- nil means "leave alone".
+    //
+    // Description uses a CASE expression because COALESCE can't
+    // distinguish "field absent in the request" from "field
+    // explicitly null in the request" (both encode as SQL NULL once
+    // they reach the query layer). The handler resolves the
+    // tri-state, sets `clear_description` true on an explicit
+    // `description: null` body, and the service drives both args
+    // accordingly:
+    //   * clear_description=false                 -> column unchanged
+    //   * clear_description=true, description=NULL -> column cleared
+    //   * clear_description=true, description="x"  -> column set to "x"
+    //
+    // The service is responsible for 404 / 403 gating before this
+    // query runs (via GetQuizForUpdateWithParentStatus). updated_at
+    // is bumped to now() on every successful call -- the at-least-
+    // one-field rule is enforced in Go so this query is never
+    // reached for an empty PATCH.
+    UpdateQuiz(ctx context.Context, arg UpdateQuizParams) error
     // Partial update for ASK-129. Each updatable column uses COALESCE(narg,
     // current) so a nil arg from Go means "leave this column alone" and a
     // non-nil arg means "replace with the supplied value". The service is
@@ -3468,6 +3518,17 @@ func (q *Queries) GetQuizDetail(ctx context.Context, id pgtype.UUID) (GetQuizDet
 
 Load the quiz row \+ privacy\-floor creator info for the detail payload. The study guide is NOT joined back \-\- the caller already knows the study\_guide\_id \(it's in the URL on POST and on the quiz row itself\). Excludes soft\-deleted quizzes \(deleted\_at IS NULL\), soft\-deleted creators \(u.deleted\_at IS NULL\), and soft\-deleted parent guides \(sg.deleted\_at IS NULL\) so a hydration that races with a parent\-cascade soft\-delete reports 'not found' rather than rendering an orphaned quiz.
 
+<a name="Queries.GetQuizForUpdateWithParentStatus"></a>
+### func \(\*Queries\) [GetQuizForUpdateWithParentStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L121>)
+
+```go
+func (q *Queries) GetQuizForUpdateWithParentStatus(ctx context.Context, id pgtype.UUID) (GetQuizForUpdateWithParentStatusRow, error)
+```
+
+Locked SELECT used by UpdateQuiz \(ASK\-153\). Like GetQuizByIDForUpdate but also joins to the parent study guide so the service can enforce the "parent guide must be live" gate \(AC6\) inside the same transaction without a second round trip. Locks ONLY the quiz row \(FOR UPDATE OF q\) \-\- the parent guide is read\-only at this site and we don't want to hold a write lock on it for the duration of the quiz update.
+
+Filters NOTHING \-\- the service inspects the four fields to choose 404 \(missing quiz / deleted quiz / deleted guide\) vs 403 \(not creator\) vs proceed.
+
 <a name="Queries.GetResourceByCreatorURL"></a>
 ### func \(\*Queries\) [GetResourceByCreatorURL](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L238>)
 
@@ -3544,7 +3605,7 @@ func (q *Queries) GuideExistsAndLive(ctx context.Context, id pgtype.UUID) (bool,
 Live\-presence probe used by both vote endpoints. Returns TRUE only when the guide row exists AND is not soft\-deleted. The vote service gates on this before the upsert/delete so a missing\-or\-deleted guide returns 404 with a clear message rather than e.g. trampling through to the SQL layer and surfacing a generic FK error.
 
 <a name="Queries.GuideExistsAndLiveForQuizzes"></a>
-### func \(\*Queries\) [GuideExistsAndLiveForQuizzes](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L127>)
+### func \(\*Queries\) [GuideExistsAndLiveForQuizzes](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L166>)
 
 ```go
 func (q *Queries) GuideExistsAndLiveForQuizzes(ctx context.Context, id pgtype.UUID) (bool, error)
@@ -3597,7 +3658,7 @@ func (q *Queries) InsertGuideResource(ctx context.Context, arg InsertGuideResour
 Creates the \(resource\_id, study\_guide\_id, attached\_by\) join row. The PK is \(resource\_id, study\_guide\_id\) so a same\-resource\-and\-guide duplicate raises a unique\_violation \-\- but the user\-facing 409 conflict on a duplicate URL is detected EARLIER by URLAlreadyAttachedToGuide \(which catches across resource rows with the same URL but different creators\). This INSERT's PK failure mode is the narrow concurrency\-race: two attachers slip through the pre\-check between query 1 and query 4.
 
 <a name="Queries.InsertQuiz"></a>
-### func \(\*Queries\) [InsertQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L163>)
+### func \(\*Queries\) [InsertQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L202>)
 
 ```go
 func (q *Queries) InsertQuiz(ctx context.Context, arg InsertQuizParams) (InsertQuizRow, error)
@@ -3606,7 +3667,7 @@ func (q *Queries) InsertQuiz(ctx context.Context, arg InsertQuizParams) (InsertQ
 Insert a new quiz row. Returns the columns the service needs to build the QuizDetailResponse without an extra round trip on the write side \-\- the read\-side hydration still happens via GetQuizDetail because the creator's first\_name \+ last\_name come from a join to users \(and would inflate this RETURNING clause\).
 
 <a name="Queries.InsertQuizAnswerOption"></a>
-### func \(\*Queries\) [InsertQuizAnswerOption](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L196>)
+### func \(\*Queries\) [InsertQuizAnswerOption](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L235>)
 
 ```go
 func (q *Queries) InsertQuizAnswerOption(ctx context.Context, arg InsertQuizAnswerOptionParams) error
@@ -3615,7 +3676,7 @@ func (q *Queries) InsertQuizAnswerOption(ctx context.Context, arg InsertQuizAnsw
 Insert one option row. The service has already validated that exactly one option per MCQ has is\_correct=true; for true\-false questions the service synthesises two options \(\`True\` \+ \`False\`\) with the matching is\_correct flag.
 
 <a name="Queries.InsertQuizQuestion"></a>
-### func \(\*Queries\) [InsertQuizQuestion](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L239>)
+### func \(\*Queries\) [InsertQuizQuestion](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L278>)
 
 ```go
 func (q *Queries) InsertQuizQuestion(ctx context.Context, arg InsertQuizQuestionParams) (pgtype.UUID, error)
@@ -3910,7 +3971,7 @@ func (q *Queries) ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFi
 
 
 <a name="Queries.ListQuizAnswerOptionsByQuiz"></a>
-### func \(\*Queries\) [ListQuizAnswerOptionsByQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L268>)
+### func \(\*Queries\) [ListQuizAnswerOptionsByQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L307>)
 
 ```go
 func (q *Queries) ListQuizAnswerOptionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]QuizAnswerOption, error)
@@ -3919,7 +3980,7 @@ func (q *Queries) ListQuizAnswerOptionsByQuiz(ctx context.Context, quizID pgtype
 All answer options for every question in a quiz, ordered by question\_id then sort\_order then id. The mapper groups by question\_id in Go to attach options to their parent question. The triple\-key ordering keeps the option list deterministic.
 
 <a name="Queries.ListQuizQuestionsByQuiz"></a>
-### func \(\*Queries\) [ListQuizQuestionsByQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L319>)
+### func \(\*Queries\) [ListQuizQuestionsByQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L358>)
 
 ```go
 func (q *Queries) ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]ListQuizQuestionsByQuizRow, error)
@@ -3928,7 +3989,7 @@ func (q *Queries) ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUI
 All questions for a quiz, ordered by sort\_order then id \(the id tiebreaker keeps the response deterministic when two questions happen to share a sort\_order \-\- the spec doesn't enforce uniqueness on sort\_order\). Returns reference\_answer so the mapper can emit it as \`correct\_answer\` on freeform questions.
 
 <a name="Queries.ListQuizzesByStudyGuide"></a>
-### func \(\*Queries\) [ListQuizzesByStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L404>)
+### func \(\*Queries\) [ListQuizzesByStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L443>)
 
 ```go
 func (q *Queries) ListQuizzesByStudyGuide(ctx context.Context, studyGuideID pgtype.UUID) ([]ListQuizzesByStudyGuideRow, error)
@@ -4085,7 +4146,7 @@ func (q *Queries) SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) 
 Marks a file as pending deletion. Only applies if the file is owned by the caller and has not already entered a deletion state \(idempotency\-safe\).
 
 <a name="Queries.SoftDeleteQuiz"></a>
-### func \(\*Queries\) [SoftDeleteQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L446>)
+### func \(\*Queries\) [SoftDeleteQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L485>)
 
 ```go
 func (q *Queries) SoftDeleteQuiz(ctx context.Context, id pgtype.UUID) error
@@ -4148,6 +4209,23 @@ func (q *Queries) UpdateFileStatus(ctx context.Context, arg UpdateFileStatusPara
 ```
 
 
+
+<a name="Queries.UpdateQuiz"></a>
+### func \(\*Queries\) [UpdateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L527>)
+
+```go
+func (q *Queries) UpdateQuiz(ctx context.Context, arg UpdateQuizParams) error
+```
+
+Partial update for ASK\-153. The title column uses the standard COALESCE\(narg, current\) pattern \-\- nil means "leave alone".
+
+Description uses a CASE expression because COALESCE can't distinguish "field absent in the request" from "field explicitly null in the request" \(both encode as SQL NULL once they reach the query layer\). The handler resolves the tri\-state, sets \`clear\_description\` true on an explicit \`description: null\` body, and the service drives both args accordingly:
+
+- clear\_description=false \-\> column unchanged
+- clear\_description=true, description=NULL \-\> column cleared
+- clear\_description=true, description="x" \-\> column set to "x"
+
+The service is responsible for 404 / 403 gating before this query runs \(via GetQuizForUpdateWithParentStatus\). updated\_at is bumped to now\(\) on every successful call \-\- the at\-least\- one\-field rule is enforced in Go so this query is never reached for an empty PATCH.
 
 <a name="Queries.UpdateStudyGuide"></a>
 ### func \(\*Queries\) [UpdateStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/study_guides.sql.go#L1868>)
@@ -4585,6 +4663,20 @@ type UpdateFileStatusParams struct {
     Status  UploadStatus `json:"status"`
     FileID  pgtype.UUID  `json:"file_id"`
     OwnerID pgtype.UUID  `json:"owner_id"`
+}
+```
+
+<a name="UpdateQuizParams"></a>
+## type [UpdateQuizParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L501-L506>)
+
+
+
+```go
+type UpdateQuizParams struct {
+    Title            pgtype.Text `json:"title"`
+    ClearDescription bool        `json:"clear_description"`
+    Description      pgtype.Text `json:"description"`
+    ID               pgtype.UUID `json:"id"`
 }
 ```
 

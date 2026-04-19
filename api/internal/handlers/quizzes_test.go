@@ -347,6 +347,143 @@ func TestQuizzesHandler_Create_Success_FullPayload(t *testing.T) {
 // same package.
 func ptrStrQ(s string) *string { return &s }
 
+// ---- UpdateQuiz (ASK-153) ----
+
+func TestQuizzesHandler_Update_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	body := bytes.NewReader([]byte(`{"title":"X"}`))
+	url := fmt.Sprintf("/quizzes/%s", uuid.NewString())
+	req := httptest.NewRequest(http.MethodPatch, url, body)
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestQuizzesHandler_Update_InvalidJSON_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	url := fmt.Sprintf("/quizzes/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPatch, url, bytes.NewReader([]byte("{not-json")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestQuizzesHandler_Update_NullDescription_TriState verifies the
+// raw-body two-pass decode: a request with `description: null`
+// must reach the service with ClearDescription=true and a nil
+// Description pointer (drives the SQL CASE that NULLs the column).
+// This is the keystone test for the tri-state JSON handling.
+func TestQuizzesHandler_Update_NullDescription_TriState(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().UpdateQuiz(mock.Anything, mock.MatchedBy(func(p quizzes.UpdateQuizParams) bool {
+		return p.ClearDescription && p.Description == nil && p.Title == nil
+	})).Return(quizzes.QuizDetail{ID: uuid.New(), Creator: quizzes.Creator{}}, nil)
+
+	url := fmt.Sprintf("/quizzes/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPatch, url, bytes.NewReader([]byte(`{"description":null}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+// TestQuizzesHandler_Update_AbsentDescription verifies the inverse
+// of the above: a request with `{"title":"X"}` (no description
+// key at all) must reach the service with ClearDescription=false.
+func TestQuizzesHandler_Update_AbsentDescription(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().UpdateQuiz(mock.Anything, mock.MatchedBy(func(p quizzes.UpdateQuizParams) bool {
+		return !p.ClearDescription && p.Title != nil && *p.Title == "X"
+	})).Return(quizzes.QuizDetail{ID: uuid.New(), Creator: quizzes.Creator{}}, nil)
+
+	url := fmt.Sprintf("/quizzes/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPatch, url, bytes.NewReader([]byte(`{"title":"X"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+// TestQuizzesHandler_Update_ValueDescription verifies a request
+// with `description: "value"` reaches the service with
+// ClearDescription=true and Description pointing to the value.
+func TestQuizzesHandler_Update_ValueDescription(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().UpdateQuiz(mock.Anything, mock.MatchedBy(func(p quizzes.UpdateQuizParams) bool {
+		return p.ClearDescription && p.Description != nil && *p.Description == "new desc"
+	})).Return(quizzes.QuizDetail{ID: uuid.New(), Creator: quizzes.Creator{}}, nil)
+
+	url := fmt.Sprintf("/quizzes/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPatch, url, bytes.NewReader([]byte(`{"description":"new desc"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestQuizzesHandler_Update_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().UpdateQuiz(mock.Anything, mock.Anything).
+		Return(quizzes.QuizDetail{}, apperrors.NewNotFound("Quiz not found"))
+
+	url := fmt.Sprintf("/quizzes/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPatch, url, bytes.NewReader([]byte(`{"title":"X"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestQuizzesHandler_Update_NotCreator_403(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().UpdateQuiz(mock.Anything, mock.Anything).
+		Return(quizzes.QuizDetail{}, apperrors.NewForbidden())
+
+	url := fmt.Sprintf("/quizzes/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPatch, url, bytes.NewReader([]byte(`{"title":"X"}`)))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
 // ---- DeleteQuiz (ASK-102) ----
 
 func TestQuizzesHandler_Delete_Unauthorized(t *testing.T) {

@@ -98,3 +98,11 @@ func (r *sqlcRepository) GetQuizByIDForUpdate(ctx context.Context, id pgtype.UUI
 func (r *sqlcRepository) SoftDeleteQuiz(ctx context.Context, id pgtype.UUID) error {
 	return r.queries.SoftDeleteQuiz(ctx, id)
 }
+
+func (r *sqlcRepository) GetQuizForUpdateWithParentStatus(ctx context.Context, id pgtype.UUID) (db.GetQuizForUpdateWithParentStatusRow, error) {
+	return r.queries.GetQuizForUpdateWithParentStatus(ctx, id)
+}
+
+func (r *sqlcRepository) UpdateQuiz(ctx context.Context, arg db.UpdateQuizParams) error {
+	return r.queries.UpdateQuiz(ctx, arg)
+}

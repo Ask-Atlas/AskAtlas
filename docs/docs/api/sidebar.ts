@@ -132,6 +132,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/update-quiz",
+          label: "Update a quiz's metadata (title and/or description)",
+          className: "api-method patch",
+        },
+        {
+          type: "doc",
           id: "api/delete-quiz",
           label: "Soft-delete a quiz",
           className: "api-method delete",

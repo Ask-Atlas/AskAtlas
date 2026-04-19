@@ -856,6 +856,64 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
   /quizzes/{quiz_id}:
+    patch:
+      operationId: UpdateQuiz
+      summary: Update a quiz's metadata (title and/or description)
+      description: |
+        Partial-update of the quiz's `title` and/or `description`.
+        Question-level edits flow through the per-question endpoints --
+        this PATCH only touches the quiz row.
+
+        Authorization: creator-only. The authenticated user MUST be
+        `quizzes.creator_id`; any other authenticated user gets 403.
+
+        Field semantics:
+          * Both fields are optional. An empty body `{}` is rejected
+            with 400 -- at least one field must be provided.
+          * `title` MUST be non-empty when provided (after trim) and
+            <=500 chars.
+          * `description` accepts JSON `null` to explicitly CLEAR
+            the existing value, a non-empty string to set the value
+            (max 2,000 chars after trim), and a whitespace-only
+            string is downgraded to a clear (NULL) since the column
+            should not store meaningless blank values. To leave the
+            current description untouched, OMIT the field entirely
+            from the request body.
+
+        404 covers BOTH the quiz being missing/soft-deleted AND the
+        parent study guide being soft-deleted (per spec AC6).
+        `updated_at` is refreshed on every successful PATCH.
+      parameters:
+        - name: quiz_id
+          in: path
+          description: The unique UUID of the quiz to update
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateQuizRequest'
+      responses:
+        '200':
+          description: The updated quiz with all questions and options.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     delete:
       operationId: DeleteQuiz
       summary: Soft-delete a quiz
@@ -2630,6 +2688,27 @@ components:
             $ref: '#/components/schemas/QuizListItemResponse'
       required:
         - quizzes
+    UpdateQuizRequest:
+      type: object
+      description: |
+        Request body for PATCH /api/quizzes/{quiz_id}. Both fields
+        are optional; absent fields preserve their current value.
+        At least one field must be provided -- an empty body `{}`
+        is rejected with 400.
+
+        `description` supports an explicit JSON `null` to clear the
+        existing value (the only field on this endpoint with that
+        semantic; `title` cannot be cleared because the column is
+        NOT NULL on the underlying schema).
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
     AppError:
       type: object
       description: Standardized error response structure matching application error domains

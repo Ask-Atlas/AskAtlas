@@ -693,6 +693,308 @@ func TestCreateQuiz_SortOrderHonored(t *testing.T) {
 	require.Equal(t, []int32{99, 1}, capturedSortOrders)
 }
 
+// ---- UpdateQuiz (ASK-153) ----
+
+// quizUpdateFixture builds a GetQuizForUpdateWithParentStatusRow
+// with the given creator + deletion states. The two deleted_at
+// flags drive the "guide deleted" vs "quiz deleted" 404 paths
+// independently.
+func quizUpdateFixture(t *testing.T, quizID, creatorID uuid.UUID, quizDeleted, guideDeleted bool) db.GetQuizForUpdateWithParentStatusRow {
+	t.Helper()
+	row := db.GetQuizForUpdateWithParentStatusRow{
+		ID:        utils.UUID(quizID),
+		CreatorID: utils.UUID(creatorID),
+	}
+	if quizDeleted {
+		row.DeletedAt = pgtype.Timestamptz{Time: fixtureTime, Valid: true}
+	}
+	if guideDeleted {
+		row.GuideDeletedAt = pgtype.Timestamptz{Time: fixtureTime, Valid: true}
+	}
+	return row
+}
+
+func TestUpdateQuiz_EmptyBody_400(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	svc := quizzes.NewService(repo)
+
+	_, err := svc.UpdateQuiz(context.Background(), quizzes.UpdateQuizParams{
+		QuizID:   uuid.New(),
+		ViewerID: uuid.New(),
+	})
+	assertBadRequest(t, err, "body")
+}
+
+func TestUpdateQuiz_BlankTitle_400(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	svc := quizzes.NewService(repo)
+
+	blank := "   "
+	_, err := svc.UpdateQuiz(context.Background(), quizzes.UpdateQuizParams{
+		QuizID:   uuid.New(),
+		ViewerID: uuid.New(),
+		Title:    &blank,
+	})
+	assertBadRequest(t, err, "title")
+}
+
+func TestUpdateQuiz_TitleTooLong_400(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	svc := quizzes.NewService(repo)
+
+	tooLong := strings.Repeat("a", quizzes.MaxTitleLength+1)
+	_, err := svc.UpdateQuiz(context.Background(), quizzes.UpdateQuizParams{
+		QuizID:   uuid.New(),
+		ViewerID: uuid.New(),
+		Title:    &tooLong,
+	})
+	assertBadRequest(t, err, "title")
+}
+
+func TestUpdateQuiz_DescriptionTooLong_400(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	svc := quizzes.NewService(repo)
+
+	tooLong := strings.Repeat("d", quizzes.MaxDescriptionLength+1)
+	_, err := svc.UpdateQuiz(context.Background(), quizzes.UpdateQuizParams{
+		QuizID:           uuid.New(),
+		ViewerID:         uuid.New(),
+		ClearDescription: true,
+		Description:      &tooLong,
+	})
+	assertBadRequest(t, err, "description")
+}
+
+func TestUpdateQuiz_QuizNotFound_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{}, sql.ErrNoRows)
+
+	title := "New Title"
+	svc := quizzes.NewService(repo)
+	_, err := svc.UpdateQuiz(context.Background(), quizzes.UpdateQuizParams{
+		QuizID:   uuid.New(),
+		ViewerID: uuid.New(),
+		Title:    &title,
+	})
+	var appErr *apperrors.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestUpdateQuiz_QuizSoftDeleted_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	quizID := uuid.New()
+	creatorID := uuid.New()
+
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(quizUpdateFixture(t, quizID, creatorID, true, false), nil)
+
+	title := "X"
+	svc := quizzes.NewService(repo)
+	_, err := svc.UpdateQuiz(context.Background(), quizzes.UpdateQuizParams{
+		QuizID:   quizID,
+		ViewerID: creatorID,
+		Title:    &title,
+	})
+	var appErr *apperrors.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+// TestUpdateQuiz_GuideSoftDeleted_404 covers AC6: even when the
+// quiz row itself is live, the parent guide being soft-deleted
+// surfaces as 404.
+func TestUpdateQuiz_GuideSoftDeleted_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	quizID := uuid.New()
+	creatorID := uuid.New()
+
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(quizUpdateFixture(t, quizID, creatorID, false, true), nil)
+
+	title := "X"
+	svc := quizzes.NewService(repo)
+	_, err := svc.UpdateQuiz(context.Background(), quizzes.UpdateQuizParams{
+		QuizID:   quizID,
+		ViewerID: creatorID,
+		Title:    &title,
+	})
+	var appErr *apperrors.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestUpdateQuiz_NotCreator_403(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	quizID := uuid.New()
+	creatorID := uuid.New()
+	otherUser := uuid.New()
+
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(quizUpdateFixture(t, quizID, creatorID, false, false), nil)
+
+	title := "X"
+	svc := quizzes.NewService(repo)
+	_, err := svc.UpdateQuiz(context.Background(), quizzes.UpdateQuizParams{
+		QuizID:   quizID,
+		ViewerID: otherUser,
+		Title:    &title,
+	})
+	var appErr *apperrors.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, http.StatusForbidden, appErr.Code)
+}
+
+// TestUpdateQuiz_TitleOnly_Success covers AC1: PATCH with only
+// title sets title and leaves description sqlArg empty.
+func TestUpdateQuiz_TitleOnly_Success(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	quizID := uuid.New()
+	studyGuideID := uuid.New()
+	creatorID := uuid.New()
+
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(quizUpdateFixture(t, quizID, creatorID, false, false), nil)
+
+	var captured db.UpdateQuizParams
+	repo.EXPECT().UpdateQuiz(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, arg db.UpdateQuizParams) error {
+			captured = arg
+			return nil
+		})
+	expectHydration(repo, quizID, studyGuideID, creatorID, nil, nil)
+
+	title := "Updated Title"
+	svc := quizzes.NewService(repo)
+	_, err := svc.UpdateQuiz(context.Background(), quizzes.UpdateQuizParams{
+		QuizID:   quizID,
+		ViewerID: creatorID,
+		Title:    &title,
+	})
+	require.NoError(t, err)
+
+	require.True(t, captured.Title.Valid, "title must be set")
+	assert.Equal(t, "Updated Title", captured.Title.String)
+	assert.False(t, captured.ClearDescription, "description must NOT be touched on title-only update")
+	assert.False(t, captured.Description.Valid)
+}
+
+// TestUpdateQuiz_DescriptionClear_Success covers AC3: PATCH with
+// `description: null` (handler dispatches ClearDescription=true,
+// Description=nil) writes a NULL description without touching
+// title.
+func TestUpdateQuiz_DescriptionClear_Success(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	quizID := uuid.New()
+	studyGuideID := uuid.New()
+	creatorID := uuid.New()
+
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(quizUpdateFixture(t, quizID, creatorID, false, false), nil)
+
+	var captured db.UpdateQuizParams
+	repo.EXPECT().UpdateQuiz(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, arg db.UpdateQuizParams) error {
+			captured = arg
+			return nil
+		})
+	expectHydration(repo, quizID, studyGuideID, creatorID, nil, nil)
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.UpdateQuiz(context.Background(), quizzes.UpdateQuizParams{
+		QuizID:           quizID,
+		ViewerID:         creatorID,
+		ClearDescription: true,
+		Description:      nil, // explicit clear
+	})
+	require.NoError(t, err)
+
+	assert.False(t, captured.Title.Valid, "title must NOT be touched on description-only update")
+	assert.True(t, captured.ClearDescription, "ClearDescription must be true to drive the SQL CASE")
+	assert.False(t, captured.Description.Valid, "description sqlArg must be NULL for explicit clear")
+}
+
+// TestUpdateQuiz_WhitespaceDescriptionClears verifies the documented
+// edge case: an explicit-clear request whose Description is a
+// whitespace-only string is treated as a clear (NULL), not stored
+// as whitespace. The handler dispatches ClearDescription=true with
+// Description=&"   "; the service trims and downgrades to a NULL
+// write so the column is cleared rather than corrupted with
+// whitespace (PR #150 review feedback -- previously untested).
+func TestUpdateQuiz_WhitespaceDescriptionClears(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	quizID := uuid.New()
+	studyGuideID := uuid.New()
+	creatorID := uuid.New()
+
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(quizUpdateFixture(t, quizID, creatorID, false, false), nil)
+
+	var captured db.UpdateQuizParams
+	repo.EXPECT().UpdateQuiz(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, arg db.UpdateQuizParams) error {
+			captured = arg
+			return nil
+		})
+	expectHydration(repo, quizID, studyGuideID, creatorID, nil, nil)
+
+	ws := "   "
+	svc := quizzes.NewService(repo)
+	_, err := svc.UpdateQuiz(context.Background(), quizzes.UpdateQuizParams{
+		QuizID:           quizID,
+		ViewerID:         creatorID,
+		ClearDescription: true,
+		Description:      &ws,
+	})
+	require.NoError(t, err)
+
+	assert.True(t, captured.ClearDescription)
+	assert.False(t, captured.Description.Valid, "whitespace-only with explicit clear must store NULL, not whitespace")
+}
+
+// TestUpdateQuiz_DescriptionSet_Success covers AC2: PATCH with
+// `description: "Updated"` sets the column to the trimmed value.
+func TestUpdateQuiz_DescriptionSet_Success(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	quizID := uuid.New()
+	studyGuideID := uuid.New()
+	creatorID := uuid.New()
+
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(quizUpdateFixture(t, quizID, creatorID, false, false), nil)
+
+	var captured db.UpdateQuizParams
+	repo.EXPECT().UpdateQuiz(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, arg db.UpdateQuizParams) error {
+			captured = arg
+			return nil
+		})
+	expectHydration(repo, quizID, studyGuideID, creatorID, nil, nil)
+
+	desc := "  Updated description.  "
+	svc := quizzes.NewService(repo)
+	_, err := svc.UpdateQuiz(context.Background(), quizzes.UpdateQuizParams{
+		QuizID:           quizID,
+		ViewerID:         creatorID,
+		ClearDescription: true,
+		Description:      &desc,
+	})
+	require.NoError(t, err)
+
+	assert.True(t, captured.ClearDescription)
+	require.True(t, captured.Description.Valid)
+	assert.Equal(t, "Updated description.", captured.Description.String, "must persist trimmed value")
+}
+
 // ---- DeleteQuiz (ASK-102) ----
 
 // quizForUpdateFixture builds a GetQuizByIDForUpdateRow with the
