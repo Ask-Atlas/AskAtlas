@@ -692,22 +692,22 @@ func (_c *MockRepository_InsertStudyGuide_Call) RunAndReturn(run func(ctx contex
 }
 
 // InsertStudyGuideRecommendation provides a mock function for the type MockRepository
-func (_mock *MockRepository) InsertStudyGuideRecommendation(ctx context.Context, arg db.InsertStudyGuideRecommendationParams) (pgtype.Timestamptz, error) {
+func (_mock *MockRepository) InsertStudyGuideRecommendation(ctx context.Context, arg db.InsertStudyGuideRecommendationParams) (db.InsertStudyGuideRecommendationRow, error) {
 	ret := _mock.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for InsertStudyGuideRecommendation")
 	}
 
-	var r0 pgtype.Timestamptz
+	var r0 db.InsertStudyGuideRecommendationRow
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, db.InsertStudyGuideRecommendationParams) (pgtype.Timestamptz, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.InsertStudyGuideRecommendationParams) (db.InsertStudyGuideRecommendationRow, error)); ok {
 		return returnFunc(ctx, arg)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, db.InsertStudyGuideRecommendationParams) pgtype.Timestamptz); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.InsertStudyGuideRecommendationParams) db.InsertStudyGuideRecommendationRow); ok {
 		r0 = returnFunc(ctx, arg)
 	} else {
-		r0 = ret.Get(0).(pgtype.Timestamptz)
+		r0 = ret.Get(0).(db.InsertStudyGuideRecommendationRow)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, db.InsertStudyGuideRecommendationParams) error); ok {
 		r1 = returnFunc(ctx, arg)
@@ -747,12 +747,12 @@ func (_c *MockRepository_InsertStudyGuideRecommendation_Call) Run(run func(ctx c
 	return _c
 }
 
-func (_c *MockRepository_InsertStudyGuideRecommendation_Call) Return(timestamptz pgtype.Timestamptz, err error) *MockRepository_InsertStudyGuideRecommendation_Call {
-	_c.Call.Return(timestamptz, err)
+func (_c *MockRepository_InsertStudyGuideRecommendation_Call) Return(insertStudyGuideRecommendationRow db.InsertStudyGuideRecommendationRow, err error) *MockRepository_InsertStudyGuideRecommendation_Call {
+	_c.Call.Return(insertStudyGuideRecommendationRow, err)
 	return _c
 }
 
-func (_c *MockRepository_InsertStudyGuideRecommendation_Call) RunAndReturn(run func(ctx context.Context, arg db.InsertStudyGuideRecommendationParams) (pgtype.Timestamptz, error)) *MockRepository_InsertStudyGuideRecommendation_Call {
+func (_c *MockRepository_InsertStudyGuideRecommendation_Call) RunAndReturn(run func(ctx context.Context, arg db.InsertStudyGuideRecommendationParams) (db.InsertStudyGuideRecommendationRow, error)) *MockRepository_InsertStudyGuideRecommendation_Call {
 	_c.Call.Return(run)
 	return _c
 }

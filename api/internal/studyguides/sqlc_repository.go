@@ -156,7 +156,7 @@ func (r *sqlcRepository) ViewerCanRecommendForGuide(ctx context.Context, arg db.
 	return r.queries.ViewerCanRecommendForGuide(ctx, arg)
 }
 
-func (r *sqlcRepository) InsertStudyGuideRecommendation(ctx context.Context, arg db.InsertStudyGuideRecommendationParams) (pgtype.Timestamptz, error) {
+func (r *sqlcRepository) InsertStudyGuideRecommendation(ctx context.Context, arg db.InsertStudyGuideRecommendationParams) (db.InsertStudyGuideRecommendationRow, error) {
 	return r.queries.InsertStudyGuideRecommendation(ctx, arg)
 }
 

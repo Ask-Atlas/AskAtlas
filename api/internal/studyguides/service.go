@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -51,7 +52,7 @@ type Repository interface {
 	DeleteStudyGuideVote(ctx context.Context, arg db.DeleteStudyGuideVoteParams) (int64, error)
 
 	ViewerCanRecommendForGuide(ctx context.Context, arg db.ViewerCanRecommendForGuideParams) (db.ViewerCanRecommendForGuideRow, error)
-	InsertStudyGuideRecommendation(ctx context.Context, arg db.InsertStudyGuideRecommendationParams) (pgtype.Timestamptz, error)
+	InsertStudyGuideRecommendation(ctx context.Context, arg db.InsertStudyGuideRecommendationParams) (db.InsertStudyGuideRecommendationRow, error)
 	DeleteStudyGuideRecommendation(ctx context.Context, arg db.DeleteStudyGuideRecommendationParams) (int64, error)
 
 	// InTx runs fn inside a single Postgres transaction. The Repository
@@ -845,6 +846,110 @@ func (s *Service) RemoveVote(ctx context.Context, p RemoveVoteParams) error {
 	}
 	if rows == 0 {
 		return apperrors.NewNotFound("Vote not found")
+	}
+	return nil
+}
+
+// RecommendStudyGuide records that the viewer (an instructor or TA in
+// the guide's course) recommends the guide (ASK-147).
+//
+// Order of checks:
+//  1. ViewerCanRecommendForGuide -> 404 if guide missing/deleted,
+//     403 if viewer lacks instructor/ta role in any section of the
+//     guide's course.
+//  2. InsertStudyGuideRecommendation -> 409 if the (guide, viewer)
+//     row already exists (the SQL uses ON CONFLICT DO NOTHING +
+//     RETURNING so a duplicate surfaces as sql.ErrNoRows on the
+//     joined SELECT, which we map to a typed Conflict AppError).
+//
+// Authorization is "any current elevated-role section in the course"
+// per the spec -- holding student in some sections does not block
+// the action as long as instructor/ta is held in at least one.
+func (s *Service) RecommendStudyGuide(ctx context.Context, p RecommendStudyGuideParams) (Recommendation, error) {
+	gate, err := s.repo.ViewerCanRecommendForGuide(ctx, db.ViewerCanRecommendForGuideParams{
+		StudyGuideID: utils.UUID(p.StudyGuideID),
+		ViewerID:     utils.UUID(p.ViewerID),
+	})
+	if err != nil {
+		return Recommendation{}, fmt.Errorf("RecommendStudyGuide: gate: %w", err)
+	}
+	if !gate.GuideExists {
+		return Recommendation{}, apperrors.NewNotFound("Study guide not found")
+	}
+	if !gate.HasRole {
+		return Recommendation{}, &apperrors.AppError{
+			Code:    http.StatusForbidden,
+			Status:  "Forbidden",
+			Message: "Only instructors and TAs can recommend study guides",
+		}
+	}
+
+	row, err := s.repo.InsertStudyGuideRecommendation(ctx, db.InsertStudyGuideRecommendationParams{
+		StudyGuideID:  utils.UUID(p.StudyGuideID),
+		RecommendedBy: utils.UUID(p.ViewerID),
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Recommendation{}, &apperrors.AppError{
+				Code:    http.StatusConflict,
+				Status:  "Conflict",
+				Message: "You have already recommended this study guide",
+			}
+		}
+		return Recommendation{}, fmt.Errorf("RecommendStudyGuide: insert: %w", err)
+	}
+
+	return Recommendation{
+		StudyGuideID: p.StudyGuideID,
+		Recommender: Creator{
+			ID:        p.ViewerID,
+			FirstName: row.FirstName,
+			LastName:  row.LastName,
+		},
+		CreatedAt: row.CreatedAt.Time,
+	}, nil
+}
+
+// RemoveRecommendation hard-deletes the viewer's recommendation row
+// on a guide (ASK-101). Authorization mirrors the POST side: viewer
+// must currently hold instructor/ta in the guide's course (a former
+// TA who lost the role can't manage their old recommendations -- the
+// policy is "current elevated-role users only").
+//
+// Order of checks:
+//  1. ViewerCanRecommendForGuide -> 404 if guide missing/deleted,
+//     403 if viewer lacks instructor/ta role.
+//  2. DeleteStudyGuideRecommendation -> 404 'Recommendation not
+//     found' if rows-affected is 0 (viewer never recommended this
+//     guide).
+func (s *Service) RemoveRecommendation(ctx context.Context, p RemoveRecommendationParams) error {
+	gate, err := s.repo.ViewerCanRecommendForGuide(ctx, db.ViewerCanRecommendForGuideParams{
+		StudyGuideID: utils.UUID(p.StudyGuideID),
+		ViewerID:     utils.UUID(p.ViewerID),
+	})
+	if err != nil {
+		return fmt.Errorf("RemoveRecommendation: gate: %w", err)
+	}
+	if !gate.GuideExists {
+		return apperrors.NewNotFound("Study guide not found")
+	}
+	if !gate.HasRole {
+		return &apperrors.AppError{
+			Code:    http.StatusForbidden,
+			Status:  "Forbidden",
+			Message: "Only instructors and TAs can manage recommendations",
+		}
+	}
+
+	rows, err := s.repo.DeleteStudyGuideRecommendation(ctx, db.DeleteStudyGuideRecommendationParams{
+		StudyGuideID:  utils.UUID(p.StudyGuideID),
+		RecommendedBy: utils.UUID(p.ViewerID),
+	})
+	if err != nil {
+		return fmt.Errorf("RemoveRecommendation: delete: %w", err)
+	}
+	if rows == 0 {
+		return apperrors.NewNotFound("Recommendation not found")
 	}
 	return nil
 }

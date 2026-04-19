@@ -337,30 +337,49 @@ func (q *Queries) InsertStudyGuide(ctx context.Context, arg InsertStudyGuidePara
 }
 
 const insertStudyGuideRecommendation = `-- name: InsertStudyGuideRecommendation :one
-INSERT INTO study_guide_recommendations (study_guide_id, recommended_by)
-VALUES (
-  $1::uuid,
-  $2::uuid
+WITH ins AS (
+  INSERT INTO study_guide_recommendations (study_guide_id, recommended_by)
+  VALUES (
+    $2::uuid,
+    $1::uuid
+  )
+  ON CONFLICT (study_guide_id, recommended_by) DO NOTHING
+  RETURNING created_at
 )
-RETURNING created_at
+SELECT
+  ins.created_at,
+  u.first_name,
+  u.last_name
+FROM ins
+JOIN users u ON u.id = $1::uuid
 `
 
 type InsertStudyGuideRecommendationParams struct {
-	StudyGuideID  pgtype.UUID `json:"study_guide_id"`
 	RecommendedBy pgtype.UUID `json:"recommended_by"`
+	StudyGuideID  pgtype.UUID `json:"study_guide_id"`
+}
+
+type InsertStudyGuideRecommendationRow struct {
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	FirstName string             `json:"first_name"`
+	LastName  string             `json:"last_name"`
 }
 
 // Inserts the (study_guide_id, recommended_by) row and returns the
-// server-generated created_at so the response can ship the timestamp
-// without a follow-up SELECT. The (study_guide_id, recommended_by)
-// PK from the schema makes a duplicate insert raise unique_violation
-// (Postgres SQLSTATE 23505), which the service catches and maps to
-// apperrors.ErrConflict (409).
-func (q *Queries) InsertStudyGuideRecommendation(ctx context.Context, arg InsertStudyGuideRecommendationParams) (pgtype.Timestamptz, error) {
-	row := q.db.QueryRow(ctx, insertStudyGuideRecommendation, arg.StudyGuideID, arg.RecommendedBy)
-	var created_at pgtype.Timestamptz
-	err := row.Scan(&created_at)
-	return created_at, err
+// created_at PLUS the recommender's privacy-floor identity
+// (first_name + last_name) via a CTE join to users. One round trip
+// builds the entire RecommendationResponse payload; without the
+// CTE the service would need a second SELECT against users just to
+// pull the recommender's name.
+//
+// The (study_guide_id, recommended_by) PK from the schema makes a
+// duplicate insert raise unique_violation (Postgres SQLSTATE 23505),
+// which the service catches and maps to apperrors.ErrConflict (409).
+func (q *Queries) InsertStudyGuideRecommendation(ctx context.Context, arg InsertStudyGuideRecommendationParams) (InsertStudyGuideRecommendationRow, error) {
+	row := q.db.QueryRow(ctx, insertStudyGuideRecommendation, arg.RecommendedBy, arg.StudyGuideID)
+	var i InsertStudyGuideRecommendationRow
+	err := row.Scan(&i.CreatedAt, &i.FirstName, &i.LastName)
+	return i, err
 }
 
 const listGuideFiles = `-- name: ListGuideFiles :many

@@ -159,3 +159,28 @@ type RemoveVoteParams struct {
 	StudyGuideID uuid.UUID
 	ViewerID     uuid.UUID
 }
+
+// RecommendStudyGuideParams is the input to Service.RecommendStudyGuide
+// (ASK-147). ViewerID identifies the recommender (taken from the JWT;
+// never accepted from the body).
+type RecommendStudyGuideParams struct {
+	StudyGuideID uuid.UUID
+	ViewerID     uuid.UUID
+}
+
+// Recommendation is the output of Service.RecommendStudyGuide. The
+// nested Recommender uses the same Creator privacy floor as everywhere
+// else in this package (id + first_name + last_name only).
+type Recommendation struct {
+	StudyGuideID uuid.UUID
+	Recommender  Creator
+	CreatedAt    time.Time
+}
+
+// RemoveRecommendationParams is the input to
+// Service.RemoveRecommendation (ASK-101). ViewerID identifies whose
+// recommendation is being removed (always the JWT viewer).
+type RemoveRecommendationParams struct {
+	StudyGuideID uuid.UUID
+	ViewerID     uuid.UUID
+}
