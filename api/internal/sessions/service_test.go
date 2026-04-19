@@ -412,3 +412,53 @@ func TestStartSession_NullableAnswerFields(t *testing.T) {
 	assert.Nil(t, a.IsCorrect, "NULL is_correct must surface as nil pointer")
 	assert.False(t, a.Verified, "verified flag must round-trip")
 }
+
+// TestStartSession_StaleCleanupOrdering verifies the AC6 contract
+// at the call-sequence level: DeleteStaleIncompleteSessions MUST
+// fire before FindIncompleteSession (so a previously-stale session
+// is hard-deleted before the resume probe sees it). When the stale
+// row is gone, FindIncompleteSession returns sql.ErrNoRows and
+// the service takes the create branch -> 201 (not 200 resume of
+// a stale session).
+//
+// The mock.InOrder expectations would fail if the service ever
+// reorders the cleanup vs the resume probe (e.g., probes first
+// then "cleans up" the resumed session -- which would be wrong).
+func TestStartSession_StaleCleanupOrdering(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+
+	liveCall := repo.EXPECT().CheckQuizLiveForSession(mock.Anything, mock.Anything).Return(true, nil)
+	cleanupCall := repo.EXPECT().DeleteStaleIncompleteSessions(mock.Anything, mock.MatchedBy(func(arg db.DeleteStaleIncompleteSessionsParams) bool {
+		// Verify the StaleSessionAge constant flows through as the
+		// expected number of seconds (7 days = 604800s).
+		return arg.StaleThresholdSeconds == int64(sessions.StaleSessionAge.Seconds())
+	})).Return(nil)
+	probeCall := repo.EXPECT().FindIncompleteSession(mock.Anything, mock.Anything).
+		Return(db.FindIncompleteSessionRow{}, sql.ErrNoRows)
+
+	// Stale was cleaned -> probe finds nothing -> create path runs.
+	inTxRunsFn(repo)
+	insertCall := repo.EXPECT().InsertPracticeSessionIfAbsent(mock.Anything, mock.Anything).
+		Return(db.InsertPracticeSessionIfAbsentRow{
+			ID:             utils.UUID(uuid.New()),
+			QuizID:         utils.UUID(uuid.New()),
+			StartedAt:      pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+			TotalQuestions: 0,
+		}, nil)
+	snapshotCall := repo.EXPECT().SnapshotQuizQuestionsAndUpdateCount(mock.Anything, mock.Anything).
+		Return(int32(2), nil)
+
+	mock.InOrder(
+		liveCall.Call,
+		cleanupCall.Call,
+		probeCall.Call,
+		insertCall.Call,
+		snapshotCall.Call,
+	)
+
+	svc := sessions.NewService(repo)
+	got, err := svc.StartSession(context.Background(), validParams(t))
+	require.NoError(t, err)
+	assert.True(t, got.Created, "stale-cleanup -> empty probe -> create path must yield 201")
+	assert.Equal(t, int32(2), got.Session.TotalQuestions, "snapshot CTE return value must flow through")
+}

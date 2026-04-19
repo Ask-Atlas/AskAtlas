@@ -100,8 +100,9 @@ func (s *Service) StartSession(ctx context.Context, p StartSessionParams) (Start
 	}
 
 	if err := s.repo.DeleteStaleIncompleteSessions(ctx, db.DeleteStaleIncompleteSessionsParams{
-		UserID: userPgxID,
-		QuizID: quizPgxID,
+		UserID:                userPgxID,
+		QuizID:                quizPgxID,
+		StaleThresholdSeconds: int64(StaleSessionAge.Seconds()),
 	}); err != nil {
 		return StartSessionResult{}, fmt.Errorf("StartSession: stale cleanup: %w", err)
 	}
