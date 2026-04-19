@@ -79,6 +79,34 @@ func (q *Queries) CheckQuizLiveForSession(ctx context.Context, quizID pgtype.UUI
 	return exists, err
 }
 
+const deleteSessionByID = `-- name: DeleteSessionByID :execrows
+DELETE FROM practice_sessions
+WHERE id = $1::uuid
+`
+
+// Hard-deletes a practice session by id (ASK-144). The CASCADE
+// foreign keys on practice_session_questions and practice_answers
+// ensure the snapshot rows and answer rows are removed in the
+// same statement.
+//
+// Blind by id only -- the service has already verified ownership
+// + completed_at IS NULL inside the same tx via
+// LockSessionForCompletion + the FOR UPDATE row lock. By the
+// time this runs, the only legitimate outcome is "row deleted".
+// :execrows lets the service double-check the rows-affected
+// count (defense-in-depth) and surface a 500 on the
+// vanishingly-rare 0-rows path (would mean another tx slipped
+// in and deleted between our lock and this DELETE -- which the
+// FOR UPDATE rules out under any READ COMMITTED behavior I'm
+// aware of, but the check is cheap and self-documenting).
+func (q *Queries) DeleteSessionByID(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteSessionByID, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteStaleIncompleteSessions = `-- name: DeleteStaleIncompleteSessions :exec
 DELETE FROM practice_sessions
 WHERE user_id = $1::uuid

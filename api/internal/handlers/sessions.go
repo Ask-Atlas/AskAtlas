@@ -23,6 +23,7 @@ type SessionService interface {
 	CompleteSession(ctx context.Context, params sessions.CompleteSessionParams) (sessions.CompletedSessionDetail, error)
 	GetSession(ctx context.Context, params sessions.GetSessionParams) (sessions.SessionDetail, error)
 	ListSessions(ctx context.Context, params sessions.ListSessionsParams) (sessions.ListSessionsResult, error)
+	AbandonSession(ctx context.Context, params sessions.AbandonSessionParams) error
 }
 
 // SessionsHandler manages incoming HTTP requests for the practice-
@@ -133,6 +134,39 @@ func mapSessionDetailResponse(d sessions.SessionDetail) api.SessionDetailRespons
 		resp.ScorePercentage = &score
 	}
 	return resp
+}
+
+// AbandonPracticeSession handles DELETE /sessions/{session_id}
+// (ASK-144). All gating (404 / 403 / 409) lives in
+// service.AbandonSession; the handler is a thin auth + dispatch +
+// 204-render pass.
+//
+// Returns 204 on success with no body (per spec). The endpoint is
+// NOT idempotent: a second call on an already-abandoned session
+// returns 404, which is the same shape the rest of the
+// session-by-id endpoints (GET, POST /complete) return when the
+// session is missing.
+func (h *SessionsHandler) AbandonPracticeSession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	err := h.service.AbandonSession(r.Context(), sessions.AbandonSessionParams{
+		SessionID: uuid.UUID(sessionId),
+		UserID:    viewerID,
+	})
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("AbandonPracticeSession failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // CompletePracticeSession handles POST /sessions/{session_id}/complete

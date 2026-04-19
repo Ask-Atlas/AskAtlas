@@ -302,3 +302,146 @@ test.describe("Sessions API (ASK-149 list)", () => {
     }
   });
 });
+
+// ASK-144 — DELETE /sessions/{session_id}
+//
+// Hard-deletes an in-progress session and its CASCADE children
+// (snapshot rows + answers). Validation tests run unconditionally;
+// the destructive happy-path test creates its own session
+// in-test (POST /quizzes/{id}/sessions) so it doesn't depend on
+// pre-seeded data and never destroys a session another test was
+// using. Skips cleanly when no quiz can be discovered on staging.
+
+test.describe("AbandonPracticeSession (ASK-144)", () => {
+  let quizId: string | null = null;
+
+  test.beforeAll(async ({ request }) => {
+    // Same discovery cascade as the list describe -- find any
+    // quiz the test user can access. Uses GET-only calls so it's
+    // safe to run alongside the other beforeAll.
+    const coursesResp = await request.get("/api/courses", {
+      params: { page_limit: 1 },
+    });
+    if (!coursesResp.ok()) return;
+    const course = (await coursesResp.json())?.courses?.[0];
+    if (!course?.id) return;
+
+    const guidesResp = await request.get(
+      `/api/courses/${course.id}/study-guides`,
+      { params: { page_limit: 1 } },
+    );
+    if (!guidesResp.ok()) return;
+    const guide = (await guidesResp.json())?.study_guides?.[0];
+    if (!guide?.id) return;
+
+    const quizzesResp = await request.get(
+      `/api/study-guides/${guide.id}/quizzes`,
+    );
+    if (!quizzesResp.ok()) return;
+    const quiz = (await quizzesResp.json())?.quizzes?.[0];
+    if (!quiz?.id) return;
+    quizId = quiz.id;
+  });
+
+  // ---------- Validation (no seed data required) ----------
+
+  test("rejects unauthenticated", async ({ playwright }) => {
+    const noAuth = await playwright.request.newContext({
+      baseURL: process.env.E2E_BASE_URL,
+      extraHTTPHeaders: {},
+    });
+    const resp = await noAuth.delete(
+      "/api/sessions/00000000-0000-0000-0000-000000000000",
+    );
+    expect([401, 403]).toContain(resp.status());
+    await noAuth.dispose();
+  });
+
+  test("rejects invalid session UUID with 400", async ({ request }) => {
+    const resp = await request.delete("/api/sessions/not-a-uuid");
+    expect(resp.status()).toBe(400);
+  });
+
+  test("returns 404 for a non-existent session", async ({ request }) => {
+    const resp = await request.delete(
+      "/api/sessions/00000000-0000-0000-0000-000000000000",
+    );
+    expect(resp.status()).toBe(404);
+    const body = await resp.json();
+    expect(body).toHaveProperty("code", 404);
+    expect(body.message).toMatch(/not found/i);
+  });
+
+  // ---------- Destructive happy path (creates + deletes) ----------
+
+  test("abandons an incomplete session and second delete returns 404", async ({
+    request,
+  }) => {
+    if (!quizId) {
+      test.skip(true, "No seed quiz available on staging");
+      return;
+    }
+
+    // Create a fresh session purely for this test. POST is
+    // idempotent on resume -- if a session already exists
+    // we'll get the existing one and still successfully
+    // abandon it. Tests should be self-contained, so we
+    // don't rely on the list describe's beforeAll.
+    const startResp = await request.post(
+      `/api/quizzes/${quizId}/sessions`,
+    );
+    expect(startResp.ok()).toBeTruthy();
+    const session = await startResp.json();
+    const sessionId = session?.id;
+    expect(sessionId).toBeTruthy();
+
+    // First delete -- should 204 No Content with no body.
+    const firstDel = await request.delete(`/api/sessions/${sessionId}`);
+    expect(firstDel.status()).toBe(204);
+    expect((await firstDel.body()).length).toBe(0);
+
+    // GET on the just-abandoned session must 404 (the row is gone).
+    const getResp = await request.get(`/api/sessions/${sessionId}`);
+    expect(getResp.status()).toBe(404);
+
+    // Second delete (AC6) -- 404, NOT 204. The endpoint is
+    // intentionally NOT idempotent.
+    const secondDel = await request.delete(`/api/sessions/${sessionId}`);
+    expect(secondDel.status()).toBe(404);
+  });
+
+  // ---------- AC5: post-abandon, fresh start ----------
+
+  test("after abandon, POST /quizzes/{id}/sessions creates a fresh session", async ({
+    request,
+  }) => {
+    if (!quizId) {
+      test.skip(true, "No seed quiz available on staging");
+      return;
+    }
+
+    // Ensure we have an in-progress session first.
+    const before = await request.post(`/api/quizzes/${quizId}/sessions`);
+    expect(before.ok()).toBeTruthy();
+    const beforeBody = await before.json();
+    const oldSessionId = beforeBody?.id;
+    expect(oldSessionId).toBeTruthy();
+
+    // Abandon it.
+    const del = await request.delete(`/api/sessions/${oldSessionId}`);
+    expect(del.status()).toBe(204);
+
+    // Start again -- spec AC5 requires this returns a NEW session
+    // (a different id) on the 201 fresh-start path. We can't
+    // assert the status code is 201 (the resume vs create split
+    // is an implementation detail of the start endpoint), but we
+    // CAN assert the returned session id is different from the
+    // abandoned one.
+    const after = await request.post(`/api/quizzes/${quizId}/sessions`);
+    expect(after.ok()).toBeTruthy();
+    const afterBody = await after.json();
+    const newSessionId = afterBody?.id;
+    expect(newSessionId).toBeTruthy();
+    expect(newSessionId).not.toBe(oldSessionId);
+  });
+});

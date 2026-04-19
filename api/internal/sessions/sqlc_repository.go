@@ -120,3 +120,7 @@ func (r *sqlcRepository) GetSessionByID(ctx context.Context, id pgtype.UUID) (db
 func (r *sqlcRepository) ListUserSessionsForQuiz(ctx context.Context, arg db.ListUserSessionsForQuizParams) ([]db.ListUserSessionsForQuizRow, error) {
 	return r.queries.ListUserSessionsForQuiz(ctx, arg)
 }
+
+func (r *sqlcRepository) DeleteSessionByID(ctx context.Context, id pgtype.UUID) (int64, error) {
+	return r.queries.DeleteSessionByID(ctx, id)
+}

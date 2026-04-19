@@ -76,6 +76,22 @@ type Querier interface {
 	// detach. Returns rows-affected so the service can detect
 	// already-detached races (0 rows -> 404) vs success (1 row -> nil).
 	DeleteGuideResource(ctx context.Context, arg DeleteGuideResourceParams) (int64, error)
+	// Hard-deletes a practice session by id (ASK-144). The CASCADE
+	// foreign keys on practice_session_questions and practice_answers
+	// ensure the snapshot rows and answer rows are removed in the
+	// same statement.
+	//
+	// Blind by id only -- the service has already verified ownership
+	// + completed_at IS NULL inside the same tx via
+	// LockSessionForCompletion + the FOR UPDATE row lock. By the
+	// time this runs, the only legitimate outcome is "row deleted".
+	// :execrows lets the service double-check the rows-affected
+	// count (defense-in-depth) and surface a 500 on the
+	// vanishingly-rare 0-rows path (would mean another tx slipped
+	// in and deleted between our lock and this DELETE -- which the
+	// FOR UPDATE rules out under any READ COMMITTED behavior I'm
+	// aware of, but the check is cheap and self-documenting).
+	DeleteSessionByID(ctx context.Context, id pgtype.UUID) (int64, error)
 	// Hard-deletes this user's incomplete session for this quiz when it
 	// has been sitting around longer than the caller-supplied stale
 	// threshold. CASCADE deletes the attached practice_session_questions

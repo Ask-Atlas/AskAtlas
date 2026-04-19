@@ -1879,3 +1879,205 @@ func TestListSessions_ZeroTotal_ScoreZero(t *testing.T) {
 	require.NotNil(t, got.Sessions[0].ScorePercentage)
 	assert.Equal(t, int32(0), *got.Sessions[0].ScorePercentage)
 }
+
+// ============================================================
+// AbandonSession tests (ASK-144)
+// ============================================================
+
+// abandonRow is a shorthand builder for the locked-session row
+// returned by LockSessionForCompletion. CompletedAt is the
+// dispatch hinge: zero -> 204 path, set -> 409 path.
+func abandonRow(sessionID, userID, quizID uuid.UUID, completedAt pgtype.Timestamptz) db.PracticeSession {
+	return db.PracticeSession{
+		ID:             utils.UUID(sessionID),
+		UserID:         utils.UUID(userID),
+		QuizID:         utils.UUID(quizID),
+		StartedAt:      pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+		CompletedAt:    completedAt,
+		TotalQuestions: 10,
+		CorrectAnswers: 3,
+	}
+}
+
+// TestAbandonSession_AC1_Incomplete_204 covers AC1: an incomplete
+// session with answers is hard-deleted (the CASCADE removes the
+// snapshot + answer rows; the service test verifies the right
+// queries fire in order).
+func TestAbandonSession_AC1_Incomplete_204(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+	repo.EXPECT().LockSessionForCompletion(mock.Anything, utils.UUID(sessionID)).
+		Return(abandonRow(sessionID, userID, uuid.New(), pgtype.Timestamptz{}), nil)
+	repo.EXPECT().DeleteSessionByID(mock.Anything, utils.UUID(sessionID)).
+		Return(int64(1), nil)
+
+	svc := sessions.NewService(repo)
+	err := svc.AbandonSession(context.Background(), sessions.AbandonSessionParams{
+		SessionID: sessionID, UserID: userID,
+	})
+	require.NoError(t, err)
+}
+
+// TestAbandonSession_AC2_Completed_409 covers AC2: a completed
+// session cannot be abandoned. The locked SELECT returns the
+// session with completed_at set; the service short-circuits
+// with 409 BEFORE issuing the DELETE.
+func TestAbandonSession_AC2_Completed_409(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+	completedAt := pgtype.Timestamptz{Time: fixtureTime.Add(time.Hour), Valid: true}
+	repo.EXPECT().LockSessionForCompletion(mock.Anything, utils.UUID(sessionID)).
+		Return(abandonRow(sessionID, userID, uuid.New(), completedAt), nil)
+	// DeleteSessionByID is NOT expected -- the 409 short-circuits
+	// before any delete fires. Mockery's AssertExpectations
+	// (auto-fired by NewMockRepository(t) cleanup) catches a
+	// regression here.
+
+	svc := sessions.NewService(repo)
+	err := svc.AbandonSession(context.Background(), sessions.AbandonSessionParams{
+		SessionID: sessionID, UserID: userID,
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusConflict, sysErr.Code)
+}
+
+// TestAbandonSession_AC3_NotOwner_403 covers AC3: a session
+// belonging to user A cannot be abandoned by user B. The locked
+// SELECT returns a row owned by A; the service's ownership check
+// surfaces 403.
+func TestAbandonSession_AC3_NotOwner_403(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	owner := uuid.New()
+	other := uuid.New()
+	repo.EXPECT().LockSessionForCompletion(mock.Anything, utils.UUID(sessionID)).
+		Return(abandonRow(sessionID, owner, uuid.New(), pgtype.Timestamptz{}), nil)
+
+	svc := sessions.NewService(repo)
+	err := svc.AbandonSession(context.Background(), sessions.AbandonSessionParams{
+		SessionID: sessionID, UserID: other,
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusForbidden, sysErr.Code)
+}
+
+// TestAbandonSession_AC4_NotFound_404 covers AC4: a missing
+// session returns 404 (the locked SELECT returns sql.ErrNoRows).
+func TestAbandonSession_AC4_NotFound_404(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	repo.EXPECT().LockSessionForCompletion(mock.Anything, utils.UUID(sessionID)).
+		Return(db.PracticeSession{}, sql.ErrNoRows)
+
+	svc := sessions.NewService(repo)
+	err := svc.AbandonSession(context.Background(), sessions.AbandonSessionParams{
+		SessionID: sessionID, UserID: uuid.New(),
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusNotFound, sysErr.Code)
+}
+
+// TestAbandonSession_AC6_DoubleDelete_404 covers AC6: a second
+// AbandonSession call on an already-deleted session returns 404.
+// The first call commits, the second call's locked SELECT
+// returns sql.ErrNoRows -> 404. (Same code path as AC4; the
+// distinction is only meaningful at the wire level.)
+func TestAbandonSession_AC6_DoubleDelete_404(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	repo.EXPECT().LockSessionForCompletion(mock.Anything, utils.UUID(sessionID)).
+		Return(db.PracticeSession{}, sql.ErrNoRows)
+
+	svc := sessions.NewService(repo)
+	err := svc.AbandonSession(context.Background(), sessions.AbandonSessionParams{
+		SessionID: sessionID, UserID: uuid.New(),
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusNotFound, sysErr.Code)
+}
+
+// TestAbandonSession_LockError_500 surfaces a non-ErrNoRows
+// failure on the locked SELECT as 500 (e.g. DB connection drop
+// mid-transaction).
+func TestAbandonSession_LockError_500(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	repo.EXPECT().LockSessionForCompletion(mock.Anything, utils.UUID(sessionID)).
+		Return(db.PracticeSession{}, errors.New("connection refused"))
+
+	svc := sessions.NewService(repo)
+	err := svc.AbandonSession(context.Background(), sessions.AbandonSessionParams{
+		SessionID: sessionID, UserID: uuid.New(),
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}
+
+// TestAbandonSession_DeleteError_500 surfaces a DELETE-side
+// failure (e.g. CASCADE deadlock) as 500. Ownership +
+// completion checks have already passed; the failure is on the
+// wire.
+func TestAbandonSession_DeleteError_500(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+	repo.EXPECT().LockSessionForCompletion(mock.Anything, utils.UUID(sessionID)).
+		Return(abandonRow(sessionID, userID, uuid.New(), pgtype.Timestamptz{}), nil)
+	repo.EXPECT().DeleteSessionByID(mock.Anything, utils.UUID(sessionID)).
+		Return(int64(0), errors.New("deadlock detected"))
+
+	svc := sessions.NewService(repo)
+	err := svc.AbandonSession(context.Background(), sessions.AbandonSessionParams{
+		SessionID: sessionID, UserID: userID,
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}
+
+// TestAbandonSession_DeleteZeroRows_500 covers the "impossible"
+// path where the locked SELECT returned a row but the DELETE
+// affected 0 rows. Under FOR UPDATE serialization this should
+// be unreachable, but the assertion catches a future regression
+// (e.g. someone replacing the locked SELECT with a plain SELECT)
+// and surfaces it as a 500 instead of silent success.
+func TestAbandonSession_DeleteZeroRows_500(t *testing.T) {
+	repo := mock_sessions.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	sessionID := uuid.New()
+	userID := uuid.New()
+	repo.EXPECT().LockSessionForCompletion(mock.Anything, utils.UUID(sessionID)).
+		Return(abandonRow(sessionID, userID, uuid.New(), pgtype.Timestamptz{}), nil)
+	repo.EXPECT().DeleteSessionByID(mock.Anything, utils.UUID(sessionID)).
+		Return(int64(0), nil)
+
+	svc := sessions.NewService(repo)
+	err := svc.AbandonSession(context.Background(), sessions.AbandonSessionParams{
+		SessionID: sessionID, UserID: userID,
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}

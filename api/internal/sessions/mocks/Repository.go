@@ -172,6 +172,72 @@ func (_c *MockRepository_CheckQuizLiveForSession_Call) RunAndReturn(run func(ctx
 	return _c
 }
 
+// DeleteSessionByID provides a mock function for the type MockRepository
+func (_mock *MockRepository) DeleteSessionByID(ctx context.Context, id pgtype.UUID) (int64, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteSessionByID")
+	}
+
+	var r0 int64
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) (int64, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) int64); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, pgtype.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_DeleteSessionByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteSessionByID'
+type MockRepository_DeleteSessionByID_Call struct {
+	*mock.Call
+}
+
+// DeleteSessionByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id pgtype.UUID
+func (_e *MockRepository_Expecter) DeleteSessionByID(ctx interface{}, id interface{}) *MockRepository_DeleteSessionByID_Call {
+	return &MockRepository_DeleteSessionByID_Call{Call: _e.mock.On("DeleteSessionByID", ctx, id)}
+}
+
+func (_c *MockRepository_DeleteSessionByID_Call) Run(run func(ctx context.Context, id pgtype.UUID)) *MockRepository_DeleteSessionByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_DeleteSessionByID_Call) Return(n int64, err error) *MockRepository_DeleteSessionByID_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockRepository_DeleteSessionByID_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) (int64, error)) *MockRepository_DeleteSessionByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteStaleIncompleteSessions provides a mock function for the type MockRepository
 func (_mock *MockRepository) DeleteStaleIncompleteSessions(ctx context.Context, arg db.DeleteStaleIncompleteSessionsParams) error {
 	ret := _mock.Called(ctx, arg)

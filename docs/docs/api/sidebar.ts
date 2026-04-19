@@ -174,6 +174,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/abandon-practice-session",
+          label: "Hard-delete an in-progress practice session",
+          className: "api-method delete",
+        },
+        {
+          type: "doc",
           id: "api/complete-practice-session",
           label: "Mark a practice session as completed and return the score",
           className: "api-method post",

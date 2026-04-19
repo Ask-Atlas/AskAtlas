@@ -38,6 +38,63 @@ func (_m *MockSessionService) EXPECT() *MockSessionService_Expecter {
 	return &MockSessionService_Expecter{mock: &_m.Mock}
 }
 
+// AbandonSession provides a mock function for the type MockSessionService
+func (_mock *MockSessionService) AbandonSession(ctx context.Context, params sessions.AbandonSessionParams) error {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AbandonSession")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, sessions.AbandonSessionParams) error); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockSessionService_AbandonSession_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AbandonSession'
+type MockSessionService_AbandonSession_Call struct {
+	*mock.Call
+}
+
+// AbandonSession is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params sessions.AbandonSessionParams
+func (_e *MockSessionService_Expecter) AbandonSession(ctx interface{}, params interface{}) *MockSessionService_AbandonSession_Call {
+	return &MockSessionService_AbandonSession_Call{Call: _e.mock.On("AbandonSession", ctx, params)}
+}
+
+func (_c *MockSessionService_AbandonSession_Call) Run(run func(ctx context.Context, params sessions.AbandonSessionParams)) *MockSessionService_AbandonSession_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 sessions.AbandonSessionParams
+		if args[1] != nil {
+			arg1 = args[1].(sessions.AbandonSessionParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSessionService_AbandonSession_Call) Return(err error) *MockSessionService_AbandonSession_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockSessionService_AbandonSession_Call) RunAndReturn(run func(ctx context.Context, params sessions.AbandonSessionParams) error) *MockSessionService_AbandonSession_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CompleteSession provides a mock function for the type MockSessionService
 func (_mock *MockSessionService) CompleteSession(ctx context.Context, params sessions.CompleteSessionParams) (sessions.CompletedSessionDetail, error) {
 	ret := _mock.Called(ctx, params)
