@@ -249,12 +249,18 @@ func (s *Service) hydrate(ctx context.Context, quizPgxID pgtype.UUID) (QuizDetai
 // per-question errors. The frontend uses these keys to highlight
 // the offending fields.
 func validateCreateParams(p CreateQuizParams) error {
-	if strings.TrimSpace(p.Title) == "" {
+	trimmedTitle := strings.TrimSpace(p.Title)
+	if trimmedTitle == "" {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
 			"title": "must not be empty",
 		})
 	}
-	if len(p.Title) > MaxTitleLength {
+	// Length check on the TRIMMED value, not the raw input -- the
+	// service trims before persist, so rejecting a whitespace-padded
+	// string that would fit after trim is a confusing UX (gemini PR
+	// feedback). Same pattern applied to MCQ option text and freeform
+	// reference answer below.
+	if len(trimmedTitle) > MaxTitleLength {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
 			"title": fmt.Sprintf("must be %d characters or fewer", MaxTitleLength),
 		})
@@ -318,6 +324,17 @@ func validateQuestion(idx int, q CreateQuizQuestionInput) error {
 			prefix + ".feedback_incorrect": fmt.Sprintf("must be %d characters or fewer", MaxFeedbackLength),
 		})
 	}
+	// Service-layer defense in depth on sort_order >= 0 (copilot PR
+	// feedback). The handler's int->int32 narrowing catches the
+	// upper bound + negative inputs from the wire; this re-check
+	// covers Go callers that bypass the handler (tests / future
+	// internal callers / batch import jobs) and would otherwise
+	// persist a negative sort_order to the DB.
+	if q.SortOrder != nil && *q.SortOrder < 0 {
+		return apperrors.NewBadRequest("Invalid request body", map[string]string{
+			prefix + ".sort_order": "must be 0 or greater",
+		})
+	}
 
 	switch q.Type {
 	case QuestionTypeMultipleChoice:
@@ -338,12 +355,13 @@ func validateMCQ(prefix string, q CreateQuizQuestionInput) error {
 	}
 	correctCount := 0
 	for j, opt := range q.Options {
-		if strings.TrimSpace(opt.Text) == "" {
+		trimmedText := strings.TrimSpace(opt.Text)
+		if trimmedText == "" {
 			return apperrors.NewBadRequest("Invalid request body", map[string]string{
 				fmt.Sprintf("%s.options[%d].text", prefix, j): "must not be empty",
 			})
 		}
-		if len(opt.Text) > MaxOptionTextLength {
+		if len(trimmedText) > MaxOptionTextLength {
 			return apperrors.NewBadRequest("Invalid request body", map[string]string{
 				fmt.Sprintf("%s.options[%d].text", prefix, j): fmt.Sprintf("must be %d characters or fewer", MaxOptionTextLength),
 			})
@@ -371,12 +389,20 @@ func validateTrueFalse(prefix string, q CreateQuizQuestionInput) error {
 
 func validateFreeform(prefix string, q CreateQuizQuestionInput) error {
 	ans, ok := q.CorrectAnswer.(string)
-	if !ok || strings.TrimSpace(ans) == "" {
+	if !ok {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
 			prefix + ".correct_answer": "is required for freeform questions",
 		})
 	}
-	if len(ans) > MaxFreeformAnswerLength {
+	trimmed := strings.TrimSpace(ans)
+	if trimmed == "" {
+		return apperrors.NewBadRequest("Invalid request body", map[string]string{
+			prefix + ".correct_answer": "is required for freeform questions",
+		})
+	}
+	// Length check on TRIMMED value -- the service trims before
+	// persisting to reference_answer (gemini PR feedback).
+	if len(trimmed) > MaxFreeformAnswerLength {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
 			prefix + ".correct_answer": fmt.Sprintf("must be %d characters or fewer", MaxFreeformAnswerLength),
 		})

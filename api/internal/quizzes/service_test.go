@@ -305,6 +305,55 @@ func TestCreateQuiz_TF_NilCorrectAnswer_400(t *testing.T) {
 	assertBadRequest(t, err, "questions[0].correct_answer")
 }
 
+// TestCreateQuiz_NegativeSortOrder_400 covers the service-side
+// defense-in-depth check on sort_order >= 0 (copilot PR feedback on
+// PR #147). The handler's int->int32 narrowing also catches this on
+// the wire path; this test exercises the Go-caller path (which
+// would otherwise silently persist a negative sort_order).
+func TestCreateQuiz_NegativeSortOrder_400(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	svc := quizzes.NewService(repo)
+
+	negative := int32(-1)
+	p := validParams(t)
+	p.Questions[0].SortOrder = &negative
+	_, err := svc.CreateQuiz(context.Background(), p)
+	assertBadRequest(t, err, "questions[0].sort_order")
+}
+
+// TestCreateQuiz_TitleTrimmedLength covers the gemini PR #147
+// feedback: a title that exceeds MaxTitleLength only when counting
+// surrounding whitespace should pass (the service trims before
+// persist, so the stored value is within bounds).
+func TestCreateQuiz_TitleTrimmedLength_OK(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	studyGuideID := uuid.New()
+	creatorID := uuid.New()
+	quizID := uuid.New()
+
+	inTxRunsFn(repo)
+	repo.EXPECT().GuideExistsAndLiveForQuizzes(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().InsertQuiz(mock.Anything, mock.Anything).
+		Return(db.InsertQuizRow{
+			ID:        utils.UUID(quizID),
+			CreatedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+			UpdatedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		}, nil)
+	repo.EXPECT().InsertQuizQuestion(mock.Anything, mock.Anything).
+		Return(utils.UUID(uuid.New()), nil)
+	repo.EXPECT().InsertQuizAnswerOption(mock.Anything, mock.Anything).Return(nil).Times(4)
+	expectHydration(repo, quizID, studyGuideID, creatorID, nil, nil)
+
+	svc := quizzes.NewService(repo)
+	p := validParams(t)
+	p.StudyGuideID = studyGuideID
+	p.CreatorID = creatorID
+	// Exactly MaxTitleLength after trim, but raw is longer.
+	p.Title = "  " + strings.Repeat("a", quizzes.MaxTitleLength) + "  "
+	_, err := svc.CreateQuiz(context.Background(), p)
+	require.NoError(t, err)
+}
+
 func TestCreateQuiz_Freeform_EmptyCorrectAnswer_400(t *testing.T) {
 	repo := mock_quizzes.NewMockRepository(t)
 	svc := quizzes.NewService(repo)

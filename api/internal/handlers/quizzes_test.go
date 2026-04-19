@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -172,6 +173,65 @@ func TestQuizzesHandler_Create_ServiceError_500(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// TestQuizzesHandler_Create_SortOrderOverflow_400 verifies the
+// handler-side bounds check on sort_order int->int32 narrowing
+// (copilot PR #147 feedback). Reject anything above MaxInt32 with
+// a typed 400 keyed by the per-question field path so the frontend
+// can highlight the offending input.
+func TestQuizzesHandler_Create_SortOrderOverflow_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	body := validCreateQuizBody()
+	overflow := math.MaxInt32 + 1
+	body.Questions[0].SortOrder = &overflow
+
+	raw, err := json.Marshal(body)
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("/study-guides/%s/quizzes", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, bytes.NewReader(raw))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Contains(t, resp["details"], "questions[0].sort_order")
+}
+
+// TestQuizzesHandler_Create_NegativeSortOrder_400 covers the
+// handler-side rejection of negative sort_order values (copilot PR
+// #147 feedback). Service-side defense-in-depth covers the same
+// case for direct Go callers.
+func TestQuizzesHandler_Create_NegativeSortOrder_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	body := validCreateQuizBody()
+	negative := -1
+	body.Questions[0].SortOrder = &negative
+
+	raw, err := json.Marshal(body)
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("/study-guides/%s/quizzes", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, bytes.NewReader(raw))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	var resp map[string]any
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Contains(t, resp["details"], "questions[0].sort_order")
 }
 
 // TestQuizzesHandler_Create_Success_FullPayload exercises the full

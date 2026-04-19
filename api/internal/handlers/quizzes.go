@@ -3,7 +3,9 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
+	"math"
 	"net/http"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/api"
@@ -53,12 +55,17 @@ func (h *QuizzesHandler) CreateQuiz(w http.ResponseWriter, r *http.Request, stud
 		return
 	}
 
+	questions, convErr := convertCreateQuizQuestions(body.Questions)
+	if convErr != nil {
+		apperrors.RespondWithError(w, convErr)
+		return
+	}
 	params := quizzes.CreateQuizParams{
 		StudyGuideID: uuid.UUID(studyGuideId),
 		CreatorID:    viewerID,
 		Title:        body.Title,
 		Description:  body.Description,
-		Questions:    convertCreateQuizQuestions(body.Questions),
+		Questions:    questions,
 	}
 
 	detail, err := h.service.CreateQuiz(r.Context(), params)
@@ -75,12 +82,17 @@ func (h *QuizzesHandler) CreateQuiz(w http.ResponseWriter, r *http.Request, stud
 }
 
 // convertCreateQuizQuestions projects the openapi-generated request
-// type onto the domain CreateQuizQuestionInput slice. SortOrder is
-// converted via a local copy of the *int pointer to a *int32 so the
-// service can distinguish "client supplied 0" from "client omitted".
-func convertCreateQuizQuestions(in []api.CreateQuizQuestion) []quizzes.CreateQuizQuestionInput {
+// type onto the domain CreateQuizQuestionInput slice. SortOrder
+// crosses an int (from the wire decoder) -> int32 (DB column) bound
+// here; on 64-bit platforms a >2^31 input would silently overflow
+// into a negative value, so reject anything outside [0, MaxInt32]
+// up-front with a typed 400 (copilot PR feedback).
+//
+// Returns a typed *apperrors.AppError on validation failure so the
+// handler can RespondWithError without an extra unwrap.
+func convertCreateQuizQuestions(in []api.CreateQuizQuestion) ([]quizzes.CreateQuizQuestionInput, *apperrors.AppError) {
 	if len(in) == 0 {
-		return nil
+		return nil, nil
 	}
 	out := make([]quizzes.CreateQuizQuestionInput, len(in))
 	for i, q := range in {
@@ -93,7 +105,13 @@ func convertCreateQuizQuestions(in []api.CreateQuizQuestion) []quizzes.CreateQui
 			FeedbackIncorrect: q.FeedbackIncorrect,
 		}
 		if q.SortOrder != nil {
-			v := int32(*q.SortOrder)
+			s := *q.SortOrder
+			if s < 0 || s > math.MaxInt32 {
+				return nil, apperrors.NewBadRequest("Invalid request body", map[string]string{
+					fmt.Sprintf("questions[%d].sort_order", i): fmt.Sprintf("must be between 0 and %d", math.MaxInt32),
+				})
+			}
+			v := int32(s)
 			input.SortOrder = &v
 		}
 		if q.Options != nil {
@@ -108,7 +126,7 @@ func convertCreateQuizQuestions(in []api.CreateQuizQuestion) []quizzes.CreateQui
 		}
 		out[i] = input
 	}
-	return out
+	return out, nil
 }
 
 // mapQuizDetailResponse projects the QuizDetail domain type onto
