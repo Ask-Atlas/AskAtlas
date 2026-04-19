@@ -310,7 +310,7 @@ func NewService(repo Repository) *Service
 NewService creates a new Service backed by the given Repository.
 
 <a name="Service.CreateQuiz"></a>
-### func \(\*Service\) [CreateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L287>)
+### func \(\*Service\) [CreateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L292>)
 
 ```go
 func (s *Service) CreateQuiz(ctx context.Context, p CreateQuizParams) (QuizDetail, error)
@@ -328,7 +328,7 @@ True/false questions auto\-expand to 2 quiz\_answer\_options rows \("True", "Fal
 After the tx commits, hydrates the response by loading the quiz \+ creator \(privacy floor\) \+ questions \+ options via three separate reads. The two\-list \(questions \+ options\) fan\-out matches the studyguides detail pattern; mapping options back onto questions happens in Go via group\-by\-question\_id.
 
 <a name="Service.DeleteQuiz"></a>
-### func \(\*Service\) [DeleteQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L235>)
+### func \(\*Service\) [DeleteQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L240>)
 
 ```go
 func (s *Service) DeleteQuiz(ctx context.Context, p DeleteQuizParams) error
@@ -357,7 +357,7 @@ Order of operations:
 No transaction wrapping \-\- both reads are snapshot\-safe and a race where a guide gets soft\-deleted between the live check and the list returns the live\-time list, which is acceptable eventual\-consistency behavior for a read endpoint.
 
 <a name="Service.UpdateQuiz"></a>
-### func \(\*Service\) [UpdateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L122>)
+### func \(\*Service\) [UpdateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L127>)
 
 ```go
 func (s *Service) UpdateQuiz(ctx context.Context, p UpdateQuizParams) (QuizDetail, error)
@@ -375,7 +375,7 @@ Order of operations \(single transaction\):
 
 After the tx commits, re\-hydrates the full QuizDetail via the shared hydrate path used by CreateQuiz so the response carries the same wire shape \(QuizDetailResponse\) as the create endpoint.
 
-Title trim semantics: a body field of " " is rejected by validateUpdateParams \(must not be empty after trim\). When set, the trimmed value is what gets persisted. Description trim semantics: " " is treated as 'no change' \(matches the trimmed\-non\-empty pattern on CreateQuiz / studyguides\).
+Title trim semantics: a body field of " " is rejected by validateUpdateQuizParams \(must not be empty after trim\). When set, the trimmed value is what gets persisted. Description trim semantics on an EXPLICIT clear \(the JSON key was present\): " " is downgraded to NULL so the DB never stores a whitespace\-only description \-\- the caller's intent on \`\{"description":" "\}\` is clearly "I want this gone", and the trim\+downgrade keeps the column from carrying a meaningless blank value. When the key is absent \(ClearDescription=false\), description is left alone \-\- no trim, no write.
 
 <a name="UpdateQuizParams"></a>
 ## type [UpdateQuizParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/params.go#L130-L136>)

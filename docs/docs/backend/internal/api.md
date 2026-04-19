@@ -677,7 +677,7 @@ func BearerAuthFunc(_ context.Context, input *openapi3filter.AuthenticationInput
 BearerAuthFunc is an openapi3filter.AuthenticationFunc that asserts the operation's security scheme is HTTP bearer and that an Authorization: Bearer header is present. It does not verify the token.
 
 <a name="GetSwagger"></a>
-## func [GetSwagger](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L6523>)
+## func [GetSwagger](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L6524>)
 
 ```go
 func GetSwagger() (swagger *openapi3.T, err error)
@@ -740,7 +740,7 @@ func OAPIValidatorErrorHandler(w http.ResponseWriter, message string, statusCode
 OAPIValidatorErrorHandler is a custom ErrorHandler for the OpenAPI request validator middleware.
 
 <a name="PathToRawSpec"></a>
-## func [PathToRawSpec](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L6509>)
+## func [PathToRawSpec](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L6510>)
 
 ```go
 func PathToRawSpec(pathToFile string) map[string]func() ([]byte, error)

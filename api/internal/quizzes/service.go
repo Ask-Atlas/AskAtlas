@@ -115,10 +115,15 @@ func (s *Service) ListQuizzes(ctx context.Context, p ListQuizzesParams) ([]QuizL
 // the same wire shape (QuizDetailResponse) as the create endpoint.
 //
 // Title trim semantics: a body field of "  " is rejected by
-// validateUpdateParams (must not be empty after trim). When set,
-// the trimmed value is what gets persisted. Description trim
-// semantics: "  " is treated as 'no change' (matches the
-// trimmed-non-empty pattern on CreateQuiz / studyguides).
+// validateUpdateQuizParams (must not be empty after trim). When
+// set, the trimmed value is what gets persisted. Description trim
+// semantics on an EXPLICIT clear (the JSON key was present):
+// "  " is downgraded to NULL so the DB never stores a
+// whitespace-only description -- the caller's intent on
+// `{"description":"  "}` is clearly "I want this gone", and the
+// trim+downgrade keeps the column from carrying a meaningless
+// blank value. When the key is absent (ClearDescription=false),
+// description is left alone -- no trim, no write.
 func (s *Service) UpdateQuiz(ctx context.Context, p UpdateQuizParams) (QuizDetail, error) {
 	if err := validateUpdateQuizParams(p); err != nil {
 		return QuizDetail{}, err
