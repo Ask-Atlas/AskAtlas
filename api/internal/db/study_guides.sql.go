@@ -48,6 +48,32 @@ func (q *Queries) CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bo
 	return exists, err
 }
 
+const deleteGuideFile = `-- name: DeleteGuideFile :execrows
+DELETE FROM study_guide_files
+WHERE file_id = $1::uuid
+  AND study_guide_id = $2::uuid
+`
+
+type DeleteGuideFileParams struct {
+	FileID       pgtype.UUID `json:"file_id"`
+	StudyGuideID pgtype.UUID `json:"study_guide_id"`
+}
+
+// Removes the (file_id, study_guide_id) join row. Returns rows-
+// affected so the service can detect the concurrency-race case
+// (0 rows = a parallel detach already removed it, still maps to
+// 404 to match the get-then-delete contract). The file row is
+// preserved -- it may be attached to other guides + courses, and
+// the spec explicitly forbids cascading the file delete from a
+// single detach.
+func (q *Queries) DeleteGuideFile(ctx context.Context, arg DeleteGuideFileParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteGuideFile, arg.FileID, arg.StudyGuideID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteGuideResource = `-- name: DeleteGuideResource :execrows
 DELETE FROM study_guide_resources
 WHERE resource_id = $1::uuid
@@ -120,6 +146,44 @@ func (q *Queries) DeleteStudyGuideVote(ctx context.Context, arg DeleteStudyGuide
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const getFileForAttach = `-- name: GetFileForAttach :one
+SELECT id, user_id, status, deleted_at, deletion_status
+FROM files
+WHERE id = $1::uuid
+`
+
+type GetFileForAttachRow struct {
+	ID             pgtype.UUID            `json:"id"`
+	UserID         pgtype.UUID            `json:"user_id"`
+	Status         UploadStatus           `json:"status"`
+	DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
+	DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
+}
+
+// File-side gate for AttachFile (ASK-121). Returns the file's
+// ownership + status fields so the service can choose 403 (not
+// owner) vs 404 (missing / not 'complete' / soft-deleted) without
+// a second round trip. Filters NOTHING -- the service inspects
+// status + deleted_at + deletion_status to decide vs returning
+// pre-filtered for "is the row attachable" since the messages
+// differ (403 vs 404) and we want to give the right one.
+//
+// The columns mirror files.GetFileByOwner -- this is intentional;
+// the cross-package read keeps the service layer aware of file
+// ownership without reaching into the files package.
+func (q *Queries) GetFileForAttach(ctx context.Context, id pgtype.UUID) (GetFileForAttachRow, error) {
+	row := q.db.QueryRow(ctx, getFileForAttach, id)
+	var i GetFileForAttachRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Status,
+		&i.DeletedAt,
+		&i.DeletionStatus,
+	)
+	return i, err
 }
 
 const getGuideResourceAttacher = `-- name: GetGuideResourceAttacher :one
@@ -345,6 +409,64 @@ func (q *Queries) GuideExistsAndLive(ctx context.Context, id pgtype.UUID) (bool,
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const guideFileAttached = `-- name: GuideFileAttached :one
+SELECT EXISTS (
+  SELECT 1
+  FROM study_guide_files
+  WHERE file_id = $1::uuid
+    AND study_guide_id = $2::uuid
+)
+`
+
+type GuideFileAttachedParams struct {
+	FileID       pgtype.UUID `json:"file_id"`
+	StudyGuideID pgtype.UUID `json:"study_guide_id"`
+}
+
+// Lookup for DetachFile (ASK-124). Returns TRUE when the (file,
+// guide) join row exists. Used as the 404 short-circuit before the
+// delete fires -- we want a clean 'File attachment not found' rather
+// than relying on DeleteGuideFile :execrows which can't distinguish
+// 'never existed' from 'concurrent detach happened first'.
+func (q *Queries) GuideFileAttached(ctx context.Context, arg GuideFileAttachedParams) (bool, error) {
+	row := q.db.QueryRow(ctx, guideFileAttached, arg.FileID, arg.StudyGuideID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const insertGuideFile = `-- name: InsertGuideFile :one
+INSERT INTO study_guide_files (file_id, study_guide_id)
+VALUES (
+  $1::uuid,
+  $2::uuid
+)
+ON CONFLICT (file_id, study_guide_id) DO NOTHING
+RETURNING created_at
+`
+
+type InsertGuideFileParams struct {
+	FileID       pgtype.UUID `json:"file_id"`
+	StudyGuideID pgtype.UUID `json:"study_guide_id"`
+}
+
+// Creates the (file_id, study_guide_id) join row. Uses ON CONFLICT
+// DO NOTHING + RETURNING so a duplicate attach surfaces as
+// sql.ErrNoRows in Go, which the service maps to a 409 'File is
+// already attached to this study guide'. Same pattern as
+// recommendations + JoinSection.
+//
+// No attached_by column on this join table (unlike
+// study_guide_resources) -- file ownership is determined from
+// files.user_id instead, and the dual-authz check on detach
+// compares against guide.creator_id + file.user_id.
+func (q *Queries) InsertGuideFile(ctx context.Context, arg InsertGuideFileParams) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, insertGuideFile, arg.FileID, arg.StudyGuideID)
+	var created_at pgtype.Timestamptz
+	err := row.Scan(&created_at)
+	return created_at, err
 }
 
 const insertGuideResource = `-- name: InsertGuideResource :exec

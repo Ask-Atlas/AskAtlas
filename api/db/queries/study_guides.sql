@@ -841,3 +841,63 @@ WHERE resource_id = sqlc.arg(resource_id)::uuid
 DELETE FROM study_guide_resources
 WHERE resource_id = sqlc.arg(resource_id)::uuid
   AND study_guide_id = sqlc.arg(study_guide_id)::uuid;
+
+-- name: GetFileForAttach :one
+-- File-side gate for AttachFile (ASK-121). Returns the file's
+-- ownership + status fields so the service can choose 403 (not
+-- owner) vs 404 (missing / not 'complete' / soft-deleted) without
+-- a second round trip. Filters NOTHING -- the service inspects
+-- status + deleted_at + deletion_status to decide vs returning
+-- pre-filtered for "is the row attachable" since the messages
+-- differ (403 vs 404) and we want to give the right one.
+--
+-- The columns mirror files.GetFileByOwner -- this is intentional;
+-- the cross-package read keeps the service layer aware of file
+-- ownership without reaching into the files package.
+SELECT id, user_id, status, deleted_at, deletion_status
+FROM files
+WHERE id = sqlc.arg(id)::uuid;
+
+-- name: InsertGuideFile :one
+-- Creates the (file_id, study_guide_id) join row. Uses ON CONFLICT
+-- DO NOTHING + RETURNING so a duplicate attach surfaces as
+-- sql.ErrNoRows in Go, which the service maps to a 409 'File is
+-- already attached to this study guide'. Same pattern as
+-- recommendations + JoinSection.
+--
+-- No attached_by column on this join table (unlike
+-- study_guide_resources) -- file ownership is determined from
+-- files.user_id instead, and the dual-authz check on detach
+-- compares against guide.creator_id + file.user_id.
+INSERT INTO study_guide_files (file_id, study_guide_id)
+VALUES (
+  sqlc.arg(file_id)::uuid,
+  sqlc.arg(study_guide_id)::uuid
+)
+ON CONFLICT (file_id, study_guide_id) DO NOTHING
+RETURNING created_at;
+
+-- name: GuideFileAttached :one
+-- Lookup for DetachFile (ASK-124). Returns TRUE when the (file,
+-- guide) join row exists. Used as the 404 short-circuit before the
+-- delete fires -- we want a clean 'File attachment not found' rather
+-- than relying on DeleteGuideFile :execrows which can't distinguish
+-- 'never existed' from 'concurrent detach happened first'.
+SELECT EXISTS (
+  SELECT 1
+  FROM study_guide_files
+  WHERE file_id = sqlc.arg(file_id)::uuid
+    AND study_guide_id = sqlc.arg(study_guide_id)::uuid
+);
+
+-- name: DeleteGuideFile :execrows
+-- Removes the (file_id, study_guide_id) join row. Returns rows-
+-- affected so the service can detect the concurrency-race case
+-- (0 rows = a parallel detach already removed it, still maps to
+-- 404 to match the get-then-delete contract). The file row is
+-- preserved -- it may be attached to other guides + courses, and
+-- the spec explicitly forbids cascading the file delete from a
+-- single detach.
+DELETE FROM study_guide_files
+WHERE file_id = sqlc.arg(file_id)::uuid
+  AND study_guide_id = sqlc.arg(study_guide_id)::uuid;
