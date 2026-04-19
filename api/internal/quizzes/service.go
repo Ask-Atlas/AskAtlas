@@ -323,7 +323,7 @@ func (s *Service) CreateQuiz(ctx context.Context, p CreateQuizParams) (QuizDetai
 		quizPgxID = inserted.ID
 
 		for i, q := range p.Questions {
-			if _, err := s.insertQuestion(ctx, tx, quizPgxID, i, q); err != nil {
+			if _, err := s.insertQuestion(ctx, tx, quizPgxID, i, fmt.Sprintf("questions[%d]", i), q); err != nil {
 				return err
 			}
 		}
@@ -415,7 +415,7 @@ func (s *Service) AddQuestion(ctx context.Context, p AddQuestionParams) (Questio
 		// resolveSortOrder (called inside insertQuestion via the
 		// `idx` arg), so a frontend that wants to interleave can do
 		// so by sending its own value.
-		insertedID, err := s.insertQuestion(ctx, tx, quizPgxID, int(count), p.Question)
+		insertedID, err := s.insertQuestion(ctx, tx, quizPgxID, int(count), "", p.Question)
 		if err != nil {
 			return err
 		}
@@ -466,16 +466,29 @@ func (s *Service) hydrateQuestion(ctx context.Context, questionPgxID pgtype.UUID
 // (AddQuestion) can hydrate the response after commit; CreateQuiz
 // discards the id because it re-loads the whole quiz via hydrate.
 //
+// `idx` is the per-question array position used for sort_order
+// fallback (resolveSortOrder) and for log-context wraps so a tx-
+// level failure points back at the offending question. `prefix` is
+// the dotted-path key prefix prepended to defense-in-depth 400
+// detail keys -- `questions[i]` for CreateQuiz so per-question
+// errors surface as e.g. `questions[i].correct_answer`, and `""`
+// for AddQuestion (the question is the whole body) so keys
+// collapse to bare names like `correct_answer`. Without the
+// prefix split a Go caller that bypassed validateQuestion (the
+// only practical route into these defense-in-depth branches)
+// would see `questions[0].correct_answer` errors out of an
+// endpoint that takes a single question.
+//
 // The caller has already validated `q` -- this function is allowed
 // to assume well-formed input (CorrectAnswer of the right type,
 // options counts within bounds).
-func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID pgtype.UUID, idx int, q CreateQuizQuestionInput) (pgtype.UUID, error) {
+func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID pgtype.UUID, idx int, prefix string, q CreateQuizQuestionInput) (pgtype.UUID, error) {
 	dbType, ok := questionTypeToDB(q.Type)
 	if !ok {
 		// Defense in depth -- validateCreateParams should have caught
 		// this. Still surface a typed 400 rather than crashing the SQL.
 		return pgtype.UUID{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
-			fmt.Sprintf("questions[%d].type", idx): "must be multiple-choice, true-false, or freeform",
+			fieldKey(prefix, "type"): "must be multiple-choice, true-false, or freeform",
 		})
 	}
 
@@ -498,7 +511,7 @@ func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID p
 		ans, ok := q.CorrectAnswer.(string)
 		if !ok {
 			return pgtype.UUID{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
-				fmt.Sprintf("questions[%d].correct_answer", idx): "is required for freeform questions",
+				fieldKey(prefix, "correct_answer"): "is required for freeform questions",
 			})
 		}
 		args.ReferenceAnswer = pgtype.Text{String: strings.TrimSpace(ans), Valid: true}
@@ -530,7 +543,7 @@ func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID p
 		correct, ok := q.CorrectAnswer.(bool)
 		if !ok {
 			return pgtype.UUID{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
-				fmt.Sprintf("questions[%d].correct_answer", idx): "must be boolean for true-false questions",
+				fieldKey(prefix, "correct_answer"): "must be boolean for true-false questions",
 			})
 		}
 		// Order matters for the response: True first (sort_order 0),
