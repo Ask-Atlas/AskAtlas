@@ -30,6 +30,8 @@ type StudyGuideService interface {
 	RemoveRecommendation(ctx context.Context, params studyguides.RemoveRecommendationParams) error
 	AttachResource(ctx context.Context, params studyguides.AttachResourceParams) (studyguides.Resource, error)
 	DetachResource(ctx context.Context, params studyguides.DetachResourceParams) error
+	AttachFile(ctx context.Context, params studyguides.AttachFileParams) (studyguides.FileAttachment, error)
+	DetachFile(ctx context.Context, params studyguides.DetachFileParams) error
 }
 
 // StudyGuideHandler manages incoming HTTP requests for the study-guide
@@ -430,6 +432,64 @@ func (h *StudyGuideHandler) DetachResource(w http.ResponseWriter, r *http.Reques
 		sysErr := apperrors.ToHTTPError(err)
 		if sysErr.Code >= 500 {
 			slog.Error("DetachResource failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// AttachFile handles POST /study-guides/{id}/files/{file_id}.
+// No body. AttacherID comes from JWT. Service runs ownership +
+// status checks; 201 on success with FileAttachmentResponse,
+// 403/404/409/500 flow through ToHTTPError.
+func (h *StudyGuideHandler) AttachFile(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, fileId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	att, err := h.service.AttachFile(r.Context(), studyguides.AttachFileParams{
+		StudyGuideID: uuid.UUID(studyGuideId),
+		FileID:       uuid.UUID(fileId),
+		AttacherID:   viewerID,
+	})
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("AttachFile failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, api.FileAttachmentResponse{
+		FileId:       openapi_types.UUID(att.FileID),
+		StudyGuideId: openapi_types.UUID(att.StudyGuideID),
+		CreatedAt:    att.CreatedAt,
+	})
+}
+
+// DetachFile handles DELETE /study-guides/{id}/files/{file_id}.
+// 204 on success. Dual-authz (file owner OR guide creator) lives in
+// the service; 403/404 from the service flow through ToHTTPError.
+func (h *StudyGuideHandler) DetachFile(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, fileId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	if err := h.service.DetachFile(r.Context(), studyguides.DetachFileParams{
+		StudyGuideID: uuid.UUID(studyGuideId),
+		FileID:       uuid.UUID(fileId),
+		ViewerID:     viewerID,
+	}); err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("DetachFile failed", "error", err)
 		}
 		apperrors.RespondWithError(w, sysErr)
 		return

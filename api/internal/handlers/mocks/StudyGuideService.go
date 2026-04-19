@@ -96,6 +96,72 @@ func (_c *MockStudyGuideService_AssertCourseExists_Call) RunAndReturn(run func(c
 	return _c
 }
 
+// AttachFile provides a mock function for the type MockStudyGuideService
+func (_mock *MockStudyGuideService) AttachFile(ctx context.Context, params studyguides.AttachFileParams) (studyguides.FileAttachment, error) {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AttachFile")
+	}
+
+	var r0 studyguides.FileAttachment
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, studyguides.AttachFileParams) (studyguides.FileAttachment, error)); ok {
+		return returnFunc(ctx, params)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, studyguides.AttachFileParams) studyguides.FileAttachment); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Get(0).(studyguides.FileAttachment)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, studyguides.AttachFileParams) error); ok {
+		r1 = returnFunc(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStudyGuideService_AttachFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AttachFile'
+type MockStudyGuideService_AttachFile_Call struct {
+	*mock.Call
+}
+
+// AttachFile is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params studyguides.AttachFileParams
+func (_e *MockStudyGuideService_Expecter) AttachFile(ctx interface{}, params interface{}) *MockStudyGuideService_AttachFile_Call {
+	return &MockStudyGuideService_AttachFile_Call{Call: _e.mock.On("AttachFile", ctx, params)}
+}
+
+func (_c *MockStudyGuideService_AttachFile_Call) Run(run func(ctx context.Context, params studyguides.AttachFileParams)) *MockStudyGuideService_AttachFile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 studyguides.AttachFileParams
+		if args[1] != nil {
+			arg1 = args[1].(studyguides.AttachFileParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStudyGuideService_AttachFile_Call) Return(fileAttachment studyguides.FileAttachment, err error) *MockStudyGuideService_AttachFile_Call {
+	_c.Call.Return(fileAttachment, err)
+	return _c
+}
+
+func (_c *MockStudyGuideService_AttachFile_Call) RunAndReturn(run func(ctx context.Context, params studyguides.AttachFileParams) (studyguides.FileAttachment, error)) *MockStudyGuideService_AttachFile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // AttachResource provides a mock function for the type MockStudyGuideService
 func (_mock *MockStudyGuideService) AttachResource(ctx context.Context, params studyguides.AttachResourceParams) (studyguides.Resource, error) {
 	ret := _mock.Called(ctx, params)
@@ -347,6 +413,63 @@ func (_c *MockStudyGuideService_DeleteStudyGuide_Call) Return(err error) *MockSt
 }
 
 func (_c *MockStudyGuideService_DeleteStudyGuide_Call) RunAndReturn(run func(ctx context.Context, params studyguides.DeleteStudyGuideParams) error) *MockStudyGuideService_DeleteStudyGuide_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DetachFile provides a mock function for the type MockStudyGuideService
+func (_mock *MockStudyGuideService) DetachFile(ctx context.Context, params studyguides.DetachFileParams) error {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DetachFile")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, studyguides.DetachFileParams) error); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStudyGuideService_DetachFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DetachFile'
+type MockStudyGuideService_DetachFile_Call struct {
+	*mock.Call
+}
+
+// DetachFile is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params studyguides.DetachFileParams
+func (_e *MockStudyGuideService_Expecter) DetachFile(ctx interface{}, params interface{}) *MockStudyGuideService_DetachFile_Call {
+	return &MockStudyGuideService_DetachFile_Call{Call: _e.mock.On("DetachFile", ctx, params)}
+}
+
+func (_c *MockStudyGuideService_DetachFile_Call) Run(run func(ctx context.Context, params studyguides.DetachFileParams)) *MockStudyGuideService_DetachFile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 studyguides.DetachFileParams
+		if args[1] != nil {
+			arg1 = args[1].(studyguides.DetachFileParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStudyGuideService_DetachFile_Call) Return(err error) *MockStudyGuideService_DetachFile_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStudyGuideService_DetachFile_Call) RunAndReturn(run func(ctx context.Context, params studyguides.DetachFileParams) error) *MockStudyGuideService_DetachFile_Call {
 	_c.Call.Return(run)
 	return _c
 }
