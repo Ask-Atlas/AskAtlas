@@ -40,9 +40,13 @@ type Repository interface {
 	InsertPracticeAnswer(ctx context.Context, arg db.InsertPracticeAnswerParams) (db.InsertPracticeAnswerRow, error)
 	IncrementSessionCorrectAnswers(ctx context.Context, id pgtype.UUID) error
 
-	// CompleteSession-related (ASK-140).
+	// CompleteSession-related (ASK-140) and AbandonSession-related
+	// (ASK-144). LockSessionForCompletion is reused by both flows
+	// -- both need the same FOR UPDATE row + ownership/completion
+	// state to dispatch 404 / 403 / 409 / proceed.
 	LockSessionForCompletion(ctx context.Context, id pgtype.UUID) (db.PracticeSession, error)
 	MarkSessionCompleted(ctx context.Context, id pgtype.UUID) (pgtype.Timestamptz, error)
+	DeleteSessionByID(ctx context.Context, id pgtype.UUID) (int64, error)
 
 	// GetSession-related (ASK-152). GetSessionByID is a non-locking
 	// read; the lock-equivalent on the writer side is
@@ -765,4 +769,75 @@ func (s *Service) ListSessions(ctx context.Context, p ListSessionsParams) (ListS
 		out.NextCursor = &encoded
 	}
 	return out, nil
+}
+
+// AbandonSession hard-deletes an in-progress practice session
+// owned by the authenticated user (ASK-144). Completed sessions
+// cannot be abandoned -- they are historical analytics data and
+// surface as 409 here.
+//
+// Order of operations (single transaction):
+//  1. LockSessionForCompletion -- locked SELECT returning all
+//     session fields. FOR UPDATE serializes against concurrent
+//     SubmitAnswer (ASK-137) and CompleteSession (ASK-140) so
+//     the spec's race semantics fall out naturally:
+//     * answer wins -> our lock waits, then sees the answer
+//     row already in place; the CASCADE delete cleans it
+//     up alongside the session.
+//     * complete wins -> our lock sees completed_at set and
+//     we return 409.
+//  2. 404 if missing.
+//  3. 403 if user_id != viewer.
+//  4. 409 if completed_at IS NOT NULL.
+//  5. DeleteSessionByID -- blind by-id delete. CASCADE foreign
+//     keys on practice_session_questions + practice_answers
+//     remove children in the same statement. We assert
+//     rowsAffected == 1 as defense-in-depth (the FOR UPDATE
+//     lock makes a 0-rows path effectively unreachable, but
+//     the assertion is cheap and self-documenting).
+//
+// Asymmetric to GetSession (ASK-152), which returns historical
+// sessions for soft-deleted parents: AbandonSession refuses to
+// touch a completed session entirely. The user can always view
+// it via GetSession; deletion of historical analytics data is
+// out of scope (per the spec's "Out of Scope" section).
+//
+// Idempotency: NOT idempotent. A second AbandonSession call on
+// an already-deleted session returns 404 (sql.ErrNoRows from
+// the locked SELECT). Documented on the wire side as
+// "callers that want 'make sure it's gone' must tolerate 404".
+func (s *Service) AbandonSession(ctx context.Context, p AbandonSessionParams) error {
+	sessionPgxID := utils.UUID(p.SessionID)
+
+	return s.repo.InTx(ctx, func(tx Repository) error {
+		row, err := tx.LockSessionForCompletion(ctx, sessionPgxID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return apperrors.NewNotFound("Session not found")
+			}
+			return fmt.Errorf("AbandonSession: lock session: %w", err)
+		}
+		ownerID, err := utils.PgxToGoogleUUID(row.UserID)
+		if err != nil {
+			return fmt.Errorf("AbandonSession: session owner id: %w", err)
+		}
+		if ownerID != p.UserID {
+			return apperrors.NewForbidden()
+		}
+		if row.CompletedAt.Valid {
+			return apperrors.NewConflict("Cannot delete a completed session")
+		}
+
+		rows, err := tx.DeleteSessionByID(ctx, sessionPgxID)
+		if err != nil {
+			return fmt.Errorf("AbandonSession: delete: %w", err)
+		}
+		if rows != 1 {
+			// Unreachable under FOR UPDATE serialization, but the
+			// assertion is cheap and surfaces a 500 instead of a
+			// silent success on the impossible path.
+			return fmt.Errorf("AbandonSession: expected 1 row deleted, got %d", rows)
+		}
+		return nil
+	})
 }

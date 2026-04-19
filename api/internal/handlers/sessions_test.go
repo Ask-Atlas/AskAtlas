@@ -1089,3 +1089,130 @@ func TestSessionsHandler_List_OK_InProgressNullScore(t *testing.T) {
 	assert.Nil(t, first["completed_at"], "in-progress: completed_at must be JSON null")
 	assert.Nil(t, first["score_percentage"], "in-progress: score_percentage must be JSON null")
 }
+
+// ============================================================
+// AbandonPracticeSession tests (ASK-144)
+// ============================================================
+
+func TestSessionsHandler_Abandon_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	url := fmt.Sprintf("/sessions/%s", uuid.NewString())
+	req := httptest.NewRequest(http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestSessionsHandler_Abandon_InvalidUUID_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	req := authedRequestMethod(t, http.MethodDelete, "/sessions/not-a-uuid", nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestSessionsHandler_Abandon_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().AbandonSession(mock.Anything, mock.Anything).
+		Return(apperrors.NewNotFound("Session not found"))
+
+	url := fmt.Sprintf("/sessions/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestSessionsHandler_Abandon_Forbidden_403(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().AbandonSession(mock.Anything, mock.Anything).
+		Return(apperrors.NewForbidden())
+
+	url := fmt.Sprintf("/sessions/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestSessionsHandler_Abandon_Conflict_409(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().AbandonSession(mock.Anything, mock.Anything).
+		Return(apperrors.NewConflict("Cannot delete a completed session"))
+
+	url := fmt.Sprintf("/sessions/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusConflict, w.Code)
+}
+
+func TestSessionsHandler_Abandon_ServiceError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	mockSvc.EXPECT().AbandonSession(mock.Anything, mock.Anything).
+		Return(errors.New("connection refused"))
+
+	url := fmt.Sprintf("/sessions/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// TestSessionsHandler_Abandon_Success_204 covers the happy path:
+// service returns nil, handler renders 204 No Content with no
+// body. The mock matcher verifies the path session_id is
+// forwarded into AbandonSessionParams. (UserID is stamped from
+// the JWT context middleware -- the test request helper uses a
+// fresh test user so the matcher only pins the field this test
+// directly controls; copilot PR #159 review.)
+func TestSessionsHandler_Abandon_Success_204(t *testing.T) {
+	mockSvc := mock_handlers.NewMockSessionService(t)
+	h := handlers.NewSessionsHandler(mockSvc)
+
+	sessionID := uuid.New()
+	mockSvc.EXPECT().AbandonSession(mock.Anything,
+		mock.MatchedBy(func(p sessions.AbandonSessionParams) bool {
+			return p.SessionID == sessionID && p.UserID != uuid.Nil
+		})).Return(nil)
+
+	url := fmt.Sprintf("/sessions/%s", sessionID.String())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := sessionsTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNoContent, w.Code, "204 No Content per spec")
+	assert.Empty(t, w.Body.String(), "204 must have no body")
+}

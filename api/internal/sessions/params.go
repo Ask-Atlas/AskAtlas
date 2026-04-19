@@ -40,6 +40,18 @@ type CompleteSessionParams struct {
 	UserID    uuid.UUID
 }
 
+// AbandonSessionParams is the input to Service.AbandonSession
+// (ASK-144). UserID is taken from the JWT in the handler -- the
+// spec forbids accepting a user id from the request. SessionID
+// is the path parameter. Identical shape to CompleteSessionParams
+// because the auth + ownership checks have identical structure;
+// kept as a separate type so future divergence (e.g. an explicit
+// "force" flag) doesn't ripple through the complete path.
+type AbandonSessionParams struct {
+	SessionID uuid.UUID
+	UserID    uuid.UUID
+}
+
 // SubmitAnswerParams is the input to Service.SubmitAnswer (ASK-137).
 // UserID is taken from the JWT in the handler -- the spec forbids
 // accepting a user id from the request body. UserAnswer is the

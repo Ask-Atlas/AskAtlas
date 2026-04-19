@@ -262,6 +262,25 @@ SET completed_at = now()
 WHERE id = sqlc.arg(id)::uuid
 RETURNING completed_at;
 
+-- name: DeleteSessionByID :execrows
+-- Hard-deletes a practice session by id (ASK-144). The CASCADE
+-- foreign keys on practice_session_questions and practice_answers
+-- ensure the snapshot rows and answer rows are removed in the
+-- same statement.
+--
+-- Blind by id only -- the service has already verified ownership
+-- + completed_at IS NULL inside the same tx via
+-- LockSessionForCompletion + the FOR UPDATE row lock. By the
+-- time this runs, the only legitimate outcome is "row deleted".
+-- :execrows lets the service double-check the rows-affected
+-- count (defense-in-depth) and surface a 500 on the
+-- vanishingly-rare 0-rows path (would mean another tx slipped
+-- in and deleted between our lock and this DELETE -- which is
+-- ruled out by the FOR UPDATE row lock under READ COMMITTED,
+-- but the check is cheap and self-documenting).
+DELETE FROM practice_sessions
+WHERE id = sqlc.arg(id)::uuid;
+
 -- name: ListUserSessionsForQuiz :many
 -- Cursor-paginated keyset list of the authenticated user's
 -- practice sessions for one quiz (ASK-149). Sorted by
