@@ -47,6 +47,7 @@ Package handlers contains the HTTP handlers and routes for the API endpoints.
 - [type QuizzesHandler](<#QuizzesHandler>)
   - [func NewQuizzesHandler\(service QuizService\) \*QuizzesHandler](<#NewQuizzesHandler>)
   - [func \(h \*QuizzesHandler\) CreateQuiz\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#QuizzesHandler.CreateQuiz>)
+  - [func \(h \*QuizzesHandler\) ListQuizzes\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#QuizzesHandler.ListQuizzes>)
 - [type SchoolService](<#SchoolService>)
 - [type SchoolsHandler](<#SchoolsHandler>)
   - [func NewSchoolsHandler\(service SchoolService\) \*SchoolsHandler](<#NewSchoolsHandler>)
@@ -404,18 +405,19 @@ func (h *JobHandler) DeleteFileJob(w http.ResponseWriter, r *http.Request)
 DeleteFileJob handles POST /jobs/delete\-file. It deletes the S3 object and marks the file as deleted in the DB.
 
 <a name="QuizService"></a>
-## type [QuizService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L19-L21>)
+## type [QuizService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L21-L24>)
 
 QuizService defines the application logic required by the QuizzesHandler. Mirrors StudyGuideService: small, defined at the consumer, and mocked via mockery for handler tests.
 
 ```go
 type QuizService interface {
     CreateQuiz(ctx context.Context, params quizzes.CreateQuizParams) (quizzes.QuizDetail, error)
+    ListQuizzes(ctx context.Context, params quizzes.ListQuizzesParams) ([]quizzes.QuizListItem, error)
 }
 ```
 
 <a name="QuizzesHandler"></a>
-## type [QuizzesHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L26-L28>)
+## type [QuizzesHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L29-L31>)
 
 QuizzesHandler manages incoming HTTP requests for the quizzes surface. Embedded in CompositeHandler so a single instance satisfies the generated api.ServerInterface.
 
@@ -426,7 +428,7 @@ type QuizzesHandler struct {
 ```
 
 <a name="NewQuizzesHandler"></a>
-### func [NewQuizzesHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L32>)
+### func [NewQuizzesHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L35>)
 
 ```go
 func NewQuizzesHandler(service QuizService) *QuizzesHandler
@@ -435,13 +437,22 @@ func NewQuizzesHandler(service QuizService) *QuizzesHandler
 NewQuizzesHandler creates a new QuizzesHandler backed by the given QuizService.
 
 <a name="QuizzesHandler.CreateQuiz"></a>
-### func \(\*QuizzesHandler\) [CreateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L43>)
+### func \(\*QuizzesHandler\) [CreateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L73>)
 
 ```go
 func (h *QuizzesHandler) CreateQuiz(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
 ```
 
 CreateQuiz handles POST /study\-guides/\{study\_guide\_id\}/quizzes. The body is decoded into the openapi\-generated request type; the service layer applies the cross\-field validation \(per\-type correct\_answer typing, MCQ correct\-count invariant\) and runs the quiz \+ questions \+ options inserts inside one transaction. The creator id is always taken from the JWT \-\- the openapi schema explicitly forbids accepting one in the request body.
+
+<a name="QuizzesHandler.ListQuizzes"></a>
+### func \(\*QuizzesHandler\) [ListQuizzes](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/quizzes.go#L45>)
+
+```go
+func (h *QuizzesHandler) ListQuizzes(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+ListQuizzes handles GET /study\-guides/\{study\_guide\_id\}/quizzes \(ASK\-136\). Auth\-only \-\- any authenticated user can list. The service runs the live\-guide preflight \+ the list query; a missing or soft\-deleted guide surfaces as 404. The response always emits a non\-nil quizzes slice so the JSON shape is \`\[\]\` \(not null\) when the guide has no quizzes.
 
 <a name="SchoolService"></a>
 ## type [SchoolService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/handlers/schools.go#L17-L20>)

@@ -107,6 +107,7 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
 - [type ListOwnedFilesUpdatedDescParams](<#ListOwnedFilesUpdatedDescParams>)
 - [type ListOwnedFilesUpdatedDescRow](<#ListOwnedFilesUpdatedDescRow>)
 - [type ListQuizQuestionsByQuizRow](<#ListQuizQuestionsByQuizRow>)
+- [type ListQuizzesByStudyGuideRow](<#ListQuizzesByStudyGuideRow>)
 - [type ListSchoolsParams](<#ListSchoolsParams>)
 - [type ListSectionMembersParams](<#ListSectionMembersParams>)
 - [type ListSectionMembersRow](<#ListSectionMembersRow>)
@@ -219,6 +220,7 @@ import "github.com/Ask-Atlas/AskAtlas/api/internal/db"
   - [func \(q \*Queries\) ListOwnedFilesUpdatedDesc\(ctx context.Context, arg ListOwnedFilesUpdatedDescParams\) \(\[\]ListOwnedFilesUpdatedDescRow, error\)](<#Queries.ListOwnedFilesUpdatedDesc>)
   - [func \(q \*Queries\) ListQuizAnswerOptionsByQuiz\(ctx context.Context, quizID pgtype.UUID\) \(\[\]QuizAnswerOption, error\)](<#Queries.ListQuizAnswerOptionsByQuiz>)
   - [func \(q \*Queries\) ListQuizQuestionsByQuiz\(ctx context.Context, quizID pgtype.UUID\) \(\[\]ListQuizQuestionsByQuizRow, error\)](<#Queries.ListQuizQuestionsByQuiz>)
+  - [func \(q \*Queries\) ListQuizzesByStudyGuide\(ctx context.Context, studyGuideID pgtype.UUID\) \(\[\]ListQuizzesByStudyGuideRow, error\)](<#Queries.ListQuizzesByStudyGuide>)
   - [func \(q \*Queries\) ListSchools\(ctx context.Context, arg ListSchoolsParams\) \(\[\]School, error\)](<#Queries.ListSchools>)
   - [func \(q \*Queries\) ListSectionMembers\(ctx context.Context, arg ListSectionMembersParams\) \(\[\]ListSectionMembersRow, error\)](<#Queries.ListSectionMembers>)
   - [func \(q \*Queries\) ListStudyGuidesNewestAsc\(ctx context.Context, arg ListStudyGuidesNewestAscParams\) \(\[\]ListStudyGuidesNewestAscRow, error\)](<#Queries.ListStudyGuidesNewestAsc>)
@@ -2076,6 +2078,25 @@ type ListQuizQuestionsByQuizRow struct {
 }
 ```
 
+<a name="ListQuizzesByStudyGuideRow"></a>
+## type [ListQuizzesByStudyGuideRow](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L338-L348>)
+
+
+
+```go
+type ListQuizzesByStudyGuideRow struct {
+    ID               pgtype.UUID        `json:"id"`
+    Title            string             `json:"title"`
+    Description      pgtype.Text        `json:"description"`
+    CreatedAt        pgtype.Timestamptz `json:"created_at"`
+    UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+    CreatorID        pgtype.UUID        `json:"creator_id"`
+    CreatorFirstName string             `json:"creator_first_name"`
+    CreatorLastName  string             `json:"creator_last_name"`
+    QuestionCount    int64              `json:"question_count"`
+}
+```
+
 <a name="ListSchoolsParams"></a>
 ## type [ListSchoolsParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/schools.sql.go#L55-L60>)
 
@@ -2763,7 +2784,7 @@ type PracticeSessionQuestion struct {
 ```
 
 <a name="Querier"></a>
-## type [Querier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/querier.go#L13-L473>)
+## type [Querier](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/querier.go#L13-L501>)
 
 
 
@@ -3084,6 +3105,34 @@ type Querier interface {
     // uniqueness on sort_order). Returns reference_answer so the
     // mapper can emit it as `correct_answer` on freeform questions.
     ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]ListQuizQuestionsByQuizRow, error)
+    // Lists every non-soft-deleted quiz attached to a study guide
+    // (ASK-136). Each row carries the privacy-floor creator payload
+    // (id + first_name + last_name only -- mirrors the studyguides
+    // surface) plus a server-computed question_count via LEFT JOIN +
+    // COUNT, so a quiz with zero questions still surfaces with a 0
+    // count rather than being silently dropped by an INNER JOIN.
+    //
+    // Soft-delete invariants:
+    //   * q.deleted_at IS NULL  -- excludes soft-deleted quizzes
+    //                              (AC3: studyguide with mixed live +
+    //                              deleted quizzes only returns the live
+    //                              ones)
+    //   * u.deleted_at IS NULL  -- excludes quizzes whose creator's user
+    //                              record was soft-deleted (matches the
+    //                              ASK-143 convention used by
+    //                              GetStudyGuideDetail)
+    //
+    // The parent study guide's deleted_at is checked separately by the
+    // service via GuideExistsAndLiveForQuizzes BEFORE this query runs --
+    // a missing or soft-deleted guide returns 404 even when this query
+    // would have returned an empty array. Keeps the 404 vs 200-empty
+    // distinction crisp.
+    //
+    // Order: created_at DESC with id DESC as the deterministic
+    // tiebreaker (the spec calls for "newest first"). The id tiebreaker
+    // prevents a flaky test on a Postgres that happens to insert two
+    // rows in the same microsecond.
+    ListQuizzesByStudyGuide(ctx context.Context, studyGuideID pgtype.UUID) ([]ListQuizzesByStudyGuideRow, error)
     ListSchools(ctx context.Context, arg ListSchoolsParams) ([]School, error)
     // Returns the section roster joined against users for first/last name.
     // Privacy floor: SELECT lists ONLY the five fields exposed in the
@@ -3837,6 +3886,24 @@ func (q *Queries) ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUI
 ```
 
 All questions for a quiz, ordered by sort\_order then id \(the id tiebreaker keeps the response deterministic when two questions happen to share a sort\_order \-\- the spec doesn't enforce uniqueness on sort\_order\). Returns reference\_answer so the mapper can emit it as \`correct\_answer\` on freeform questions.
+
+<a name="Queries.ListQuizzesByStudyGuide"></a>
+### func \(\*Queries\) [ListQuizzesByStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/quizzes.sql.go#L377>)
+
+```go
+func (q *Queries) ListQuizzesByStudyGuide(ctx context.Context, studyGuideID pgtype.UUID) ([]ListQuizzesByStudyGuideRow, error)
+```
+
+Lists every non\-soft\-deleted quiz attached to a study guide \(ASK\-136\). Each row carries the privacy\-floor creator payload \(id \+ first\_name \+ last\_name only \-\- mirrors the studyguides surface\) plus a server\-computed question\_count via LEFT JOIN \+ COUNT, so a quiz with zero questions still surfaces with a 0 count rather than being silently dropped by an INNER JOIN.
+
+Soft\-delete invariants:
+
+- q.deleted\_at IS NULL \-\- excludes soft\-deleted quizzes \(AC3: studyguide with mixed live \+ deleted quizzes only returns the live ones\)
+- u.deleted\_at IS NULL \-\- excludes quizzes whose creator's user record was soft\-deleted \(matches the ASK\-143 convention used by GetStudyGuideDetail\)
+
+The parent study guide's deleted\_at is checked separately by the service via GuideExistsAndLiveForQuizzes BEFORE this query runs \-\- a missing or soft\-deleted guide returns 404 even when this query would have returned an empty array. Keeps the 404 vs 200\-empty distinction crisp.
+
+Order: created\_at DESC with id DESC as the deterministic tiebreaker \(the spec calls for "newest first"\). The id tiebreaker prevents a flaky test on a Postgres that happens to insert two rows in the same microsecond.
 
 <a name="Queries.ListSchools"></a>
 ### func \(\*Queries\) [ListSchools](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/db/schools.sql.go#L62>)

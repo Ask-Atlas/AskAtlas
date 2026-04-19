@@ -326,6 +326,34 @@ type Querier interface {
 	// uniqueness on sort_order). Returns reference_answer so the
 	// mapper can emit it as `correct_answer` on freeform questions.
 	ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]ListQuizQuestionsByQuizRow, error)
+	// Lists every non-soft-deleted quiz attached to a study guide
+	// (ASK-136). Each row carries the privacy-floor creator payload
+	// (id + first_name + last_name only -- mirrors the studyguides
+	// surface) plus a server-computed question_count via LEFT JOIN +
+	// COUNT, so a quiz with zero questions still surfaces with a 0
+	// count rather than being silently dropped by an INNER JOIN.
+	//
+	// Soft-delete invariants:
+	//   * q.deleted_at IS NULL  -- excludes soft-deleted quizzes
+	//                              (AC3: studyguide with mixed live +
+	//                              deleted quizzes only returns the live
+	//                              ones)
+	//   * u.deleted_at IS NULL  -- excludes quizzes whose creator's user
+	//                              record was soft-deleted (matches the
+	//                              ASK-143 convention used by
+	//                              GetStudyGuideDetail)
+	//
+	// The parent study guide's deleted_at is checked separately by the
+	// service via GuideExistsAndLiveForQuizzes BEFORE this query runs --
+	// a missing or soft-deleted guide returns 404 even when this query
+	// would have returned an empty array. Keeps the 404 vs 200-empty
+	// distinction crisp.
+	//
+	// Order: created_at DESC with id DESC as the deterministic
+	// tiebreaker (the spec calls for "newest first"). The id tiebreaker
+	// prevents a flaky test on a Postgres that happens to insert two
+	// rows in the same microsecond.
+	ListQuizzesByStudyGuide(ctx context.Context, studyGuideID pgtype.UUID) ([]ListQuizzesByStudyGuideRow, error)
 	ListSchools(ctx context.Context, arg ListSchoolsParams) ([]School, error)
 	// Returns the section roster joined against users for first/last name.
 	// Privacy floor: SELECT lists ONLY the five fields exposed in the

@@ -758,6 +758,44 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
   /study-guides/{study_guide_id}/quizzes:
+    get:
+      operationId: ListQuizzes
+      summary: List quizzes attached to a study guide
+      description: |
+        Returns every non-soft-deleted quiz attached to the given study
+        guide, with the creator (privacy floor: id + first_name +
+        last_name only) and a server-computed `question_count`. Quizzes
+        are ordered by `created_at DESC` (newest first), with `id` as
+        the deterministic tiebreaker on identical timestamps.
+
+        No pagination -- per the PRD, study guides typically host a
+        handful of quizzes (<10) and the practice page renders them all
+        in one go. Non-deleted-only by construction (no `include_deleted`
+        toggle); a soft-deleted quiz never surfaces.
+
+        Returns 404 when the study guide does not exist OR is itself
+        soft-deleted, mirroring the studyguides surface convention.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide whose quizzes to list
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: A list of quizzes attached to the study guide.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListQuizzesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     post:
       operationId: CreateQuiz
       summary: Create a quiz attached to a study guide
@@ -2493,6 +2531,58 @@ components:
         - questions
         - created_at
         - updated_at
+    QuizListItemResponse:
+      type: object
+      description: |
+        Compact quiz payload returned by GET /api/study-guides/{id}/quizzes.
+        Richer than QuizSummary (which embeds inside StudyGuideDetailResponse
+        and intentionally stays minimal): includes the creator (privacy
+        floor: id + first_name + last_name only), description, and
+        timestamps so the practice page can render the quiz card without
+        a follow-up GET on the quiz detail.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        question_count:
+          type: integer
+          format: int64
+          minimum: 0
+        creator:
+          $ref: '#/components/schemas/CreatorSummary'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - description
+        - question_count
+        - creator
+        - created_at
+        - updated_at
+    ListQuizzesResponse:
+      type: object
+      description: |
+        A non-paginated collection of quizzes for one study guide. The
+        spec deliberately omits pagination -- guides typically host
+        fewer than ten quizzes and the practice page renders them all
+        in one shot.
+      properties:
+        quizzes:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizListItemResponse'
+      required:
+        - quizzes
     AppError:
       type: object
       description: Standardized error response structure matching application error domains

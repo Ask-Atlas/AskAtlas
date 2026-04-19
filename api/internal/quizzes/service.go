@@ -23,6 +23,7 @@ type Repository interface {
 	GetQuizDetail(ctx context.Context, id pgtype.UUID) (db.GetQuizDetailRow, error)
 	ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]db.ListQuizQuestionsByQuizRow, error)
 	ListQuizAnswerOptionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]db.QuizAnswerOption, error)
+	ListQuizzesByStudyGuide(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListQuizzesByStudyGuideRow, error)
 
 	// InTx runs fn inside a single Postgres transaction. The
 	// Repository passed to fn is scoped to the tx via
@@ -41,6 +42,51 @@ type Service struct {
 // NewService creates a new Service backed by the given Repository.
 func NewService(repo Repository) *Service {
 	return &Service{repo: repo}
+}
+
+// ListQuizzes returns every non-soft-deleted quiz attached to a
+// study guide (ASK-136). The order is created_at DESC with id DESC
+// as tiebreaker (matches the SQL ORDER BY in
+// ListQuizzesByStudyGuide). Returns an empty (non-nil) slice when
+// the guide has no quizzes; the handler renders that as `[]`.
+//
+// Order of operations:
+//  1. GuideExistsAndLiveForQuizzes -- 404 if missing or
+//     soft-deleted. Done BEFORE the list query so a soft-deleted
+//     guide returns 404 even when the list query would have
+//     returned an empty array (the spec is explicit on this:
+//     "soft-deleted guide -> 404, never 200 empty").
+//  2. ListQuizzesByStudyGuide.
+//
+// No transaction wrapping -- both reads are snapshot-safe and a
+// race where a guide gets soft-deleted between the live check and
+// the list returns the live-time list, which is acceptable
+// eventual-consistency behavior for a read endpoint.
+func (s *Service) ListQuizzes(ctx context.Context, p ListQuizzesParams) ([]QuizListItem, error) {
+	guidePgxID := utils.UUID(p.StudyGuideID)
+
+	live, err := s.repo.GuideExistsAndLiveForQuizzes(ctx, guidePgxID)
+	if err != nil {
+		return nil, fmt.Errorf("ListQuizzes: live check: %w", err)
+	}
+	if !live {
+		return nil, apperrors.NewNotFound("Study guide not found")
+	}
+
+	rows, err := s.repo.ListQuizzesByStudyGuide(ctx, guidePgxID)
+	if err != nil {
+		return nil, fmt.Errorf("ListQuizzes: list: %w", err)
+	}
+
+	out := make([]QuizListItem, 0, len(rows))
+	for _, r := range rows {
+		item, mapErr := mapQuizListItem(r)
+		if mapErr != nil {
+			return nil, fmt.Errorf("ListQuizzes: map: %w", mapErr)
+		}
+		out = append(out, item)
+	}
+	return out, nil
 }
 
 // CreateQuiz creates a quiz with all its questions and answer

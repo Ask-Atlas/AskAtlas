@@ -346,3 +346,147 @@ func TestQuizzesHandler_Create_Success_FullPayload(t *testing.T) {
 // collide with helper names defined in sibling _test.go files of the
 // same package.
 func ptrStrQ(s string) *string { return &s }
+
+// ---- ListQuizzes (ASK-136) ----
+
+func TestQuizzesHandler_List_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	url := fmt.Sprintf("/study-guides/%s/quizzes", uuid.NewString())
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestQuizzesHandler_List_StudyGuideNotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().ListQuizzes(mock.Anything, mock.Anything).
+		Return(nil, apperrors.NewNotFound("Study guide not found"))
+
+	url := fmt.Sprintf("/study-guides/%s/quizzes", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestQuizzesHandler_List_ServiceError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().ListQuizzes(mock.Anything, mock.Anything).
+		Return(nil, errors.New("connection refused"))
+
+	url := fmt.Sprintf("/study-guides/%s/quizzes", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// TestQuizzesHandler_List_EmptyResponseShape covers AC2: even when
+// the service returns a nil slice, the wire response renders as
+// `{"quizzes": []}` (not `{"quizzes": null}`).
+func TestQuizzesHandler_List_EmptyResponseShape(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().ListQuizzes(mock.Anything, mock.Anything).Return(nil, nil)
+
+	url := fmt.Sprintf("/study-guides/%s/quizzes", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	// Snapshot the body BEFORE decoding so the trailing string-shape
+	// assertion still has data to inspect (json.NewDecoder consumes
+	// the buffer).
+	rawBody := w.Body.String()
+	var resp api.ListQuizzesResponse
+	require.NoError(t, json.Unmarshal([]byte(rawBody), &resp))
+	assert.NotNil(t, resp.Quizzes)
+	assert.Empty(t, resp.Quizzes)
+	// Belt-and-braces: the raw JSON should contain `"quizzes":[]`,
+	// not the `null` form. Catches a regression where the mapper
+	// switches to a nil-allowing shape in the future.
+	assert.Contains(t, rawBody, `"quizzes":[]`)
+}
+
+// TestQuizzesHandler_List_Success_FullPayload exercises the wire
+// shape end-to-end: 200 + every required field per
+// QuizListItemResponse, with the order preserved from the service.
+func TestQuizzesHandler_List_Success_FullPayload(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	studyGuideID := uuid.New()
+	creatorID := uuid.New()
+	quiz1ID := uuid.New()
+	quiz2ID := uuid.New()
+	now := time.Date(2026, 4, 19, 10, 0, 0, 0, time.UTC)
+
+	mockSvc.EXPECT().ListQuizzes(mock.Anything, mock.MatchedBy(func(p quizzes.ListQuizzesParams) bool {
+		return p.StudyGuideID == studyGuideID
+	})).Return([]quizzes.QuizListItem{
+		{
+			ID:            quiz1ID,
+			Title:         "Newer Quiz",
+			Description:   ptrStrQ("Recent material"),
+			QuestionCount: 7,
+			Creator:       quizzes.Creator{ID: creatorID, FirstName: "Ada", LastName: "Lovelace"},
+			CreatedAt:     now,
+			UpdatedAt:     now,
+		},
+		{
+			ID:            quiz2ID,
+			Title:         "Older Quiz",
+			Description:   nil,
+			QuestionCount: 0,
+			Creator:       quizzes.Creator{ID: creatorID, FirstName: "Ada", LastName: "Lovelace"},
+			CreatedAt:     now.Add(-24 * time.Hour),
+			UpdatedAt:     now.Add(-24 * time.Hour),
+		},
+	}, nil)
+
+	url := fmt.Sprintf("/study-guides/%s/quizzes", studyGuideID.String())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp api.ListQuizzesResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	require.Len(t, resp.Quizzes, 2)
+
+	first := resp.Quizzes[0]
+	assert.Equal(t, quiz1ID, uuid.UUID(first.Id))
+	assert.Equal(t, "Newer Quiz", first.Title)
+	require.NotNil(t, first.Description)
+	assert.Equal(t, "Recent material", *first.Description)
+	assert.Equal(t, int64(7), first.QuestionCount)
+	assert.Equal(t, creatorID, uuid.UUID(first.Creator.Id))
+	assert.Equal(t, "Ada", first.Creator.FirstName)
+
+	second := resp.Quizzes[1]
+	assert.Equal(t, "Older Quiz", second.Title)
+	assert.Nil(t, second.Description, "nil description must serialize as JSON null per spec")
+	assert.Equal(t, int64(0), second.QuestionCount)
+}

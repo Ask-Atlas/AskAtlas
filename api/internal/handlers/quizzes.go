@@ -20,6 +20,7 @@ import (
 // consumer, and mocked via mockery for handler tests.
 type QuizService interface {
 	CreateQuiz(ctx context.Context, params quizzes.CreateQuizParams) (quizzes.QuizDetail, error)
+	ListQuizzes(ctx context.Context, params quizzes.ListQuizzesParams) ([]quizzes.QuizListItem, error)
 }
 
 // QuizzesHandler manages incoming HTTP requests for the quizzes
@@ -33,6 +34,33 @@ type QuizzesHandler struct {
 // QuizService.
 func NewQuizzesHandler(service QuizService) *QuizzesHandler {
 	return &QuizzesHandler{service: service}
+}
+
+// ListQuizzes handles GET /study-guides/{study_guide_id}/quizzes
+// (ASK-136). Auth-only -- any authenticated user can list. The
+// service runs the live-guide preflight + the list query; a missing
+// or soft-deleted guide surfaces as 404. The response always emits
+// a non-nil quizzes slice so the JSON shape is `[]` (not null) when
+// the guide has no quizzes.
+func (h *QuizzesHandler) ListQuizzes(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	if _, appErr := viewerIDFromContext(r); appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	items, err := h.service.ListQuizzes(r.Context(), quizzes.ListQuizzesParams{
+		StudyGuideID: uuid.UUID(studyGuideId),
+	})
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("ListQuizzes failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, mapListQuizzesResponse(items))
 }
 
 // CreateQuiz handles POST /study-guides/{study_guide_id}/quizzes.
@@ -190,4 +218,24 @@ func mapCreatorSummaryFromQuizzes(c quizzes.Creator) api.CreatorSummary {
 		FirstName: c.FirstName,
 		LastName:  c.LastName,
 	}
+}
+
+// mapListQuizzesResponse projects a slice of QuizListItem domain
+// values onto the wire ListQuizzesResponse. Always emits a non-nil
+// Quizzes slice so the JSON wire shape is `[]` (not null) when the
+// guide has no quizzes.
+func mapListQuizzesResponse(items []quizzes.QuizListItem) api.ListQuizzesResponse {
+	out := make([]api.QuizListItemResponse, 0, len(items))
+	for _, q := range items {
+		out = append(out, api.QuizListItemResponse{
+			Id:            openapi_types.UUID(q.ID),
+			Title:         q.Title,
+			Description:   q.Description,
+			QuestionCount: q.QuestionCount,
+			Creator:       mapCreatorSummaryFromQuizzes(q.Creator),
+			CreatedAt:     q.CreatedAt,
+			UpdatedAt:     q.UpdatedAt,
+		})
+	}
+	return api.ListQuizzesResponse{Quizzes: out}
 }

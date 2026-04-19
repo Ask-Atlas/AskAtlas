@@ -92,3 +92,12 @@ type CreateQuizParams struct {
 	Description  *string
 	Questions    []CreateQuizQuestionInput
 }
+
+// ListQuizzesParams is the input to Service.ListQuizzes (ASK-136).
+// No filters / pagination -- the endpoint returns every non-deleted
+// quiz on the guide. ViewerID is intentionally absent: the spec
+// has no per-viewer access control beyond authentication, and the
+// privacy-floor creator info is uniform across all callers.
+type ListQuizzesParams struct {
+	StudyGuideID uuid.UUID
+}

@@ -692,6 +692,122 @@ func TestCreateQuiz_SortOrderHonored(t *testing.T) {
 	require.Equal(t, []int32{99, 1}, capturedSortOrders)
 }
 
+// ---- ListQuizzes (ASK-136) ----
+
+// listQuizFixture builds a single sqlc row with synthetic but
+// realistic values. Used to assemble the slices that
+// ListQuizzesByStudyGuide returns in the happy-path tests below.
+func listQuizFixture(t *testing.T, title string, questionCount int64) db.ListQuizzesByStudyGuideRow {
+	t.Helper()
+	return db.ListQuizzesByStudyGuideRow{
+		ID:               utils.UUID(uuid.New()),
+		Title:            title,
+		Description:      pgtype.Text{String: "desc", Valid: true},
+		CreatedAt:        pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		UpdatedAt:        pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		CreatorID:        utils.UUID(uuid.New()),
+		CreatorFirstName: "Ada",
+		CreatorLastName:  "Lovelace",
+		QuestionCount:    questionCount,
+	}
+}
+
+// TestListQuizzes_GuideNotFound_404 covers AC4 + AC5 -- the spec
+// collapses "missing" and "soft-deleted" guides into the same 404
+// response since GuideExistsAndLiveForQuizzes returns false in both
+// cases.
+func TestListQuizzes_GuideNotFound_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	repo.EXPECT().GuideExistsAndLiveForQuizzes(mock.Anything, mock.Anything).Return(false, nil)
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.ListQuizzes(context.Background(), quizzes.ListQuizzesParams{StudyGuideID: uuid.New()})
+
+	var appErr *apperrors.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Study guide not found", appErr.Message)
+}
+
+// TestListQuizzes_EmptyGuide_200Empty covers AC2: a live guide with
+// no quizzes returns an empty (non-nil) slice; the handler renders
+// that as `{"quizzes": []}`.
+func TestListQuizzes_EmptyGuide_200Empty(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	repo.EXPECT().GuideExistsAndLiveForQuizzes(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().ListQuizzesByStudyGuide(mock.Anything, mock.Anything).Return(nil, nil)
+
+	svc := quizzes.NewService(repo)
+	got, err := svc.ListQuizzes(context.Background(), quizzes.ListQuizzesParams{StudyGuideID: uuid.New()})
+	require.NoError(t, err)
+	assert.NotNil(t, got, "must return non-nil slice for JSON []")
+	assert.Empty(t, got)
+}
+
+// TestListQuizzes_Success covers AC1: returns every row from the
+// repo with question_count and creator info preserved through the
+// mapper. The order assertion is implicit -- the SQL ORDER BY does
+// the work; this test just verifies the slice is preserved 1:1.
+func TestListQuizzes_Success(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	repo.EXPECT().GuideExistsAndLiveForQuizzes(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().ListQuizzesByStudyGuide(mock.Anything, mock.Anything).Return([]db.ListQuizzesByStudyGuideRow{
+		listQuizFixture(t, "Quiz Newest", 5),
+		listQuizFixture(t, "Quiz Mid", 0),
+		listQuizFixture(t, "Quiz Oldest", 12),
+	}, nil)
+
+	svc := quizzes.NewService(repo)
+	got, err := svc.ListQuizzes(context.Background(), quizzes.ListQuizzesParams{StudyGuideID: uuid.New()})
+	require.NoError(t, err)
+	require.Len(t, got, 3)
+	assert.Equal(t, "Quiz Newest", got[0].Title)
+	assert.Equal(t, int64(5), got[0].QuestionCount)
+	// AC: question_count of 0 surfaces correctly (LEFT JOIN ensures
+	// quizzes with no questions are not silently dropped).
+	assert.Equal(t, "Quiz Mid", got[1].Title)
+	assert.Equal(t, int64(0), got[1].QuestionCount)
+	assert.Equal(t, "Quiz Oldest", got[2].Title)
+	assert.Equal(t, int64(12), got[2].QuestionCount)
+
+	// Creator privacy floor preserved through the mapper.
+	assert.Equal(t, "Ada", got[0].Creator.FirstName)
+	assert.Equal(t, "Lovelace", got[0].Creator.LastName)
+}
+
+// TestListQuizzes_LiveCheckError_500 covers the dependency-failure
+// edge case: a DB blip on the live check propagates as a 500 (the
+// list query never runs because the live-check error short-
+// circuits).
+func TestListQuizzes_LiveCheckError_500(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	repo.EXPECT().GuideExistsAndLiveForQuizzes(mock.Anything, mock.Anything).
+		Return(false, errors.New("connection refused"))
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.ListQuizzes(context.Background(), quizzes.ListQuizzesParams{StudyGuideID: uuid.New()})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}
+
+// TestListQuizzes_ListError_500 covers the second dependency-
+// failure path: live check passes, list query fails -> 500.
+func TestListQuizzes_ListError_500(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	repo.EXPECT().GuideExistsAndLiveForQuizzes(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().ListQuizzesByStudyGuide(mock.Anything, mock.Anything).
+		Return(nil, errors.New("query timeout"))
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.ListQuizzes(context.Background(), quizzes.ListQuizzesParams{StudyGuideID: uuid.New()})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}
+
+// ---- CreateQuiz error-resilience smoke ----
+
 // TestCreateQuiz_InsertError_Returns500 is a smoke check that a SQL
 // failure inside the transaction propagates as a wrapped error
 // (which apperrors.ToHTTPError later turns into a 500). The
