@@ -181,40 +181,6 @@ func mapListRows[R any](rows []R, project func(R) sharedGuideRow) ([]StudyGuide,
 	return out, nil
 }
 
-// cursor pgtype helpers unwrap the pointer fields on Cursor into
-// pgtype values for the sqlc narg args. Return a zero (invalid)
-// pgtype when the cursor is absent or the relevant field is unset,
-// which is how the SQL predicates short-circuit to "no cursor applied".
-
-func cursorInt64(c *Cursor, field func(*Cursor) *int64) pgtype.Int8 {
-	if c == nil {
-		return pgtype.Int8{}
-	}
-	v := field(c)
-	if v == nil {
-		return pgtype.Int8{}
-	}
-	return pgtype.Int8{Int64: *v, Valid: true}
-}
-
-func cursorTimestamp(c *Cursor, field func(*Cursor) *time.Time) pgtype.Timestamptz {
-	if c == nil {
-		return pgtype.Timestamptz{}
-	}
-	v := field(c)
-	if v == nil {
-		return pgtype.Timestamptz{}
-	}
-	return pgtype.Timestamptz{Time: *v, Valid: true}
-}
-
-func cursorID(c *Cursor) pgtype.UUID {
-	if c == nil {
-		return pgtype.UUID{}
-	}
-	return utils.UUID(c.ID)
-}
-
 // Per-sort-variant query methods. Each builds the typed *Params struct,
 // calls the matching repository method, and projects the rows through
 // the shared mapper.
@@ -225,10 +191,10 @@ func (s *Service) queryScoreDesc(ctx context.Context, f dbFilters, limit int32) 
 		Q:               f.Q,
 		Tags:            f.Tags,
 		PageLimit:       limit,
-		CursorVoteScore: cursorInt64(f.Cursor, func(c *Cursor) *int64 { return c.VoteScore }),
-		CursorViewCount: cursorInt64(f.Cursor, func(c *Cursor) *int64 { return c.ViewCount }),
-		CursorUpdatedAt: cursorTimestamp(f.Cursor, func(c *Cursor) *time.Time { return c.UpdatedAt }),
-		CursorID:        cursorID(f.Cursor),
+		CursorVoteScore: utils.CursorInt8(f.Cursor, func(c *Cursor) *int64 { return c.VoteScore }),
+		CursorViewCount: utils.CursorInt8(f.Cursor, func(c *Cursor) *int64 { return c.ViewCount }),
+		CursorUpdatedAt: utils.CursorTimestamptz(f.Cursor, func(c *Cursor) *time.Time { return c.UpdatedAt }),
+		CursorID:        utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
 	})
 	if err != nil {
 		return nil, err
@@ -242,10 +208,10 @@ func (s *Service) queryScoreAsc(ctx context.Context, f dbFilters, limit int32) (
 		Q:               f.Q,
 		Tags:            f.Tags,
 		PageLimit:       limit,
-		CursorVoteScore: cursorInt64(f.Cursor, func(c *Cursor) *int64 { return c.VoteScore }),
-		CursorViewCount: cursorInt64(f.Cursor, func(c *Cursor) *int64 { return c.ViewCount }),
-		CursorUpdatedAt: cursorTimestamp(f.Cursor, func(c *Cursor) *time.Time { return c.UpdatedAt }),
-		CursorID:        cursorID(f.Cursor),
+		CursorVoteScore: utils.CursorInt8(f.Cursor, func(c *Cursor) *int64 { return c.VoteScore }),
+		CursorViewCount: utils.CursorInt8(f.Cursor, func(c *Cursor) *int64 { return c.ViewCount }),
+		CursorUpdatedAt: utils.CursorTimestamptz(f.Cursor, func(c *Cursor) *time.Time { return c.UpdatedAt }),
+		CursorID:        utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
 	})
 	if err != nil {
 		return nil, err
@@ -259,9 +225,9 @@ func (s *Service) queryViewsDesc(ctx context.Context, f dbFilters, limit int32) 
 		Q:               f.Q,
 		Tags:            f.Tags,
 		PageLimit:       limit,
-		CursorViewCount: cursorInt64(f.Cursor, func(c *Cursor) *int64 { return c.ViewCount }),
-		CursorUpdatedAt: cursorTimestamp(f.Cursor, func(c *Cursor) *time.Time { return c.UpdatedAt }),
-		CursorID:        cursorID(f.Cursor),
+		CursorViewCount: utils.CursorInt8(f.Cursor, func(c *Cursor) *int64 { return c.ViewCount }),
+		CursorUpdatedAt: utils.CursorTimestamptz(f.Cursor, func(c *Cursor) *time.Time { return c.UpdatedAt }),
+		CursorID:        utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
 	})
 	if err != nil {
 		return nil, err
@@ -275,9 +241,9 @@ func (s *Service) queryViewsAsc(ctx context.Context, f dbFilters, limit int32) (
 		Q:               f.Q,
 		Tags:            f.Tags,
 		PageLimit:       limit,
-		CursorViewCount: cursorInt64(f.Cursor, func(c *Cursor) *int64 { return c.ViewCount }),
-		CursorUpdatedAt: cursorTimestamp(f.Cursor, func(c *Cursor) *time.Time { return c.UpdatedAt }),
-		CursorID:        cursorID(f.Cursor),
+		CursorViewCount: utils.CursorInt8(f.Cursor, func(c *Cursor) *int64 { return c.ViewCount }),
+		CursorUpdatedAt: utils.CursorTimestamptz(f.Cursor, func(c *Cursor) *time.Time { return c.UpdatedAt }),
+		CursorID:        utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
 	})
 	if err != nil {
 		return nil, err
@@ -291,8 +257,8 @@ func (s *Service) queryNewestDesc(ctx context.Context, f dbFilters, limit int32)
 		Q:               f.Q,
 		Tags:            f.Tags,
 		PageLimit:       limit,
-		CursorCreatedAt: cursorTimestamp(f.Cursor, func(c *Cursor) *time.Time { return c.CreatedAt }),
-		CursorID:        cursorID(f.Cursor),
+		CursorCreatedAt: utils.CursorTimestamptz(f.Cursor, func(c *Cursor) *time.Time { return c.CreatedAt }),
+		CursorID:        utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
 	})
 	if err != nil {
 		return nil, err
@@ -306,8 +272,8 @@ func (s *Service) queryNewestAsc(ctx context.Context, f dbFilters, limit int32) 
 		Q:               f.Q,
 		Tags:            f.Tags,
 		PageLimit:       limit,
-		CursorCreatedAt: cursorTimestamp(f.Cursor, func(c *Cursor) *time.Time { return c.CreatedAt }),
-		CursorID:        cursorID(f.Cursor),
+		CursorCreatedAt: utils.CursorTimestamptz(f.Cursor, func(c *Cursor) *time.Time { return c.CreatedAt }),
+		CursorID:        utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
 	})
 	if err != nil {
 		return nil, err
@@ -321,8 +287,8 @@ func (s *Service) queryUpdatedDesc(ctx context.Context, f dbFilters, limit int32
 		Q:               f.Q,
 		Tags:            f.Tags,
 		PageLimit:       limit,
-		CursorUpdatedAt: cursorTimestamp(f.Cursor, func(c *Cursor) *time.Time { return c.UpdatedAt }),
-		CursorID:        cursorID(f.Cursor),
+		CursorUpdatedAt: utils.CursorTimestamptz(f.Cursor, func(c *Cursor) *time.Time { return c.UpdatedAt }),
+		CursorID:        utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
 	})
 	if err != nil {
 		return nil, err
@@ -336,8 +302,8 @@ func (s *Service) queryUpdatedAsc(ctx context.Context, f dbFilters, limit int32)
 		Q:               f.Q,
 		Tags:            f.Tags,
 		PageLimit:       limit,
-		CursorUpdatedAt: cursorTimestamp(f.Cursor, func(c *Cursor) *time.Time { return c.UpdatedAt }),
-		CursorID:        cursorID(f.Cursor),
+		CursorUpdatedAt: utils.CursorTimestamptz(f.Cursor, func(c *Cursor) *time.Time { return c.UpdatedAt }),
+		CursorID:        utils.CursorUUID(f.Cursor, func(c *Cursor) [16]byte { return c.ID }),
 	})
 	if err != nil {
 		return nil, err
