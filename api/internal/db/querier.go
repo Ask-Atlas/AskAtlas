@@ -88,9 +88,9 @@ type Querier interface {
 	// :execrows lets the service double-check the rows-affected
 	// count (defense-in-depth) and surface a 500 on the
 	// vanishingly-rare 0-rows path (would mean another tx slipped
-	// in and deleted between our lock and this DELETE -- which the
-	// FOR UPDATE rules out under any READ COMMITTED behavior I'm
-	// aware of, but the check is cheap and self-documenting).
+	// in and deleted between our lock and this DELETE -- which is
+	// ruled out by the FOR UPDATE row lock under READ COMMITTED,
+	// but the check is cheap and self-documenting).
 	DeleteSessionByID(ctx context.Context, id pgtype.UUID) (int64, error)
 	// Hard-deletes this user's incomplete session for this quiz when it
 	// has been sitting around longer than the caller-supplied stale

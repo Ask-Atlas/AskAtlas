@@ -1191,8 +1191,11 @@ func TestSessionsHandler_Abandon_ServiceError_500(t *testing.T) {
 
 // TestSessionsHandler_Abandon_Success_204 covers the happy path:
 // service returns nil, handler renders 204 No Content with no
-// body. The mock matcher verifies the JWT-derived viewerID and
-// path session_id are forwarded into AbandonSessionParams.
+// body. The mock matcher verifies the path session_id is
+// forwarded into AbandonSessionParams. (UserID is stamped from
+// the JWT context middleware -- the test request helper uses a
+// fresh test user so the matcher only pins the field this test
+// directly controls; copilot PR #159 review.)
 func TestSessionsHandler_Abandon_Success_204(t *testing.T) {
 	mockSvc := mock_handlers.NewMockSessionService(t)
 	h := handlers.NewSessionsHandler(mockSvc)
@@ -1200,7 +1203,7 @@ func TestSessionsHandler_Abandon_Success_204(t *testing.T) {
 	sessionID := uuid.New()
 	mockSvc.EXPECT().AbandonSession(mock.Anything,
 		mock.MatchedBy(func(p sessions.AbandonSessionParams) bool {
-			return p.SessionID == sessionID
+			return p.SessionID == sessionID && p.UserID != uuid.Nil
 		})).Return(nil)
 
 	url := fmt.Sprintf("/sessions/%s", sessionID.String())
