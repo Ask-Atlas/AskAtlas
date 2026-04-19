@@ -517,6 +517,89 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}/recommendations:
+    post:
+      operationId: RecommendStudyGuide
+      summary: Recommend a study guide
+      description: |
+        Records that the authenticated user (an instructor or TA in the
+        guide's course) recommends the guide. Recommendations contribute
+        to the `is_recommended` badge and the `recommended_by` list on
+        the guide detail.
+
+        Authorization: viewer must hold the `instructor` or `ta` role in
+        AT LEAST ONE section of the guide's course. Holding a
+        non-elevated role (`student`) in some sections does NOT block
+        the action -- the rule is "any elevated role somewhere in the
+        course suffices".
+
+        Returns 409 on duplicate (same viewer recommended this guide
+        before) -- recommendations are not idempotent because the
+        creation timestamp matters and re-recommending would silently
+        bump it.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide to recommend
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Recommendation recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: RemoveStudyGuideRecommendation
+      summary: Remove the authenticated user's recommendation on a study guide
+      description: |
+        Hard-deletes the (viewer, guide) row in
+        `study_guide_recommendations`. Authorization mirrors the POST
+        side: viewer must currently hold instructor/TA in the guide's
+        course (a former TA who lost the role can't manage their old
+        recommendations -- the policy is "current elevated-role users
+        only").
+
+        404 covers BOTH "guide missing/deleted" and "viewer never
+        recommended this guide" -- by design, since the desired end
+        state is "no recommendation from viewer", which is reached in
+        either case from the caller's point of view.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Recommendation removed; no response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /study-guides/{study_guide_id}/votes:
     post:
       operationId: CastStudyGuideVote
@@ -1627,6 +1710,26 @@ components:
         - name
         - mime_type
         - size
+    RecommendationResponse:
+      type: object
+      description: |
+        Response body for POST /api/study-guides/{study_guide_id}/recommendations.
+        Returns the freshly-created recommendation row plus the
+        recommender's compact identity (same privacy floor as
+        CreatorSummary -- no email, no clerk_id).
+      properties:
+        study_guide_id:
+          type: string
+          format: uuid
+        recommended_by:
+          $ref: '#/components/schemas/CreatorSummary'
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - study_guide_id
+        - recommended_by
+        - created_at
     CastVoteRequest:
       type: object
       description: |
