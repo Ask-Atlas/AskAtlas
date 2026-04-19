@@ -99,6 +99,38 @@ func (s *Service) ListQuizzes(ctx context.Context, p ListQuizzesParams) ([]QuizL
 	return out, nil
 }
 
+// GetQuiz returns the full quiz payload (title + description +
+// creator + every question with options + per-type correct_answer)
+// for the practice player (ASK-142). Auth-only -- any authenticated
+// user can fetch any quiz that is live AND whose parent study guide
+// is live.
+//
+// All the heavy lifting is in s.hydrate -- it runs the same three
+// reads (GetQuizDetail + ListQuizQuestionsByQuiz +
+// ListQuizAnswerOptionsByQuiz) that CreateQuiz / UpdateQuiz use
+// post-tx, then groups options by question id in Go. The
+// GetQuizDetail SQL query already filters
+// `q.deleted_at IS NULL AND u.deleted_at IS NULL AND
+// sg.deleted_at IS NULL`, so a missing quiz, soft-deleted quiz, or
+// soft-deleted parent guide all surface as `sql.ErrNoRows` from the
+// detail query (per ASK-142 AC6 + AC7 -- 404 covers all three
+// cases).
+//
+// The error coming out of hydrate is wrapped with `%w`, so
+// `errors.Is(err, sql.ErrNoRows)` walks the chain and matches
+// correctly. Anything else is a genuine 500.
+func (s *Service) GetQuiz(ctx context.Context, p GetQuizParams) (QuizDetail, error) {
+	quizPgxID := utils.UUID(p.QuizID)
+	detail, err := s.hydrate(ctx, quizPgxID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return QuizDetail{}, apperrors.NewNotFound("Quiz not found")
+		}
+		return QuizDetail{}, err
+	}
+	return detail, nil
+}
+
 // UpdateQuiz partially updates a quiz's title and/or description
 // (ASK-153, creator-only). At least one field must be provided
 // (an empty body is a 400 before SQL is touched).

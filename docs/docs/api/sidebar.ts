@@ -132,6 +132,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/get-quiz",
+          label: "Get a quiz with all questions and correct answers",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "api/update-quiz",
           label: "Update a quiz's metadata (title and/or description)",
           className: "api-method patch",

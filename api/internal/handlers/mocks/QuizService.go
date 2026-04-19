@@ -227,6 +227,72 @@ func (_c *MockQuizService_DeleteQuiz_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
+// GetQuiz provides a mock function for the type MockQuizService
+func (_mock *MockQuizService) GetQuiz(ctx context.Context, params quizzes.GetQuizParams) (quizzes.QuizDetail, error) {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetQuiz")
+	}
+
+	var r0 quizzes.QuizDetail
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, quizzes.GetQuizParams) (quizzes.QuizDetail, error)); ok {
+		return returnFunc(ctx, params)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, quizzes.GetQuizParams) quizzes.QuizDetail); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Get(0).(quizzes.QuizDetail)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, quizzes.GetQuizParams) error); ok {
+		r1 = returnFunc(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockQuizService_GetQuiz_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetQuiz'
+type MockQuizService_GetQuiz_Call struct {
+	*mock.Call
+}
+
+// GetQuiz is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params quizzes.GetQuizParams
+func (_e *MockQuizService_Expecter) GetQuiz(ctx interface{}, params interface{}) *MockQuizService_GetQuiz_Call {
+	return &MockQuizService_GetQuiz_Call{Call: _e.mock.On("GetQuiz", ctx, params)}
+}
+
+func (_c *MockQuizService_GetQuiz_Call) Run(run func(ctx context.Context, params quizzes.GetQuizParams)) *MockQuizService_GetQuiz_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 quizzes.GetQuizParams
+		if args[1] != nil {
+			arg1 = args[1].(quizzes.GetQuizParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockQuizService_GetQuiz_Call) Return(quizDetail quizzes.QuizDetail, err error) *MockQuizService_GetQuiz_Call {
+	_c.Call.Return(quizDetail, err)
+	return _c
+}
+
+func (_c *MockQuizService_GetQuiz_Call) RunAndReturn(run func(ctx context.Context, params quizzes.GetQuizParams) (quizzes.QuizDetail, error)) *MockQuizService_GetQuiz_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListQuizzes provides a mock function for the type MockQuizService
 func (_mock *MockQuizService) ListQuizzes(ctx context.Context, params quizzes.ListQuizzesParams) ([]quizzes.QuizListItem, error) {
 	ret := _mock.Called(ctx, params)

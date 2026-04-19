@@ -21,6 +21,7 @@ import (
 // consumer, and mocked via mockery for handler tests.
 type QuizService interface {
 	CreateQuiz(ctx context.Context, params quizzes.CreateQuizParams) (quizzes.QuizDetail, error)
+	GetQuiz(ctx context.Context, params quizzes.GetQuizParams) (quizzes.QuizDetail, error)
 	ListQuizzes(ctx context.Context, params quizzes.ListQuizzesParams) ([]quizzes.QuizListItem, error)
 	DeleteQuiz(ctx context.Context, params quizzes.DeleteQuizParams) error
 	UpdateQuiz(ctx context.Context, params quizzes.UpdateQuizParams) (quizzes.QuizDetail, error)
@@ -65,6 +66,39 @@ func (h *QuizzesHandler) ListQuizzes(w http.ResponseWriter, r *http.Request, stu
 	}
 
 	respondJSON(w, http.StatusOK, mapListQuizzesResponse(items))
+}
+
+// GetQuiz handles GET /quizzes/{quiz_id} (ASK-142). Auth-only -- the
+// service trusts the JWT gate and returns the full QuizDetail with
+// every question and per-type correct_answer. 404 covers quiz
+// missing OR quiz soft-deleted OR parent guide soft-deleted; the
+// service maps the underlying sql.ErrNoRows to apperrors.NewNotFound
+// so all three surface identically (info-leak prevention -- a
+// caller cannot distinguish "no such quiz" from "quiz exists but
+// you can't see it because the parent guide was deleted").
+//
+// The wire response shape is the shared QuizDetailResponse used by
+// CreateQuiz / UpdateQuiz, so the practice player can render any of
+// the three quiz endpoints with the same client-side mapper.
+func (h *QuizzesHandler) GetQuiz(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID) {
+	if _, appErr := viewerIDFromContext(r); appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	detail, err := h.service.GetQuiz(r.Context(), quizzes.GetQuizParams{
+		QuizID: uuid.UUID(quizId),
+	})
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("GetQuiz failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, mapQuizDetailResponse(detail))
 }
 
 // UpdateQuiz handles PATCH /quizzes/{quiz_id} (ASK-153).

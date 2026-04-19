@@ -1751,3 +1751,246 @@ func TestAddQuestion_LockError_500(t *testing.T) {
 	sysErr := apperrors.ToHTTPError(err)
 	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
 }
+
+// ============================================================
+// GetQuiz (ASK-142)
+// ============================================================
+//
+// expectGetQuizHydration wires the three reads hydrate runs
+// (GetQuizDetail + ListQuizQuestionsByQuiz +
+// ListQuizAnswerOptionsByQuiz). Used by GetQuiz happy-path tests so
+// each per-type test focuses on what's distinctive about its
+// projection (correct_answer derivation, options shape, sort order)
+// rather than re-wiring the plumbing.
+func expectGetQuizHydration(repo *mock_quizzes.MockRepository, quizID, studyGuideID, creatorID uuid.UUID, questions []db.ListQuizQuestionsByQuizRow, options []db.QuizAnswerOption) {
+	repo.EXPECT().GetQuizDetail(mock.Anything, mock.Anything).
+		Return(db.GetQuizDetailRow{
+			ID:               utils.UUID(quizID),
+			StudyGuideID:     utils.UUID(studyGuideID),
+			Title:            "Tree Traversal Quiz",
+			Description:      pgtype.Text{String: "Test your knowledge.", Valid: true},
+			CreatedAt:        pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+			UpdatedAt:        pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+			CreatorID:        utils.UUID(creatorID),
+			CreatorFirstName: "Nathaniel",
+			CreatorLastName:  "Gaines",
+		}, nil)
+	repo.EXPECT().ListQuizQuestionsByQuiz(mock.Anything, mock.Anything).Return(questions, nil)
+	repo.EXPECT().ListQuizAnswerOptionsByQuiz(mock.Anything, mock.Anything).Return(options, nil)
+}
+
+// TestGetQuiz_QuizNotFound_404 covers AC6 + AC7 + the missing-row
+// case: GetQuizDetail filters q.deleted_at + sg.deleted_at IS NULL,
+// so all three "missing" cases (never existed / quiz soft-deleted /
+// guide soft-deleted) collapse to sql.ErrNoRows, which the service
+// must surface as a typed 404 (not the generic 500).
+func TestGetQuiz_QuizNotFound_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	repo.EXPECT().GetQuizDetail(mock.Anything, mock.Anything).
+		Return(db.GetQuizDetailRow{}, sql.ErrNoRows)
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.GetQuiz(context.Background(), quizzes.GetQuizParams{QuizID: uuid.New()})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusNotFound, sysErr.Code)
+}
+
+// TestGetQuiz_DBError_500 covers the dependency-failure path: a
+// non-ErrNoRows database error must bubble as a 500 (NOT 404).
+func TestGetQuiz_DBError_500(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	repo.EXPECT().GetQuizDetail(mock.Anything, mock.Anything).
+		Return(db.GetQuizDetailRow{}, errors.New("connection refused"))
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.GetQuiz(context.Background(), quizzes.GetQuizParams{QuizID: uuid.New()})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}
+
+// TestGetQuiz_ListQuestionsError_500 covers the second-stage failure
+// (detail succeeded, questions list failed) -- still a 500.
+func TestGetQuiz_ListQuestionsError_500(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	repo.EXPECT().GetQuizDetail(mock.Anything, mock.Anything).
+		Return(db.GetQuizDetailRow{
+			ID:               utils.UUID(uuid.New()),
+			StudyGuideID:     utils.UUID(uuid.New()),
+			CreatorID:        utils.UUID(uuid.New()),
+			CreatorFirstName: "X",
+			CreatorLastName:  "Y",
+		}, nil)
+	repo.EXPECT().ListQuizQuestionsByQuiz(mock.Anything, mock.Anything).
+		Return(nil, errors.New("query timeout"))
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.GetQuiz(context.Background(), quizzes.GetQuizParams{QuizID: uuid.New()})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}
+
+// TestGetQuiz_MixedTypes_AC1_AC2_AC3_AC4 verifies that a quiz with
+// MCQ + TF + freeform questions resolves correct_answer correctly
+// per type (string for MCQ + freeform, bool for TF) and that
+// options is populated only for MCQ. Covers ACs 1-4 in one shot.
+func TestGetQuiz_MixedTypes_AC1_AC2_AC3_AC4(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+
+	quizID := uuid.New()
+	studyGuideID := uuid.New()
+	creatorID := uuid.New()
+	mcqID := uuid.New()
+	tfID := uuid.New()
+	ffID := uuid.New()
+
+	expectGetQuizHydration(repo, quizID, studyGuideID, creatorID,
+		[]db.ListQuizQuestionsByQuizRow{
+			{
+				ID:           utils.UUID(mcqID),
+				Type:         db.QuestionTypeMultipleChoice,
+				QuestionText: "What is the output of an in-order traversal of a BST?",
+				SortOrder:    0,
+			},
+			{
+				ID:           utils.UUID(tfID),
+				Type:         db.QuestionTypeTrueFalse,
+				QuestionText: "A complete binary tree is always a full binary tree.",
+				SortOrder:    1,
+			},
+			{
+				ID:              utils.UUID(ffID),
+				Type:            db.QuestionTypeFreeform,
+				QuestionText:    "What is the time complexity of searching in a balanced BST?",
+				ReferenceAnswer: pgtype.Text{String: "O(log n)", Valid: true},
+				SortOrder:       2,
+			},
+		},
+		[]db.QuizAnswerOption{
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(mcqID), Text: "Random order", IsCorrect: false, SortOrder: 0},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(mcqID), Text: "Sorted ascending", IsCorrect: true, SortOrder: 1},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(mcqID), Text: "Sorted descending", IsCorrect: false, SortOrder: 2},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(mcqID), Text: "Level order", IsCorrect: false, SortOrder: 3},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(tfID), Text: "True", IsCorrect: false, SortOrder: 0},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(tfID), Text: "False", IsCorrect: true, SortOrder: 1},
+		},
+	)
+
+	svc := quizzes.NewService(repo)
+	got, err := svc.GetQuiz(context.Background(), quizzes.GetQuizParams{QuizID: quizID})
+	require.NoError(t, err)
+
+	assert.Equal(t, quizID, got.ID)
+	assert.Equal(t, studyGuideID, got.StudyGuideID)
+	assert.Equal(t, creatorID, got.Creator.ID)
+	assert.Equal(t, "Nathaniel", got.Creator.FirstName)
+	require.Len(t, got.Questions, 3)
+
+	// AC2: MCQ -- options populated, correct_answer is winning text.
+	mcq := got.Questions[0]
+	assert.Equal(t, quizzes.QuestionTypeMultipleChoice, mcq.Type)
+	require.Len(t, mcq.Options, 4)
+	assert.Equal(t, "Sorted ascending", mcq.CorrectAnswer)
+
+	// AC3: TF -- correct_answer is bool. The "True" option's
+	// is_correct flag is false (the user said "False" on create), so
+	// the resolved canonical answer is `false`.
+	tf := got.Questions[1]
+	assert.Equal(t, quizzes.QuestionTypeTrueFalse, tf.Type)
+	assert.Equal(t, false, tf.CorrectAnswer)
+
+	// AC4: freeform -- correct_answer is the reference_answer string,
+	// no options populated.
+	ff := got.Questions[2]
+	assert.Equal(t, quizzes.QuestionTypeFreeform, ff.Type)
+	assert.Equal(t, "O(log n)", ff.CorrectAnswer)
+	assert.Empty(t, ff.Options)
+}
+
+// TestGetQuiz_QuestionsSortedByOrder verifies AC5: questions stored
+// with sort_order [2, 0, 1] are returned in [0, 1, 2] order. The
+// SQL ORDER BY does the work, so this test relies on the repo mock
+// returning rows already sorted (matching the production query). It
+// then asserts the response slice preserves that order through the
+// Go mapper.
+func TestGetQuiz_QuestionsSortedByOrder(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	quizID := uuid.New()
+
+	q0ID := uuid.New()
+	q1ID := uuid.New()
+	q2ID := uuid.New()
+
+	expectGetQuizHydration(repo, quizID, uuid.New(), uuid.New(),
+		// Rows arrive pre-sorted by the SQL ORDER BY -- the mapper must
+		// preserve that order. SortOrder values 0, 1, 2 exercise the
+		// ascending sort.
+		[]db.ListQuizQuestionsByQuizRow{
+			{ID: utils.UUID(q0ID), Type: db.QuestionTypeFreeform, QuestionText: "Q at sort 0", ReferenceAnswer: pgtype.Text{String: "a", Valid: true}, SortOrder: 0},
+			{ID: utils.UUID(q1ID), Type: db.QuestionTypeFreeform, QuestionText: "Q at sort 1", ReferenceAnswer: pgtype.Text{String: "b", Valid: true}, SortOrder: 1},
+			{ID: utils.UUID(q2ID), Type: db.QuestionTypeFreeform, QuestionText: "Q at sort 2", ReferenceAnswer: pgtype.Text{String: "c", Valid: true}, SortOrder: 2},
+		},
+		nil,
+	)
+
+	svc := quizzes.NewService(repo)
+	got, err := svc.GetQuiz(context.Background(), quizzes.GetQuizParams{QuizID: quizID})
+	require.NoError(t, err)
+	require.Len(t, got.Questions, 3)
+	assert.Equal(t, "Q at sort 0", got.Questions[0].Question)
+	assert.Equal(t, "Q at sort 1", got.Questions[1].Question)
+	assert.Equal(t, "Q at sort 2", got.Questions[2].Question)
+	assert.Equal(t, int32(0), got.Questions[0].SortOrder)
+	assert.Equal(t, int32(1), got.Questions[1].SortOrder)
+	assert.Equal(t, int32(2), got.Questions[2].SortOrder)
+}
+
+// TestGetQuiz_NullFeedbackAndHint covers the null-fields edge case:
+// hint, feedback_correct, feedback_incorrect arrive as pgtype.Text
+// with Valid=false. The mapper projects them as nil *string, which
+// the wire mapper renders as JSON null per the spec.
+func TestGetQuiz_NullFeedbackAndHint(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	quizID := uuid.New()
+	qID := uuid.New()
+
+	expectGetQuizHydration(repo, quizID, uuid.New(), uuid.New(),
+		[]db.ListQuizQuestionsByQuizRow{{
+			ID:                utils.UUID(qID),
+			Type:              db.QuestionTypeFreeform,
+			QuestionText:      "Q",
+			Hint:              pgtype.Text{},
+			FeedbackCorrect:   pgtype.Text{},
+			FeedbackIncorrect: pgtype.Text{},
+			ReferenceAnswer:   pgtype.Text{String: "a", Valid: true},
+			SortOrder:         0,
+		}},
+		nil,
+	)
+
+	svc := quizzes.NewService(repo)
+	got, err := svc.GetQuiz(context.Background(), quizzes.GetQuizParams{QuizID: quizID})
+	require.NoError(t, err)
+	require.Len(t, got.Questions, 1)
+	assert.Nil(t, got.Questions[0].Hint)
+	assert.Nil(t, got.Questions[0].FeedbackCorrect)
+	assert.Nil(t, got.Questions[0].FeedbackIncorrect)
+}
+
+// TestGetQuiz_EmptyQuestions_200 covers the boundary: a quiz with
+// zero question rows must return a 200 with an empty slice (rather
+// than 404 or 500). Hard to reach in practice -- the create
+// endpoint requires at least one question -- but the read side
+// must not crash on the edge.
+func TestGetQuiz_EmptyQuestions_200(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	quizID := uuid.New()
+	expectGetQuizHydration(repo, quizID, uuid.New(), uuid.New(), nil, nil)
+
+	svc := quizzes.NewService(repo)
+	got, err := svc.GetQuiz(context.Background(), quizzes.GetQuizParams{QuizID: quizID})
+	require.NoError(t, err)
+	assert.Empty(t, got.Questions, "empty Questions slice on a question-less quiz")
+}

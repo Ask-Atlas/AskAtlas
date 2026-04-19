@@ -111,6 +111,15 @@ type DeleteQuizParams struct {
 	ViewerID uuid.UUID
 }
 
+// GetQuizParams is the input to Service.GetQuiz (ASK-142). The
+// endpoint has no per-viewer access control beyond authentication
+// (any authenticated user can fetch any live quiz on a live guide),
+// so ViewerID is intentionally omitted -- the handler enforces auth
+// at the request boundary and the service trusts that gate.
+type GetQuizParams struct {
+	QuizID uuid.UUID
+}
+
 // AddQuestionParams is the input to Service.AddQuestion (ASK-115).
 // ViewerID drives the creator-only authorization gate; the service
 // returns apperrors.NewForbidden if it doesn't match the row's
