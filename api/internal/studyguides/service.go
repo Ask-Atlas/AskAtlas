@@ -1,6 +1,6 @@
-// Package studyguides hosts the domain types, params, mappers, and
-// service logic for the study-guide surface. The service layer is
-// split across four files in this package:
+package studyguides
+
+// The service layer for this package is split across four files:
 //
 //   - service.go       (this file) -- Repository interface, Service
 //                                     struct, constructor.
@@ -12,10 +12,8 @@
 //                         CastVote, RemoveVote, RecommendStudyGuide,
 //                         RemoveRecommendation + write-side helpers.
 //
-// Keeping the read / list / write surfaces in separate files is purely
-// a maintenance split -- they all live on the same *Service and share
-// the same Repository interface. Tests stay in service_test.go.
-package studyguides
+// The canonical `// Package studyguides ...` doc comment lives in
+// model.go (Go expects exactly one package-level doc per package).
 
 import (
 	"context"
