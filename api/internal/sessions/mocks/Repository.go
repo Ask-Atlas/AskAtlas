@@ -807,6 +807,138 @@ func (_c *MockRepository_ListSessionAnswers_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// LockSessionForCompletion provides a mock function for the type MockRepository
+func (_mock *MockRepository) LockSessionForCompletion(ctx context.Context, id pgtype.UUID) (db.PracticeSession, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LockSessionForCompletion")
+	}
+
+	var r0 db.PracticeSession
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) (db.PracticeSession, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) db.PracticeSession); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(db.PracticeSession)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, pgtype.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_LockSessionForCompletion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LockSessionForCompletion'
+type MockRepository_LockSessionForCompletion_Call struct {
+	*mock.Call
+}
+
+// LockSessionForCompletion is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id pgtype.UUID
+func (_e *MockRepository_Expecter) LockSessionForCompletion(ctx interface{}, id interface{}) *MockRepository_LockSessionForCompletion_Call {
+	return &MockRepository_LockSessionForCompletion_Call{Call: _e.mock.On("LockSessionForCompletion", ctx, id)}
+}
+
+func (_c *MockRepository_LockSessionForCompletion_Call) Run(run func(ctx context.Context, id pgtype.UUID)) *MockRepository_LockSessionForCompletion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_LockSessionForCompletion_Call) Return(practiceSession db.PracticeSession, err error) *MockRepository_LockSessionForCompletion_Call {
+	_c.Call.Return(practiceSession, err)
+	return _c
+}
+
+func (_c *MockRepository_LockSessionForCompletion_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) (db.PracticeSession, error)) *MockRepository_LockSessionForCompletion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// MarkSessionCompleted provides a mock function for the type MockRepository
+func (_mock *MockRepository) MarkSessionCompleted(ctx context.Context, id pgtype.UUID) (pgtype.Timestamptz, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MarkSessionCompleted")
+	}
+
+	var r0 pgtype.Timestamptz
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) (pgtype.Timestamptz, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) pgtype.Timestamptz); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(pgtype.Timestamptz)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, pgtype.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_MarkSessionCompleted_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkSessionCompleted'
+type MockRepository_MarkSessionCompleted_Call struct {
+	*mock.Call
+}
+
+// MarkSessionCompleted is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id pgtype.UUID
+func (_e *MockRepository_Expecter) MarkSessionCompleted(ctx interface{}, id interface{}) *MockRepository_MarkSessionCompleted_Call {
+	return &MockRepository_MarkSessionCompleted_Call{Call: _e.mock.On("MarkSessionCompleted", ctx, id)}
+}
+
+func (_c *MockRepository_MarkSessionCompleted_Call) Run(run func(ctx context.Context, id pgtype.UUID)) *MockRepository_MarkSessionCompleted_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_MarkSessionCompleted_Call) Return(timestamptz pgtype.Timestamptz, err error) *MockRepository_MarkSessionCompleted_Call {
+	_c.Call.Return(timestamptz, err)
+	return _c
+}
+
+func (_c *MockRepository_MarkSessionCompleted_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) (pgtype.Timestamptz, error)) *MockRepository_MarkSessionCompleted_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SnapshotQuizQuestionsAndUpdateCount provides a mock function for the type MockRepository
 func (_mock *MockRepository) SnapshotQuizQuestionsAndUpdateCount(ctx context.Context, arg db.SnapshotQuizQuestionsAndUpdateCountParams) (int32, error) {
 	ret := _mock.Called(ctx, arg)

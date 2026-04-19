@@ -53,6 +53,22 @@ type SessionDetail struct {
 	Answers        []AnswerSummary
 }
 
+// CompletedSessionDetail is the domain payload returned by
+// Service.CompleteSession (ASK-140). Distinct from SessionDetail
+// because the wire shape is also distinct: no Answers slice
+// (callers fetch them separately via GET /api/sessions/{id}),
+// CompletedAt is non-nullable (the endpoint always sets it),
+// and ScorePercentage is a server-computed derived field.
+type CompletedSessionDetail struct {
+	ID              uuid.UUID
+	QuizID          uuid.UUID
+	StartedAt       time.Time
+	CompletedAt     time.Time
+	TotalQuestions  int32
+	CorrectAnswers  int32
+	ScorePercentage int32
+}
+
 // StartSessionResult bundles the SessionDetail with a Created flag
 // so the handler can choose 201 (created) vs 200 (resumed) without
 // re-deriving the path from the session row's timestamps. Both

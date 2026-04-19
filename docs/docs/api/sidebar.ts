@@ -162,6 +162,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/complete-practice-session",
+          label: "Mark a practice session as completed and return the score",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "api/submit-practice-answer",
           label: "Submit an answer for one question in a practice session",
           className: "api-method post",

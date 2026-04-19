@@ -104,3 +104,11 @@ func (r *sqlcRepository) InsertPracticeAnswer(ctx context.Context, arg db.Insert
 func (r *sqlcRepository) IncrementSessionCorrectAnswers(ctx context.Context, id pgtype.UUID) error {
 	return r.queries.IncrementSessionCorrectAnswers(ctx, id)
 }
+
+func (r *sqlcRepository) LockSessionForCompletion(ctx context.Context, id pgtype.UUID) (db.PracticeSession, error) {
+	return r.queries.LockSessionForCompletion(ctx, id)
+}
+
+func (r *sqlcRepository) MarkSessionCompleted(ctx context.Context, id pgtype.UUID) (pgtype.Timestamptz, error) {
+	return r.queries.MarkSessionCompleted(ctx, id)
+}
