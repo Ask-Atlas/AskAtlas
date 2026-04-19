@@ -724,3 +724,30 @@ JOIN users u ON u.id = sqlc.arg(recommended_by)::uuid;
 DELETE FROM study_guide_recommendations
 WHERE study_guide_id = sqlc.arg(study_guide_id)::uuid
   AND recommended_by = sqlc.arg(recommended_by)::uuid;
+
+-- name: UpdateStudyGuide :exec
+-- Partial update for ASK-129. Each updatable column uses COALESCE(narg,
+-- current) so a nil arg from Go means "leave this column alone" and a
+-- non-nil arg means "replace with the supplied value". The service is
+-- responsible for:
+--   * 404 / 403 gating (via GetStudyGuideByIDForUpdate before this).
+--   * Validating the at-least-one-field rule (an empty body is a 400
+--     before this query runs).
+--   * Tag normalization (trim + lowercase + dedupe) -- the array
+--     written here is the final canonical form.
+--
+-- The service runs the locked SELECT + this UPDATE in a single
+-- transaction so a concurrent delete can't slip in between. updated_at
+-- is bumped to now() on every successful call (the UPDATE sees at
+-- least the updated_at change even when every other narg is NULL,
+-- which matches the spec's "updated_at reflects the latest" guarantee
+-- but also means a no-op PATCH still bumps updated_at -- the service's
+-- empty-body 400 check prevents that case from reaching SQL).
+UPDATE study_guides
+SET
+  title       = COALESCE(sqlc.narg(title)::text,        title),
+  description = COALESCE(sqlc.narg(description)::text,  description),
+  content     = COALESCE(sqlc.narg(content)::text,      content),
+  tags        = COALESCE(sqlc.narg(tags)::text[],       tags),
+  updated_at  = now()
+WHERE id = sqlc.arg(id)::uuid;

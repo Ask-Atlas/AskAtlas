@@ -50,6 +50,7 @@ type Repository interface {
 	GetStudyGuideByIDForUpdate(ctx context.Context, id pgtype.UUID) (db.GetStudyGuideByIDForUpdateRow, error)
 	SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUID) error
 	SoftDeleteQuizzesForGuide(ctx context.Context, studyGuideID pgtype.UUID) error
+	UpdateStudyGuide(ctx context.Context, arg db.UpdateStudyGuideParams) error
 
 	GuideExistsAndLive(ctx context.Context, id pgtype.UUID) (bool, error)
 	UpsertStudyGuideVote(ctx context.Context, arg db.UpsertStudyGuideVoteParams) error

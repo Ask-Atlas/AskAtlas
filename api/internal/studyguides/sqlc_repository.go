@@ -136,6 +136,10 @@ func (r *sqlcRepository) SoftDeleteQuizzesForGuide(ctx context.Context, studyGui
 	return r.queries.SoftDeleteQuizzesForGuide(ctx, studyGuideID)
 }
 
+func (r *sqlcRepository) UpdateStudyGuide(ctx context.Context, arg db.UpdateStudyGuideParams) error {
+	return r.queries.UpdateStudyGuide(ctx, arg)
+}
+
 func (r *sqlcRepository) GuideExistsAndLive(ctx context.Context, id pgtype.UUID) (bool, error) {
 	return r.queries.GuideExistsAndLive(ctx, id)
 }
