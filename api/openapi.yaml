@@ -664,6 +664,99 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}/files/{file_id}:
+    post:
+      operationId: AttachFile
+      summary: Attach a file to a study guide
+      description: |
+        Links an already-uploaded file to a study guide. The file must
+        be owned by the viewer (`files.user_id == JWT viewer`) and in
+        `status = 'complete'` with no deletion in progress.
+
+        Authorization: only the file owner can attach. A user who does
+        not own the file gets 403 (regardless of whether they own the
+        guide -- the rule is "you can only put your own files on
+        guides", to prevent linking other users' private uploads).
+
+        409 on duplicate -- the same `(file_id, study_guide_id)` pair
+        is already attached.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: file_id
+          in: path
+          description: The unique UUID of the file
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: File attached.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileAttachmentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: DetachFile
+      summary: Detach a file from a study guide
+      description: |
+        Removes the link between a file and a guide. Does NOT delete
+        the file itself -- a file may be attached to many guides /
+        courses.
+
+        Dual-authz: viewer must be EITHER the file owner OR the
+        study guide creator. Broader than POST (which requires file
+        owner only) so a guide creator can curate their guide's
+        attached files without owning every file.
+
+        404 covers both 'guide missing/deleted' and 'file not
+        attached to this guide'.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: file_id
+          in: path
+          description: The unique UUID of the file to detach
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: File detached; no response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /study-guides/{study_guide_id}/recommendations:
     post:
       operationId: RecommendStudyGuide
@@ -1801,6 +1894,30 @@ components:
         - id
         - title
         - question_count
+    FileAttachmentResponse:
+      type: object
+      description: |
+        Response body for POST /api/study-guides/{study_guide_id}/files/{file_id}.
+        Returns the join row's keys + creation timestamp. The file's
+        own metadata (name, mime_type, size) is intentionally NOT
+        included -- the wire shape mirrors the join table since this
+        endpoint only creates the link, not the file. Callers that
+        want full file metadata can hit GET /api/study-guides/{id}
+        which includes the attached file list with privacy floor.
+      properties:
+        file_id:
+          type: string
+          format: uuid
+        study_guide_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - file_id
+        - study_guide_id
+        - created_at
     AttachResourceRequest:
       type: object
       description: |
