@@ -45,6 +45,11 @@ type Repository interface {
 	SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUID) error
 	SoftDeleteQuizzesForGuide(ctx context.Context, studyGuideID pgtype.UUID) error
 
+	GuideExistsAndLive(ctx context.Context, id pgtype.UUID) (bool, error)
+	UpsertStudyGuideVote(ctx context.Context, arg db.UpsertStudyGuideVoteParams) error
+	ComputeGuideVoteScore(ctx context.Context, studyGuideID pgtype.UUID) (int64, error)
+	DeleteStudyGuideVote(ctx context.Context, arg db.DeleteStudyGuideVoteParams) (int64, error)
+
 	// InTx runs fn inside a single Postgres transaction. The Repository
 	// passed to fn is scoped to the tx; commits on a nil return,
 	// rolls back on any error. Used by DeleteStudyGuide for the

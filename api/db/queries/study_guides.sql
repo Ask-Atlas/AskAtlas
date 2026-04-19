@@ -589,3 +589,58 @@ WHERE (
 )
 ORDER BY updated_at ASC, id ASC
 LIMIT sqlc.arg(page_limit);
+
+-- name: GuideExistsAndLive :one
+-- Live-presence probe used by both vote endpoints. Returns TRUE only
+-- when the guide row exists AND is not soft-deleted. The vote service
+-- gates on this before the upsert/delete so a missing-or-deleted
+-- guide returns 404 with a clear message rather than e.g. trampling
+-- through to the SQL layer and surfacing a generic FK error.
+SELECT EXISTS (
+  SELECT 1
+  FROM study_guides
+  WHERE id = sqlc.arg(id)::uuid
+    AND deleted_at IS NULL
+) AS exists;
+
+-- name: UpsertStudyGuideVote :exec
+-- Cast or change a vote (ASK-139). Inserts a new (user_id,
+-- study_guide_id, vote) row when the viewer has not voted, or
+-- updates the existing row's vote when the direction changes. Same-
+-- direction re-submits hit the WHERE clause on the DO UPDATE branch
+-- and become a true no-op (no row touched, no trigger fired,
+-- updated_at preserved). The (user_id, study_guide_id) PK from the
+-- schema is what makes ON CONFLICT resolve correctly.
+INSERT INTO study_guide_votes (user_id, study_guide_id, vote)
+VALUES (
+  sqlc.arg(user_id)::uuid,
+  sqlc.arg(study_guide_id)::uuid,
+  sqlc.arg(vote)::vote_direction
+)
+ON CONFLICT (user_id, study_guide_id) DO UPDATE
+  SET vote = EXCLUDED.vote,
+      updated_at = now()
+  WHERE study_guide_votes.vote != EXCLUDED.vote;
+
+-- name: ComputeGuideVoteScore :one
+-- Recomputes the guide's vote_score from study_guide_votes. Returned
+-- as int64 to match the wire shape on CastVoteResponse. Run after
+-- the upsert in the same logical request so the response reflects the
+-- post-mutation state.
+SELECT COALESCE(
+  SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END),
+  0
+)::bigint AS vote_score
+FROM study_guide_votes
+WHERE study_guide_id = sqlc.arg(study_guide_id)::uuid;
+
+-- name: DeleteStudyGuideVote :execrows
+-- Hard-delete the (viewer, guide) vote row (ASK-141). Returns the
+-- rows-affected count so the service can distinguish "no existing
+-- vote" (0 rows -> 404 'Vote not found') from a successful delete
+-- (1 row -> 204). The guide-existence check happens BEFORE this
+-- runs in the service so a missing guide doesn't leak through as
+-- "vote not found".
+DELETE FROM study_guide_votes
+WHERE user_id = sqlc.arg(user_id)::uuid
+  AND study_guide_id = sqlc.arg(study_guide_id)::uuid;

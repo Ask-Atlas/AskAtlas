@@ -40,6 +40,72 @@ func (_m *MockRepository) EXPECT() *MockRepository_Expecter {
 	return &MockRepository_Expecter{mock: &_m.Mock}
 }
 
+// ComputeGuideVoteScore provides a mock function for the type MockRepository
+func (_mock *MockRepository) ComputeGuideVoteScore(ctx context.Context, studyGuideID pgtype.UUID) (int64, error) {
+	ret := _mock.Called(ctx, studyGuideID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ComputeGuideVoteScore")
+	}
+
+	var r0 int64
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) (int64, error)); ok {
+		return returnFunc(ctx, studyGuideID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) int64); ok {
+		r0 = returnFunc(ctx, studyGuideID)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, pgtype.UUID) error); ok {
+		r1 = returnFunc(ctx, studyGuideID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_ComputeGuideVoteScore_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ComputeGuideVoteScore'
+type MockRepository_ComputeGuideVoteScore_Call struct {
+	*mock.Call
+}
+
+// ComputeGuideVoteScore is a helper method to define mock.On call
+//   - ctx context.Context
+//   - studyGuideID pgtype.UUID
+func (_e *MockRepository_Expecter) ComputeGuideVoteScore(ctx interface{}, studyGuideID interface{}) *MockRepository_ComputeGuideVoteScore_Call {
+	return &MockRepository_ComputeGuideVoteScore_Call{Call: _e.mock.On("ComputeGuideVoteScore", ctx, studyGuideID)}
+}
+
+func (_c *MockRepository_ComputeGuideVoteScore_Call) Run(run func(ctx context.Context, studyGuideID pgtype.UUID)) *MockRepository_ComputeGuideVoteScore_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_ComputeGuideVoteScore_Call) Return(n int64, err error) *MockRepository_ComputeGuideVoteScore_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockRepository_ComputeGuideVoteScore_Call) RunAndReturn(run func(ctx context.Context, studyGuideID pgtype.UUID) (int64, error)) *MockRepository_ComputeGuideVoteScore_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CourseExistsForGuides provides a mock function for the type MockRepository
 func (_mock *MockRepository) CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error) {
 	ret := _mock.Called(ctx, id)
@@ -102,6 +168,72 @@ func (_c *MockRepository_CourseExistsForGuides_Call) Return(b bool, err error) *
 }
 
 func (_c *MockRepository_CourseExistsForGuides_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) (bool, error)) *MockRepository_CourseExistsForGuides_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteStudyGuideVote provides a mock function for the type MockRepository
+func (_mock *MockRepository) DeleteStudyGuideVote(ctx context.Context, arg db.DeleteStudyGuideVoteParams) (int64, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteStudyGuideVote")
+	}
+
+	var r0 int64
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.DeleteStudyGuideVoteParams) (int64, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.DeleteStudyGuideVoteParams) int64); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.DeleteStudyGuideVoteParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_DeleteStudyGuideVote_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteStudyGuideVote'
+type MockRepository_DeleteStudyGuideVote_Call struct {
+	*mock.Call
+}
+
+// DeleteStudyGuideVote is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.DeleteStudyGuideVoteParams
+func (_e *MockRepository_Expecter) DeleteStudyGuideVote(ctx interface{}, arg interface{}) *MockRepository_DeleteStudyGuideVote_Call {
+	return &MockRepository_DeleteStudyGuideVote_Call{Call: _e.mock.On("DeleteStudyGuideVote", ctx, arg)}
+}
+
+func (_c *MockRepository_DeleteStudyGuideVote_Call) Run(run func(ctx context.Context, arg db.DeleteStudyGuideVoteParams)) *MockRepository_DeleteStudyGuideVote_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.DeleteStudyGuideVoteParams
+		if args[1] != nil {
+			arg1 = args[1].(db.DeleteStudyGuideVoteParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_DeleteStudyGuideVote_Call) Return(n int64, err error) *MockRepository_DeleteStudyGuideVote_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockRepository_DeleteStudyGuideVote_Call) RunAndReturn(run func(ctx context.Context, arg db.DeleteStudyGuideVoteParams) (int64, error)) *MockRepository_DeleteStudyGuideVote_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -300,6 +432,72 @@ func (_c *MockRepository_GetUserVoteForGuide_Call) Return(voteDirection db.VoteD
 }
 
 func (_c *MockRepository_GetUserVoteForGuide_Call) RunAndReturn(run func(ctx context.Context, arg db.GetUserVoteForGuideParams) (db.VoteDirection, error)) *MockRepository_GetUserVoteForGuide_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GuideExistsAndLive provides a mock function for the type MockRepository
+func (_mock *MockRepository) GuideExistsAndLive(ctx context.Context, id pgtype.UUID) (bool, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GuideExistsAndLive")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) (bool, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) bool); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, pgtype.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_GuideExistsAndLive_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GuideExistsAndLive'
+type MockRepository_GuideExistsAndLive_Call struct {
+	*mock.Call
+}
+
+// GuideExistsAndLive is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id pgtype.UUID
+func (_e *MockRepository_Expecter) GuideExistsAndLive(ctx interface{}, id interface{}) *MockRepository_GuideExistsAndLive_Call {
+	return &MockRepository_GuideExistsAndLive_Call{Call: _e.mock.On("GuideExistsAndLive", ctx, id)}
+}
+
+func (_c *MockRepository_GuideExistsAndLive_Call) Run(run func(ctx context.Context, id pgtype.UUID)) *MockRepository_GuideExistsAndLive_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_GuideExistsAndLive_Call) Return(b bool, err error) *MockRepository_GuideExistsAndLive_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *MockRepository_GuideExistsAndLive_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) (bool, error)) *MockRepository_GuideExistsAndLive_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1353,6 +1551,63 @@ func (_c *MockRepository_SoftDeleteStudyGuide_Call) Return(err error) *MockRepos
 }
 
 func (_c *MockRepository_SoftDeleteStudyGuide_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) error) *MockRepository_SoftDeleteStudyGuide_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpsertStudyGuideVote provides a mock function for the type MockRepository
+func (_mock *MockRepository) UpsertStudyGuideVote(ctx context.Context, arg db.UpsertStudyGuideVoteParams) error {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertStudyGuideVote")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.UpsertStudyGuideVoteParams) error); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_UpsertStudyGuideVote_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpsertStudyGuideVote'
+type MockRepository_UpsertStudyGuideVote_Call struct {
+	*mock.Call
+}
+
+// UpsertStudyGuideVote is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.UpsertStudyGuideVoteParams
+func (_e *MockRepository_Expecter) UpsertStudyGuideVote(ctx interface{}, arg interface{}) *MockRepository_UpsertStudyGuideVote_Call {
+	return &MockRepository_UpsertStudyGuideVote_Call{Call: _e.mock.On("UpsertStudyGuideVote", ctx, arg)}
+}
+
+func (_c *MockRepository_UpsertStudyGuideVote_Call) Run(run func(ctx context.Context, arg db.UpsertStudyGuideVoteParams)) *MockRepository_UpsertStudyGuideVote_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.UpsertStudyGuideVoteParams
+		if args[1] != nil {
+			arg1 = args[1].(db.UpsertStudyGuideVoteParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_UpsertStudyGuideVote_Call) Return(err error) *MockRepository_UpsertStudyGuideVote_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_UpsertStudyGuideVote_Call) RunAndReturn(run func(ctx context.Context, arg db.UpsertStudyGuideVoteParams) error) *MockRepository_UpsertStudyGuideVote_Call {
 	_c.Call.Return(run)
 	return _c
 }

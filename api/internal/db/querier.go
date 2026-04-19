@@ -11,6 +11,11 @@ import (
 )
 
 type Querier interface {
+	// Recomputes the guide's vote_score from study_guide_votes. Returned
+	// as int64 to match the wire shape on CastVoteResponse. Run after
+	// the upsert in the same logical request so the response reflects the
+	// post-mutation state.
+	ComputeGuideVoteScore(ctx context.Context, studyGuideID pgtype.UUID) (int64, error)
 	// Single-row existence probe used by join/leave to disambiguate the
 	// "Course not found" 404 from the "Section not found" 404 the spec
 	// requires (see ASK-132 / ASK-138).
@@ -20,6 +25,13 @@ type Querier interface {
 	// array). Separate from courses.CourseExists only because sqlc-generated
 	// queriers are per-file; the predicate is identical.
 	CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error)
+	// Hard-delete the (viewer, guide) vote row (ASK-141). Returns the
+	// rows-affected count so the service can distinguish "no existing
+	// vote" (0 rows -> 404 'Vote not found') from a successful delete
+	// (1 row -> 204). The guide-existence check happens BEFORE this
+	// runs in the service so a missing guide doesn't leak through as
+	// "vote not found".
+	DeleteStudyGuideVote(ctx context.Context, arg DeleteStudyGuideVoteParams) (int64, error)
 	GetCourse(ctx context.Context, id pgtype.UUID) (GetCourseRow, error)
 	// Fetches a file only if it belongs to the given user and has not been soft-deleted.
 	// Returns sql.ErrNoRows if not found or already in a deletion state.
@@ -64,6 +76,12 @@ type Querier interface {
 	// the viewer has not voted. The service maps ErrNoRows to a nil
 	// user_vote in the response (JSON null, not omitted).
 	GetUserVoteForGuide(ctx context.Context, arg GetUserVoteForGuideParams) (VoteDirection, error)
+	// Live-presence probe used by both vote endpoints. Returns TRUE only
+	// when the guide row exists AND is not soft-deleted. The vote service
+	// gates on this before the upsert/delete so a missing-or-deleted
+	// guide returns 404 with a clear message rather than e.g. trampling
+	// through to the SQL layer and surfacing a generic FK error.
+	GuideExistsAndLive(ctx context.Context, id pgtype.UUID) (bool, error)
 	InsertFile(ctx context.Context, arg InsertFileParams) (File, error)
 	// Study guide list queries (ASK-104).
 	//
@@ -235,6 +253,14 @@ type Querier interface {
 	// and returns the row. Using DO UPDATE SET avoids a race window where
 	// concurrent inserts could cause both INSERT and fallback SELECT to miss.
 	UpsertFileGrant(ctx context.Context, arg UpsertFileGrantParams) (FileGrant, error)
+	// Cast or change a vote (ASK-139). Inserts a new (user_id,
+	// study_guide_id, vote) row when the viewer has not voted, or
+	// updates the existing row's vote when the direction changes. Same-
+	// direction re-submits hit the WHERE clause on the DO UPDATE branch
+	// and become a true no-op (no row touched, no trigger fired,
+	// updated_at preserved). The (user_id, study_guide_id) PK from the
+	// schema is what makes ON CONFLICT resolve correctly.
+	UpsertStudyGuideVote(ctx context.Context, arg UpsertStudyGuideVoteParams) error
 }
 
 var _ Querier = (*Queries)(nil)
