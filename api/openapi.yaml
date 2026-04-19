@@ -517,6 +517,74 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}/votes:
+    post:
+      operationId: CastStudyGuideVote
+      summary: Cast or change a vote on a study guide
+      description: |
+        Upserts the authenticated user's vote on the guide. Same-direction
+        re-submits are no-ops; opposite-direction submits flip the vote.
+        Returns the post-upsert `vote_score` so the UI can update without
+        a refetch. Soft-deleted guides return 404. Creators may vote on
+        their own guides (no self-vote restriction).
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide to vote on
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CastVoteRequest'
+      responses:
+        '200':
+          description: Vote applied; returns the resulting state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CastVoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: RemoveStudyGuideVote
+      summary: Remove the authenticated user's vote on a study guide
+      description: |
+        Hard-deletes the row in `study_guide_votes` for the
+        (viewer, guide) pair, returning the user to a neutral state.
+        Returns 404 when the guide is missing/soft-deleted OR when the
+        viewer has no existing vote -- both surfaces are collapsed to
+        404 by design (the desired state is "no vote", which is reached
+        in either case from the caller's point of view).
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide to remove the vote from
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Vote removed; no response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /courses/{course_id}/study-guides:
     get:
       operationId: ListStudyGuides
@@ -1559,6 +1627,39 @@ components:
         - name
         - mime_type
         - size
+    CastVoteRequest:
+      type: object
+      description: |
+        Request body for POST /api/study-guides/{study_guide_id}/votes.
+        `vote` is the desired direction. Same-direction submits are
+        no-ops at the SQL layer (the upsert WHERE clause skips the row
+        modification when vote is unchanged).
+      properties:
+        vote:
+          type: string
+          enum:
+            - up
+            - down
+      required:
+        - vote
+    CastVoteResponse:
+      type: object
+      description: |
+        Response body for POST /api/study-guides/{study_guide_id}/votes.
+        Returns the post-upsert state so the UI can patch its local
+        vote_score without a follow-up GET.
+      properties:
+        vote:
+          type: string
+          enum:
+            - up
+            - down
+        vote_score:
+          type: integer
+          format: int64
+      required:
+        - vote
+        - vote_score
     CreateStudyGuideRequest:
       type: object
       description: |
