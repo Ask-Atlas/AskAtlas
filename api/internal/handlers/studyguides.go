@@ -8,6 +8,7 @@ import (
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/api"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/studyguides"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -386,7 +387,7 @@ func mapStudyGuideListItemResponse(g studyguides.StudyGuide) api.StudyGuideListI
 		Id:            openapi_types.UUID(g.ID),
 		Title:         g.Title,
 		Description:   g.Description,
-		Tags:          append([]string(nil), g.Tags...),
+		Tags:          utils.NonNilStrings(g.Tags),
 		Creator:       mapCreatorSummary(g.Creator),
 		CourseId:      openapi_types.UUID(g.CourseID),
 		VoteScore:     g.VoteScore,
@@ -485,7 +486,7 @@ func mapStudyGuideDetailResponse(d studyguides.StudyGuideDetail) api.StudyGuideD
 		Title:         d.Title,
 		Description:   d.Description,
 		Content:       d.Content,
-		Tags:          append([]string(nil), d.Tags...),
+		Tags:          utils.NonNilStrings(d.Tags),
 		Creator:       mapCreatorSummary(d.Creator),
 		Course:        mapGuideCourseSummaryResponse(d.Course),
 		VoteScore:     d.VoteScore,
