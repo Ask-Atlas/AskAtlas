@@ -84,6 +84,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/update-study-guide",
+          label: "Update a study guide",
+          className: "api-method patch",
+        },
+        {
+          type: "doc",
           id: "api/delete-study-guide",
           label: "Soft-delete a study guide",
           className: "api-method delete",

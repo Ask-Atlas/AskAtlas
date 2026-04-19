@@ -480,6 +480,57 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+    patch:
+      operationId: UpdateStudyGuide
+      summary: Update a study guide
+      description: |
+        Partial update of any subset of `title`, `description`, `content`,
+        or `tags`. Only fields provided in the request body are touched;
+        absent fields preserve their current values. Tags, when provided,
+        are REPLACED entirely (no merge) and normalized server-side
+        (trim + lowercase + dedupe).
+
+        Creator-only: 403 if the viewer is not the guide's creator. 404
+        for missing or already-deleted guides. Order of checks:
+          1. Validate the request body (per-field caps + at-least-one
+             field provided).
+          2. Fetch + lock guide row.
+          3. 404 if missing or deleted_at IS NOT NULL.
+          4. 403 if creator_id != viewer_id.
+          5. UPDATE only the provided fields, set updated_at = now(),
+             COMMIT.
+          6. Re-hydrate the full StudyGuideDetail (same shape as GET).
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide to update
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStudyGuideRequest'
+      responses:
+        '200':
+          description: The updated study guide.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGuideDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     delete:
       operationId: DeleteStudyGuide
       summary: Soft-delete a study guide
@@ -1793,6 +1844,35 @@ components:
             maxLength: 50
       required:
         - title
+    UpdateStudyGuideRequest:
+      type: object
+      description: |
+        Request body for PATCH /api/study-guides/{study_guide_id}.
+        All fields are optional; absent fields preserve their current
+        value. Tags, when provided, REPLACE all existing tags (no
+        merge) and are normalized server-side (trim + lowercase +
+        dedupe). At least one field must be provided -- an empty body
+        `{}` is rejected with 400.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+        content:
+          type: string
+          nullable: true
+          maxLength: 100000
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+            maxLength: 50
     StudyGuideDetailResponse:
       type: object
       description: |

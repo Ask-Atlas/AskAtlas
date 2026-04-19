@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -1675,4 +1676,335 @@ func TestService_RemoveRecommendation_DeleteError_500(t *testing.T) {
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "delete blew up")
+}
+
+// ---------------------------------------------------------------------
+// UpdateStudyGuide (ASK-129)
+// ---------------------------------------------------------------------
+
+// strPtr is a tiny convenience used only by the update tests for
+// building the optional pointer fields on UpdateStudyGuideParams.
+func strPtr(s string) *string { return &s }
+
+// expectUpdateAndRehydrate sets up the lock + creator-check + update +
+// re-hydrate fan-out a Service.UpdateStudyGuide call requires when the
+// caller is the legitimate creator. Returns a pointer to the captured
+// sqlc params so individual tests can assert the COALESCE-narg shape
+// the service ended up sending to the DB.
+func expectUpdateAndRehydrate(t *testing.T, repo *mock_studyguides.MockRepository, guideID, creatorID uuid.UUID) *db.UpdateStudyGuideParams {
+	t.Helper()
+
+	repo.EXPECT().InTx(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, fn func(studyguides.Repository) error) error {
+			return fn(repo)
+		})
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{
+			ID:        utils.UUID(guideID),
+			CreatorID: utils.UUID(creatorID),
+		}, nil)
+
+	captured := &db.UpdateStudyGuideParams{}
+	repo.EXPECT().UpdateStudyGuide(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, arg db.UpdateStudyGuideParams) {
+			*captured = arg
+		}).Return(nil)
+
+	// Re-hydrate stage: GetStudyGuide does the GetStudyGuideDetail +
+	// 5-way sibling fan-out. Wire all 6 with empty results; the tests
+	// don't need to inspect the response here, just confirm the path
+	// completes without error.
+	repo.EXPECT().GetStudyGuideDetail(mock.Anything, mock.Anything).
+		Return(detailFixture(t, guideID, uuid.New(), creatorID), nil)
+	repo.EXPECT().GetUserVoteForGuide(mock.Anything, mock.Anything).
+		Return(db.VoteDirection(""), sql.ErrNoRows)
+	repo.EXPECT().ListGuideRecommenders(mock.Anything, mock.Anything).Return(nil, nil)
+	repo.EXPECT().ListGuideQuizzesWithQuestionCount(mock.Anything, mock.Anything).Return(nil, nil)
+	repo.EXPECT().ListGuideResources(mock.Anything, mock.Anything).Return(nil, nil)
+	repo.EXPECT().ListGuideFiles(mock.Anything, mock.Anything).Return(nil, nil)
+
+	return captured
+}
+
+func TestService_UpdateStudyGuide_TitleOnly_PassesOtherNargsAsNULL(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID := uuid.New(), uuid.New()
+
+	captured := expectUpdateAndRehydrate(t, repo, guideID, creatorID)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.UpdateStudyGuide(context.Background(), studyguides.UpdateStudyGuideParams{
+		StudyGuideID: guideID, ViewerID: creatorID,
+		Title: strPtr("New Title"),
+	})
+	require.NoError(t, err)
+	require.True(t, captured.Title.Valid, "title should be a non-NULL narg")
+	assert.Equal(t, "New Title", captured.Title.String)
+	assert.False(t, captured.Description.Valid, "description should stay NULL (don't update)")
+	assert.False(t, captured.Content.Valid, "content should stay NULL (don't update)")
+	assert.Nil(t, captured.Tags, "tags should be nil (don't update)")
+}
+
+func TestService_UpdateStudyGuide_TitleTrimmed(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID := uuid.New(), uuid.New()
+	captured := expectUpdateAndRehydrate(t, repo, guideID, creatorID)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.UpdateStudyGuide(context.Background(), studyguides.UpdateStudyGuideParams{
+		StudyGuideID: guideID, ViewerID: creatorID,
+		Title: strPtr("  Trimmed  "),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "Trimmed", captured.Title.String)
+}
+
+// Tags non-nil but empty must reach SQL as a non-nil empty slice so
+// the COALESCE replaces with []. nil tags would mean "don't update".
+func TestService_UpdateStudyGuide_TagsClearedWithEmptySlice(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID := uuid.New(), uuid.New()
+	captured := expectUpdateAndRehydrate(t, repo, guideID, creatorID)
+
+	emptyTags := []string{}
+	svc := studyguides.NewService(repo)
+	_, err := svc.UpdateStudyGuide(context.Background(), studyguides.UpdateStudyGuideParams{
+		StudyGuideID: guideID, ViewerID: creatorID,
+		Tags: &emptyTags,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, captured.Tags, "empty slice must reach SQL as non-nil so COALESCE replaces (not skips)")
+	assert.Empty(t, captured.Tags)
+}
+
+func TestService_UpdateStudyGuide_TagsNormalized(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID := uuid.New(), uuid.New()
+	captured := expectUpdateAndRehydrate(t, repo, guideID, creatorID)
+
+	tags := []string{" Midterm ", "FINAL", "midterm"}
+	svc := studyguides.NewService(repo)
+	_, err := svc.UpdateStudyGuide(context.Background(), studyguides.UpdateStudyGuideParams{
+		StudyGuideID: guideID, ViewerID: creatorID,
+		Tags: &tags,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []string{"midterm", "final"}, captured.Tags)
+}
+
+// Description with whitespace gets dropped (no-op on that field) --
+// matches CreateStudyGuide. Documented limitation: clearing isn't
+// supported via PATCH.
+func TestService_UpdateStudyGuide_DescriptionWhitespace_DropsToNoOp(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID := uuid.New(), uuid.New()
+	captured := expectUpdateAndRehydrate(t, repo, guideID, creatorID)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.UpdateStudyGuide(context.Background(), studyguides.UpdateStudyGuideParams{
+		StudyGuideID: guideID, ViewerID: creatorID,
+		Description: strPtr("   "),
+		// At least one other field present so the at-least-one-field
+		// rule passes (whitespace description alone normalizes away
+		// to nothing, which would trip validateUpdateParams indirectly
+		// -- but actually our validator only checks the input pointer,
+		// not post-normalization, so a lone whitespace description
+		// would also pass validation but be a SQL no-op. Adding a
+		// title here keeps the test focused on the normalization
+		// behavior, not the at-least-one rule).
+		Title: strPtr("T"),
+	})
+	require.NoError(t, err)
+	assert.False(t, captured.Description.Valid, "whitespace-only description should be dropped")
+}
+
+func TestService_UpdateStudyGuide_EmptyBody_400(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+	_, err := svc.UpdateStudyGuide(context.Background(), studyguides.UpdateStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+	assert.Contains(t, appErr.Details, "body")
+}
+
+func TestService_UpdateStudyGuide_TitleEmptyAfterTrim_400(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+	_, err := svc.UpdateStudyGuide(context.Background(), studyguides.UpdateStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+		Title: strPtr("   "),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+	assert.Contains(t, appErr.Details, "title")
+}
+
+func TestService_UpdateStudyGuide_TitleTooLong_400(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+	long := strings.Repeat("a", studyguides.MaxTitleLength+1)
+	_, err := svc.UpdateStudyGuide(context.Background(), studyguides.UpdateStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+		Title: &long,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+	assert.Contains(t, appErr.Details, "title")
+}
+
+func TestService_UpdateStudyGuide_DescriptionTooLong_400(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+	long := strings.Repeat("a", studyguides.MaxDescriptionLength+1)
+	_, err := svc.UpdateStudyGuide(context.Background(), studyguides.UpdateStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+		Description: &long,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+	assert.Contains(t, appErr.Details, "description")
+}
+
+func TestService_UpdateStudyGuide_ContentTooLong_400(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+	long := strings.Repeat("a", studyguides.MaxContentLength+1)
+	_, err := svc.UpdateStudyGuide(context.Background(), studyguides.UpdateStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+		Content: &long,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+	assert.Contains(t, appErr.Details, "content")
+}
+
+// Tag normalization is the gate -- a 21-element input or a 51-char tag
+// should fail BEFORE the tx opens (a clean 400 vs a rolled-back tx).
+func TestService_UpdateStudyGuide_TooManyTags_400_BeforeTx(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	tags := make([]string, studyguides.MaxTagsCount+1)
+	for i := range tags {
+		tags[i] = fmt.Sprintf("t%d", i)
+	}
+	svc := studyguides.NewService(repo)
+	_, err := svc.UpdateStudyGuide(context.Background(), studyguides.UpdateStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+		Tags: &tags,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+	assert.Contains(t, appErr.Details, "tags")
+	repo.AssertNotCalled(t, "InTx", mock.Anything, mock.Anything)
+}
+
+func TestService_UpdateStudyGuide_GuideMissing_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().InTx(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, fn func(studyguides.Repository) error) error {
+			return fn(repo)
+		})
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{}, sql.ErrNoRows)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.UpdateStudyGuide(context.Background(), studyguides.UpdateStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+		Title: strPtr("T"),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Study guide not found", appErr.Message)
+	repo.AssertNotCalled(t, "UpdateStudyGuide", mock.Anything, mock.Anything)
+}
+
+func TestService_UpdateStudyGuide_AlreadyDeleted_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().InTx(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, fn func(studyguides.Repository) error) error {
+			return fn(repo)
+		})
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{
+			ID:        utils.UUID(uuid.New()),
+			CreatorID: utils.UUID(uuid.New()),
+			DeletedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		}, nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.UpdateStudyGuide(context.Background(), studyguides.UpdateStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+		Title: strPtr("T"),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	repo.AssertNotCalled(t, "UpdateStudyGuide", mock.Anything, mock.Anything)
+}
+
+func TestService_UpdateStudyGuide_NotCreator_403(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().InTx(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, fn func(studyguides.Repository) error) error {
+			return fn(repo)
+		})
+	creatorID := uuid.New()
+	otherViewer := uuid.New()
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{
+			ID:        utils.UUID(uuid.New()),
+			CreatorID: utils.UUID(creatorID),
+		}, nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.UpdateStudyGuide(context.Background(), studyguides.UpdateStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: otherViewer,
+		Title: strPtr("T"),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusForbidden, appErr.Code)
+	repo.AssertNotCalled(t, "UpdateStudyGuide", mock.Anything, mock.Anything)
+}
+
+func TestService_UpdateStudyGuide_UpdateError_500_PropagatesAndRollsBack(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID := uuid.New(), uuid.New()
+
+	repo.EXPECT().InTx(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, fn func(studyguides.Repository) error) error {
+			return fn(repo)
+		})
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{
+			ID:        utils.UUID(guideID),
+			CreatorID: utils.UUID(creatorID),
+		}, nil)
+	repo.EXPECT().UpdateStudyGuide(mock.Anything, mock.Anything).
+		Return(errors.New("update blew up"))
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.UpdateStudyGuide(context.Background(), studyguides.UpdateStudyGuideParams{
+		StudyGuideID: guideID, ViewerID: creatorID,
+		Title: strPtr("T"),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "update blew up")
 }

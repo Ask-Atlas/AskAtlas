@@ -1245,3 +1245,194 @@ func TestStudyGuidesHandler_RemoveRecommendation_InternalError_500(t *testing.T)
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
+
+// ---------------------------------------------------------------------
+// UpdateStudyGuide (ASK-129)
+// ---------------------------------------------------------------------
+
+// updateBody marshals an UpdateStudyGuideRequest into a JSON body
+// reader for use with httptest. Centralized so individual tests don't
+// re-derive the JSON shape.
+func updateBody(t *testing.T, body api.UpdateStudyGuideJSONRequestBody) *strings.Reader {
+	t.Helper()
+	raw, err := json.Marshal(body)
+	require.NoError(t, err)
+	return strings.NewReader(string(raw))
+}
+
+func TestStudyGuidesHandler_Update_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := fmt.Sprintf("/study-guides/%s", uuid.NewString())
+	req := httptest.NewRequest(http.MethodPatch, url, strings.NewReader(`{"title":"x"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestStudyGuidesHandler_Update_MalformedJSON_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := fmt.Sprintf("/study-guides/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPatch, url, strings.NewReader(`{not json}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestStudyGuidesHandler_Update_Success_200(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	guideID := uuid.New()
+	courseID := uuid.New()
+	creatorID := uuid.New()
+	desc := "Updated."
+	tags := []string{"trees", "midterm"}
+
+	captured := &studyguides.UpdateStudyGuideParams{}
+	mockSvc.EXPECT().
+		UpdateStudyGuide(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, p studyguides.UpdateStudyGuideParams) {
+			*captured = p
+		}).
+		Return(studyguides.StudyGuideDetail{
+			ID:          guideID,
+			Title:       "New Title",
+			Description: &desc,
+			Tags:        tags,
+			Creator:     studyguides.Creator{ID: creatorID, FirstName: "Ada", LastName: "Lovelace"},
+			Course: studyguides.GuideCourseSummary{
+				ID: courseID, Department: "CS", Number: "161", Title: "Algorithms",
+			},
+			RecommendedBy: []studyguides.Creator{},
+			Quizzes:       []studyguides.Quiz{},
+			Resources:     []studyguides.Resource{},
+			Files:         []studyguides.GuideFile{},
+			CreatedAt:     time.Now().UTC(),
+			UpdatedAt:     time.Now().UTC(),
+		}, nil)
+
+	bodyTitle := "New Title"
+	bodyDesc := "Updated."
+	bodyTags := []string{"Trees", "midterm"}
+	url := fmt.Sprintf("/study-guides/%s", guideID)
+	req := authedRequestMethod(t, http.MethodPatch, url, updateBody(t, api.UpdateStudyGuideJSONRequestBody{
+		Title:       &bodyTitle,
+		Description: &bodyDesc,
+		Tags:        &bodyTags,
+	}))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp api.StudyGuideDetailResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, guideID, uuid.UUID(resp.Id))
+	assert.Equal(t, "New Title", resp.Title)
+	// Pointer fields flow through to service params unchanged
+	require.NotNil(t, captured.Title)
+	assert.Equal(t, "New Title", *captured.Title)
+	require.NotNil(t, captured.Description)
+	assert.Equal(t, "Updated.", *captured.Description)
+	require.NotNil(t, captured.Tags)
+	assert.Equal(t, []string{"Trees", "midterm"}, *captured.Tags)
+	// Snapshot semantics: handler must NOT alias the decoded body's
+	// backing array (so the service can normalize freely).
+	assert.NotSame(t, &bodyTags, captured.Tags, "tags slice header should be a fresh copy")
+	// Path param + viewer id flow through.
+	assert.Equal(t, guideID, captured.StudyGuideID)
+	assert.NotEqual(t, uuid.Nil, captured.ViewerID)
+}
+
+func TestStudyGuidesHandler_Update_ServiceBadRequest_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		UpdateStudyGuide(mock.Anything, mock.Anything).
+		Return(studyguides.StudyGuideDetail{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"body": "at least one field must be provided",
+		}))
+
+	url := fmt.Sprintf("/study-guides/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPatch, url, strings.NewReader(`{}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	var errResp apperrors.AppError
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&errResp))
+	assert.Contains(t, errResp.Details, "body")
+}
+
+func TestStudyGuidesHandler_Update_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		UpdateStudyGuide(mock.Anything, mock.Anything).
+		Return(studyguides.StudyGuideDetail{}, apperrors.NewNotFound("Study guide not found"))
+
+	url := fmt.Sprintf("/study-guides/%s", uuid.NewString())
+	bodyTitle := "T"
+	req := authedRequestMethod(t, http.MethodPatch, url, updateBody(t, api.UpdateStudyGuideJSONRequestBody{Title: &bodyTitle}))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestStudyGuidesHandler_Update_Forbidden_403(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		UpdateStudyGuide(mock.Anything, mock.Anything).
+		Return(studyguides.StudyGuideDetail{}, apperrors.NewForbidden())
+
+	url := fmt.Sprintf("/study-guides/%s", uuid.NewString())
+	bodyTitle := "T"
+	req := authedRequestMethod(t, http.MethodPatch, url, updateBody(t, api.UpdateStudyGuideJSONRequestBody{Title: &bodyTitle}))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestStudyGuidesHandler_Update_InternalError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		UpdateStudyGuide(mock.Anything, mock.Anything).
+		Return(studyguides.StudyGuideDetail{}, errors.New("db down"))
+
+	url := fmt.Sprintf("/study-guides/%s", uuid.NewString())
+	bodyTitle := "T"
+	req := authedRequestMethod(t, http.MethodPatch, url, updateBody(t, api.UpdateStudyGuideJSONRequestBody{Title: &bodyTitle}))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}

@@ -1557,6 +1557,53 @@ func (q *Queries) SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUID) erro
 	return err
 }
 
+const updateStudyGuide = `-- name: UpdateStudyGuide :exec
+UPDATE study_guides
+SET
+  title       = COALESCE($1::text,        title),
+  description = COALESCE($2::text,  description),
+  content     = COALESCE($3::text,      content),
+  tags        = COALESCE($4::text[],       tags),
+  updated_at  = now()
+WHERE id = $5::uuid
+`
+
+type UpdateStudyGuideParams struct {
+	Title       pgtype.Text `json:"title"`
+	Description pgtype.Text `json:"description"`
+	Content     pgtype.Text `json:"content"`
+	Tags        []string    `json:"tags"`
+	ID          pgtype.UUID `json:"id"`
+}
+
+// Partial update for ASK-129. Each updatable column uses COALESCE(narg,
+// current) so a nil arg from Go means "leave this column alone" and a
+// non-nil arg means "replace with the supplied value". The service is
+// responsible for:
+//   - 404 / 403 gating (via GetStudyGuideByIDForUpdate before this).
+//   - Validating the at-least-one-field rule (an empty body is a 400
+//     before this query runs).
+//   - Tag normalization (trim + lowercase + dedupe) -- the array
+//     written here is the final canonical form.
+//
+// The service runs the locked SELECT + this UPDATE in a single
+// transaction so a concurrent delete can't slip in between. updated_at
+// is bumped to now() on every successful call (the UPDATE sees at
+// least the updated_at change even when every other narg is NULL,
+// which matches the spec's "updated_at reflects the latest" guarantee
+// but also means a no-op PATCH still bumps updated_at -- the service's
+// empty-body 400 check prevents that case from reaching SQL).
+func (q *Queries) UpdateStudyGuide(ctx context.Context, arg UpdateStudyGuideParams) error {
+	_, err := q.db.Exec(ctx, updateStudyGuide,
+		arg.Title,
+		arg.Description,
+		arg.Content,
+		arg.Tags,
+		arg.ID,
+	)
+	return err
+}
+
 const upsertStudyGuideVote = `-- name: UpsertStudyGuideVote :exec
 INSERT INTO study_guide_votes (user_id, study_guide_id, vote)
 VALUES (

@@ -265,6 +265,24 @@ type Querier interface {
 	// Returns sql.ErrNoRows when file is not found, not owned, or in deletion.
 	UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateFileRow, error)
 	UpdateFileStatus(ctx context.Context, arg UpdateFileStatusParams) error
+	// Partial update for ASK-129. Each updatable column uses COALESCE(narg,
+	// current) so a nil arg from Go means "leave this column alone" and a
+	// non-nil arg means "replace with the supplied value". The service is
+	// responsible for:
+	//   * 404 / 403 gating (via GetStudyGuideByIDForUpdate before this).
+	//   * Validating the at-least-one-field rule (an empty body is a 400
+	//     before this query runs).
+	//   * Tag normalization (trim + lowercase + dedupe) -- the array
+	//     written here is the final canonical form.
+	//
+	// The service runs the locked SELECT + this UPDATE in a single
+	// transaction so a concurrent delete can't slip in between. updated_at
+	// is bumped to now() on every successful call (the UPDATE sees at
+	// least the updated_at change even when every other narg is NULL,
+	// which matches the spec's "updated_at reflects the latest" guarantee
+	// but also means a no-op PATCH still bumps updated_at -- the service's
+	// empty-body 400 check prevents that case from reaching SQL).
+	UpdateStudyGuide(ctx context.Context, arg UpdateStudyGuideParams) error
 	UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
 	// Inserts a new file grant, returning the row. If the grant already exists
 	// (same file_id, grantee_type, grantee_id, permission), updates granted_by
