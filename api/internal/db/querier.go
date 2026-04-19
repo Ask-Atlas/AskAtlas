@@ -119,12 +119,16 @@ type Querier interface {
 	// as a backstop if a course is hard-deleted between preflight + insert.
 	InsertStudyGuide(ctx context.Context, arg InsertStudyGuideParams) (InsertStudyGuideRow, error)
 	// Inserts the (study_guide_id, recommended_by) row and returns the
-	// server-generated created_at so the response can ship the timestamp
-	// without a follow-up SELECT. The (study_guide_id, recommended_by)
-	// PK from the schema makes a duplicate insert raise unique_violation
-	// (Postgres SQLSTATE 23505), which the service catches and maps to
-	// apperrors.ErrConflict (409).
-	InsertStudyGuideRecommendation(ctx context.Context, arg InsertStudyGuideRecommendationParams) (pgtype.Timestamptz, error)
+	// created_at PLUS the recommender's privacy-floor identity
+	// (first_name + last_name) via a CTE join to users. One round trip
+	// builds the entire RecommendationResponse payload; without the
+	// CTE the service would need a second SELECT against users just to
+	// pull the recommender's name.
+	//
+	// The (study_guide_id, recommended_by) PK from the schema makes a
+	// duplicate insert raise unique_violation (Postgres SQLSTATE 23505),
+	// which the service catches and maps to apperrors.ErrConflict (409).
+	InsertStudyGuideRecommendation(ctx context.Context, arg InsertStudyGuideRecommendationParams) (InsertStudyGuideRecommendationRow, error)
 	// Adds the user to the section as a 'student'. ON CONFLICT DO NOTHING
 	// keeps duplicate joins atomic (no PK violation surfacing) and concurrency
 	// safe; the service layer treats an empty result as the 409 "Already a
