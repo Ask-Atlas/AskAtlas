@@ -134,3 +134,28 @@ type DeleteStudyGuideParams struct {
 	StudyGuideID uuid.UUID
 	ViewerID     uuid.UUID
 }
+
+// CastVoteParams is the input to Service.CastVote (ASK-139). ViewerID
+// is taken from the JWT in the handler. Vote is the GuideVote enum
+// declared in model.go (mirrors the vote_direction Postgres enum).
+type CastVoteParams struct {
+	StudyGuideID uuid.UUID
+	ViewerID     uuid.UUID
+	Vote         GuideVote
+}
+
+// CastVoteResult is the output of Service.CastVote. Returns the
+// post-upsert state so the handler can build CastVoteResponse without
+// re-querying.
+type CastVoteResult struct {
+	Vote      GuideVote
+	VoteScore int64
+}
+
+// RemoveVoteParams is the input to Service.RemoveVote (ASK-141).
+// ViewerID identifies whose vote is being removed (always the JWT
+// viewer; we never let one user remove another's vote).
+type RemoveVoteParams struct {
+	StudyGuideID uuid.UUID
+	ViewerID     uuid.UUID
+}
