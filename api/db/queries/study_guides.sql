@@ -661,6 +661,15 @@ WHERE user_id = sqlc.arg(user_id)::uuid
 -- Combining the two checks into a single query (rather than two
 -- sequential calls) keeps the recommend hot path at one DB round
 -- trip for the gate; the actual insert/delete is the second.
+--
+-- NULL-semantics note: when the guide doesn't exist, the inner
+-- `guide` CTE returns 0 rows, so `(SELECT course_id FROM guide)` is
+-- NULL, and `cs.course_id = NULL` is always FALSE (not NULL-equal).
+-- That makes `has_role` correctly false for missing guides without
+-- needing a separate WHERE EXISTS guard. The service short-circuits
+-- on !guide_exists before inspecting has_role, so the two booleans
+-- are independent by contract even though they correlate in this
+-- edge case.
 WITH guide AS (
   SELECT id, course_id
   FROM study_guides
