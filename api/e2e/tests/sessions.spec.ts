@@ -64,11 +64,14 @@ test.describe("Sessions API (ASK-149 list)", () => {
     if (!quiz?.id) return;
     quizId = quiz.id;
 
-    // Ensure the test user has at least one session on this quiz
-    // so the per-row shape assertions in the substantive tests
-    // have a row to inspect. POST is idempotent on resume so this
-    // is safe to re-run. Result discarded -- we don't pin the id.
-    await request.post(`/api/quizzes/${quizId}/sessions`);
+    // We deliberately do NOT POST to start a session here. The
+    // partial unique index on (user_id, quiz_id) WHERE
+    // completed_at IS NULL means the destructive ASK-144 tests
+    // in the sibling describe contend for the same slot, and
+    // creating one here would lose that race in either
+    // direction. The substantive tests below already gracefully
+    // handle an empty list (their per-row shape inspections are
+    // conditional on body.sessions.length > 0).
   });
 
   // ---------- Validation (no seed data required) ----------
@@ -303,6 +306,15 @@ test.describe("Sessions API (ASK-149 list)", () => {
 // using. Skips cleanly when no quiz can be discovered on staging.
 
 test.describe("AbandonPracticeSession (ASK-144)", () => {
+  // Serial mode: every test in this describe mutates the same
+  // (user, quiz) slot guarded by the partial unique index, so
+  // they can't run in parallel without stepping on each other.
+  // Playwright's serial mode also stops the run on first failure
+  // within the describe -- which is the right behavior here
+  // because a failed POST/DELETE in test N taints the state
+  // expected by test N+1.
+  test.describe.configure({ mode: "serial" });
+
   let quizId: string | null = null;
 
   test.beforeAll(async ({ request }) => {
