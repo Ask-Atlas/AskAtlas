@@ -1466,3 +1466,213 @@ func TestService_RemoveVote_DeleteError_500(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "delete blew up")
 }
+
+// ---------------------------------------------------------------------
+// RecommendStudyGuide (ASK-147)
+// ---------------------------------------------------------------------
+
+// gateRow returns a synthetic ViewerCanRecommendForGuideRow with the
+// given booleans. Centralized so individual tests don't re-derive
+// the row shape.
+func gateRow(guideExists, hasRole bool) db.ViewerCanRecommendForGuideRow {
+	return db.ViewerCanRecommendForGuideRow{GuideExists: guideExists, HasRole: hasRole}
+}
+
+func TestService_RecommendStudyGuide_Success_201Body(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, viewerID := uuid.New(), uuid.New()
+	now := time.Now().UTC()
+
+	repo.EXPECT().ViewerCanRecommendForGuide(mock.Anything, mock.Anything).Return(gateRow(true, true), nil)
+	repo.EXPECT().InsertStudyGuideRecommendation(mock.Anything, mock.Anything).
+		Return(db.InsertStudyGuideRecommendationRow{
+			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			FirstName: "Ananth",
+			LastName:  "Jillepalli",
+		}, nil)
+
+	svc := studyguides.NewService(repo)
+	got, err := svc.RecommendStudyGuide(context.Background(), studyguides.RecommendStudyGuideParams{
+		StudyGuideID: guideID, ViewerID: viewerID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, guideID, got.StudyGuideID)
+	assert.Equal(t, viewerID, got.Recommender.ID)
+	assert.Equal(t, "Ananth", got.Recommender.FirstName)
+	assert.Equal(t, "Jillepalli", got.Recommender.LastName)
+	assert.WithinDuration(t, now, got.CreatedAt, time.Second)
+}
+
+func TestService_RecommendStudyGuide_GuideMissing_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().ViewerCanRecommendForGuide(mock.Anything, mock.Anything).Return(gateRow(false, false), nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.RecommendStudyGuide(context.Background(), studyguides.RecommendStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Study guide not found", appErr.Message)
+	repo.AssertNotCalled(t, "InsertStudyGuideRecommendation", mock.Anything, mock.Anything)
+}
+
+// Guide exists but viewer is only a student / not enrolled at all
+// (has_role=false). The 403 message is the recommend-side variant
+// per the spec.
+func TestService_RecommendStudyGuide_NotInstructorOrTA_403(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().ViewerCanRecommendForGuide(mock.Anything, mock.Anything).Return(gateRow(true, false), nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.RecommendStudyGuide(context.Background(), studyguides.RecommendStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusForbidden, appErr.Code)
+	assert.Equal(t, "Only instructors and TAs can recommend study guides", appErr.Message)
+	repo.AssertNotCalled(t, "InsertStudyGuideRecommendation", mock.Anything, mock.Anything)
+}
+
+// ON CONFLICT DO NOTHING + RETURNING surfaces as sql.ErrNoRows on the
+// joined SELECT when the (guide, viewer) row already exists.
+func TestService_RecommendStudyGuide_Duplicate_409(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().ViewerCanRecommendForGuide(mock.Anything, mock.Anything).Return(gateRow(true, true), nil)
+	repo.EXPECT().InsertStudyGuideRecommendation(mock.Anything, mock.Anything).
+		Return(db.InsertStudyGuideRecommendationRow{}, sql.ErrNoRows)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.RecommendStudyGuide(context.Background(), studyguides.RecommendStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusConflict, appErr.Code)
+	assert.Equal(t, "You have already recommended this study guide", appErr.Message)
+}
+
+func TestService_RecommendStudyGuide_GateError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().ViewerCanRecommendForGuide(mock.Anything, mock.Anything).
+		Return(db.ViewerCanRecommendForGuideRow{}, errors.New("gate down"))
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.RecommendStudyGuide(context.Background(), studyguides.RecommendStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "gate down")
+}
+
+func TestService_RecommendStudyGuide_InsertError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().ViewerCanRecommendForGuide(mock.Anything, mock.Anything).Return(gateRow(true, true), nil)
+	repo.EXPECT().InsertStudyGuideRecommendation(mock.Anything, mock.Anything).
+		Return(db.InsertStudyGuideRecommendationRow{}, errors.New("insert blew up"))
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.RecommendStudyGuide(context.Background(), studyguides.RecommendStudyGuideParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "insert blew up")
+}
+
+// ---------------------------------------------------------------------
+// RemoveRecommendation (ASK-101)
+// ---------------------------------------------------------------------
+
+func TestService_RemoveRecommendation_Success(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().ViewerCanRecommendForGuide(mock.Anything, mock.Anything).Return(gateRow(true, true), nil)
+	repo.EXPECT().DeleteStudyGuideRecommendation(mock.Anything, mock.Anything).Return(int64(1), nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.RemoveRecommendation(context.Background(), studyguides.RemoveRecommendationParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.NoError(t, err)
+}
+
+func TestService_RemoveRecommendation_GuideMissing_404_GuideMessage(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().ViewerCanRecommendForGuide(mock.Anything, mock.Anything).Return(gateRow(false, false), nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.RemoveRecommendation(context.Background(), studyguides.RemoveRecommendationParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Study guide not found", appErr.Message)
+	repo.AssertNotCalled(t, "DeleteStudyGuideRecommendation", mock.Anything, mock.Anything)
+}
+
+// Former TA who lost the role can't manage their old recommendation.
+func TestService_RemoveRecommendation_NotInstructorOrTA_403(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().ViewerCanRecommendForGuide(mock.Anything, mock.Anything).Return(gateRow(true, false), nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.RemoveRecommendation(context.Background(), studyguides.RemoveRecommendationParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusForbidden, appErr.Code)
+	assert.Equal(t, "Only instructors and TAs can manage recommendations", appErr.Message)
+	repo.AssertNotCalled(t, "DeleteStudyGuideRecommendation", mock.Anything, mock.Anything)
+}
+
+// Guide exists, viewer has role, but viewer never recommended this guide.
+func TestService_RemoveRecommendation_NoExistingRecommendation_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().ViewerCanRecommendForGuide(mock.Anything, mock.Anything).Return(gateRow(true, true), nil)
+	repo.EXPECT().DeleteStudyGuideRecommendation(mock.Anything, mock.Anything).Return(int64(0), nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.RemoveRecommendation(context.Background(), studyguides.RemoveRecommendationParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Recommendation not found", appErr.Message)
+}
+
+func TestService_RemoveRecommendation_GateError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().ViewerCanRecommendForGuide(mock.Anything, mock.Anything).
+		Return(db.ViewerCanRecommendForGuideRow{}, errors.New("gate down"))
+
+	svc := studyguides.NewService(repo)
+	err := svc.RemoveRecommendation(context.Background(), studyguides.RemoveRecommendationParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "gate down")
+}
+
+func TestService_RemoveRecommendation_DeleteError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().ViewerCanRecommendForGuide(mock.Anything, mock.Anything).Return(gateRow(true, true), nil)
+	repo.EXPECT().DeleteStudyGuideRecommendation(mock.Anything, mock.Anything).
+		Return(int64(0), errors.New("delete blew up"))
+
+	svc := studyguides.NewService(repo)
+	err := svc.RemoveRecommendation(context.Background(), studyguides.RemoveRecommendationParams{
+		StudyGuideID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "delete blew up")
+}
