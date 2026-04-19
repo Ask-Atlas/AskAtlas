@@ -2715,11 +2715,11 @@ components:
     QuizDetailResponse:
       type: object
       description: |
-        Full quiz payload returned by POST /api/study-guides/{id}/quizzes
-        (and the future GET /api/quizzes/{quiz_id}). Includes the
-        embedded study guide id, the creator (privacy floor: id +
-        first_name + last_name only), and every question with its
-        options and correct answer.
+        Full quiz payload returned by POST /api/study-guides/{id}/quizzes,
+        GET /api/quizzes/{quiz_id}, and PATCH /api/quizzes/{quiz_id}.
+        Includes the embedded study guide id, the creator (privacy
+        floor: id + first_name + last_name only), and every question
+        with its options and correct answer.
       properties:
         id:
           type: string
