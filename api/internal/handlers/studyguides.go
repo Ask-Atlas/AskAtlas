@@ -22,6 +22,8 @@ type StudyGuideService interface {
 	GetStudyGuide(ctx context.Context, params studyguides.GetStudyGuideParams) (studyguides.StudyGuideDetail, error)
 	CreateStudyGuide(ctx context.Context, params studyguides.CreateStudyGuideParams) (studyguides.StudyGuideDetail, error)
 	DeleteStudyGuide(ctx context.Context, params studyguides.DeleteStudyGuideParams) error
+	CastVote(ctx context.Context, params studyguides.CastVoteParams) (studyguides.CastVoteResult, error)
+	RemoveVote(ctx context.Context, params studyguides.RemoveVoteParams) error
 }
 
 // StudyGuideHandler manages incoming HTTP requests for the study-guide
@@ -189,6 +191,69 @@ func (h *StudyGuideHandler) DeleteStudyGuide(w http.ResponseWriter, r *http.Requ
 		sysErr := apperrors.ToHTTPError(err)
 		if sysErr.Code >= 500 {
 			slog.Error("DeleteStudyGuide failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// CastStudyGuideVote handles POST /study-guides/{id}/votes.
+// Decodes the body, validates that `vote` is one of "up" | "down" at
+// the openapi-validator wrapper, then delegates to the service which
+// upserts and returns the post-mutation vote_score so the UI can
+// patch its local state without a follow-up GET.
+func (h *StudyGuideHandler) CastStudyGuideVote(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	var body api.CastStudyGuideVoteJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", nil))
+		return
+	}
+
+	result, err := h.service.CastVote(r.Context(), studyguides.CastVoteParams{
+		StudyGuideID: uuid.UUID(studyGuideId),
+		ViewerID:     viewerID,
+		Vote:         studyguides.GuideVote(body.Vote),
+	})
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("CastStudyGuideVote failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, api.CastVoteResponse{
+		Vote:      api.CastVoteResponseVote(result.Vote),
+		VoteScore: result.VoteScore,
+	})
+}
+
+// RemoveStudyGuideVote handles DELETE /study-guides/{id}/votes.
+// 404 covers both "guide missing/deleted" and "no existing vote" --
+// the service already collapses both cases to apperrors.ErrNotFound.
+func (h *StudyGuideHandler) RemoveStudyGuideVote(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	if err := h.service.RemoveVote(r.Context(), studyguides.RemoveVoteParams{
+		StudyGuideID: uuid.UUID(studyGuideId),
+		ViewerID:     viewerID,
+	}); err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("RemoveStudyGuideVote failed", "error", err)
 		}
 		apperrors.RespondWithError(w, sysErr)
 		return

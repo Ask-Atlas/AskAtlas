@@ -96,6 +96,72 @@ func (_c *MockStudyGuideService_AssertCourseExists_Call) RunAndReturn(run func(c
 	return _c
 }
 
+// CastVote provides a mock function for the type MockStudyGuideService
+func (_mock *MockStudyGuideService) CastVote(ctx context.Context, params studyguides.CastVoteParams) (studyguides.CastVoteResult, error) {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CastVote")
+	}
+
+	var r0 studyguides.CastVoteResult
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, studyguides.CastVoteParams) (studyguides.CastVoteResult, error)); ok {
+		return returnFunc(ctx, params)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, studyguides.CastVoteParams) studyguides.CastVoteResult); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Get(0).(studyguides.CastVoteResult)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, studyguides.CastVoteParams) error); ok {
+		r1 = returnFunc(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStudyGuideService_CastVote_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CastVote'
+type MockStudyGuideService_CastVote_Call struct {
+	*mock.Call
+}
+
+// CastVote is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params studyguides.CastVoteParams
+func (_e *MockStudyGuideService_Expecter) CastVote(ctx interface{}, params interface{}) *MockStudyGuideService_CastVote_Call {
+	return &MockStudyGuideService_CastVote_Call{Call: _e.mock.On("CastVote", ctx, params)}
+}
+
+func (_c *MockStudyGuideService_CastVote_Call) Run(run func(ctx context.Context, params studyguides.CastVoteParams)) *MockStudyGuideService_CastVote_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 studyguides.CastVoteParams
+		if args[1] != nil {
+			arg1 = args[1].(studyguides.CastVoteParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStudyGuideService_CastVote_Call) Return(castVoteResult studyguides.CastVoteResult, err error) *MockStudyGuideService_CastVote_Call {
+	_c.Call.Return(castVoteResult, err)
+	return _c
+}
+
+func (_c *MockStudyGuideService_CastVote_Call) RunAndReturn(run func(ctx context.Context, params studyguides.CastVoteParams) (studyguides.CastVoteResult, error)) *MockStudyGuideService_CastVote_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateStudyGuide provides a mock function for the type MockStudyGuideService
 func (_mock *MockStudyGuideService) CreateStudyGuide(ctx context.Context, params studyguides.CreateStudyGuideParams) (studyguides.StudyGuideDetail, error) {
 	ret := _mock.Called(ctx, params)
@@ -347,6 +413,63 @@ func (_c *MockStudyGuideService_ListStudyGuides_Call) Return(listStudyGuidesResu
 }
 
 func (_c *MockStudyGuideService_ListStudyGuides_Call) RunAndReturn(run func(ctx context.Context, params studyguides.ListStudyGuidesParams) (studyguides.ListStudyGuidesResult, error)) *MockStudyGuideService_ListStudyGuides_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RemoveVote provides a mock function for the type MockStudyGuideService
+func (_mock *MockStudyGuideService) RemoveVote(ctx context.Context, params studyguides.RemoveVoteParams) error {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RemoveVote")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, studyguides.RemoveVoteParams) error); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockStudyGuideService_RemoveVote_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RemoveVote'
+type MockStudyGuideService_RemoveVote_Call struct {
+	*mock.Call
+}
+
+// RemoveVote is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params studyguides.RemoveVoteParams
+func (_e *MockStudyGuideService_Expecter) RemoveVote(ctx interface{}, params interface{}) *MockStudyGuideService_RemoveVote_Call {
+	return &MockStudyGuideService_RemoveVote_Call{Call: _e.mock.On("RemoveVote", ctx, params)}
+}
+
+func (_c *MockStudyGuideService_RemoveVote_Call) Run(run func(ctx context.Context, params studyguides.RemoveVoteParams)) *MockStudyGuideService_RemoveVote_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 studyguides.RemoveVoteParams
+		if args[1] != nil {
+			arg1 = args[1].(studyguides.RemoveVoteParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStudyGuideService_RemoveVote_Call) Return(err error) *MockStudyGuideService_RemoveVote_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockStudyGuideService_RemoveVote_Call) RunAndReturn(run func(ctx context.Context, params studyguides.RemoveVoteParams) error) *MockStudyGuideService_RemoveVote_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -45,6 +45,11 @@ type Repository interface {
 	SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUID) error
 	SoftDeleteQuizzesForGuide(ctx context.Context, studyGuideID pgtype.UUID) error
 
+	GuideExistsAndLive(ctx context.Context, id pgtype.UUID) (bool, error)
+	UpsertStudyGuideVote(ctx context.Context, arg db.UpsertStudyGuideVoteParams) error
+	ComputeGuideVoteScore(ctx context.Context, studyGuideID pgtype.UUID) (int64, error)
+	DeleteStudyGuideVote(ctx context.Context, arg db.DeleteStudyGuideVoteParams) (int64, error)
+
 	// InTx runs fn inside a single Postgres transaction. The Repository
 	// passed to fn is scoped to the tx; commits on a nil return,
 	// rolls back on any error. Used by DeleteStudyGuide for the
@@ -757,4 +762,104 @@ func (s *Service) DeleteStudyGuide(ctx context.Context, p DeleteStudyGuideParams
 		}
 		return nil
 	})
+}
+
+// CastVote upserts the viewer's vote on a guide (ASK-139). Same-
+// direction re-submits are no-ops at the SQL layer (the upsert WHERE
+// clause skips the row update); opposite-direction submits flip the
+// vote. After the upsert, the post-mutation vote_score is recomputed
+// and returned so the UI can patch its local state without a follow-
+// up GET.
+//
+// Order of checks:
+//  1. Validate the requested vote direction (up | down).
+//  2. GuideExistsAndLive -> 404 if missing or soft-deleted.
+//  3. UpsertStudyGuideVote.
+//  4. ComputeGuideVoteScore.
+//
+// The two SQL calls are NOT wrapped in a transaction: the upsert is
+// already atomic per-row (PK on (user_id, study_guide_id)) and the
+// score recomputation is a snapshot read -- a concurrent vote from a
+// different user that lands between the upsert and the recompute is
+// fine to be reflected in the response.
+func (s *Service) CastVote(ctx context.Context, p CastVoteParams) (CastVoteResult, error) {
+	dbVote, ok := guideVoteToDB(p.Vote)
+	if !ok {
+		return CastVoteResult{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"vote": "must be 'up' or 'down'",
+		})
+	}
+
+	guidePgxID := utils.UUID(p.StudyGuideID)
+	live, err := s.repo.GuideExistsAndLive(ctx, guidePgxID)
+	if err != nil {
+		return CastVoteResult{}, fmt.Errorf("CastVote: live check: %w", err)
+	}
+	if !live {
+		return CastVoteResult{}, apperrors.NewNotFound("Study guide not found")
+	}
+
+	if err := s.repo.UpsertStudyGuideVote(ctx, db.UpsertStudyGuideVoteParams{
+		UserID:       utils.UUID(p.ViewerID),
+		StudyGuideID: guidePgxID,
+		Vote:         dbVote,
+	}); err != nil {
+		return CastVoteResult{}, fmt.Errorf("CastVote: upsert: %w", err)
+	}
+
+	score, err := s.repo.ComputeGuideVoteScore(ctx, guidePgxID)
+	if err != nil {
+		return CastVoteResult{}, fmt.Errorf("CastVote: score: %w", err)
+	}
+
+	return CastVoteResult{Vote: p.Vote, VoteScore: score}, nil
+}
+
+// RemoveVote hard-deletes the viewer's vote row on a guide (ASK-141).
+// 404 covers BOTH "guide missing/deleted" and "no existing vote" --
+// both surface as the same status by design (the desired end state
+// is "no vote", which is already true in either case from the
+// caller's point of view). The guide-existence check runs first so
+// the more-specific "Study guide not found" message wins when both
+// conditions are true.
+func (s *Service) RemoveVote(ctx context.Context, p RemoveVoteParams) error {
+	guidePgxID := utils.UUID(p.StudyGuideID)
+	live, err := s.repo.GuideExistsAndLive(ctx, guidePgxID)
+	if err != nil {
+		return fmt.Errorf("RemoveVote: live check: %w", err)
+	}
+	if !live {
+		return apperrors.NewNotFound("Study guide not found")
+	}
+
+	rows, err := s.repo.DeleteStudyGuideVote(ctx, db.DeleteStudyGuideVoteParams{
+		UserID:       utils.UUID(p.ViewerID),
+		StudyGuideID: guidePgxID,
+	})
+	if err != nil {
+		return fmt.Errorf("RemoveVote: delete: %w", err)
+	}
+	if rows == 0 {
+		return apperrors.NewNotFound("Vote not found")
+	}
+	return nil
+}
+
+// guideVoteToDB maps the domain GuideVote enum onto the sqlc-generated
+// db.VoteDirection enum. Returns ok=false on unknown values; the
+// service translates that to a 400 'must be up or down'. The switch
+// is exhaustive against the GuideVote constants -- adding a new
+// domain value (e.g. GuideVoteAbstain) without updating both this
+// switch AND the SQL vote_direction enum is a compile-time
+// regression rather than a silent invalid-enum injection at the cast
+// site (see PR #139 review M1).
+func guideVoteToDB(v GuideVote) (db.VoteDirection, bool) {
+	switch v {
+	case GuideVoteUp:
+		return db.VoteDirectionUp, true
+	case GuideVoteDown:
+		return db.VoteDirectionDown, true
+	default:
+		return "", false
+	}
 }

@@ -135,3 +135,19 @@ func (r *sqlcRepository) SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUI
 func (r *sqlcRepository) SoftDeleteQuizzesForGuide(ctx context.Context, studyGuideID pgtype.UUID) error {
 	return r.queries.SoftDeleteQuizzesForGuide(ctx, studyGuideID)
 }
+
+func (r *sqlcRepository) GuideExistsAndLive(ctx context.Context, id pgtype.UUID) (bool, error) {
+	return r.queries.GuideExistsAndLive(ctx, id)
+}
+
+func (r *sqlcRepository) UpsertStudyGuideVote(ctx context.Context, arg db.UpsertStudyGuideVoteParams) error {
+	return r.queries.UpsertStudyGuideVote(ctx, arg)
+}
+
+func (r *sqlcRepository) ComputeGuideVoteScore(ctx context.Context, studyGuideID pgtype.UUID) (int64, error) {
+	return r.queries.ComputeGuideVoteScore(ctx, studyGuideID)
+}
+
+func (r *sqlcRepository) DeleteStudyGuideVote(ctx context.Context, arg db.DeleteStudyGuideVoteParams) (int64, error) {
+	return r.queries.DeleteStudyGuideVote(ctx, arg)
+}

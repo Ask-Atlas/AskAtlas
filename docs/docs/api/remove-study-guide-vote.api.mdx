@@ -1,0 +1,75 @@
+---
+id: remove-study-guide-vote
+title: "Remove the authenticated user's vote on a study guide"
+description: "Hard-deletes the row in `study_guide_votes` for the"
+sidebar_label: "Remove the authenticated user's vote on a study guide"
+hide_title: true
+hide_table_of_contents: true
+api: eJztVk1vG0cM/SsEL7GBtaQU7kU9OYjbuijawB/twRISaofSTrKaWXO4dhRh/3vB2bUtR0YvBeqLT/sx5PCR782QW4wNC6mP4czhFM95HW/5Qlu3+aX1jv+Kylig41SKb8wMp/griTtyXLNyAq0YJN6BD/Apmd/HlTl+vI3K6RMso5jJLBzcer5jKSAvH0JDXgoQ1laCD6u8T5tYQCMQBG5VqIakpDyahfNsl+B4cgx3FYdsnncCn2DtU/JhNU5xqQMwB3+eP1jOQh8cKkoQIvBXn9SCGkg4OoJF1ApSK0sqOQEJQxnrmprEDjTOgoVdbMBx8qsABxbc3oVdj9BAzDDEvOEMC7irfFnZX2EqK3az4AOw14oFSkoMS4nrnERJdc3yJkETfVCISzCsh6NZwAIbElqzsiScXm8x0Jpxirtl9g4L9MZKQ1rtUXVpVQ3+pmW4ujp7b9tb0LzDUD+NIJn1vJIrYuCwQOGb1nLEqUrLBaay4jXhdIu6aXog4sMKC1xGWZPiFNvWO+y6uTmnJobEyex/mBzb4yk209YQ2v1ktNy7wCK6zQi7Ao8nk32/d+TAoHFSLLCMQTmomVHT1L7MYh5/Tma73cccF5+51L1CXSgFR+L8N3bAIlEe4SSVttRWGNakZWXC2Qk1WLu4Jh+SkSZ2ptT3qZfR8U54H5RXLJacKadN++XsClxzSrTiZ9ccK/k6PZcSOecNEtUfnmD4bo+u2+X2uof4gOcx+rxA9Vqb60nTnFqa5px5ebvPy1WgVqsoVsJXYl6KmGcO2h9RYRnb8MrKC7Hy43PX2FlQlmA9juWWpa/LK0MvwVAGqFW0CagfH3Lv1QqnOM698ij3yjTePu293TiPORYrk9i36VZqc6TGo3XCxGUrXjd57R2TsJy0tvf1fHf5wojt09s1eki2Um1waML2vchGWAwvP9+34N/+vkTLyIdlzO73GacvJ1pTgpMPZ1igoe2V8nY0GU2MiCYmXVNW2TBpnD8OBna3c1DTCLs8qb1J/bQQA9DuRPG9FLePkn4dHf+30XFQjfJXHTc1+WAMZ2VuB2lf4660scDp3mDZq3teYBWTmsd2u6DEV1J3nf2+aVlM1/MCb0k8LUxp11t0Ptm7w+mS6sT/IoiD8+HcHsJ/mlWfTXf4SWFjuVDd2hcW+IU3+2N0N+8KrJgcS86hNzopS250x33vTrYz/HB7vD/9/fTyFLvuH4/iswA=
+sidebar_class_name: "delete api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Remove the authenticated user's vote on a study guide"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"delete"}
+  path={"/study-guides/{study_guide_id}/votes"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Hard-deletes the row in `study_guide_votes` for the
+(viewer, guide) pair, returning the user to a neutral state.
+Returns 404 when the guide is missing/soft-deleted OR when the
+viewer has no existing vote -- both surfaces are collapsed to
+404 by design (the desired state is "no vote", which is reached
+in either case from the caller's point of view).
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./remove-study-guide-vote.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./remove-study-guide-vote.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./remove-study-guide-vote.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      
