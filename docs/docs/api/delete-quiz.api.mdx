@@ -1,0 +1,92 @@
+---
+id: delete-quiz
+title: "Soft-delete a quiz"
+description: "Soft-deletes the quiz by setting `deleted_at = now()` (the row"
+sidebar_label: "Soft-delete a quiz"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV0tPHEcQ/iulvgSkAdY2uawVRUTGEpFD7ADKgUGmd7p2p01P9dBVAx5W+9+j6hnYtRdFyiHyhdM+6tFf1VeP7qWJLSYrPtKJM1PzDgMKfur8gymMQ66Sb1VopuYszmXPZTmD1Ai3nX+AWQ+MIp4WcD0I3Wcr8AtQvN/ZvYYd1UzxviQW2zN4yrZiZwHfAnczxtsOSSChdQxzHwSTet30dnJW0unFhw/XYMmBJLSyRmAZFpFwd7+kko46qWPyDzmiKVSqGtNepNDvw3mNYDupkcRXVtBBx5jgj4uzc5hhSdfq7wF5fzT77N01zGPKZ9lKXYJEaFOsEN1bsNRDlBpTSc+4XaAwHE7eZFwnDps2ClLVT8ECYxXJwbvjD8fnxxAJLIENmoJ+j9d5djnCkhJKl0i9HcIORYHXk8NdjcczeAYLDoOfKY8IVR19hbC3B7Yk17UhY3o8SmqrqVZ36NQN3McuOGAfkCT0UEWa+9RkY2RJXSX+7il6TX9j+SZnpDReC8HzwAOLDwFqTPhraUq67ZCHjNUIlQ0BU8ZaSWdD6MHyjafFQIrGpbLAUdVLYtsgJOQ2EiNYoEh7Iykj4AXKEzWDdrwvgGNJw1kMlSVNlfOs1dl5rqE0Gem9ZfjSscCY5dLAPMWmpFFOeIcJ8KvnQRgTlKaPnbr8SYAR12GXRlOdQXuax9TkytsLaG+gTXinRREJqniHCZ0WtiLuyAsIsnCujtMIleXKOpxCmzTXFQIjs4/EBTymkotMgCW+xwQxNyaXZBPC6Z/nILGranRDSgdKfNOGHmZYxQa19+48+1lAreIMOXiWA4difQAk10ZPwmNhtQkZ0x0y1J4lJl/ZAM6K1byXVMWmHWr0EehYHVLV44DgFqufGErz6OopuJIGn31pIOFt5xM2SLJfkilMa5NtUDCxmV4uDdkGzTQz89k7Uxiv06i1Um+NqPMhtbcdwsXFyTuI8/WYkAgbnWUKM57rzFRSh4XhqsbGmunSSN/qiSzJ08IUZqDVTE3XeWdWqys1HmqTVf/15FA/vsXyKROw0ctvgeK6pmfR9ftmVZjDyatt44s8UHSQoUZcRRIkUT3bDh3tIx18YVVebiOPsy9YyfYEF0vOJqdeAVOKaY1naPUu4cCgzvONo0ZtFxvriZWjpHtD/JCAKjrcON6T4AKTRsdipePtpK4K0yCzXeCzsqEk+bmQrHNeIdnw8RsM3/lYrTYZvhwgPuFZn35VGPES1PSobY81TDXOxLzZJuZ9TDPvHNILKz+KlWd67TTqMujopVd+ECs/TybbrJyQYCIbIM/+NOTlhaEfwVAGKHXUK/7TAswrdGoOxlvvwXJcsSv1nCkbFnCXgqrZ1htdfYxVl7z0WfYb2oRJb91menm1KT5TGodgNpWeQqtFWjNuXf09y0qmGL+8f9y5v/99bhS/3q6y+WN8fHMkwTIcfTwxhVG0Q1282p/sTzTtbWRpbK6p8Q6x8YQBm68F31fVcl2dLw+elwfPy4Pn5cHz/z94xoko+FUO2mA96fTKU3c5DulLM3aqKcz08SV0VZg6sqh0uZxZxosUViv9+7bDpPP5qjB3NnkdPXlaO8/63Znp3AbGf5l9O3+N22YX/tOj6tlQxj8t9Tqobej0lynMDfYbD7vV1aowNVqHKYMdpEdVha1s2G1dGXTpPC23oevNavUP4Wy1QQ==
+sidebar_class_name: "delete api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Soft-delete a quiz"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"delete"}
+  path={"/quizzes/{quiz_id}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Soft-deletes the quiz by setting `deleted_at = now()` (the row
+stays in the table; subsequent reads filter by `deleted_at IS
+NULL` and treat the quiz as gone).
+
+Authorization: creator-only. The authenticated user MUST be
+`quizzes.creator_id` for the action to proceed; any other
+authenticated user gets 403.
+
+Idempotency: a second DELETE on an already-soft-deleted quiz
+returns 404 (not 204). This is a deliberate choice -- a
+duplicate DELETE that returned 204 would silently confirm a
+destructive action and mask the "is this quiz still here?"
+question the caller is actually asking. The 404 is also the
+same response a non-creator would get for the same row, so
+callers cannot distinguish "quiz was just deleted" from
+"quiz never existed" or "you can't see this quiz" -- the
+information-leak prevention covered by the unit tests.
+
+No cascade: practice sessions, questions, and answer options
+are NOT touched. The quiz simply becomes invisible to the
+list/detail endpoints. This preserves historical data for
+completed sessions and matches the spec's "preserve practice
+history" requirement.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./delete-quiz.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./delete-quiz.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./delete-quiz.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

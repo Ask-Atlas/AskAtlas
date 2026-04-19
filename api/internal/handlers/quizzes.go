@@ -21,6 +21,7 @@ import (
 type QuizService interface {
 	CreateQuiz(ctx context.Context, params quizzes.CreateQuizParams) (quizzes.QuizDetail, error)
 	ListQuizzes(ctx context.Context, params quizzes.ListQuizzesParams) ([]quizzes.QuizListItem, error)
+	DeleteQuiz(ctx context.Context, params quizzes.DeleteQuizParams) error
 }
 
 // QuizzesHandler manages incoming HTTP requests for the quizzes
@@ -61,6 +62,34 @@ func (h *QuizzesHandler) ListQuizzes(w http.ResponseWriter, r *http.Request, stu
 	}
 
 	respondJSON(w, http.StatusOK, mapListQuizzesResponse(items))
+}
+
+// DeleteQuiz handles DELETE /quizzes/{quiz_id} (ASK-102).
+// Creator-only -- the service runs the locked SELECT + creator
+// check + soft-delete in a single transaction. 404 covers both
+// 'never existed' and 'already deleted' (idempotent semantics);
+// 403 covers viewer-is-not-creator. Returns 204 with no body on
+// success.
+func (h *QuizzesHandler) DeleteQuiz(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	if err := h.service.DeleteQuiz(r.Context(), quizzes.DeleteQuizParams{
+		QuizID:   uuid.UUID(quizId),
+		ViewerID: viewerID,
+	}); err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("DeleteQuiz failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // CreateQuiz handles POST /study-guides/{study_guide_id}/quizzes.

@@ -104,6 +104,63 @@ func (_c *MockQuizService_CreateQuiz_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
+// DeleteQuiz provides a mock function for the type MockQuizService
+func (_mock *MockQuizService) DeleteQuiz(ctx context.Context, params quizzes.DeleteQuizParams) error {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteQuiz")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, quizzes.DeleteQuizParams) error); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockQuizService_DeleteQuiz_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteQuiz'
+type MockQuizService_DeleteQuiz_Call struct {
+	*mock.Call
+}
+
+// DeleteQuiz is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params quizzes.DeleteQuizParams
+func (_e *MockQuizService_Expecter) DeleteQuiz(ctx interface{}, params interface{}) *MockQuizService_DeleteQuiz_Call {
+	return &MockQuizService_DeleteQuiz_Call{Call: _e.mock.On("DeleteQuiz", ctx, params)}
+}
+
+func (_c *MockQuizService_DeleteQuiz_Call) Run(run func(ctx context.Context, params quizzes.DeleteQuizParams)) *MockQuizService_DeleteQuiz_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 quizzes.DeleteQuizParams
+		if args[1] != nil {
+			arg1 = args[1].(quizzes.DeleteQuizParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockQuizService_DeleteQuiz_Call) Return(err error) *MockQuizService_DeleteQuiz_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockQuizService_DeleteQuiz_Call) RunAndReturn(run func(ctx context.Context, params quizzes.DeleteQuizParams) error) *MockQuizService_DeleteQuiz_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListQuizzes provides a mock function for the type MockQuizService
 func (_mock *MockQuizService) ListQuizzes(ctx context.Context, params quizzes.ListQuizzesParams) ([]quizzes.QuizListItem, error) {
 	ret := _mock.Called(ctx, params)

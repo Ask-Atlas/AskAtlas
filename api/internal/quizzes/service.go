@@ -2,6 +2,8 @@ package quizzes
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -24,6 +26,8 @@ type Repository interface {
 	ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]db.ListQuizQuestionsByQuizRow, error)
 	ListQuizAnswerOptionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]db.QuizAnswerOption, error)
 	ListQuizzesByStudyGuide(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListQuizzesByStudyGuideRow, error)
+	GetQuizByIDForUpdate(ctx context.Context, id pgtype.UUID) (db.GetQuizByIDForUpdateRow, error)
+	SoftDeleteQuiz(ctx context.Context, id pgtype.UUID) error
 
 	// InTx runs fn inside a single Postgres transaction. The
 	// Repository passed to fn is scoped to the tx via
@@ -87,6 +91,52 @@ func (s *Service) ListQuizzes(ctx context.Context, p ListQuizzesParams) ([]QuizL
 		out = append(out, item)
 	}
 	return out, nil
+}
+
+// DeleteQuiz soft-deletes a quiz (creator-only, ASK-102). Wraps
+// the locked SELECT + creator check + soft-delete in a single
+// transaction so a concurrent delete cannot race the auth check
+// (one wins with 204, the other sees the row already-deleted in
+// its tx snapshot and returns 404).
+//
+// 404 is returned both when the quiz is missing and when it's
+// already soft-deleted (idempotent semantics: a duplicate DELETE
+// does not surface a 409 since the desired state is already
+// reached). 403 is returned when the viewer is not the quiz's
+// creator. The order of checks is "missing/deleted -> creator
+// mismatch -> proceed", so a 404 wins over a 403 when both apply
+// (a non-creator probing a deleted quiz can't distinguish "no
+// such quiz" from "you can't touch this quiz").
+//
+// No cascade: practice sessions, questions, and answer options
+// stay intact. The quiz simply becomes invisible to the list/
+// detail endpoints (which all filter q.deleted_at IS NULL). This
+// preserves historical practice data per the spec.
+func (s *Service) DeleteQuiz(ctx context.Context, p DeleteQuizParams) error {
+	quizPgxID := utils.UUID(p.QuizID)
+	return s.repo.InTx(ctx, func(tx Repository) error {
+		row, err := tx.GetQuizByIDForUpdate(ctx, quizPgxID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return apperrors.NewNotFound("Quiz not found")
+			}
+			return fmt.Errorf("DeleteQuiz: lock: %w", err)
+		}
+		if row.DeletedAt.Valid {
+			return apperrors.NewNotFound("Quiz not found")
+		}
+		creatorID, err := utils.PgxToGoogleUUID(row.CreatorID)
+		if err != nil {
+			return fmt.Errorf("DeleteQuiz: creator id: %w", err)
+		}
+		if creatorID != p.ViewerID {
+			return apperrors.NewForbidden()
+		}
+		if err := tx.SoftDeleteQuiz(ctx, quizPgxID); err != nil {
+			return fmt.Errorf("DeleteQuiz: soft delete: %w", err)
+		}
+		return nil
+	})
 }
 
 // CreateQuiz creates a quiz with all its questions and answer
