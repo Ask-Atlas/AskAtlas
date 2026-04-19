@@ -317,3 +317,89 @@ func (q *Queries) ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUI
 	}
 	return items, nil
 }
+
+const listQuizzesByStudyGuide = `-- name: ListQuizzesByStudyGuide :many
+SELECT
+  q.id, q.title, q.description, q.created_at, q.updated_at,
+  u.id          AS creator_id,
+  u.first_name  AS creator_first_name,
+  u.last_name   AS creator_last_name,
+  COUNT(qq.id)::bigint AS question_count
+FROM quizzes q
+JOIN users u ON u.id = q.creator_id
+LEFT JOIN quiz_questions qq ON qq.quiz_id = q.id
+WHERE q.study_guide_id = $1::uuid
+  AND q.deleted_at IS NULL
+  AND u.deleted_at IS NULL
+GROUP BY q.id, u.id
+ORDER BY q.created_at DESC, q.id DESC
+`
+
+type ListQuizzesByStudyGuideRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	Title            string             `json:"title"`
+	Description      pgtype.Text        `json:"description"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	CreatorID        pgtype.UUID        `json:"creator_id"`
+	CreatorFirstName string             `json:"creator_first_name"`
+	CreatorLastName  string             `json:"creator_last_name"`
+	QuestionCount    int64              `json:"question_count"`
+}
+
+// Lists every non-soft-deleted quiz attached to a study guide
+// (ASK-136). Each row carries the privacy-floor creator payload
+// (id + first_name + last_name only -- mirrors the studyguides
+// surface) plus a server-computed question_count via LEFT JOIN +
+// COUNT, so a quiz with zero questions still surfaces with a 0
+// count rather than being silently dropped by an INNER JOIN.
+//
+// Soft-delete invariants:
+//   - q.deleted_at IS NULL  -- excludes soft-deleted quizzes
+//     (AC3: studyguide with mixed live +
+//     deleted quizzes only returns the live
+//     ones)
+//   - u.deleted_at IS NULL  -- excludes quizzes whose creator's user
+//     record was soft-deleted (matches the
+//     ASK-143 convention used by
+//     GetStudyGuideDetail)
+//
+// The parent study guide's deleted_at is checked separately by the
+// service via GuideExistsAndLiveForQuizzes BEFORE this query runs --
+// a missing or soft-deleted guide returns 404 even when this query
+// would have returned an empty array. Keeps the 404 vs 200-empty
+// distinction crisp.
+//
+// Order: created_at DESC with id DESC as the deterministic
+// tiebreaker (the spec calls for "newest first"). The id tiebreaker
+// prevents a flaky test on a Postgres that happens to insert two
+// rows in the same microsecond.
+func (q *Queries) ListQuizzesByStudyGuide(ctx context.Context, studyGuideID pgtype.UUID) ([]ListQuizzesByStudyGuideRow, error) {
+	rows, err := q.db.Query(ctx, listQuizzesByStudyGuide, studyGuideID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListQuizzesByStudyGuideRow
+	for rows.Next() {
+		var i ListQuizzesByStudyGuideRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.CreatorID,
+			&i.CreatorFirstName,
+			&i.CreatorLastName,
+			&i.QuestionCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

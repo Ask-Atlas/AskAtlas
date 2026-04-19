@@ -86,3 +86,7 @@ func (r *sqlcRepository) ListQuizQuestionsByQuiz(ctx context.Context, quizID pgt
 func (r *sqlcRepository) ListQuizAnswerOptionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]db.QuizAnswerOption, error) {
 	return r.queries.ListQuizAnswerOptionsByQuiz(ctx, quizID)
 }
+
+func (r *sqlcRepository) ListQuizzesByStudyGuide(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListQuizzesByStudyGuideRow, error) {
+	return r.queries.ListQuizzesByStudyGuide(ctx, studyGuideID)
+}

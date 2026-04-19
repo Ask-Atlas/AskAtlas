@@ -7,6 +7,35 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
 )
 
+// mapQuizListItem projects a single ListQuizzesByStudyGuide row
+// into the domain QuizListItem (ASK-136). Privacy floor: copies
+// only id + first_name + last_name from the creator -- the SQL
+// SELECT list is also the privacy floor so wider creator fields
+// shouldn't exist in the row.
+func mapQuizListItem(r db.ListQuizzesByStudyGuideRow) (QuizListItem, error) {
+	id, err := utils.PgxToGoogleUUID(r.ID)
+	if err != nil {
+		return QuizListItem{}, fmt.Errorf("mapQuizListItem: id: %w", err)
+	}
+	creatorID, err := utils.PgxToGoogleUUID(r.CreatorID)
+	if err != nil {
+		return QuizListItem{}, fmt.Errorf("mapQuizListItem: creator id: %w", err)
+	}
+	return QuizListItem{
+		ID:            id,
+		Title:         r.Title,
+		Description:   utils.TextPtr(r.Description),
+		QuestionCount: r.QuestionCount,
+		Creator: Creator{
+			ID:        creatorID,
+			FirstName: r.CreatorFirstName,
+			LastName:  r.CreatorLastName,
+		},
+		CreatedAt: r.CreatedAt.Time,
+		UpdatedAt: r.UpdatedAt.Time,
+	}, nil
+}
+
 // mapQuizDetail projects the three sqlc rowsets returned by the
 // hydrate fan-out (GetQuizDetail + ListQuizQuestionsByQuiz +
 // ListQuizAnswerOptionsByQuiz) into a single QuizDetail value.

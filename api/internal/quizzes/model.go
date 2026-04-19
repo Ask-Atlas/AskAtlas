@@ -77,3 +77,18 @@ type QuizDetail struct {
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
+
+// QuizListItem is the row-level domain payload returned by
+// Service.ListQuizzes (ASK-136). Richer than studyguides.Quiz (which
+// embeds in StudyGuideDetailResponse and intentionally stays
+// minimal): includes the creator + description + timestamps so the
+// practice page can render the quiz card without a follow-up GET.
+type QuizListItem struct {
+	ID            uuid.UUID
+	Title         string
+	Description   *string
+	QuestionCount int64
+	Creator       Creator
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}

@@ -120,6 +120,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/list-quizzes",
+          label: "List quizzes attached to a study guide",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "api/create-quiz",
           label: "Create a quiz attached to a study guide",
           className: "api-method post",

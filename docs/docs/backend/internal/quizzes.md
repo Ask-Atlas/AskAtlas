@@ -15,15 +15,18 @@ Package quizzes hosts the domain types, params, mappers, and service logic for t
 - [type CreateQuizParams](<#CreateQuizParams>)
 - [type CreateQuizQuestionInput](<#CreateQuizQuestionInput>)
 - [type Creator](<#Creator>)
+- [type ListQuizzesParams](<#ListQuizzesParams>)
 - [type MCQOption](<#MCQOption>)
 - [type Question](<#Question>)
 - [type QuestionType](<#QuestionType>)
 - [type QuizDetail](<#QuizDetail>)
+- [type QuizListItem](<#QuizListItem>)
 - [type Repository](<#Repository>)
   - [func NewSQLCRepository\(pool \*pgxpool.Pool, queries \*db.Queries\) Repository](<#NewSQLCRepository>)
 - [type Service](<#Service>)
   - [func NewService\(repo Repository\) \*Service](<#NewService>)
   - [func \(s \*Service\) CreateQuiz\(ctx context.Context, p CreateQuizParams\) \(QuizDetail, error\)](<#Service.CreateQuiz>)
+  - [func \(s \*Service\) ListQuizzes\(ctx context.Context, p ListQuizzesParams\) \(\[\]QuizListItem, error\)](<#Service.ListQuizzes>)
 
 
 ## Constants
@@ -133,6 +136,17 @@ type Creator struct {
 }
 ```
 
+<a name="ListQuizzesParams"></a>
+## type [ListQuizzesParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/params.go#L101-L103>)
+
+ListQuizzesParams is the input to Service.ListQuizzes \(ASK\-136\). No filters / pagination \-\- the endpoint returns every non\-deleted quiz on the guide. ViewerID is intentionally absent: the spec has no per\-viewer access control beyond authentication, and the privacy\-floor creator info is uniform across all callers.
+
+```go
+type ListQuizzesParams struct {
+    StudyGuideID uuid.UUID
+}
+```
+
 <a name="MCQOption"></a>
 ## type [MCQOption](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/model.go#L42-L47>)
 
@@ -203,8 +217,25 @@ type QuizDetail struct {
 }
 ```
 
+<a name="QuizListItem"></a>
+## type [QuizListItem](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/model.go#L86-L94>)
+
+QuizListItem is the row\-level domain payload returned by Service.ListQuizzes \(ASK\-136\). Richer than studyguides.Quiz \(which embeds in StudyGuideDetailResponse and intentionally stays minimal\): includes the creator \+ description \+ timestamps so the practice page can render the quiz card without a follow\-up GET.
+
+```go
+type QuizListItem struct {
+    ID            uuid.UUID
+    Title         string
+    Description   *string
+    QuestionCount int64
+    Creator       Creator
+    CreatedAt     time.Time
+    UpdatedAt     time.Time
+}
+```
+
 <a name="Repository"></a>
-## type [Repository](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L18-L34>)
+## type [Repository](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L18-L35>)
 
 Repository is the data\-access surface required by Service. Mirrors the studyguides.Repository pattern \-\- the production implementation is sqlc\-backed and lives in sqlc\_repository.go; tests inject a mockery\-generated mock.
 
@@ -217,6 +248,7 @@ type Repository interface {
     GetQuizDetail(ctx context.Context, id pgtype.UUID) (db.GetQuizDetailRow, error)
     ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]db.ListQuizQuestionsByQuizRow, error)
     ListQuizAnswerOptionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]db.QuizAnswerOption, error)
+    ListQuizzesByStudyGuide(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListQuizzesByStudyGuideRow, error)
 
     // InTx runs fn inside a single Postgres transaction. The
     // Repository passed to fn is scoped to the tx via
@@ -238,7 +270,7 @@ func NewSQLCRepository(pool *pgxpool.Pool, queries *db.Queries) Repository
 NewSQLCRepository returns a Repository backed by sqlc\-generated Postgres queries. Takes the pgxpool.Pool alongside the Queries instance so InTx can begin transactions.
 
 <a name="Service"></a>
-## type [Service](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L37-L39>)
+## type [Service](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L38-L40>)
 
 Service is the business\-logic layer for the quizzes feature.
 
@@ -249,7 +281,7 @@ type Service struct {
 ```
 
 <a name="NewService"></a>
-### func [NewService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L42>)
+### func [NewService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L43>)
 
 ```go
 func NewService(repo Repository) *Service
@@ -258,7 +290,7 @@ func NewService(repo Repository) *Service
 NewService creates a new Service backed by the given Repository.
 
 <a name="Service.CreateQuiz"></a>
-### func \(\*Service\) [CreateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L71>)
+### func \(\*Service\) [CreateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L117>)
 
 ```go
 func (s *Service) CreateQuiz(ctx context.Context, p CreateQuizParams) (QuizDetail, error)
@@ -274,5 +306,21 @@ Validation runs in two passes:
 True/false questions auto\-expand to 2 quiz\_answer\_options rows \("True", "False"\) with the matching is\_correct flag. Freeform questions store the reference answer on quiz\_questions.reference\_answer and create no options rows. MCQ stores the per\-option text \+ is\_correct directly.
 
 After the tx commits, hydrates the response by loading the quiz \+ creator \(privacy floor\) \+ questions \+ options via three separate reads. The two\-list \(questions \+ options\) fan\-out matches the studyguides detail pattern; mapping options back onto questions happens in Go via group\-by\-question\_id.
+
+<a name="Service.ListQuizzes"></a>
+### func \(\*Service\) [ListQuizzes](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L65>)
+
+```go
+func (s *Service) ListQuizzes(ctx context.Context, p ListQuizzesParams) ([]QuizListItem, error)
+```
+
+ListQuizzes returns every non\-soft\-deleted quiz attached to a study guide \(ASK\-136\). The order is created\_at DESC with id DESC as tiebreaker \(matches the SQL ORDER BY in ListQuizzesByStudyGuide\). Returns an empty \(non\-nil\) slice when the guide has no quizzes; the handler renders that as \`\[\]\`.
+
+Order of operations:
+
+1. GuideExistsAndLiveForQuizzes \-\- 404 if missing or soft\-deleted. Done BEFORE the list query so a soft\-deleted guide returns 404 even when the list query would have returned an empty array \(the spec is explicit on this: "soft\-deleted guide \-\> 404, never 200 empty"\).
+2. ListQuizzesByStudyGuide.
+
+No transaction wrapping \-\- both reads are snapshot\-safe and a race where a guide gets soft\-deleted between the live check and the list returns the live\-time list, which is acceptable eventual\-consistency behavior for a read endpoint.
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)

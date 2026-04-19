@@ -115,6 +115,49 @@ FROM quiz_questions
 WHERE quiz_id = sqlc.arg(quiz_id)::uuid
 ORDER BY sort_order ASC, id ASC;
 
+-- name: ListQuizzesByStudyGuide :many
+-- Lists every non-soft-deleted quiz attached to a study guide
+-- (ASK-136). Each row carries the privacy-floor creator payload
+-- (id + first_name + last_name only -- mirrors the studyguides
+-- surface) plus a server-computed question_count via LEFT JOIN +
+-- COUNT, so a quiz with zero questions still surfaces with a 0
+-- count rather than being silently dropped by an INNER JOIN.
+--
+-- Soft-delete invariants:
+--   * q.deleted_at IS NULL  -- excludes soft-deleted quizzes
+--                              (AC3: studyguide with mixed live +
+--                              deleted quizzes only returns the live
+--                              ones)
+--   * u.deleted_at IS NULL  -- excludes quizzes whose creator's user
+--                              record was soft-deleted (matches the
+--                              ASK-143 convention used by
+--                              GetStudyGuideDetail)
+--
+-- The parent study guide's deleted_at is checked separately by the
+-- service via GuideExistsAndLiveForQuizzes BEFORE this query runs --
+-- a missing or soft-deleted guide returns 404 even when this query
+-- would have returned an empty array. Keeps the 404 vs 200-empty
+-- distinction crisp.
+--
+-- Order: created_at DESC with id DESC as the deterministic
+-- tiebreaker (the spec calls for "newest first"). The id tiebreaker
+-- prevents a flaky test on a Postgres that happens to insert two
+-- rows in the same microsecond.
+SELECT
+  q.id, q.title, q.description, q.created_at, q.updated_at,
+  u.id          AS creator_id,
+  u.first_name  AS creator_first_name,
+  u.last_name   AS creator_last_name,
+  COUNT(qq.id)::bigint AS question_count
+FROM quizzes q
+JOIN users u ON u.id = q.creator_id
+LEFT JOIN quiz_questions qq ON qq.quiz_id = q.id
+WHERE q.study_guide_id = sqlc.arg(study_guide_id)::uuid
+  AND q.deleted_at IS NULL
+  AND u.deleted_at IS NULL
+GROUP BY q.id, u.id
+ORDER BY q.created_at DESC, q.id DESC;
+
 -- name: ListQuizAnswerOptionsByQuiz :many
 -- All answer options for every question in a quiz, ordered by
 -- question_id then sort_order then id. The mapper groups by
