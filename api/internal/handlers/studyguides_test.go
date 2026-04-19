@@ -1014,3 +1014,234 @@ func TestStudyGuidesHandler_RemoveVote_InternalError_500(t *testing.T) {
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
+
+// ---------------------------------------------------------------------
+// RecommendStudyGuide (ASK-147)
+// ---------------------------------------------------------------------
+
+func TestStudyGuidesHandler_Recommend_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := fmt.Sprintf("/study-guides/%s/recommendations", uuid.NewString())
+	req := httptest.NewRequest(http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestStudyGuidesHandler_Recommend_Success_201(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	guideID := uuid.New()
+	recID := uuid.New()
+	now := time.Now().UTC()
+
+	captured := &studyguides.RecommendStudyGuideParams{}
+	mockSvc.EXPECT().
+		RecommendStudyGuide(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, p studyguides.RecommendStudyGuideParams) {
+			*captured = p
+		}).
+		Return(studyguides.Recommendation{
+			StudyGuideID: guideID,
+			Recommender: studyguides.Creator{
+				ID: recID, FirstName: "Ananth", LastName: "Jillepalli",
+			},
+			CreatedAt: now,
+		}, nil)
+
+	url := fmt.Sprintf("/study-guides/%s/recommendations", guideID)
+	req := authedRequestMethod(t, http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusCreated, w.Code)
+	var resp api.RecommendationResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, guideID, uuid.UUID(resp.StudyGuideId))
+	assert.Equal(t, recID, uuid.UUID(resp.RecommendedBy.Id))
+	assert.Equal(t, "Ananth", resp.RecommendedBy.FirstName)
+	assert.Equal(t, "Jillepalli", resp.RecommendedBy.LastName)
+	assert.Equal(t, guideID, captured.StudyGuideID)
+	assert.NotEqual(t, uuid.Nil, captured.ViewerID)
+}
+
+func TestStudyGuidesHandler_Recommend_Forbidden_403(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		RecommendStudyGuide(mock.Anything, mock.Anything).
+		Return(studyguides.Recommendation{}, &apperrors.AppError{
+			Code:    http.StatusForbidden,
+			Status:  "Forbidden",
+			Message: "Only instructors and TAs can recommend study guides",
+		})
+
+	url := fmt.Sprintf("/study-guides/%s/recommendations", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestStudyGuidesHandler_Recommend_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		RecommendStudyGuide(mock.Anything, mock.Anything).
+		Return(studyguides.Recommendation{}, apperrors.NewNotFound("Study guide not found"))
+
+	url := fmt.Sprintf("/study-guides/%s/recommendations", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestStudyGuidesHandler_Recommend_Conflict_409(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		RecommendStudyGuide(mock.Anything, mock.Anything).
+		Return(studyguides.Recommendation{}, &apperrors.AppError{
+			Code:    http.StatusConflict,
+			Status:  "Conflict",
+			Message: "You have already recommended this study guide",
+		})
+
+	url := fmt.Sprintf("/study-guides/%s/recommendations", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusConflict, w.Code)
+}
+
+func TestStudyGuidesHandler_Recommend_InternalError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		RecommendStudyGuide(mock.Anything, mock.Anything).
+		Return(studyguides.Recommendation{}, errors.New("db down"))
+
+	url := fmt.Sprintf("/study-guides/%s/recommendations", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// ---------------------------------------------------------------------
+// RemoveStudyGuideRecommendation (ASK-101)
+// ---------------------------------------------------------------------
+
+func TestStudyGuidesHandler_RemoveRecommendation_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := fmt.Sprintf("/study-guides/%s/recommendations", uuid.NewString())
+	req := httptest.NewRequest(http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestStudyGuidesHandler_RemoveRecommendation_Success_204(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	guideID := uuid.New()
+	captured := &studyguides.RemoveRecommendationParams{}
+	mockSvc.EXPECT().
+		RemoveRecommendation(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, p studyguides.RemoveRecommendationParams) {
+			*captured = p
+		}).
+		Return(nil)
+
+	url := fmt.Sprintf("/study-guides/%s/recommendations", guideID)
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNoContent, w.Code)
+	assert.Empty(t, w.Body.String())
+	assert.Equal(t, guideID, captured.StudyGuideID)
+	assert.NotEqual(t, uuid.Nil, captured.ViewerID)
+}
+
+func TestStudyGuidesHandler_RemoveRecommendation_Forbidden_403(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		RemoveRecommendation(mock.Anything, mock.Anything).
+		Return(&apperrors.AppError{
+			Code:    http.StatusForbidden,
+			Status:  "Forbidden",
+			Message: "Only instructors and TAs can manage recommendations",
+		})
+
+	url := fmt.Sprintf("/study-guides/%s/recommendations", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestStudyGuidesHandler_RemoveRecommendation_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		RemoveRecommendation(mock.Anything, mock.Anything).
+		Return(apperrors.NewNotFound("Recommendation not found"))
+
+	url := fmt.Sprintf("/study-guides/%s/recommendations", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestStudyGuidesHandler_RemoveRecommendation_InternalError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		RemoveRecommendation(mock.Anything, mock.Anything).
+		Return(errors.New("db down"))
+
+	url := fmt.Sprintf("/study-guides/%s/recommendations", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
