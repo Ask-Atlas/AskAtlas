@@ -59,17 +59,25 @@ DELETE FROM practice_sessions
 WHERE user_id = $1::uuid
   AND quiz_id = $2::uuid
   AND completed_at IS NULL
-  AND started_at < now() - interval '7 days'
+  AND started_at < now() - ($3::bigint * interval '1 second')
 `
 
 type DeleteStaleIncompleteSessionsParams struct {
-	UserID pgtype.UUID `json:"user_id"`
-	QuizID pgtype.UUID `json:"quiz_id"`
+	UserID                pgtype.UUID `json:"user_id"`
+	QuizID                pgtype.UUID `json:"quiz_id"`
+	StaleThresholdSeconds int64       `json:"stale_threshold_seconds"`
 }
 
 // Hard-deletes this user's incomplete session for this quiz when it
-// has been sitting around for more than 7 days. CASCADE deletes the
-// attached practice_session_questions and practice_answers rows.
+// has been sitting around longer than the caller-supplied stale
+// threshold. CASCADE deletes the attached practice_session_questions
+// and practice_answers rows.
+//
+// The threshold is a Go-side constant (sessions.StaleSessionAge,
+// currently 7 days) passed in as seconds so the policy lives in
+// exactly one place. Multiplying by `interval '1 second'` lets us
+// pass a plain integer instead of a Postgres interval value, which
+// keeps the sqlc-generated Go signature simple.
 //
 // Scoped per (user_id, quiz_id): we don't want a global cleanup job
 // here -- the spec wants stale-cleanup to run on the start-session
@@ -82,7 +90,7 @@ type DeleteStaleIncompleteSessionsParams struct {
 // can match the WHERE clause, so DELETE is a no-op when there's no
 // stale session, and a single-row DELETE otherwise.
 func (q *Queries) DeleteStaleIncompleteSessions(ctx context.Context, arg DeleteStaleIncompleteSessionsParams) error {
-	_, err := q.db.Exec(ctx, deleteStaleIncompleteSessions, arg.UserID, arg.QuizID)
+	_, err := q.db.Exec(ctx, deleteStaleIncompleteSessions, arg.UserID, arg.QuizID, arg.StaleThresholdSeconds)
 	return err
 }
 

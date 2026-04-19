@@ -71,8 +71,15 @@ type Querier interface {
 	// already-detached races (0 rows -> 404) vs success (1 row -> nil).
 	DeleteGuideResource(ctx context.Context, arg DeleteGuideResourceParams) (int64, error)
 	// Hard-deletes this user's incomplete session for this quiz when it
-	// has been sitting around for more than 7 days. CASCADE deletes the
-	// attached practice_session_questions and practice_answers rows.
+	// has been sitting around longer than the caller-supplied stale
+	// threshold. CASCADE deletes the attached practice_session_questions
+	// and practice_answers rows.
+	//
+	// The threshold is a Go-side constant (sessions.StaleSessionAge,
+	// currently 7 days) passed in as seconds so the policy lives in
+	// exactly one place. Multiplying by `interval '1 second'` lets us
+	// pass a plain integer instead of a Postgres interval value, which
+	// keeps the sqlc-generated Go signature simple.
 	//
 	// Scoped per (user_id, quiz_id): we don't want a global cleanup job
 	// here -- the spec wants stale-cleanup to run on the start-session
