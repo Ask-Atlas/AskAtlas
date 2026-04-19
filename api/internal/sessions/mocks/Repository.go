@@ -873,6 +873,74 @@ func (_c *MockRepository_ListSessionAnswers_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// ListUserSessionsForQuiz provides a mock function for the type MockRepository
+func (_mock *MockRepository) ListUserSessionsForQuiz(ctx context.Context, arg db.ListUserSessionsForQuizParams) ([]db.ListUserSessionsForQuizRow, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListUserSessionsForQuiz")
+	}
+
+	var r0 []db.ListUserSessionsForQuizRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListUserSessionsForQuizParams) ([]db.ListUserSessionsForQuizRow, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListUserSessionsForQuizParams) []db.ListUserSessionsForQuizRow); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.ListUserSessionsForQuizRow)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListUserSessionsForQuizParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_ListUserSessionsForQuiz_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListUserSessionsForQuiz'
+type MockRepository_ListUserSessionsForQuiz_Call struct {
+	*mock.Call
+}
+
+// ListUserSessionsForQuiz is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.ListUserSessionsForQuizParams
+func (_e *MockRepository_Expecter) ListUserSessionsForQuiz(ctx interface{}, arg interface{}) *MockRepository_ListUserSessionsForQuiz_Call {
+	return &MockRepository_ListUserSessionsForQuiz_Call{Call: _e.mock.On("ListUserSessionsForQuiz", ctx, arg)}
+}
+
+func (_c *MockRepository_ListUserSessionsForQuiz_Call) Run(run func(ctx context.Context, arg db.ListUserSessionsForQuizParams)) *MockRepository_ListUserSessionsForQuiz_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ListUserSessionsForQuizParams
+		if args[1] != nil {
+			arg1 = args[1].(db.ListUserSessionsForQuizParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_ListUserSessionsForQuiz_Call) Return(listUserSessionsForQuizRows []db.ListUserSessionsForQuizRow, err error) *MockRepository_ListUserSessionsForQuiz_Call {
+	_c.Call.Return(listUserSessionsForQuizRows, err)
+	return _c
+}
+
+func (_c *MockRepository_ListUserSessionsForQuiz_Call) RunAndReturn(run func(ctx context.Context, arg db.ListUserSessionsForQuizParams) ([]db.ListUserSessionsForQuizRow, error)) *MockRepository_ListUserSessionsForQuiz_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // LockSessionForCompletion provides a mock function for the type MockRepository
 func (_mock *MockRepository) LockSessionForCompletion(ctx context.Context, id pgtype.UUID) (db.PracticeSession, error) {
 	ret := _mock.Called(ctx, id)

@@ -262,6 +262,56 @@ SET completed_at = now()
 WHERE id = sqlc.arg(id)::uuid
 RETURNING completed_at;
 
+-- name: ListUserSessionsForQuiz :many
+-- Cursor-paginated keyset list of the authenticated user's
+-- practice sessions for one quiz (ASK-149). Sorted by
+-- (started_at DESC, id DESC) so newest attempts appear first;
+-- id is the deterministic tie-breaker on the (vanishingly rare)
+-- case of two sessions sharing started_at to the microsecond.
+--
+-- Filters:
+--   * Scoped to (user_id, quiz_id). The handler/service
+--     anchors user_id on the JWT so users cannot list each
+--     other's sessions even if they spoof the path param.
+--   * status_filter optional:
+--       NULL       -- both active + completed (interleaved by started_at)
+--       'active'   -- completed_at IS NULL  (in-progress only)
+--       'completed'-- completed_at IS NOT NULL (finalised only)
+--   * Keyset cursor (cursor_started_at + cursor_id) is the
+--     started_at + id of the LAST row from the previous page.
+--     Both nullable args MUST be set together; the service
+--     decodes them as a pair from the opaque base64 cursor and
+--     never sends one without the other.
+--
+-- Pagination: the service passes page_limit = caller_limit + 1
+-- so it can detect has_more without an extra COUNT query --
+-- if more than caller_limit rows come back, the extra row is
+-- trimmed and has_more=true.
+--
+-- No parent quiz / study_guide deletion check here: the service
+-- gates the call with CheckQuizLiveForSession before invoking
+-- this query. A deleted parent surfaces as 404 BEFORE we hit
+-- the database, so a stale "list" call against a soft-deleted
+-- quiz cannot leak rows.
+SELECT id, started_at, completed_at, total_questions, correct_answers
+FROM practice_sessions
+WHERE user_id = sqlc.arg(user_id)::uuid
+  AND quiz_id = sqlc.arg(quiz_id)::uuid
+  AND (
+    sqlc.narg(status_filter)::text IS NULL
+    OR (sqlc.narg(status_filter)::text = 'active' AND completed_at IS NULL)
+    OR (sqlc.narg(status_filter)::text = 'completed' AND completed_at IS NOT NULL)
+  )
+  AND (
+    sqlc.narg(cursor_started_at)::timestamptz IS NULL
+    OR (started_at, id) < (
+      sqlc.narg(cursor_started_at)::timestamptz,
+      sqlc.narg(cursor_id)::uuid
+    )
+  )
+ORDER BY started_at DESC, id DESC
+LIMIT sqlc.arg(page_limit);
+
 -- name: ListSessionAnswers :many
 -- All answers submitted in a session, ordered by answered_at ASC so
 -- the response renders them in the order the user produced them.

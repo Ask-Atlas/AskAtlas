@@ -49,6 +49,13 @@ type Repository interface {
 	// LockSessionForCompletion + GetSessionForAnswerSubmission.
 	GetSessionByID(ctx context.Context, id pgtype.UUID) (db.PracticeSession, error)
 
+	// ListSessions-related (ASK-149). Cursor-paginated keyset
+	// scan over (started_at DESC, id DESC) scoped to (user_id,
+	// quiz_id). The service computes score_percentage in Go
+	// (only completed sessions) and gates on
+	// CheckQuizLiveForSession before invoking this query.
+	ListUserSessionsForQuiz(ctx context.Context, arg db.ListUserSessionsForQuizParams) ([]db.ListUserSessionsForQuizRow, error)
+
 	// InTx runs fn inside a single Postgres transaction. The
 	// Repository passed to fn is scoped to the tx via Queries.WithTx,
 	// so any sqlc call made through it participates in the same tx.
@@ -671,4 +678,91 @@ func (s *Service) GetSession(ctx context.Context, p GetSessionParams) (SessionDe
 	}
 
 	return detail, nil
+}
+
+// ListSessions returns a cursor-paginated page of the authenticated
+// user's practice sessions for one quiz (ASK-149). Sorted by
+// (started_at DESC, id DESC) so the newest attempt is on top; the
+// id tie-breaker disambiguates the (vanishingly rare) case of two
+// sessions sharing started_at to the microsecond.
+//
+// Order of operations:
+//  1. CheckQuizLiveForSession -- 404 if the quiz is missing,
+//     soft-deleted, or under a soft-deleted study guide. Same
+//     info-leak rule as StartSession: a non-live parent yields a
+//     single 404 the caller cannot disambiguate. This is the
+//     OPPOSITE of GetSession (ASK-152), which intentionally
+//     returns historical sessions for soft-deleted parents -- a
+//     listing scoped to a quiz needs a live quiz to anchor on.
+//  2. ListUserSessionsForQuiz -- the keyset query is asked for
+//     PageLimit + 1 rows so we can detect has_more without a
+//     separate COUNT. If the query returns more than PageLimit
+//     rows, we trim the extra row and emit a NextCursor pointing
+//     to the LAST row of the trimmed page (NOT the trimmed-off
+//     row -- callers ask for "everything strictly older than
+//     started_at,id of the last row I saw").
+//  3. mapSessionSummary fills in ScorePercentage only for
+//     completed sessions; in-progress rows leave it nil so the
+//     wire renders `null`.
+//
+// Empty user (no sessions): returns ListSessionsResult{Sessions:
+// non-nil empty slice, NextCursor: nil}. The handler maps that to
+// `{"sessions": [], "has_more": false, "next_cursor": null}`.
+func (s *Service) ListSessions(ctx context.Context, p ListSessionsParams) (ListSessionsResult, error) {
+	quizPgxID := utils.UUID(p.QuizID)
+	userPgxID := utils.UUID(p.UserID)
+
+	live, err := s.repo.CheckQuizLiveForSession(ctx, quizPgxID)
+	if err != nil {
+		return ListSessionsResult{}, fmt.Errorf("ListSessions: live check: %w", err)
+	}
+	if !live {
+		return ListSessionsResult{}, apperrors.NewNotFound("Quiz not found")
+	}
+
+	args := db.ListUserSessionsForQuizParams{
+		UserID:    userPgxID,
+		QuizID:    quizPgxID,
+		PageLimit: int32(p.PageLimit + 1), // +1 to detect has_more without an extra COUNT
+	}
+	if p.Status != nil {
+		args.StatusFilter = utils.Text(p.Status)
+	}
+	if p.Cursor != nil {
+		args.CursorStartedAt = utils.Timestamptz(&p.Cursor.StartedAt)
+		args.CursorID = utils.UUID(p.Cursor.ID)
+	}
+
+	rows, err := s.repo.ListUserSessionsForQuiz(ctx, args)
+	if err != nil {
+		return ListSessionsResult{}, fmt.Errorf("ListSessions: query: %w", err)
+	}
+
+	hasMore := len(rows) > p.PageLimit
+	if hasMore {
+		rows = rows[:p.PageLimit]
+	}
+
+	summaries := make([]SessionSummary, 0, len(rows))
+	for _, r := range rows {
+		mapped, err := mapSessionSummary(r)
+		if err != nil {
+			return ListSessionsResult{}, fmt.Errorf("ListSessions: map: %w", err)
+		}
+		summaries = append(summaries, mapped)
+	}
+
+	out := ListSessionsResult{Sessions: summaries}
+	if hasMore && len(summaries) > 0 {
+		last := summaries[len(summaries)-1]
+		encoded, err := EncodeSessionsCursor(SessionsListCursor{
+			StartedAt: last.StartedAt,
+			ID:        last.ID,
+		})
+		if err != nil {
+			return ListSessionsResult{}, fmt.Errorf("ListSessions: encode cursor: %w", err)
+		}
+		out.NextCursor = &encoded
+	}
+	return out, nil
 }

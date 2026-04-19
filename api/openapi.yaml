@@ -1078,6 +1078,87 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
   /quizzes/{quiz_id}/sessions:
+    get:
+      operationId: ListPracticeSessions
+      summary: List the authenticated user's practice sessions for a quiz
+      description: |
+        Returns the authenticated user's practice sessions for the
+        target quiz, sorted by `started_at DESC, id DESC`. Used by the
+        practice-history view to render past attempts and scores.
+
+        Pagination: cursor-based keyset on `(started_at, id)`. Pass
+        the `next_cursor` from the previous response to fetch the
+        next page. `has_more` reports whether more pages exist beyond
+        the current one.
+
+        Status filter: `active` returns only in-progress sessions
+        (`completed_at IS NULL`); `completed` returns only completed
+        sessions (`completed_at IS NOT NULL`); omitting the filter
+        returns both interleaved by `started_at DESC`.
+
+        Score: for completed sessions, `score_percentage` is
+        `round((correct_answers / total_questions) * 100)` (same
+        formula as POST /sessions/{id}/complete and GET
+        /sessions/{id}). For in-progress sessions, `score_percentage`
+        is `null` because no final score exists yet.
+
+        Authorization: scoped to the authenticated user. Sessions
+        belonging to other users on the same quiz are NEVER returned,
+        even if the requesting user is the quiz creator.
+
+        Parent quiz lifecycle: a soft-deleted quiz, a quiz under a
+        soft-deleted study guide, and a missing quiz all return 404
+        (info-leak prevention -- the caller cannot distinguish them).
+        This is the OPPOSITE of GET /sessions/{id} (ASK-152), which
+        returns historical sessions for soft-deleted parents because
+        a single session read is anchored on the session id alone --
+        a list scoped to a quiz needs a live quiz to anchor on.
+
+        Response shape: a compact summary per session (no `answers`
+        array). Use GET /api/sessions/{id} (ASK-152) to fetch full
+        detail including the chronological answer list.
+      parameters:
+        - name: quiz_id
+          in: path
+          description: The unique UUID of the quiz to list sessions for
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Filter by session status (active = incomplete; completed = finalised)
+          schema:
+            type: string
+            enum: [active, completed]
+        - name: limit
+          in: query
+          description: Maximum number of sessions to return per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+        - name: cursor
+          in: query
+          description: Opaque pagination cursor token obtained from the previous response's next_cursor
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A page of the user's practice sessions for the quiz.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSessionsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     post:
       operationId: StartPracticeSession
       summary: Start a new practice session or resume an existing incomplete one
@@ -3113,6 +3194,69 @@ components:
           type: string
           nullable: true
           maxLength: 2000
+    SessionSummaryResponse:
+      type: object
+      description: |
+        A compact session summary returned in
+        GET /api/quizzes/{quiz_id}/sessions (ASK-149) listings.
+        Distinct from SessionDetailResponse: there is no `answers`
+        array (callers fetch it via GET /api/sessions/{id}) and no
+        `quiz_id` (the listing is already scoped to a quiz).
+
+        `score_percentage` is `null` while the session is in-progress
+        (`completed_at` is null too) and an integer 0-100 once the
+        session is completed -- same gating rule as
+        SessionDetailResponse.
+      properties:
+        id:
+          type: string
+          format: uuid
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        total_questions:
+          type: integer
+          minimum: 0
+        correct_answers:
+          type: integer
+          minimum: 0
+        score_percentage:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 100
+      required:
+        - id
+        - started_at
+        - completed_at
+        - total_questions
+        - correct_answers
+        - score_percentage
+    ListSessionsResponse:
+      type: object
+      description: |
+        A paginated list of the authenticated user's practice
+        sessions for a quiz (ASK-149). `next_cursor` is null on the
+        last page; `has_more` is the explicit boolean for client-side
+        page-end detection so callers don't have to inspect the
+        cursor field.
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionSummaryResponse'
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+      required:
+        - sessions
+        - has_more
     SessionDetailResponse:
       type: object
       description: |

@@ -424,6 +424,107 @@ func (q *Queries) ListSessionAnswers(ctx context.Context, sessionID pgtype.UUID)
 	return items, nil
 }
 
+const listUserSessionsForQuiz = `-- name: ListUserSessionsForQuiz :many
+SELECT id, started_at, completed_at, total_questions, correct_answers
+FROM practice_sessions
+WHERE user_id = $1::uuid
+  AND quiz_id = $2::uuid
+  AND (
+    $3::text IS NULL
+    OR ($3::text = 'active' AND completed_at IS NULL)
+    OR ($3::text = 'completed' AND completed_at IS NOT NULL)
+  )
+  AND (
+    $4::timestamptz IS NULL
+    OR (started_at, id) < (
+      $4::timestamptz,
+      $5::uuid
+    )
+  )
+ORDER BY started_at DESC, id DESC
+LIMIT $6
+`
+
+type ListUserSessionsForQuizParams struct {
+	UserID          pgtype.UUID        `json:"user_id"`
+	QuizID          pgtype.UUID        `json:"quiz_id"`
+	StatusFilter    pgtype.Text        `json:"status_filter"`
+	CursorStartedAt pgtype.Timestamptz `json:"cursor_started_at"`
+	CursorID        pgtype.UUID        `json:"cursor_id"`
+	PageLimit       int32              `json:"page_limit"`
+}
+
+type ListUserSessionsForQuizRow struct {
+	ID             pgtype.UUID        `json:"id"`
+	StartedAt      pgtype.Timestamptz `json:"started_at"`
+	CompletedAt    pgtype.Timestamptz `json:"completed_at"`
+	TotalQuestions int32              `json:"total_questions"`
+	CorrectAnswers int32              `json:"correct_answers"`
+}
+
+// Cursor-paginated keyset list of the authenticated user's
+// practice sessions for one quiz (ASK-149). Sorted by
+// (started_at DESC, id DESC) so newest attempts appear first;
+// id is the deterministic tie-breaker on the (vanishingly rare)
+// case of two sessions sharing started_at to the microsecond.
+//
+// Filters:
+//   - Scoped to (user_id, quiz_id). The handler/service
+//     anchors user_id on the JWT so users cannot list each
+//     other's sessions even if they spoof the path param.
+//   - status_filter optional:
+//     NULL       -- both active + completed (interleaved by started_at)
+//     'active'   -- completed_at IS NULL  (in-progress only)
+//     'completed'-- completed_at IS NOT NULL (finalised only)
+//   - Keyset cursor (cursor_started_at + cursor_id) is the
+//     started_at + id of the LAST row from the previous page.
+//     Both nullable args MUST be set together; the service
+//     decodes them as a pair from the opaque base64 cursor and
+//     never sends one without the other.
+//
+// Pagination: the service passes page_limit = caller_limit + 1
+// so it can detect has_more without an extra COUNT query --
+// if more than caller_limit rows come back, the extra row is
+// trimmed and has_more=true.
+//
+// No parent quiz / study_guide deletion check here: the service
+// gates the call with CheckQuizLiveForSession before invoking
+// this query. A deleted parent surfaces as 404 BEFORE we hit
+// the database, so a stale "list" call against a soft-deleted
+// quiz cannot leak rows.
+func (q *Queries) ListUserSessionsForQuiz(ctx context.Context, arg ListUserSessionsForQuizParams) ([]ListUserSessionsForQuizRow, error) {
+	rows, err := q.db.Query(ctx, listUserSessionsForQuiz,
+		arg.UserID,
+		arg.QuizID,
+		arg.StatusFilter,
+		arg.CursorStartedAt,
+		arg.CursorID,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListUserSessionsForQuizRow
+	for rows.Next() {
+		var i ListUserSessionsForQuizRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.StartedAt,
+			&i.CompletedAt,
+			&i.TotalQuestions,
+			&i.CorrectAnswers,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockSessionForCompletion = `-- name: LockSessionForCompletion :one
 SELECT id, user_id, quiz_id, started_at, completed_at, total_questions, correct_answers
 FROM practice_sessions
