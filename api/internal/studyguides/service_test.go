@@ -909,17 +909,17 @@ func TestService_CreateStudyGuide_NormalizesAndDedupesTags(t *testing.T) {
 // string.
 func TestService_CreateStudyGuide_DescriptionAndContent_TrimmedAndDroppedWhenWhitespace(t *testing.T) {
 	cases := map[string]struct {
-		in  string
+		in string
 		// expectValid: true means we expect a SQL NULL (Valid=false on
 		// pgtype.Text). false means we expect a populated value.
 		expectValid bool
 		expectVal   string
 	}{
-		"whitespace_only":        {in: "   \t\n  ", expectValid: false},
-		"empty_string":           {in: "", expectValid: false},
-		"surrounded_by_spaces":   {in: "  hello  ", expectValid: true, expectVal: "hello"},
-		"normal":                 {in: "no leading or trailing", expectValid: true, expectVal: "no leading or trailing"},
-		"newlines_inside_kept":   {in: "line one\nline two", expectValid: true, expectVal: "line one\nline two"},
+		"whitespace_only":      {in: "   \t\n  ", expectValid: false},
+		"empty_string":         {in: "", expectValid: false},
+		"surrounded_by_spaces": {in: "  hello  ", expectValid: true, expectVal: "hello"},
+		"normal":               {in: "no leading or trailing", expectValid: true, expectVal: "no leading or trailing"},
+		"newlines_inside_kept": {in: "line one\nline two", expectValid: true, expectVal: "line one\nline two"},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {

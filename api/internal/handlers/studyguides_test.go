@@ -31,7 +31,8 @@ func studyGuidesTestRouter(t *testing.T, sgh *handlers.StudyGuideHandler) chi.Ro
 	gh := handlers.NewGrantHandler(mock_handlers.NewMockGrantService(t))
 	sh := handlers.NewSchoolsHandler(mock_handlers.NewMockSchoolService(t))
 	ch := handlers.NewCoursesHandler(mock_handlers.NewMockCourseService(t))
-	composite := handlers.NewCompositeHandler(fh, gh, sh, ch, sgh)
+	qh := handlers.NewQuizzesHandler(mock_handlers.NewMockQuizService(t))
+	composite := handlers.NewCompositeHandler(fh, gh, sh, ch, sgh, qh)
 	r := chi.NewRouter()
 	api.HandlerWithOptions(composite, api.ChiServerOptions{BaseRouter: r})
 	return r
@@ -412,11 +413,11 @@ func TestStudyGuidesHandler_Get_UserVoteNullWireShape(t *testing.T) {
 	mockSvc.EXPECT().
 		GetStudyGuide(mock.Anything, mock.Anything).
 		Return(studyguides.StudyGuideDetail{
-			ID:    uuid.New(),
-			Title: "X",
-			Tags:  []string{},
+			ID:      uuid.New(),
+			Title:   "X",
+			Tags:    []string{},
 			Creator: studyguides.Creator{ID: uuid.New(), FirstName: "A", LastName: "B"},
-			Course: studyguides.GuideCourseSummary{ID: uuid.New(), Department: "D", Number: "1", Title: "T"},
+			Course:  studyguides.GuideCourseSummary{ID: uuid.New(), Department: "D", Number: "1", Title: "T"},
 			// UserVote + all nested arrays nil/empty
 		}, nil)
 
@@ -451,11 +452,11 @@ func TestStudyGuidesHandler_Get_NoPIIInResponse(t *testing.T) {
 	mockSvc.EXPECT().
 		GetStudyGuide(mock.Anything, mock.Anything).
 		Return(studyguides.StudyGuideDetail{
-			ID:    uuid.New(),
-			Title: "X",
-			Tags:  []string{},
+			ID:      uuid.New(),
+			Title:   "X",
+			Tags:    []string{},
 			Creator: studyguides.Creator{ID: uuid.New(), FirstName: "A", LastName: "B"},
-			Course: studyguides.GuideCourseSummary{ID: uuid.New(), Department: "D", Number: "1", Title: "T"},
+			Course:  studyguides.GuideCourseSummary{ID: uuid.New(), Department: "D", Number: "1", Title: "T"},
 			Files: []studyguides.GuideFile{
 				{ID: uuid.New(), Name: "slides.pdf", MimeType: "application/pdf", Size: 100},
 			},

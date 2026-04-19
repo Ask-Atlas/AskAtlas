@@ -11,18 +11,18 @@ Package utils contains shared helper functions used throughout the application.
 ## Index
 
 - [func CursorInt8\[C any\]\(c \*C, get func\(\*C\) \*int64\) pgtype.Int8](<#CursorInt8>)
-- [func CursorNullMimeType\[C any\]\(c \*C, get func\(\*C\) \*string\) db.NullMimeType](<#CursorNullMimeType>)
 - [func CursorNullUploadStatus\[C any\]\(c \*C, get func\(\*C\) \*string\) db.NullUploadStatus](<#CursorNullUploadStatus>)
 - [func CursorText\[C any\]\(c \*C, get func\(\*C\) \*string\) pgtype.Text](<#CursorText>)
 - [func CursorTimestamptz\[C any\]\(c \*C, get func\(\*C\) \*time.Time\) pgtype.Timestamptz](<#CursorTimestamptz>)
 - [func CursorUUID\[C any\]\(c \*C, get func\(\*C\) \[16\]byte\) pgtype.UUID](<#CursorUUID>)
 - [func Deref\[T any\]\(v \*T\) T](<#Deref>)
 - [func Int8\(n \*int64\) pgtype.Int8](<#Int8>)
-- [func NullMimeType\(s \*string\) db.NullMimeType](<#NullMimeType>)
+- [func NonNilStrings\(src \[\]string\) \[\]string](<#NonNilStrings>)
 - [func NullUploadStatus\(s \*string\) db.NullUploadStatus](<#NullUploadStatus>)
 - [func PgxToGoogleUUID\(u pgtype.UUID\) \(uuid.UUID, error\)](<#PgxToGoogleUUID>)
 - [func Ptr\[T any\]\(v T\) \*T](<#Ptr>)
 - [func Text\(s \*string\) pgtype.Text](<#Text>)
+- [func TextPtr\(t pgtype.Text\) \*string](<#TextPtr>)
 - [func Timestamptz\(t \*time.Time\) pgtype.Timestamptz](<#Timestamptz>)
 - [func TimestamptzPtr\(t pgtype.Timestamptz\) \*time.Time](<#TimestamptzPtr>)
 - [func UUID\(b \[16\]byte\) pgtype.UUID](<#UUID>)
@@ -36,15 +36,6 @@ func CursorInt8[C any](c *C, get func(*C) *int64) pgtype.Int8
 ```
 
 CursorInt8 creates a pgtype.Int8 extracted from a paginated cursor.
-
-<a name="CursorNullMimeType"></a>
-## func [CursorNullMimeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/utils/cursor.go#L52>)
-
-```go
-func CursorNullMimeType[C any](c *C, get func(*C) *string) db.NullMimeType
-```
-
-CursorNullMimeType creates a db.NullMimeType extracted from a paginated cursor.
 
 <a name="CursorNullUploadStatus"></a>
 ## func [CursorNullUploadStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/utils/cursor.go#L44>)
@@ -100,14 +91,16 @@ func Int8(n *int64) pgtype.Int8
 
 Int8 converts an int64 pointer to a pgtype.Int8.
 
-<a name="NullMimeType"></a>
-## func [NullMimeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/utils/pgconv.go#L50>)
+<a name="NonNilStrings"></a>
+## func [NonNilStrings](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/utils/slices.go#L14>)
 
 ```go
-func NullMimeType(s *string) db.NullMimeType
+func NonNilStrings(src []string) []string
 ```
 
-NullMimeType converts a string pointer to a db.NullMimeType.
+NonNilStrings returns a non\-nil shallow copy of src so JSON encoding emits \`\[\]\` rather than \`null\` for an empty slice. The plain \`append\(\[\]string\(nil\), src...\)\` clone idiom keeps the result nil when len\(src\) == 0 because Go's append doesn't allocate when there are no elements to append; that nil then JSON\-encodes as \`null\`, which violates wire contracts that declare arrays as non\-nullable.
+
+Use at the wire boundary \(handler mappers\) for any string slice that ships out as a JSON array. Cheap \(one allocation per call\) and safe \(always returns a fresh backing array, so callers can't accidentally alias the source\).
 
 <a name="NullUploadStatus"></a>
 ## func [NullUploadStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/utils/pgconv.go#L42>)
@@ -119,7 +112,7 @@ func NullUploadStatus(s *string) db.NullUploadStatus
 NullUploadStatus converts a string pointer to a db.NullUploadStatus.
 
 <a name="PgxToGoogleUUID"></a>
-## func [PgxToGoogleUUID](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/utils/pgconv.go#L66>)
+## func [PgxToGoogleUUID](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/utils/pgconv.go#L71>)
 
 ```go
 func PgxToGoogleUUID(u pgtype.UUID) (uuid.UUID, error)
@@ -145,6 +138,15 @@ func Text(s *string) pgtype.Text
 
 Text converts a string pointer to a pgtype.Text.
 
+<a name="TextPtr"></a>
+## func [TextPtr](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/utils/pgconv.go#L62>)
+
+```go
+func TextPtr(t pgtype.Text) *string
+```
+
+TextPtr converts a pgtype.Text into a \*string pointer, returning nil for SQL NULL. Use this in mappers when the column is nullable and the wire shape wants JSON null \(not empty string\) on absence. Three domain packages were each carrying their own local textPtr; this shared helper is the single source of truth.
+
 <a name="Timestamptz"></a>
 ## func [Timestamptz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/utils/pgconv.go#L21>)
 
@@ -155,7 +157,7 @@ func Timestamptz(t *time.Time) pgtype.Timestamptz
 Timestamptz converts a time.Time pointer to a pgtype.Timestamptz.
 
 <a name="TimestamptzPtr"></a>
-## func [TimestamptzPtr](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/utils/pgconv.go#L58>)
+## func [TimestamptzPtr](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/utils/pgconv.go#L50>)
 
 ```go
 func TimestamptzPtr(t pgtype.Timestamptz) *time.Time

@@ -15,6 +15,7 @@ Package api provides the HTTP handlers, structural models, and OpenAPI bindings 
 ## Index
 
 - [Constants](<#constants>)
+- [func BearerAuthFunc\(\_ context.Context, input \*openapi3filter.AuthenticationInput\) error](<#BearerAuthFunc>)
 - [func GetSwagger\(\) \(swagger \*openapi3.T, err error\)](<#GetSwagger>)
 - [func Handler\(si ServerInterface\) http.Handler](<#Handler>)
 - [func HandlerFromMux\(si ServerInterface, r chi.Router\) http.Handler](<#HandlerFromMux>)
@@ -24,9 +25,147 @@ Package api provides the HTTP handlers, structural models, and OpenAPI bindings 
 - [func OAPIValidatorErrorHandler\(w http.ResponseWriter, message string, statusCode int\)](<#OAPIValidatorErrorHandler>)
 - [func PathToRawSpec\(pathToFile string\) map\[string\]func\(\) \(\[\]byte, error\)](<#PathToRawSpec>)
 - [type AppError](<#AppError>)
+- [type AttachFile201JSONResponse](<#AttachFile201JSONResponse>)
+  - [func \(response AttachFile201JSONResponse\) VisitAttachFileResponse\(w http.ResponseWriter\) error](<#AttachFile201JSONResponse.VisitAttachFileResponse>)
+- [type AttachFile400JSONResponse](<#AttachFile400JSONResponse>)
+  - [func \(response AttachFile400JSONResponse\) VisitAttachFileResponse\(w http.ResponseWriter\) error](<#AttachFile400JSONResponse.VisitAttachFileResponse>)
+- [type AttachFile401JSONResponse](<#AttachFile401JSONResponse>)
+  - [func \(response AttachFile401JSONResponse\) VisitAttachFileResponse\(w http.ResponseWriter\) error](<#AttachFile401JSONResponse.VisitAttachFileResponse>)
+- [type AttachFile403JSONResponse](<#AttachFile403JSONResponse>)
+  - [func \(response AttachFile403JSONResponse\) VisitAttachFileResponse\(w http.ResponseWriter\) error](<#AttachFile403JSONResponse.VisitAttachFileResponse>)
+- [type AttachFile404JSONResponse](<#AttachFile404JSONResponse>)
+  - [func \(response AttachFile404JSONResponse\) VisitAttachFileResponse\(w http.ResponseWriter\) error](<#AttachFile404JSONResponse.VisitAttachFileResponse>)
+- [type AttachFile409JSONResponse](<#AttachFile409JSONResponse>)
+  - [func \(response AttachFile409JSONResponse\) VisitAttachFileResponse\(w http.ResponseWriter\) error](<#AttachFile409JSONResponse.VisitAttachFileResponse>)
+- [type AttachFile500JSONResponse](<#AttachFile500JSONResponse>)
+  - [func \(response AttachFile500JSONResponse\) VisitAttachFileResponse\(w http.ResponseWriter\) error](<#AttachFile500JSONResponse.VisitAttachFileResponse>)
+- [type AttachFileRequestObject](<#AttachFileRequestObject>)
+- [type AttachFileResponseObject](<#AttachFileResponseObject>)
+- [type AttachResource201JSONResponse](<#AttachResource201JSONResponse>)
+  - [func \(response AttachResource201JSONResponse\) VisitAttachResourceResponse\(w http.ResponseWriter\) error](<#AttachResource201JSONResponse.VisitAttachResourceResponse>)
+- [type AttachResource400JSONResponse](<#AttachResource400JSONResponse>)
+  - [func \(response AttachResource400JSONResponse\) VisitAttachResourceResponse\(w http.ResponseWriter\) error](<#AttachResource400JSONResponse.VisitAttachResourceResponse>)
+- [type AttachResource401JSONResponse](<#AttachResource401JSONResponse>)
+  - [func \(response AttachResource401JSONResponse\) VisitAttachResourceResponse\(w http.ResponseWriter\) error](<#AttachResource401JSONResponse.VisitAttachResourceResponse>)
+- [type AttachResource404JSONResponse](<#AttachResource404JSONResponse>)
+  - [func \(response AttachResource404JSONResponse\) VisitAttachResourceResponse\(w http.ResponseWriter\) error](<#AttachResource404JSONResponse.VisitAttachResourceResponse>)
+- [type AttachResource409JSONResponse](<#AttachResource409JSONResponse>)
+  - [func \(response AttachResource409JSONResponse\) VisitAttachResourceResponse\(w http.ResponseWriter\) error](<#AttachResource409JSONResponse.VisitAttachResourceResponse>)
+- [type AttachResource500JSONResponse](<#AttachResource500JSONResponse>)
+  - [func \(response AttachResource500JSONResponse\) VisitAttachResourceResponse\(w http.ResponseWriter\) error](<#AttachResource500JSONResponse.VisitAttachResourceResponse>)
+- [type AttachResourceJSONRequestBody](<#AttachResourceJSONRequestBody>)
+- [type AttachResourceRequest](<#AttachResourceRequest>)
+- [type AttachResourceRequestObject](<#AttachResourceRequestObject>)
+- [type AttachResourceRequestType](<#AttachResourceRequestType>)
+  - [func \(e AttachResourceRequestType\) Valid\(\) bool](<#AttachResourceRequestType.Valid>)
+- [type AttachResourceResponseObject](<#AttachResourceResponseObject>)
 - [type BadRequest](<#BadRequest>)
 - [type BadRequestJSONResponse](<#BadRequestJSONResponse>)
+- [type CastStudyGuideVote200JSONResponse](<#CastStudyGuideVote200JSONResponse>)
+  - [func \(response CastStudyGuideVote200JSONResponse\) VisitCastStudyGuideVoteResponse\(w http.ResponseWriter\) error](<#CastStudyGuideVote200JSONResponse.VisitCastStudyGuideVoteResponse>)
+- [type CastStudyGuideVote400JSONResponse](<#CastStudyGuideVote400JSONResponse>)
+  - [func \(response CastStudyGuideVote400JSONResponse\) VisitCastStudyGuideVoteResponse\(w http.ResponseWriter\) error](<#CastStudyGuideVote400JSONResponse.VisitCastStudyGuideVoteResponse>)
+- [type CastStudyGuideVote401JSONResponse](<#CastStudyGuideVote401JSONResponse>)
+  - [func \(response CastStudyGuideVote401JSONResponse\) VisitCastStudyGuideVoteResponse\(w http.ResponseWriter\) error](<#CastStudyGuideVote401JSONResponse.VisitCastStudyGuideVoteResponse>)
+- [type CastStudyGuideVote404JSONResponse](<#CastStudyGuideVote404JSONResponse>)
+  - [func \(response CastStudyGuideVote404JSONResponse\) VisitCastStudyGuideVoteResponse\(w http.ResponseWriter\) error](<#CastStudyGuideVote404JSONResponse.VisitCastStudyGuideVoteResponse>)
+- [type CastStudyGuideVote500JSONResponse](<#CastStudyGuideVote500JSONResponse>)
+  - [func \(response CastStudyGuideVote500JSONResponse\) VisitCastStudyGuideVoteResponse\(w http.ResponseWriter\) error](<#CastStudyGuideVote500JSONResponse.VisitCastStudyGuideVoteResponse>)
+- [type CastStudyGuideVoteJSONRequestBody](<#CastStudyGuideVoteJSONRequestBody>)
+- [type CastStudyGuideVoteRequestObject](<#CastStudyGuideVoteRequestObject>)
+- [type CastStudyGuideVoteResponseObject](<#CastStudyGuideVoteResponseObject>)
+- [type CastVoteRequest](<#CastVoteRequest>)
+- [type CastVoteRequestVote](<#CastVoteRequestVote>)
+  - [func \(e CastVoteRequestVote\) Valid\(\) bool](<#CastVoteRequestVote.Valid>)
+- [type CastVoteResponse](<#CastVoteResponse>)
+- [type CastVoteResponseVote](<#CastVoteResponseVote>)
+  - [func \(e CastVoteResponseVote\) Valid\(\) bool](<#CastVoteResponseVote.Valid>)
+- [type CheckMembership200JSONResponse](<#CheckMembership200JSONResponse>)
+  - [func \(response CheckMembership200JSONResponse\) VisitCheckMembershipResponse\(w http.ResponseWriter\) error](<#CheckMembership200JSONResponse.VisitCheckMembershipResponse>)
+- [type CheckMembership400JSONResponse](<#CheckMembership400JSONResponse>)
+  - [func \(response CheckMembership400JSONResponse\) VisitCheckMembershipResponse\(w http.ResponseWriter\) error](<#CheckMembership400JSONResponse.VisitCheckMembershipResponse>)
+- [type CheckMembership401JSONResponse](<#CheckMembership401JSONResponse>)
+  - [func \(response CheckMembership401JSONResponse\) VisitCheckMembershipResponse\(w http.ResponseWriter\) error](<#CheckMembership401JSONResponse.VisitCheckMembershipResponse>)
+- [type CheckMembership404JSONResponse](<#CheckMembership404JSONResponse>)
+  - [func \(response CheckMembership404JSONResponse\) VisitCheckMembershipResponse\(w http.ResponseWriter\) error](<#CheckMembership404JSONResponse.VisitCheckMembershipResponse>)
+- [type CheckMembership500JSONResponse](<#CheckMembership500JSONResponse>)
+  - [func \(response CheckMembership500JSONResponse\) VisitCheckMembershipResponse\(w http.ResponseWriter\) error](<#CheckMembership500JSONResponse.VisitCheckMembershipResponse>)
+- [type CheckMembershipRequestObject](<#CheckMembershipRequestObject>)
+- [type CheckMembershipResponseObject](<#CheckMembershipResponseObject>)
 - [type ChiServerOptions](<#ChiServerOptions>)
+- [type Conflict](<#Conflict>)
+- [type ConflictJSONResponse](<#ConflictJSONResponse>)
+- [type CourseDetailResponse](<#CourseDetailResponse>)
+- [type CourseMemberResponse](<#CourseMemberResponse>)
+- [type CourseMemberResponseRole](<#CourseMemberResponseRole>)
+  - [func \(e CourseMemberResponseRole\) Valid\(\) bool](<#CourseMemberResponseRole.Valid>)
+- [type CourseResponse](<#CourseResponse>)
+- [type CreateFile201JSONResponse](<#CreateFile201JSONResponse>)
+  - [func \(response CreateFile201JSONResponse\) VisitCreateFileResponse\(w http.ResponseWriter\) error](<#CreateFile201JSONResponse.VisitCreateFileResponse>)
+- [type CreateFile400JSONResponse](<#CreateFile400JSONResponse>)
+  - [func \(response CreateFile400JSONResponse\) VisitCreateFileResponse\(w http.ResponseWriter\) error](<#CreateFile400JSONResponse.VisitCreateFileResponse>)
+- [type CreateFile401JSONResponse](<#CreateFile401JSONResponse>)
+  - [func \(response CreateFile401JSONResponse\) VisitCreateFileResponse\(w http.ResponseWriter\) error](<#CreateFile401JSONResponse.VisitCreateFileResponse>)
+- [type CreateFile500JSONResponse](<#CreateFile500JSONResponse>)
+  - [func \(response CreateFile500JSONResponse\) VisitCreateFileResponse\(w http.ResponseWriter\) error](<#CreateFile500JSONResponse.VisitCreateFileResponse>)
+- [type CreateFileJSONRequestBody](<#CreateFileJSONRequestBody>)
+- [type CreateFileRequest](<#CreateFileRequest>)
+- [type CreateFileRequestMimeType](<#CreateFileRequestMimeType>)
+  - [func \(e CreateFileRequestMimeType\) Valid\(\) bool](<#CreateFileRequestMimeType.Valid>)
+- [type CreateFileRequestObject](<#CreateFileRequestObject>)
+- [type CreateFileResponse](<#CreateFileResponse>)
+- [type CreateFileResponseObject](<#CreateFileResponseObject>)
+- [type CreateGrant201JSONResponse](<#CreateGrant201JSONResponse>)
+  - [func \(response CreateGrant201JSONResponse\) VisitCreateGrantResponse\(w http.ResponseWriter\) error](<#CreateGrant201JSONResponse.VisitCreateGrantResponse>)
+- [type CreateGrant400JSONResponse](<#CreateGrant400JSONResponse>)
+  - [func \(response CreateGrant400JSONResponse\) VisitCreateGrantResponse\(w http.ResponseWriter\) error](<#CreateGrant400JSONResponse.VisitCreateGrantResponse>)
+- [type CreateGrant401JSONResponse](<#CreateGrant401JSONResponse>)
+  - [func \(response CreateGrant401JSONResponse\) VisitCreateGrantResponse\(w http.ResponseWriter\) error](<#CreateGrant401JSONResponse.VisitCreateGrantResponse>)
+- [type CreateGrant404JSONResponse](<#CreateGrant404JSONResponse>)
+  - [func \(response CreateGrant404JSONResponse\) VisitCreateGrantResponse\(w http.ResponseWriter\) error](<#CreateGrant404JSONResponse.VisitCreateGrantResponse>)
+- [type CreateGrant500JSONResponse](<#CreateGrant500JSONResponse>)
+  - [func \(response CreateGrant500JSONResponse\) VisitCreateGrantResponse\(w http.ResponseWriter\) error](<#CreateGrant500JSONResponse.VisitCreateGrantResponse>)
+- [type CreateGrantJSONRequestBody](<#CreateGrantJSONRequestBody>)
+- [type CreateGrantRequest](<#CreateGrantRequest>)
+- [type CreateGrantRequestGranteeType](<#CreateGrantRequestGranteeType>)
+  - [func \(e CreateGrantRequestGranteeType\) Valid\(\) bool](<#CreateGrantRequestGranteeType.Valid>)
+- [type CreateGrantRequestObject](<#CreateGrantRequestObject>)
+- [type CreateGrantRequestPermission](<#CreateGrantRequestPermission>)
+  - [func \(e CreateGrantRequestPermission\) Valid\(\) bool](<#CreateGrantRequestPermission.Valid>)
+- [type CreateGrantResponseObject](<#CreateGrantResponseObject>)
+- [type CreateQuiz201JSONResponse](<#CreateQuiz201JSONResponse>)
+  - [func \(response CreateQuiz201JSONResponse\) VisitCreateQuizResponse\(w http.ResponseWriter\) error](<#CreateQuiz201JSONResponse.VisitCreateQuizResponse>)
+- [type CreateQuiz400JSONResponse](<#CreateQuiz400JSONResponse>)
+  - [func \(response CreateQuiz400JSONResponse\) VisitCreateQuizResponse\(w http.ResponseWriter\) error](<#CreateQuiz400JSONResponse.VisitCreateQuizResponse>)
+- [type CreateQuiz401JSONResponse](<#CreateQuiz401JSONResponse>)
+  - [func \(response CreateQuiz401JSONResponse\) VisitCreateQuizResponse\(w http.ResponseWriter\) error](<#CreateQuiz401JSONResponse.VisitCreateQuizResponse>)
+- [type CreateQuiz404JSONResponse](<#CreateQuiz404JSONResponse>)
+  - [func \(response CreateQuiz404JSONResponse\) VisitCreateQuizResponse\(w http.ResponseWriter\) error](<#CreateQuiz404JSONResponse.VisitCreateQuizResponse>)
+- [type CreateQuiz500JSONResponse](<#CreateQuiz500JSONResponse>)
+  - [func \(response CreateQuiz500JSONResponse\) VisitCreateQuizResponse\(w http.ResponseWriter\) error](<#CreateQuiz500JSONResponse.VisitCreateQuizResponse>)
+- [type CreateQuizJSONRequestBody](<#CreateQuizJSONRequestBody>)
+- [type CreateQuizMCQOption](<#CreateQuizMCQOption>)
+- [type CreateQuizQuestion](<#CreateQuizQuestion>)
+- [type CreateQuizQuestionType](<#CreateQuizQuestionType>)
+  - [func \(e CreateQuizQuestionType\) Valid\(\) bool](<#CreateQuizQuestionType.Valid>)
+- [type CreateQuizRequest](<#CreateQuizRequest>)
+- [type CreateQuizRequestObject](<#CreateQuizRequestObject>)
+- [type CreateQuizResponseObject](<#CreateQuizResponseObject>)
+- [type CreateStudyGuide201JSONResponse](<#CreateStudyGuide201JSONResponse>)
+  - [func \(response CreateStudyGuide201JSONResponse\) VisitCreateStudyGuideResponse\(w http.ResponseWriter\) error](<#CreateStudyGuide201JSONResponse.VisitCreateStudyGuideResponse>)
+- [type CreateStudyGuide400JSONResponse](<#CreateStudyGuide400JSONResponse>)
+  - [func \(response CreateStudyGuide400JSONResponse\) VisitCreateStudyGuideResponse\(w http.ResponseWriter\) error](<#CreateStudyGuide400JSONResponse.VisitCreateStudyGuideResponse>)
+- [type CreateStudyGuide401JSONResponse](<#CreateStudyGuide401JSONResponse>)
+  - [func \(response CreateStudyGuide401JSONResponse\) VisitCreateStudyGuideResponse\(w http.ResponseWriter\) error](<#CreateStudyGuide401JSONResponse.VisitCreateStudyGuideResponse>)
+- [type CreateStudyGuide404JSONResponse](<#CreateStudyGuide404JSONResponse>)
+  - [func \(response CreateStudyGuide404JSONResponse\) VisitCreateStudyGuideResponse\(w http.ResponseWriter\) error](<#CreateStudyGuide404JSONResponse.VisitCreateStudyGuideResponse>)
+- [type CreateStudyGuide500JSONResponse](<#CreateStudyGuide500JSONResponse>)
+  - [func \(response CreateStudyGuide500JSONResponse\) VisitCreateStudyGuideResponse\(w http.ResponseWriter\) error](<#CreateStudyGuide500JSONResponse.VisitCreateStudyGuideResponse>)
+- [type CreateStudyGuideJSONRequestBody](<#CreateStudyGuideJSONRequestBody>)
+- [type CreateStudyGuideRequest](<#CreateStudyGuideRequest>)
+- [type CreateStudyGuideRequestObject](<#CreateStudyGuideRequestObject>)
+- [type CreateStudyGuideResponseObject](<#CreateStudyGuideResponseObject>)
+- [type CreatorSummary](<#CreatorSummary>)
 - [type DeleteFile204Response](<#DeleteFile204Response>)
   - [func \(response DeleteFile204Response\) VisitDeleteFileResponse\(w http.ResponseWriter\) error](<#DeleteFile204Response.VisitDeleteFileResponse>)
 - [type DeleteFile401JSONResponse](<#DeleteFile401JSONResponse>)
@@ -37,9 +176,70 @@ Package api provides the HTTP handlers, structural models, and OpenAPI bindings 
   - [func \(response DeleteFile500JSONResponse\) VisitDeleteFileResponse\(w http.ResponseWriter\) error](<#DeleteFile500JSONResponse.VisitDeleteFileResponse>)
 - [type DeleteFileRequestObject](<#DeleteFileRequestObject>)
 - [type DeleteFileResponseObject](<#DeleteFileResponseObject>)
+- [type DeleteStudyGuide204Response](<#DeleteStudyGuide204Response>)
+  - [func \(response DeleteStudyGuide204Response\) VisitDeleteStudyGuideResponse\(w http.ResponseWriter\) error](<#DeleteStudyGuide204Response.VisitDeleteStudyGuideResponse>)
+- [type DeleteStudyGuide400JSONResponse](<#DeleteStudyGuide400JSONResponse>)
+  - [func \(response DeleteStudyGuide400JSONResponse\) VisitDeleteStudyGuideResponse\(w http.ResponseWriter\) error](<#DeleteStudyGuide400JSONResponse.VisitDeleteStudyGuideResponse>)
+- [type DeleteStudyGuide401JSONResponse](<#DeleteStudyGuide401JSONResponse>)
+  - [func \(response DeleteStudyGuide401JSONResponse\) VisitDeleteStudyGuideResponse\(w http.ResponseWriter\) error](<#DeleteStudyGuide401JSONResponse.VisitDeleteStudyGuideResponse>)
+- [type DeleteStudyGuide403JSONResponse](<#DeleteStudyGuide403JSONResponse>)
+  - [func \(response DeleteStudyGuide403JSONResponse\) VisitDeleteStudyGuideResponse\(w http.ResponseWriter\) error](<#DeleteStudyGuide403JSONResponse.VisitDeleteStudyGuideResponse>)
+- [type DeleteStudyGuide404JSONResponse](<#DeleteStudyGuide404JSONResponse>)
+  - [func \(response DeleteStudyGuide404JSONResponse\) VisitDeleteStudyGuideResponse\(w http.ResponseWriter\) error](<#DeleteStudyGuide404JSONResponse.VisitDeleteStudyGuideResponse>)
+- [type DeleteStudyGuide500JSONResponse](<#DeleteStudyGuide500JSONResponse>)
+  - [func \(response DeleteStudyGuide500JSONResponse\) VisitDeleteStudyGuideResponse\(w http.ResponseWriter\) error](<#DeleteStudyGuide500JSONResponse.VisitDeleteStudyGuideResponse>)
+- [type DeleteStudyGuideRequestObject](<#DeleteStudyGuideRequestObject>)
+- [type DeleteStudyGuideResponseObject](<#DeleteStudyGuideResponseObject>)
+- [type DetachFile204Response](<#DetachFile204Response>)
+  - [func \(response DetachFile204Response\) VisitDetachFileResponse\(w http.ResponseWriter\) error](<#DetachFile204Response.VisitDetachFileResponse>)
+- [type DetachFile400JSONResponse](<#DetachFile400JSONResponse>)
+  - [func \(response DetachFile400JSONResponse\) VisitDetachFileResponse\(w http.ResponseWriter\) error](<#DetachFile400JSONResponse.VisitDetachFileResponse>)
+- [type DetachFile401JSONResponse](<#DetachFile401JSONResponse>)
+  - [func \(response DetachFile401JSONResponse\) VisitDetachFileResponse\(w http.ResponseWriter\) error](<#DetachFile401JSONResponse.VisitDetachFileResponse>)
+- [type DetachFile403JSONResponse](<#DetachFile403JSONResponse>)
+  - [func \(response DetachFile403JSONResponse\) VisitDetachFileResponse\(w http.ResponseWriter\) error](<#DetachFile403JSONResponse.VisitDetachFileResponse>)
+- [type DetachFile404JSONResponse](<#DetachFile404JSONResponse>)
+  - [func \(response DetachFile404JSONResponse\) VisitDetachFileResponse\(w http.ResponseWriter\) error](<#DetachFile404JSONResponse.VisitDetachFileResponse>)
+- [type DetachFile500JSONResponse](<#DetachFile500JSONResponse>)
+  - [func \(response DetachFile500JSONResponse\) VisitDetachFileResponse\(w http.ResponseWriter\) error](<#DetachFile500JSONResponse.VisitDetachFileResponse>)
+- [type DetachFileRequestObject](<#DetachFileRequestObject>)
+- [type DetachFileResponseObject](<#DetachFileResponseObject>)
+- [type DetachResource204Response](<#DetachResource204Response>)
+  - [func \(response DetachResource204Response\) VisitDetachResourceResponse\(w http.ResponseWriter\) error](<#DetachResource204Response.VisitDetachResourceResponse>)
+- [type DetachResource400JSONResponse](<#DetachResource400JSONResponse>)
+  - [func \(response DetachResource400JSONResponse\) VisitDetachResourceResponse\(w http.ResponseWriter\) error](<#DetachResource400JSONResponse.VisitDetachResourceResponse>)
+- [type DetachResource401JSONResponse](<#DetachResource401JSONResponse>)
+  - [func \(response DetachResource401JSONResponse\) VisitDetachResourceResponse\(w http.ResponseWriter\) error](<#DetachResource401JSONResponse.VisitDetachResourceResponse>)
+- [type DetachResource403JSONResponse](<#DetachResource403JSONResponse>)
+  - [func \(response DetachResource403JSONResponse\) VisitDetachResourceResponse\(w http.ResponseWriter\) error](<#DetachResource403JSONResponse.VisitDetachResourceResponse>)
+- [type DetachResource404JSONResponse](<#DetachResource404JSONResponse>)
+  - [func \(response DetachResource404JSONResponse\) VisitDetachResourceResponse\(w http.ResponseWriter\) error](<#DetachResource404JSONResponse.VisitDetachResourceResponse>)
+- [type DetachResource500JSONResponse](<#DetachResource500JSONResponse>)
+  - [func \(response DetachResource500JSONResponse\) VisitDetachResourceResponse\(w http.ResponseWriter\) error](<#DetachResource500JSONResponse.VisitDetachResourceResponse>)
+- [type DetachResourceRequestObject](<#DetachResourceRequestObject>)
+- [type DetachResourceResponseObject](<#DetachResourceResponseObject>)
+- [type EnrollmentCourseSummary](<#EnrollmentCourseSummary>)
+- [type EnrollmentResponse](<#EnrollmentResponse>)
+- [type EnrollmentResponseRole](<#EnrollmentResponseRole>)
+  - [func \(e EnrollmentResponseRole\) Valid\(\) bool](<#EnrollmentResponseRole.Valid>)
+- [type EnrollmentSchoolSummary](<#EnrollmentSchoolSummary>)
+- [type EnrollmentSectionSummary](<#EnrollmentSectionSummary>)
+- [type FileAttachmentResponse](<#FileAttachmentResponse>)
 - [type FileResponse](<#FileResponse>)
 - [type Forbidden](<#Forbidden>)
 - [type ForbiddenJSONResponse](<#ForbiddenJSONResponse>)
+- [type GetCourse200JSONResponse](<#GetCourse200JSONResponse>)
+  - [func \(response GetCourse200JSONResponse\) VisitGetCourseResponse\(w http.ResponseWriter\) error](<#GetCourse200JSONResponse.VisitGetCourseResponse>)
+- [type GetCourse400JSONResponse](<#GetCourse400JSONResponse>)
+  - [func \(response GetCourse400JSONResponse\) VisitGetCourseResponse\(w http.ResponseWriter\) error](<#GetCourse400JSONResponse.VisitGetCourseResponse>)
+- [type GetCourse401JSONResponse](<#GetCourse401JSONResponse>)
+  - [func \(response GetCourse401JSONResponse\) VisitGetCourseResponse\(w http.ResponseWriter\) error](<#GetCourse401JSONResponse.VisitGetCourseResponse>)
+- [type GetCourse404JSONResponse](<#GetCourse404JSONResponse>)
+  - [func \(response GetCourse404JSONResponse\) VisitGetCourseResponse\(w http.ResponseWriter\) error](<#GetCourse404JSONResponse.VisitGetCourseResponse>)
+- [type GetCourse500JSONResponse](<#GetCourse500JSONResponse>)
+  - [func \(response GetCourse500JSONResponse\) VisitGetCourseResponse\(w http.ResponseWriter\) error](<#GetCourse500JSONResponse.VisitGetCourseResponse>)
+- [type GetCourseRequestObject](<#GetCourseRequestObject>)
+- [type GetCourseResponseObject](<#GetCourseResponseObject>)
 - [type GetFile200JSONResponse](<#GetFile200JSONResponse>)
   - [func \(response GetFile200JSONResponse\) VisitGetFileResponse\(w http.ResponseWriter\) error](<#GetFile200JSONResponse.VisitGetFileResponse>)
 - [type GetFile400JSONResponse](<#GetFile400JSONResponse>)
@@ -54,11 +254,79 @@ Package api provides the HTTP handlers, structural models, and OpenAPI bindings 
   - [func \(response GetFile500JSONResponse\) VisitGetFileResponse\(w http.ResponseWriter\) error](<#GetFile500JSONResponse.VisitGetFileResponse>)
 - [type GetFileRequestObject](<#GetFileRequestObject>)
 - [type GetFileResponseObject](<#GetFileResponseObject>)
+- [type GetSchool200JSONResponse](<#GetSchool200JSONResponse>)
+  - [func \(response GetSchool200JSONResponse\) VisitGetSchoolResponse\(w http.ResponseWriter\) error](<#GetSchool200JSONResponse.VisitGetSchoolResponse>)
+- [type GetSchool400JSONResponse](<#GetSchool400JSONResponse>)
+  - [func \(response GetSchool400JSONResponse\) VisitGetSchoolResponse\(w http.ResponseWriter\) error](<#GetSchool400JSONResponse.VisitGetSchoolResponse>)
+- [type GetSchool401JSONResponse](<#GetSchool401JSONResponse>)
+  - [func \(response GetSchool401JSONResponse\) VisitGetSchoolResponse\(w http.ResponseWriter\) error](<#GetSchool401JSONResponse.VisitGetSchoolResponse>)
+- [type GetSchool404JSONResponse](<#GetSchool404JSONResponse>)
+  - [func \(response GetSchool404JSONResponse\) VisitGetSchoolResponse\(w http.ResponseWriter\) error](<#GetSchool404JSONResponse.VisitGetSchoolResponse>)
+- [type GetSchool500JSONResponse](<#GetSchool500JSONResponse>)
+  - [func \(response GetSchool500JSONResponse\) VisitGetSchoolResponse\(w http.ResponseWriter\) error](<#GetSchool500JSONResponse.VisitGetSchoolResponse>)
+- [type GetSchoolRequestObject](<#GetSchoolRequestObject>)
+- [type GetSchoolResponseObject](<#GetSchoolResponseObject>)
+- [type GetStudyGuide200JSONResponse](<#GetStudyGuide200JSONResponse>)
+  - [func \(response GetStudyGuide200JSONResponse\) VisitGetStudyGuideResponse\(w http.ResponseWriter\) error](<#GetStudyGuide200JSONResponse.VisitGetStudyGuideResponse>)
+- [type GetStudyGuide400JSONResponse](<#GetStudyGuide400JSONResponse>)
+  - [func \(response GetStudyGuide400JSONResponse\) VisitGetStudyGuideResponse\(w http.ResponseWriter\) error](<#GetStudyGuide400JSONResponse.VisitGetStudyGuideResponse>)
+- [type GetStudyGuide401JSONResponse](<#GetStudyGuide401JSONResponse>)
+  - [func \(response GetStudyGuide401JSONResponse\) VisitGetStudyGuideResponse\(w http.ResponseWriter\) error](<#GetStudyGuide401JSONResponse.VisitGetStudyGuideResponse>)
+- [type GetStudyGuide404JSONResponse](<#GetStudyGuide404JSONResponse>)
+  - [func \(response GetStudyGuide404JSONResponse\) VisitGetStudyGuideResponse\(w http.ResponseWriter\) error](<#GetStudyGuide404JSONResponse.VisitGetStudyGuideResponse>)
+- [type GetStudyGuide500JSONResponse](<#GetStudyGuide500JSONResponse>)
+  - [func \(response GetStudyGuide500JSONResponse\) VisitGetStudyGuideResponse\(w http.ResponseWriter\) error](<#GetStudyGuide500JSONResponse.VisitGetStudyGuideResponse>)
+- [type GetStudyGuideRequestObject](<#GetStudyGuideRequestObject>)
+- [type GetStudyGuideResponseObject](<#GetStudyGuideResponseObject>)
+- [type GrantResponse](<#GrantResponse>)
+- [type GuideCourseSummary](<#GuideCourseSummary>)
 - [type InternalServerError](<#InternalServerError>)
 - [type InternalServerErrorJSONResponse](<#InternalServerErrorJSONResponse>)
 - [type InvalidParamFormatError](<#InvalidParamFormatError>)
   - [func \(e \*InvalidParamFormatError\) Error\(\) string](<#InvalidParamFormatError.Error>)
   - [func \(e \*InvalidParamFormatError\) Unwrap\(\) error](<#InvalidParamFormatError.Unwrap>)
+- [type JoinSection201JSONResponse](<#JoinSection201JSONResponse>)
+  - [func \(response JoinSection201JSONResponse\) VisitJoinSectionResponse\(w http.ResponseWriter\) error](<#JoinSection201JSONResponse.VisitJoinSectionResponse>)
+- [type JoinSection400JSONResponse](<#JoinSection400JSONResponse>)
+  - [func \(response JoinSection400JSONResponse\) VisitJoinSectionResponse\(w http.ResponseWriter\) error](<#JoinSection400JSONResponse.VisitJoinSectionResponse>)
+- [type JoinSection401JSONResponse](<#JoinSection401JSONResponse>)
+  - [func \(response JoinSection401JSONResponse\) VisitJoinSectionResponse\(w http.ResponseWriter\) error](<#JoinSection401JSONResponse.VisitJoinSectionResponse>)
+- [type JoinSection404JSONResponse](<#JoinSection404JSONResponse>)
+  - [func \(response JoinSection404JSONResponse\) VisitJoinSectionResponse\(w http.ResponseWriter\) error](<#JoinSection404JSONResponse.VisitJoinSectionResponse>)
+- [type JoinSection409JSONResponse](<#JoinSection409JSONResponse>)
+  - [func \(response JoinSection409JSONResponse\) VisitJoinSectionResponse\(w http.ResponseWriter\) error](<#JoinSection409JSONResponse.VisitJoinSectionResponse>)
+- [type JoinSection500JSONResponse](<#JoinSection500JSONResponse>)
+  - [func \(response JoinSection500JSONResponse\) VisitJoinSectionResponse\(w http.ResponseWriter\) error](<#JoinSection500JSONResponse.VisitJoinSectionResponse>)
+- [type JoinSectionRequestObject](<#JoinSectionRequestObject>)
+- [type JoinSectionResponseObject](<#JoinSectionResponseObject>)
+- [type LeaveSection204Response](<#LeaveSection204Response>)
+  - [func \(response LeaveSection204Response\) VisitLeaveSectionResponse\(w http.ResponseWriter\) error](<#LeaveSection204Response.VisitLeaveSectionResponse>)
+- [type LeaveSection400JSONResponse](<#LeaveSection400JSONResponse>)
+  - [func \(response LeaveSection400JSONResponse\) VisitLeaveSectionResponse\(w http.ResponseWriter\) error](<#LeaveSection400JSONResponse.VisitLeaveSectionResponse>)
+- [type LeaveSection401JSONResponse](<#LeaveSection401JSONResponse>)
+  - [func \(response LeaveSection401JSONResponse\) VisitLeaveSectionResponse\(w http.ResponseWriter\) error](<#LeaveSection401JSONResponse.VisitLeaveSectionResponse>)
+- [type LeaveSection404JSONResponse](<#LeaveSection404JSONResponse>)
+  - [func \(response LeaveSection404JSONResponse\) VisitLeaveSectionResponse\(w http.ResponseWriter\) error](<#LeaveSection404JSONResponse.VisitLeaveSectionResponse>)
+- [type LeaveSection500JSONResponse](<#LeaveSection500JSONResponse>)
+  - [func \(response LeaveSection500JSONResponse\) VisitLeaveSectionResponse\(w http.ResponseWriter\) error](<#LeaveSection500JSONResponse.VisitLeaveSectionResponse>)
+- [type LeaveSectionRequestObject](<#LeaveSectionRequestObject>)
+- [type LeaveSectionResponseObject](<#LeaveSectionResponseObject>)
+- [type ListCourses200JSONResponse](<#ListCourses200JSONResponse>)
+  - [func \(response ListCourses200JSONResponse\) VisitListCoursesResponse\(w http.ResponseWriter\) error](<#ListCourses200JSONResponse.VisitListCoursesResponse>)
+- [type ListCourses400JSONResponse](<#ListCourses400JSONResponse>)
+  - [func \(response ListCourses400JSONResponse\) VisitListCoursesResponse\(w http.ResponseWriter\) error](<#ListCourses400JSONResponse.VisitListCoursesResponse>)
+- [type ListCourses401JSONResponse](<#ListCourses401JSONResponse>)
+  - [func \(response ListCourses401JSONResponse\) VisitListCoursesResponse\(w http.ResponseWriter\) error](<#ListCourses401JSONResponse.VisitListCoursesResponse>)
+- [type ListCourses500JSONResponse](<#ListCourses500JSONResponse>)
+  - [func \(response ListCourses500JSONResponse\) VisitListCoursesResponse\(w http.ResponseWriter\) error](<#ListCourses500JSONResponse.VisitListCoursesResponse>)
+- [type ListCoursesParams](<#ListCoursesParams>)
+- [type ListCoursesParamsSortBy](<#ListCoursesParamsSortBy>)
+  - [func \(e ListCoursesParamsSortBy\) Valid\(\) bool](<#ListCoursesParamsSortBy.Valid>)
+- [type ListCoursesParamsSortDir](<#ListCoursesParamsSortDir>)
+  - [func \(e ListCoursesParamsSortDir\) Valid\(\) bool](<#ListCoursesParamsSortDir.Valid>)
+- [type ListCoursesRequestObject](<#ListCoursesRequestObject>)
+- [type ListCoursesResponse](<#ListCoursesResponse>)
+- [type ListCoursesResponseObject](<#ListCoursesResponseObject>)
 - [type ListFiles200JSONResponse](<#ListFiles200JSONResponse>)
   - [func \(response ListFiles200JSONResponse\) VisitListFilesResponse\(w http.ResponseWriter\) error](<#ListFiles200JSONResponse.VisitListFilesResponse>)
 - [type ListFiles400JSONResponse](<#ListFiles400JSONResponse>)
@@ -81,26 +349,195 @@ Package api provides the HTTP handlers, structural models, and OpenAPI bindings 
 - [type ListFilesRequestObject](<#ListFilesRequestObject>)
 - [type ListFilesResponse](<#ListFilesResponse>)
 - [type ListFilesResponseObject](<#ListFilesResponseObject>)
+- [type ListMyEnrollments200JSONResponse](<#ListMyEnrollments200JSONResponse>)
+  - [func \(response ListMyEnrollments200JSONResponse\) VisitListMyEnrollmentsResponse\(w http.ResponseWriter\) error](<#ListMyEnrollments200JSONResponse.VisitListMyEnrollmentsResponse>)
+- [type ListMyEnrollments400JSONResponse](<#ListMyEnrollments400JSONResponse>)
+  - [func \(response ListMyEnrollments400JSONResponse\) VisitListMyEnrollmentsResponse\(w http.ResponseWriter\) error](<#ListMyEnrollments400JSONResponse.VisitListMyEnrollmentsResponse>)
+- [type ListMyEnrollments401JSONResponse](<#ListMyEnrollments401JSONResponse>)
+  - [func \(response ListMyEnrollments401JSONResponse\) VisitListMyEnrollmentsResponse\(w http.ResponseWriter\) error](<#ListMyEnrollments401JSONResponse.VisitListMyEnrollmentsResponse>)
+- [type ListMyEnrollments500JSONResponse](<#ListMyEnrollments500JSONResponse>)
+  - [func \(response ListMyEnrollments500JSONResponse\) VisitListMyEnrollmentsResponse\(w http.ResponseWriter\) error](<#ListMyEnrollments500JSONResponse.VisitListMyEnrollmentsResponse>)
+- [type ListMyEnrollmentsParams](<#ListMyEnrollmentsParams>)
+- [type ListMyEnrollmentsParamsRole](<#ListMyEnrollmentsParamsRole>)
+  - [func \(e ListMyEnrollmentsParamsRole\) Valid\(\) bool](<#ListMyEnrollmentsParamsRole.Valid>)
+- [type ListMyEnrollmentsRequestObject](<#ListMyEnrollmentsRequestObject>)
+- [type ListMyEnrollmentsResponse](<#ListMyEnrollmentsResponse>)
+- [type ListMyEnrollmentsResponseObject](<#ListMyEnrollmentsResponseObject>)
+- [type ListSchools200JSONResponse](<#ListSchools200JSONResponse>)
+  - [func \(response ListSchools200JSONResponse\) VisitListSchoolsResponse\(w http.ResponseWriter\) error](<#ListSchools200JSONResponse.VisitListSchoolsResponse>)
+- [type ListSchools400JSONResponse](<#ListSchools400JSONResponse>)
+  - [func \(response ListSchools400JSONResponse\) VisitListSchoolsResponse\(w http.ResponseWriter\) error](<#ListSchools400JSONResponse.VisitListSchoolsResponse>)
+- [type ListSchools401JSONResponse](<#ListSchools401JSONResponse>)
+  - [func \(response ListSchools401JSONResponse\) VisitListSchoolsResponse\(w http.ResponseWriter\) error](<#ListSchools401JSONResponse.VisitListSchoolsResponse>)
+- [type ListSchools500JSONResponse](<#ListSchools500JSONResponse>)
+  - [func \(response ListSchools500JSONResponse\) VisitListSchoolsResponse\(w http.ResponseWriter\) error](<#ListSchools500JSONResponse.VisitListSchoolsResponse>)
+- [type ListSchoolsParams](<#ListSchoolsParams>)
+- [type ListSchoolsRequestObject](<#ListSchoolsRequestObject>)
+- [type ListSchoolsResponse](<#ListSchoolsResponse>)
+- [type ListSchoolsResponseObject](<#ListSchoolsResponseObject>)
+- [type ListSectionMembers200JSONResponse](<#ListSectionMembers200JSONResponse>)
+  - [func \(response ListSectionMembers200JSONResponse\) VisitListSectionMembersResponse\(w http.ResponseWriter\) error](<#ListSectionMembers200JSONResponse.VisitListSectionMembersResponse>)
+- [type ListSectionMembers400JSONResponse](<#ListSectionMembers400JSONResponse>)
+  - [func \(response ListSectionMembers400JSONResponse\) VisitListSectionMembersResponse\(w http.ResponseWriter\) error](<#ListSectionMembers400JSONResponse.VisitListSectionMembersResponse>)
+- [type ListSectionMembers401JSONResponse](<#ListSectionMembers401JSONResponse>)
+  - [func \(response ListSectionMembers401JSONResponse\) VisitListSectionMembersResponse\(w http.ResponseWriter\) error](<#ListSectionMembers401JSONResponse.VisitListSectionMembersResponse>)
+- [type ListSectionMembers404JSONResponse](<#ListSectionMembers404JSONResponse>)
+  - [func \(response ListSectionMembers404JSONResponse\) VisitListSectionMembersResponse\(w http.ResponseWriter\) error](<#ListSectionMembers404JSONResponse.VisitListSectionMembersResponse>)
+- [type ListSectionMembers500JSONResponse](<#ListSectionMembers500JSONResponse>)
+  - [func \(response ListSectionMembers500JSONResponse\) VisitListSectionMembersResponse\(w http.ResponseWriter\) error](<#ListSectionMembers500JSONResponse.VisitListSectionMembersResponse>)
+- [type ListSectionMembersParams](<#ListSectionMembersParams>)
+- [type ListSectionMembersParamsRole](<#ListSectionMembersParamsRole>)
+  - [func \(e ListSectionMembersParamsRole\) Valid\(\) bool](<#ListSectionMembersParamsRole.Valid>)
+- [type ListSectionMembersRequestObject](<#ListSectionMembersRequestObject>)
+- [type ListSectionMembersResponse](<#ListSectionMembersResponse>)
+- [type ListSectionMembersResponseObject](<#ListSectionMembersResponseObject>)
+- [type ListStudyGuides200JSONResponse](<#ListStudyGuides200JSONResponse>)
+  - [func \(response ListStudyGuides200JSONResponse\) VisitListStudyGuidesResponse\(w http.ResponseWriter\) error](<#ListStudyGuides200JSONResponse.VisitListStudyGuidesResponse>)
+- [type ListStudyGuides400JSONResponse](<#ListStudyGuides400JSONResponse>)
+  - [func \(response ListStudyGuides400JSONResponse\) VisitListStudyGuidesResponse\(w http.ResponseWriter\) error](<#ListStudyGuides400JSONResponse.VisitListStudyGuidesResponse>)
+- [type ListStudyGuides401JSONResponse](<#ListStudyGuides401JSONResponse>)
+  - [func \(response ListStudyGuides401JSONResponse\) VisitListStudyGuidesResponse\(w http.ResponseWriter\) error](<#ListStudyGuides401JSONResponse.VisitListStudyGuidesResponse>)
+- [type ListStudyGuides404JSONResponse](<#ListStudyGuides404JSONResponse>)
+  - [func \(response ListStudyGuides404JSONResponse\) VisitListStudyGuidesResponse\(w http.ResponseWriter\) error](<#ListStudyGuides404JSONResponse.VisitListStudyGuidesResponse>)
+- [type ListStudyGuides500JSONResponse](<#ListStudyGuides500JSONResponse>)
+  - [func \(response ListStudyGuides500JSONResponse\) VisitListStudyGuidesResponse\(w http.ResponseWriter\) error](<#ListStudyGuides500JSONResponse.VisitListStudyGuidesResponse>)
+- [type ListStudyGuidesParams](<#ListStudyGuidesParams>)
+- [type ListStudyGuidesParamsSortBy](<#ListStudyGuidesParamsSortBy>)
+  - [func \(e ListStudyGuidesParamsSortBy\) Valid\(\) bool](<#ListStudyGuidesParamsSortBy.Valid>)
+- [type ListStudyGuidesParamsSortDir](<#ListStudyGuidesParamsSortDir>)
+  - [func \(e ListStudyGuidesParamsSortDir\) Valid\(\) bool](<#ListStudyGuidesParamsSortDir.Valid>)
+- [type ListStudyGuidesRequestObject](<#ListStudyGuidesRequestObject>)
+- [type ListStudyGuidesResponse](<#ListStudyGuidesResponse>)
+- [type ListStudyGuidesResponseObject](<#ListStudyGuidesResponseObject>)
+- [type MembershipCheckResponse](<#MembershipCheckResponse>)
+- [type MembershipCheckResponseRole](<#MembershipCheckResponseRole>)
+  - [func \(e MembershipCheckResponseRole\) Valid\(\) bool](<#MembershipCheckResponseRole.Valid>)
 - [type MiddlewareFunc](<#MiddlewareFunc>)
 - [type NotFound](<#NotFound>)
 - [type NotFoundJSONResponse](<#NotFoundJSONResponse>)
+- [type QuizDetailResponse](<#QuizDetailResponse>)
+- [type QuizQuestionResponse](<#QuizQuestionResponse>)
+- [type QuizQuestionResponseType](<#QuizQuestionResponseType>)
+  - [func \(e QuizQuestionResponseType\) Valid\(\) bool](<#QuizQuestionResponseType.Valid>)
+- [type QuizSummary](<#QuizSummary>)
+- [type RecommendStudyGuide201JSONResponse](<#RecommendStudyGuide201JSONResponse>)
+  - [func \(response RecommendStudyGuide201JSONResponse\) VisitRecommendStudyGuideResponse\(w http.ResponseWriter\) error](<#RecommendStudyGuide201JSONResponse.VisitRecommendStudyGuideResponse>)
+- [type RecommendStudyGuide400JSONResponse](<#RecommendStudyGuide400JSONResponse>)
+  - [func \(response RecommendStudyGuide400JSONResponse\) VisitRecommendStudyGuideResponse\(w http.ResponseWriter\) error](<#RecommendStudyGuide400JSONResponse.VisitRecommendStudyGuideResponse>)
+- [type RecommendStudyGuide401JSONResponse](<#RecommendStudyGuide401JSONResponse>)
+  - [func \(response RecommendStudyGuide401JSONResponse\) VisitRecommendStudyGuideResponse\(w http.ResponseWriter\) error](<#RecommendStudyGuide401JSONResponse.VisitRecommendStudyGuideResponse>)
+- [type RecommendStudyGuide403JSONResponse](<#RecommendStudyGuide403JSONResponse>)
+  - [func \(response RecommendStudyGuide403JSONResponse\) VisitRecommendStudyGuideResponse\(w http.ResponseWriter\) error](<#RecommendStudyGuide403JSONResponse.VisitRecommendStudyGuideResponse>)
+- [type RecommendStudyGuide404JSONResponse](<#RecommendStudyGuide404JSONResponse>)
+  - [func \(response RecommendStudyGuide404JSONResponse\) VisitRecommendStudyGuideResponse\(w http.ResponseWriter\) error](<#RecommendStudyGuide404JSONResponse.VisitRecommendStudyGuideResponse>)
+- [type RecommendStudyGuide409JSONResponse](<#RecommendStudyGuide409JSONResponse>)
+  - [func \(response RecommendStudyGuide409JSONResponse\) VisitRecommendStudyGuideResponse\(w http.ResponseWriter\) error](<#RecommendStudyGuide409JSONResponse.VisitRecommendStudyGuideResponse>)
+- [type RecommendStudyGuide500JSONResponse](<#RecommendStudyGuide500JSONResponse>)
+  - [func \(response RecommendStudyGuide500JSONResponse\) VisitRecommendStudyGuideResponse\(w http.ResponseWriter\) error](<#RecommendStudyGuide500JSONResponse.VisitRecommendStudyGuideResponse>)
+- [type RecommendStudyGuideRequestObject](<#RecommendStudyGuideRequestObject>)
+- [type RecommendStudyGuideResponseObject](<#RecommendStudyGuideResponseObject>)
+- [type RecommendationResponse](<#RecommendationResponse>)
+- [type RemoveStudyGuideRecommendation204Response](<#RemoveStudyGuideRecommendation204Response>)
+  - [func \(response RemoveStudyGuideRecommendation204Response\) VisitRemoveStudyGuideRecommendationResponse\(w http.ResponseWriter\) error](<#RemoveStudyGuideRecommendation204Response.VisitRemoveStudyGuideRecommendationResponse>)
+- [type RemoveStudyGuideRecommendation400JSONResponse](<#RemoveStudyGuideRecommendation400JSONResponse>)
+  - [func \(response RemoveStudyGuideRecommendation400JSONResponse\) VisitRemoveStudyGuideRecommendationResponse\(w http.ResponseWriter\) error](<#RemoveStudyGuideRecommendation400JSONResponse.VisitRemoveStudyGuideRecommendationResponse>)
+- [type RemoveStudyGuideRecommendation401JSONResponse](<#RemoveStudyGuideRecommendation401JSONResponse>)
+  - [func \(response RemoveStudyGuideRecommendation401JSONResponse\) VisitRemoveStudyGuideRecommendationResponse\(w http.ResponseWriter\) error](<#RemoveStudyGuideRecommendation401JSONResponse.VisitRemoveStudyGuideRecommendationResponse>)
+- [type RemoveStudyGuideRecommendation403JSONResponse](<#RemoveStudyGuideRecommendation403JSONResponse>)
+  - [func \(response RemoveStudyGuideRecommendation403JSONResponse\) VisitRemoveStudyGuideRecommendationResponse\(w http.ResponseWriter\) error](<#RemoveStudyGuideRecommendation403JSONResponse.VisitRemoveStudyGuideRecommendationResponse>)
+- [type RemoveStudyGuideRecommendation404JSONResponse](<#RemoveStudyGuideRecommendation404JSONResponse>)
+  - [func \(response RemoveStudyGuideRecommendation404JSONResponse\) VisitRemoveStudyGuideRecommendationResponse\(w http.ResponseWriter\) error](<#RemoveStudyGuideRecommendation404JSONResponse.VisitRemoveStudyGuideRecommendationResponse>)
+- [type RemoveStudyGuideRecommendation500JSONResponse](<#RemoveStudyGuideRecommendation500JSONResponse>)
+  - [func \(response RemoveStudyGuideRecommendation500JSONResponse\) VisitRemoveStudyGuideRecommendationResponse\(w http.ResponseWriter\) error](<#RemoveStudyGuideRecommendation500JSONResponse.VisitRemoveStudyGuideRecommendationResponse>)
+- [type RemoveStudyGuideRecommendationRequestObject](<#RemoveStudyGuideRecommendationRequestObject>)
+- [type RemoveStudyGuideRecommendationResponseObject](<#RemoveStudyGuideRecommendationResponseObject>)
+- [type RemoveStudyGuideVote204Response](<#RemoveStudyGuideVote204Response>)
+  - [func \(response RemoveStudyGuideVote204Response\) VisitRemoveStudyGuideVoteResponse\(w http.ResponseWriter\) error](<#RemoveStudyGuideVote204Response.VisitRemoveStudyGuideVoteResponse>)
+- [type RemoveStudyGuideVote400JSONResponse](<#RemoveStudyGuideVote400JSONResponse>)
+  - [func \(response RemoveStudyGuideVote400JSONResponse\) VisitRemoveStudyGuideVoteResponse\(w http.ResponseWriter\) error](<#RemoveStudyGuideVote400JSONResponse.VisitRemoveStudyGuideVoteResponse>)
+- [type RemoveStudyGuideVote401JSONResponse](<#RemoveStudyGuideVote401JSONResponse>)
+  - [func \(response RemoveStudyGuideVote401JSONResponse\) VisitRemoveStudyGuideVoteResponse\(w http.ResponseWriter\) error](<#RemoveStudyGuideVote401JSONResponse.VisitRemoveStudyGuideVoteResponse>)
+- [type RemoveStudyGuideVote404JSONResponse](<#RemoveStudyGuideVote404JSONResponse>)
+  - [func \(response RemoveStudyGuideVote404JSONResponse\) VisitRemoveStudyGuideVoteResponse\(w http.ResponseWriter\) error](<#RemoveStudyGuideVote404JSONResponse.VisitRemoveStudyGuideVoteResponse>)
+- [type RemoveStudyGuideVote500JSONResponse](<#RemoveStudyGuideVote500JSONResponse>)
+  - [func \(response RemoveStudyGuideVote500JSONResponse\) VisitRemoveStudyGuideVoteResponse\(w http.ResponseWriter\) error](<#RemoveStudyGuideVote500JSONResponse.VisitRemoveStudyGuideVoteResponse>)
+- [type RemoveStudyGuideVoteRequestObject](<#RemoveStudyGuideVoteRequestObject>)
+- [type RemoveStudyGuideVoteResponseObject](<#RemoveStudyGuideVoteResponseObject>)
 - [type RequiredHeaderError](<#RequiredHeaderError>)
   - [func \(e \*RequiredHeaderError\) Error\(\) string](<#RequiredHeaderError.Error>)
   - [func \(e \*RequiredHeaderError\) Unwrap\(\) error](<#RequiredHeaderError.Unwrap>)
 - [type RequiredParamError](<#RequiredParamError>)
   - [func \(e \*RequiredParamError\) Error\(\) string](<#RequiredParamError.Error>)
+- [type ResourceSummary](<#ResourceSummary>)
+- [type ResourceSummaryType](<#ResourceSummaryType>)
+  - [func \(e ResourceSummaryType\) Valid\(\) bool](<#ResourceSummaryType.Valid>)
+- [type RevokeGrant204Response](<#RevokeGrant204Response>)
+  - [func \(response RevokeGrant204Response\) VisitRevokeGrantResponse\(w http.ResponseWriter\) error](<#RevokeGrant204Response.VisitRevokeGrantResponse>)
+- [type RevokeGrant400JSONResponse](<#RevokeGrant400JSONResponse>)
+  - [func \(response RevokeGrant400JSONResponse\) VisitRevokeGrantResponse\(w http.ResponseWriter\) error](<#RevokeGrant400JSONResponse.VisitRevokeGrantResponse>)
+- [type RevokeGrant401JSONResponse](<#RevokeGrant401JSONResponse>)
+  - [func \(response RevokeGrant401JSONResponse\) VisitRevokeGrantResponse\(w http.ResponseWriter\) error](<#RevokeGrant401JSONResponse.VisitRevokeGrantResponse>)
+- [type RevokeGrant404JSONResponse](<#RevokeGrant404JSONResponse>)
+  - [func \(response RevokeGrant404JSONResponse\) VisitRevokeGrantResponse\(w http.ResponseWriter\) error](<#RevokeGrant404JSONResponse.VisitRevokeGrantResponse>)
+- [type RevokeGrant500JSONResponse](<#RevokeGrant500JSONResponse>)
+  - [func \(response RevokeGrant500JSONResponse\) VisitRevokeGrantResponse\(w http.ResponseWriter\) error](<#RevokeGrant500JSONResponse.VisitRevokeGrantResponse>)
+- [type RevokeGrantJSONRequestBody](<#RevokeGrantJSONRequestBody>)
+- [type RevokeGrantRequest](<#RevokeGrantRequest>)
+- [type RevokeGrantRequestGranteeType](<#RevokeGrantRequestGranteeType>)
+  - [func \(e RevokeGrantRequestGranteeType\) Valid\(\) bool](<#RevokeGrantRequestGranteeType.Valid>)
+- [type RevokeGrantRequestObject](<#RevokeGrantRequestObject>)
+- [type RevokeGrantRequestPermission](<#RevokeGrantRequestPermission>)
+  - [func \(e RevokeGrantRequestPermission\) Valid\(\) bool](<#RevokeGrantRequestPermission.Valid>)
+- [type RevokeGrantResponseObject](<#RevokeGrantResponseObject>)
+- [type SchoolResponse](<#SchoolResponse>)
+- [type SchoolSummary](<#SchoolSummary>)
+- [type SectionMemberResponse](<#SectionMemberResponse>)
+- [type SectionMemberResponseRole](<#SectionMemberResponseRole>)
+  - [func \(e SectionMemberResponseRole\) Valid\(\) bool](<#SectionMemberResponseRole.Valid>)
+- [type SectionSummary](<#SectionSummary>)
 - [type ServerInterface](<#ServerInterface>)
   - [func NewStrictHandler\(ssi StrictServerInterface, middlewares \[\]StrictMiddlewareFunc\) ServerInterface](<#NewStrictHandler>)
   - [func NewStrictHandlerWithOptions\(ssi StrictServerInterface, middlewares \[\]StrictMiddlewareFunc, options StrictHTTPServerOptions\) ServerInterface](<#NewStrictHandlerWithOptions>)
 - [type ServerInterfaceWrapper](<#ServerInterfaceWrapper>)
+  - [func \(siw \*ServerInterfaceWrapper\) AttachFile\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.AttachFile>)
+  - [func \(siw \*ServerInterfaceWrapper\) AttachResource\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.AttachResource>)
+  - [func \(siw \*ServerInterfaceWrapper\) CastStudyGuideVote\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.CastStudyGuideVote>)
+  - [func \(siw \*ServerInterfaceWrapper\) CheckMembership\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.CheckMembership>)
+  - [func \(siw \*ServerInterfaceWrapper\) CreateFile\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.CreateFile>)
+  - [func \(siw \*ServerInterfaceWrapper\) CreateGrant\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.CreateGrant>)
+  - [func \(siw \*ServerInterfaceWrapper\) CreateQuiz\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.CreateQuiz>)
+  - [func \(siw \*ServerInterfaceWrapper\) CreateStudyGuide\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.CreateStudyGuide>)
   - [func \(siw \*ServerInterfaceWrapper\) DeleteFile\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.DeleteFile>)
+  - [func \(siw \*ServerInterfaceWrapper\) DeleteStudyGuide\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.DeleteStudyGuide>)
+  - [func \(siw \*ServerInterfaceWrapper\) DetachFile\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.DetachFile>)
+  - [func \(siw \*ServerInterfaceWrapper\) DetachResource\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.DetachResource>)
+  - [func \(siw \*ServerInterfaceWrapper\) GetCourse\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.GetCourse>)
   - [func \(siw \*ServerInterfaceWrapper\) GetFile\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.GetFile>)
+  - [func \(siw \*ServerInterfaceWrapper\) GetSchool\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.GetSchool>)
+  - [func \(siw \*ServerInterfaceWrapper\) GetStudyGuide\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.GetStudyGuide>)
+  - [func \(siw \*ServerInterfaceWrapper\) JoinSection\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.JoinSection>)
+  - [func \(siw \*ServerInterfaceWrapper\) LeaveSection\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.LeaveSection>)
+  - [func \(siw \*ServerInterfaceWrapper\) ListCourses\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.ListCourses>)
   - [func \(siw \*ServerInterfaceWrapper\) ListFiles\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.ListFiles>)
+  - [func \(siw \*ServerInterfaceWrapper\) ListMyEnrollments\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.ListMyEnrollments>)
+  - [func \(siw \*ServerInterfaceWrapper\) ListSchools\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.ListSchools>)
+  - [func \(siw \*ServerInterfaceWrapper\) ListSectionMembers\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.ListSectionMembers>)
+  - [func \(siw \*ServerInterfaceWrapper\) ListStudyGuides\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.ListStudyGuides>)
+  - [func \(siw \*ServerInterfaceWrapper\) RecommendStudyGuide\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.RecommendStudyGuide>)
+  - [func \(siw \*ServerInterfaceWrapper\) RemoveStudyGuideRecommendation\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.RemoveStudyGuideRecommendation>)
+  - [func \(siw \*ServerInterfaceWrapper\) RemoveStudyGuideVote\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.RemoveStudyGuideVote>)
+  - [func \(siw \*ServerInterfaceWrapper\) RevokeGrant\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.RevokeGrant>)
   - [func \(siw \*ServerInterfaceWrapper\) UpdateFile\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.UpdateFile>)
+  - [func \(siw \*ServerInterfaceWrapper\) UpdateStudyGuide\(w http.ResponseWriter, r \*http.Request\)](<#ServerInterfaceWrapper.UpdateStudyGuide>)
 - [type StrictHTTPServerOptions](<#StrictHTTPServerOptions>)
 - [type StrictHandlerFunc](<#StrictHandlerFunc>)
 - [type StrictMiddlewareFunc](<#StrictMiddlewareFunc>)
 - [type StrictServerInterface](<#StrictServerInterface>)
+- [type StudyGuideDetailResponse](<#StudyGuideDetailResponse>)
+- [type StudyGuideDetailResponseUserVote](<#StudyGuideDetailResponseUserVote>)
+  - [func \(e StudyGuideDetailResponseUserVote\) Valid\(\) bool](<#StudyGuideDetailResponseUserVote.Valid>)
+- [type StudyGuideFileSummary](<#StudyGuideFileSummary>)
+- [type StudyGuideListItemResponse](<#StudyGuideListItemResponse>)
 - [type TooManyValuesForParamError](<#TooManyValuesForParamError>)
   - [func \(e \*TooManyValuesForParamError\) Error\(\) string](<#TooManyValuesForParamError.Error>)
 - [type Unauthorized](<#Unauthorized>)
@@ -109,10 +546,36 @@ Package api provides the HTTP handlers, structural models, and OpenAPI bindings 
   - [func \(e \*UnescapedCookieParamError\) Error\(\) string](<#UnescapedCookieParamError.Error>)
   - [func \(e \*UnescapedCookieParamError\) Unwrap\(\) error](<#UnescapedCookieParamError.Unwrap>)
 - [type Unimplemented](<#Unimplemented>)
+  - [func \(\_ Unimplemented\) AttachFile\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID, fileId openapi\_types.UUID\)](<#Unimplemented.AttachFile>)
+  - [func \(\_ Unimplemented\) AttachResource\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#Unimplemented.AttachResource>)
+  - [func \(\_ Unimplemented\) CastStudyGuideVote\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#Unimplemented.CastStudyGuideVote>)
+  - [func \(\_ Unimplemented\) CheckMembership\(w http.ResponseWriter, r \*http.Request, courseId openapi\_types.UUID, sectionId openapi\_types.UUID\)](<#Unimplemented.CheckMembership>)
+  - [func \(\_ Unimplemented\) CreateFile\(w http.ResponseWriter, r \*http.Request\)](<#Unimplemented.CreateFile>)
+  - [func \(\_ Unimplemented\) CreateGrant\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#Unimplemented.CreateGrant>)
+  - [func \(\_ Unimplemented\) CreateQuiz\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#Unimplemented.CreateQuiz>)
+  - [func \(\_ Unimplemented\) CreateStudyGuide\(w http.ResponseWriter, r \*http.Request, courseId openapi\_types.UUID\)](<#Unimplemented.CreateStudyGuide>)
   - [func \(\_ Unimplemented\) DeleteFile\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#Unimplemented.DeleteFile>)
+  - [func \(\_ Unimplemented\) DeleteStudyGuide\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#Unimplemented.DeleteStudyGuide>)
+  - [func \(\_ Unimplemented\) DetachFile\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID, fileId openapi\_types.UUID\)](<#Unimplemented.DetachFile>)
+  - [func \(\_ Unimplemented\) DetachResource\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID, resourceId openapi\_types.UUID\)](<#Unimplemented.DetachResource>)
+  - [func \(\_ Unimplemented\) GetCourse\(w http.ResponseWriter, r \*http.Request, courseId openapi\_types.UUID\)](<#Unimplemented.GetCourse>)
   - [func \(\_ Unimplemented\) GetFile\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#Unimplemented.GetFile>)
+  - [func \(\_ Unimplemented\) GetSchool\(w http.ResponseWriter, r \*http.Request, schoolId openapi\_types.UUID\)](<#Unimplemented.GetSchool>)
+  - [func \(\_ Unimplemented\) GetStudyGuide\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#Unimplemented.GetStudyGuide>)
+  - [func \(\_ Unimplemented\) JoinSection\(w http.ResponseWriter, r \*http.Request, courseId openapi\_types.UUID, sectionId openapi\_types.UUID\)](<#Unimplemented.JoinSection>)
+  - [func \(\_ Unimplemented\) LeaveSection\(w http.ResponseWriter, r \*http.Request, courseId openapi\_types.UUID, sectionId openapi\_types.UUID\)](<#Unimplemented.LeaveSection>)
+  - [func \(\_ Unimplemented\) ListCourses\(w http.ResponseWriter, r \*http.Request, params ListCoursesParams\)](<#Unimplemented.ListCourses>)
   - [func \(\_ Unimplemented\) ListFiles\(w http.ResponseWriter, r \*http.Request, params ListFilesParams\)](<#Unimplemented.ListFiles>)
+  - [func \(\_ Unimplemented\) ListMyEnrollments\(w http.ResponseWriter, r \*http.Request, params ListMyEnrollmentsParams\)](<#Unimplemented.ListMyEnrollments>)
+  - [func \(\_ Unimplemented\) ListSchools\(w http.ResponseWriter, r \*http.Request, params ListSchoolsParams\)](<#Unimplemented.ListSchools>)
+  - [func \(\_ Unimplemented\) ListSectionMembers\(w http.ResponseWriter, r \*http.Request, courseId openapi\_types.UUID, sectionId openapi\_types.UUID, params ListSectionMembersParams\)](<#Unimplemented.ListSectionMembers>)
+  - [func \(\_ Unimplemented\) ListStudyGuides\(w http.ResponseWriter, r \*http.Request, courseId openapi\_types.UUID, params ListStudyGuidesParams\)](<#Unimplemented.ListStudyGuides>)
+  - [func \(\_ Unimplemented\) RecommendStudyGuide\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#Unimplemented.RecommendStudyGuide>)
+  - [func \(\_ Unimplemented\) RemoveStudyGuideRecommendation\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#Unimplemented.RemoveStudyGuideRecommendation>)
+  - [func \(\_ Unimplemented\) RemoveStudyGuideVote\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#Unimplemented.RemoveStudyGuideVote>)
+  - [func \(\_ Unimplemented\) RevokeGrant\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#Unimplemented.RevokeGrant>)
   - [func \(\_ Unimplemented\) UpdateFile\(w http.ResponseWriter, r \*http.Request, fileId openapi\_types.UUID\)](<#Unimplemented.UpdateFile>)
+  - [func \(\_ Unimplemented\) UpdateStudyGuide\(w http.ResponseWriter, r \*http.Request, studyGuideId openapi\_types.UUID\)](<#Unimplemented.UpdateStudyGuide>)
 - [type UnmarshalingParamError](<#UnmarshalingParamError>)
   - [func \(e \*UnmarshalingParamError\) Error\(\) string](<#UnmarshalingParamError.Error>)
   - [func \(e \*UnmarshalingParamError\) Unwrap\(\) error](<#UnmarshalingParamError.Unwrap>)
@@ -130,6 +593,22 @@ Package api provides the HTTP handlers, structural models, and OpenAPI bindings 
 - [type UpdateFileRequest](<#UpdateFileRequest>)
 - [type UpdateFileRequestObject](<#UpdateFileRequestObject>)
 - [type UpdateFileResponseObject](<#UpdateFileResponseObject>)
+- [type UpdateStudyGuide200JSONResponse](<#UpdateStudyGuide200JSONResponse>)
+  - [func \(response UpdateStudyGuide200JSONResponse\) VisitUpdateStudyGuideResponse\(w http.ResponseWriter\) error](<#UpdateStudyGuide200JSONResponse.VisitUpdateStudyGuideResponse>)
+- [type UpdateStudyGuide400JSONResponse](<#UpdateStudyGuide400JSONResponse>)
+  - [func \(response UpdateStudyGuide400JSONResponse\) VisitUpdateStudyGuideResponse\(w http.ResponseWriter\) error](<#UpdateStudyGuide400JSONResponse.VisitUpdateStudyGuideResponse>)
+- [type UpdateStudyGuide401JSONResponse](<#UpdateStudyGuide401JSONResponse>)
+  - [func \(response UpdateStudyGuide401JSONResponse\) VisitUpdateStudyGuideResponse\(w http.ResponseWriter\) error](<#UpdateStudyGuide401JSONResponse.VisitUpdateStudyGuideResponse>)
+- [type UpdateStudyGuide403JSONResponse](<#UpdateStudyGuide403JSONResponse>)
+  - [func \(response UpdateStudyGuide403JSONResponse\) VisitUpdateStudyGuideResponse\(w http.ResponseWriter\) error](<#UpdateStudyGuide403JSONResponse.VisitUpdateStudyGuideResponse>)
+- [type UpdateStudyGuide404JSONResponse](<#UpdateStudyGuide404JSONResponse>)
+  - [func \(response UpdateStudyGuide404JSONResponse\) VisitUpdateStudyGuideResponse\(w http.ResponseWriter\) error](<#UpdateStudyGuide404JSONResponse.VisitUpdateStudyGuideResponse>)
+- [type UpdateStudyGuide500JSONResponse](<#UpdateStudyGuide500JSONResponse>)
+  - [func \(response UpdateStudyGuide500JSONResponse\) VisitUpdateStudyGuideResponse\(w http.ResponseWriter\) error](<#UpdateStudyGuide500JSONResponse.VisitUpdateStudyGuideResponse>)
+- [type UpdateStudyGuideJSONRequestBody](<#UpdateStudyGuideJSONRequestBody>)
+- [type UpdateStudyGuideRequest](<#UpdateStudyGuideRequest>)
+- [type UpdateStudyGuideRequestObject](<#UpdateStudyGuideRequestObject>)
+- [type UpdateStudyGuideResponseObject](<#UpdateStudyGuideResponseObject>)
 
 
 ## Constants
@@ -142,8 +621,17 @@ const (
 )
 ```
 
+<a name="BearerAuthFunc"></a>
+## func [BearerAuthFunc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/errors.go#L19>)
+
+```go
+func BearerAuthFunc(_ context.Context, input *openapi3filter.AuthenticationInput) error
+```
+
+BearerAuthFunc is an openapi3filter.AuthenticationFunc that asserts the operation's security scheme is HTTP bearer and that an Authorization: Bearer header is present. It does not verify the token.
+
 <a name="GetSwagger"></a>
-## func [GetSwagger](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1124>)
+## func [GetSwagger](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L6067>)
 
 ```go
 func GetSwagger() (swagger *openapi3.T, err error)
@@ -152,7 +640,7 @@ func GetSwagger() (swagger *openapi3.T, err error)
 GetSwagger returns the Swagger specification corresponding to the generated code in this file. The external references of Swagger specification are resolved. The logic of resolving external references is tightly connected to "import\-mapping" feature. Externally referenced files must be embedded in the corresponding golang packages. Urls can be supported but this task was out of the scope.
 
 <a name="Handler"></a>
-## func [Handler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L611>)
+## func [Handler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2995>)
 
 ```go
 func Handler(si ServerInterface) http.Handler
@@ -161,7 +649,7 @@ func Handler(si ServerInterface) http.Handler
 Handler creates http.Handler with routing matching OpenAPI spec.
 
 <a name="HandlerFromMux"></a>
-## func [HandlerFromMux](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L623>)
+## func [HandlerFromMux](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3007>)
 
 ```go
 func HandlerFromMux(si ServerInterface, r chi.Router) http.Handler
@@ -170,7 +658,7 @@ func HandlerFromMux(si ServerInterface, r chi.Router) http.Handler
 HandlerFromMux creates http.Handler with routing matching OpenAPI spec based on the provided mux.
 
 <a name="HandlerFromMuxWithBaseURL"></a>
-## func [HandlerFromMuxWithBaseURL](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L629>)
+## func [HandlerFromMuxWithBaseURL](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3013>)
 
 ```go
 func HandlerFromMuxWithBaseURL(si ServerInterface, r chi.Router, baseURL string) http.Handler
@@ -179,7 +667,7 @@ func HandlerFromMuxWithBaseURL(si ServerInterface, r chi.Router, baseURL string)
 
 
 <a name="HandlerWithOptions"></a>
-## func [HandlerWithOptions](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L637>)
+## func [HandlerWithOptions](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3021>)
 
 ```go
 func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handler
@@ -188,7 +676,7 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 HandlerWithOptions creates http.Handler with additional options
 
 <a name="OAPIStrictErrorHandler"></a>
-## func [OAPIStrictErrorHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/errors.go#L39>)
+## func [OAPIStrictErrorHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/errors.go#L63>)
 
 ```go
 func OAPIStrictErrorHandler(w http.ResponseWriter, r *http.Request, err error)
@@ -197,7 +685,7 @@ func OAPIStrictErrorHandler(w http.ResponseWriter, r *http.Request, err error)
 OAPIStrictErrorHandler handles binding errors from the structural request parsing generated by oapi\-codegen.
 
 <a name="OAPIValidatorErrorHandler"></a>
-## func [OAPIValidatorErrorHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/errors.go#L14>)
+## func [OAPIValidatorErrorHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/errors.go#L38>)
 
 ```go
 func OAPIValidatorErrorHandler(w http.ResponseWriter, message string, statusCode int)
@@ -206,7 +694,7 @@ func OAPIValidatorErrorHandler(w http.ResponseWriter, message string, statusCode
 OAPIValidatorErrorHandler is a custom ErrorHandler for the OpenAPI request validator middleware.
 
 <a name="PathToRawSpec"></a>
-## func [PathToRawSpec](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1110>)
+## func [PathToRawSpec](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L6053>)
 
 ```go
 func PathToRawSpec(pathToFile string) map[string]func() ([]byte, error)
@@ -215,7 +703,7 @@ func PathToRawSpec(pathToFile string) map[string]func() ([]byte, error)
 Constructs a synthetic filesystem for resolving external references when loading openapi specifications.
 
 <a name="AppError"></a>
-## type [AppError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L148-L153>)
+## type [AppError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L634-L639>)
 
 AppError Standardized error response structure matching application error domains
 
@@ -228,8 +716,344 @@ type AppError struct {
 }
 ```
 
+<a name="AttachFile201JSONResponse"></a>
+## type [AttachFile201JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4361>)
+
+
+
+```go
+type AttachFile201JSONResponse FileAttachmentResponse
+```
+
+<a name="AttachFile201JSONResponse.VisitAttachFileResponse"></a>
+### func \(AttachFile201JSONResponse\) [VisitAttachFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4363>)
+
+```go
+func (response AttachFile201JSONResponse) VisitAttachFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="AttachFile400JSONResponse"></a>
+## type [AttachFile400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4370>)
+
+
+
+```go
+type AttachFile400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="AttachFile400JSONResponse.VisitAttachFileResponse"></a>
+### func \(AttachFile400JSONResponse\) [VisitAttachFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4372>)
+
+```go
+func (response AttachFile400JSONResponse) VisitAttachFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="AttachFile401JSONResponse"></a>
+## type [AttachFile401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4379>)
+
+
+
+```go
+type AttachFile401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="AttachFile401JSONResponse.VisitAttachFileResponse"></a>
+### func \(AttachFile401JSONResponse\) [VisitAttachFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4381>)
+
+```go
+func (response AttachFile401JSONResponse) VisitAttachFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="AttachFile403JSONResponse"></a>
+## type [AttachFile403JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4388>)
+
+
+
+```go
+type AttachFile403JSONResponse struct{ ForbiddenJSONResponse }
+```
+
+<a name="AttachFile403JSONResponse.VisitAttachFileResponse"></a>
+### func \(AttachFile403JSONResponse\) [VisitAttachFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4390>)
+
+```go
+func (response AttachFile403JSONResponse) VisitAttachFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="AttachFile404JSONResponse"></a>
+## type [AttachFile404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4397>)
+
+
+
+```go
+type AttachFile404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="AttachFile404JSONResponse.VisitAttachFileResponse"></a>
+### func \(AttachFile404JSONResponse\) [VisitAttachFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4399>)
+
+```go
+func (response AttachFile404JSONResponse) VisitAttachFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="AttachFile409JSONResponse"></a>
+## type [AttachFile409JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4406>)
+
+
+
+```go
+type AttachFile409JSONResponse struct{ ConflictJSONResponse }
+```
+
+<a name="AttachFile409JSONResponse.VisitAttachFileResponse"></a>
+### func \(AttachFile409JSONResponse\) [VisitAttachFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4408>)
+
+```go
+func (response AttachFile409JSONResponse) VisitAttachFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="AttachFile500JSONResponse"></a>
+## type [AttachFile500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4415-L4417>)
+
+
+
+```go
+type AttachFile500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="AttachFile500JSONResponse.VisitAttachFileResponse"></a>
+### func \(AttachFile500JSONResponse\) [VisitAttachFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4419>)
+
+```go
+func (response AttachFile500JSONResponse) VisitAttachFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="AttachFileRequestObject"></a>
+## type [AttachFileRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4352-L4355>)
+
+
+
+```go
+type AttachFileRequestObject struct {
+    StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+    FileId       openapi_types.UUID `json:"file_id"`
+}
+```
+
+<a name="AttachFileResponseObject"></a>
+## type [AttachFileResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4357-L4359>)
+
+
+
+```go
+type AttachFileResponseObject interface {
+    VisitAttachFileResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="AttachResource201JSONResponse"></a>
+## type [AttachResource201JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4627>)
+
+
+
+```go
+type AttachResource201JSONResponse ResourceSummary
+```
+
+<a name="AttachResource201JSONResponse.VisitAttachResourceResponse"></a>
+### func \(AttachResource201JSONResponse\) [VisitAttachResourceResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4629>)
+
+```go
+func (response AttachResource201JSONResponse) VisitAttachResourceResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="AttachResource400JSONResponse"></a>
+## type [AttachResource400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4636>)
+
+
+
+```go
+type AttachResource400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="AttachResource400JSONResponse.VisitAttachResourceResponse"></a>
+### func \(AttachResource400JSONResponse\) [VisitAttachResourceResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4638>)
+
+```go
+func (response AttachResource400JSONResponse) VisitAttachResourceResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="AttachResource401JSONResponse"></a>
+## type [AttachResource401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4645>)
+
+
+
+```go
+type AttachResource401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="AttachResource401JSONResponse.VisitAttachResourceResponse"></a>
+### func \(AttachResource401JSONResponse\) [VisitAttachResourceResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4647>)
+
+```go
+func (response AttachResource401JSONResponse) VisitAttachResourceResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="AttachResource404JSONResponse"></a>
+## type [AttachResource404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4654>)
+
+
+
+```go
+type AttachResource404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="AttachResource404JSONResponse.VisitAttachResourceResponse"></a>
+### func \(AttachResource404JSONResponse\) [VisitAttachResourceResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4656>)
+
+```go
+func (response AttachResource404JSONResponse) VisitAttachResourceResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="AttachResource409JSONResponse"></a>
+## type [AttachResource409JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4663>)
+
+
+
+```go
+type AttachResource409JSONResponse struct{ ConflictJSONResponse }
+```
+
+<a name="AttachResource409JSONResponse.VisitAttachResourceResponse"></a>
+### func \(AttachResource409JSONResponse\) [VisitAttachResourceResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4665>)
+
+```go
+func (response AttachResource409JSONResponse) VisitAttachResourceResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="AttachResource500JSONResponse"></a>
+## type [AttachResource500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4672-L4674>)
+
+
+
+```go
+type AttachResource500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="AttachResource500JSONResponse.VisitAttachResourceResponse"></a>
+### func \(AttachResource500JSONResponse\) [VisitAttachResourceResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4676>)
+
+```go
+func (response AttachResource500JSONResponse) VisitAttachResourceResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="AttachResourceJSONRequestBody"></a>
+## type [AttachResourceJSONRequestBody](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1389>)
+
+AttachResourceJSONRequestBody defines body for AttachResource for application/json ContentType.
+
+```go
+type AttachResourceJSONRequestBody = AttachResourceRequest
+```
+
+<a name="AttachResourceRequest"></a>
+## type [AttachResourceRequest](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L645-L650>)
+
+AttachResourceRequest Request body for POST /api/study\-guides/\{study\_guide\_id\}/resources. \`title\` and \`url\` are required. \`type\` defaults to \`link\` when omitted. URL must be http or https \(validated server\-side; the openapi \`format: uri\` only checks general syntax\).
+
+```go
+type AttachResourceRequest struct {
+    Description *string                    `json:"description,omitempty"`
+    Title       string                     `json:"title"`
+    Type        *AttachResourceRequestType `json:"type,omitempty"`
+    Url         string                     `json:"url"`
+}
+```
+
+<a name="AttachResourceRequestObject"></a>
+## type [AttachResourceRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4618-L4621>)
+
+
+
+```go
+type AttachResourceRequestObject struct {
+    StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+    Body         *AttachResourceJSONRequestBody
+}
+```
+
+<a name="AttachResourceRequestType"></a>
+## type [AttachResourceRequestType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L653>)
+
+AttachResourceRequestType defines model for AttachResourceRequest.Type.
+
+```go
+type AttachResourceRequestType string
+```
+
+<a name="AttachResourceRequestTypeArticle"></a>Defines values for AttachResourceRequestType.
+
+```go
+const (
+    AttachResourceRequestTypeArticle AttachResourceRequestType = "article"
+    AttachResourceRequestTypeLink    AttachResourceRequestType = "link"
+    AttachResourceRequestTypePdf     AttachResourceRequestType = "pdf"
+    AttachResourceRequestTypeVideo   AttachResourceRequestType = "video"
+)
+```
+
+<a name="AttachResourceRequestType.Valid"></a>
+### func \(AttachResourceRequestType\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L39>)
+
+```go
+func (e AttachResourceRequestType) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the AttachResourceRequestType enum.
+
+<a name="AttachResourceResponseObject"></a>
+## type [AttachResourceResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4623-L4625>)
+
+
+
+```go
+type AttachResourceResponseObject interface {
+    VisitAttachResourceResponse(w http.ResponseWriter) error
+}
+```
+
 <a name="BadRequest"></a>
-## type [BadRequest](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L181>)
+## type [BadRequest](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1192>)
 
 BadRequest Standardized error response structure matching application error domains
 
@@ -238,7 +1062,7 @@ type BadRequest = AppError
 ```
 
 <a name="BadRequestJSONResponse"></a>
-## type [BadRequestJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L670>)
+## type [BadRequestJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3132>)
 
 
 
@@ -246,8 +1070,324 @@ type BadRequest = AppError
 type BadRequestJSONResponse AppError
 ```
 
+<a name="CastStudyGuideVote200JSONResponse"></a>
+## type [CastStudyGuideVote200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4810>)
+
+
+
+```go
+type CastStudyGuideVote200JSONResponse CastVoteResponse
+```
+
+<a name="CastStudyGuideVote200JSONResponse.VisitCastStudyGuideVoteResponse"></a>
+### func \(CastStudyGuideVote200JSONResponse\) [VisitCastStudyGuideVoteResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4812>)
+
+```go
+func (response CastStudyGuideVote200JSONResponse) VisitCastStudyGuideVoteResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CastStudyGuideVote400JSONResponse"></a>
+## type [CastStudyGuideVote400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4819>)
+
+
+
+```go
+type CastStudyGuideVote400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="CastStudyGuideVote400JSONResponse.VisitCastStudyGuideVoteResponse"></a>
+### func \(CastStudyGuideVote400JSONResponse\) [VisitCastStudyGuideVoteResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4821>)
+
+```go
+func (response CastStudyGuideVote400JSONResponse) VisitCastStudyGuideVoteResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CastStudyGuideVote401JSONResponse"></a>
+## type [CastStudyGuideVote401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4828>)
+
+
+
+```go
+type CastStudyGuideVote401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="CastStudyGuideVote401JSONResponse.VisitCastStudyGuideVoteResponse"></a>
+### func \(CastStudyGuideVote401JSONResponse\) [VisitCastStudyGuideVoteResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4830>)
+
+```go
+func (response CastStudyGuideVote401JSONResponse) VisitCastStudyGuideVoteResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CastStudyGuideVote404JSONResponse"></a>
+## type [CastStudyGuideVote404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4837>)
+
+
+
+```go
+type CastStudyGuideVote404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="CastStudyGuideVote404JSONResponse.VisitCastStudyGuideVoteResponse"></a>
+### func \(CastStudyGuideVote404JSONResponse\) [VisitCastStudyGuideVoteResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4839>)
+
+```go
+func (response CastStudyGuideVote404JSONResponse) VisitCastStudyGuideVoteResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CastStudyGuideVote500JSONResponse"></a>
+## type [CastStudyGuideVote500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4846-L4848>)
+
+
+
+```go
+type CastStudyGuideVote500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="CastStudyGuideVote500JSONResponse.VisitCastStudyGuideVoteResponse"></a>
+### func \(CastStudyGuideVote500JSONResponse\) [VisitCastStudyGuideVoteResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4850>)
+
+```go
+func (response CastStudyGuideVote500JSONResponse) VisitCastStudyGuideVoteResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CastStudyGuideVoteJSONRequestBody"></a>
+## type [CastStudyGuideVoteJSONRequestBody](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1392>)
+
+CastStudyGuideVoteJSONRequestBody defines body for CastStudyGuideVote for application/json ContentType.
+
+```go
+type CastStudyGuideVoteJSONRequestBody = CastVoteRequest
+```
+
+<a name="CastStudyGuideVoteRequestObject"></a>
+## type [CastStudyGuideVoteRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4801-L4804>)
+
+
+
+```go
+type CastStudyGuideVoteRequestObject struct {
+    StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+    Body         *CastStudyGuideVoteJSONRequestBody
+}
+```
+
+<a name="CastStudyGuideVoteResponseObject"></a>
+## type [CastStudyGuideVoteResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4806-L4808>)
+
+
+
+```go
+type CastStudyGuideVoteResponseObject interface {
+    VisitCastStudyGuideVoteResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="CastVoteRequest"></a>
+## type [CastVoteRequest](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L659-L661>)
+
+CastVoteRequest Request body for POST /api/study\-guides/\{study\_guide\_id\}/votes. \`vote\` is the desired direction. Same\-direction submits are no\-ops at the SQL layer \(the upsert WHERE clause skips the row modification when vote is unchanged\).
+
+```go
+type CastVoteRequest struct {
+    Vote CastVoteRequestVote `json:"vote"`
+}
+```
+
+<a name="CastVoteRequestVote"></a>
+## type [CastVoteRequestVote](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L664>)
+
+CastVoteRequestVote defines model for CastVoteRequest.Vote.
+
+```go
+type CastVoteRequestVote string
+```
+
+<a name="CastVoteRequestVoteDown"></a>Defines values for CastVoteRequestVote.
+
+```go
+const (
+    CastVoteRequestVoteDown CastVoteRequestVote = "down"
+    CastVoteRequestVoteUp   CastVoteRequestVote = "up"
+)
+```
+
+<a name="CastVoteRequestVote.Valid"></a>
+### func \(CastVoteRequestVote\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L61>)
+
+```go
+func (e CastVoteRequestVote) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the CastVoteRequestVote enum.
+
+<a name="CastVoteResponse"></a>
+## type [CastVoteResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L669-L672>)
+
+CastVoteResponse Response body for POST /api/study\-guides/\{study\_guide\_id\}/votes. Returns the post\-upsert state so the UI can patch its local vote\_score without a follow\-up GET.
+
+```go
+type CastVoteResponse struct {
+    Vote      CastVoteResponseVote `json:"vote"`
+    VoteScore int64                `json:"vote_score"`
+}
+```
+
+<a name="CastVoteResponseVote"></a>
+## type [CastVoteResponseVote](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L675>)
+
+CastVoteResponseVote defines model for CastVoteResponse.Vote.
+
+```go
+type CastVoteResponseVote string
+```
+
+<a name="CastVoteResponseVoteDown"></a>Defines values for CastVoteResponseVote.
+
+```go
+const (
+    CastVoteResponseVoteDown CastVoteResponseVote = "down"
+    CastVoteResponseVoteUp   CastVoteResponseVote = "up"
+)
+```
+
+<a name="CastVoteResponseVote.Valid"></a>
+### func \(CastVoteResponseVote\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L79>)
+
+```go
+func (e CastVoteResponseVote) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the CastVoteResponseVote enum.
+
+<a name="CheckMembership200JSONResponse"></a>
+## type [CheckMembership200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3431>)
+
+
+
+```go
+type CheckMembership200JSONResponse MembershipCheckResponse
+```
+
+<a name="CheckMembership200JSONResponse.VisitCheckMembershipResponse"></a>
+### func \(CheckMembership200JSONResponse\) [VisitCheckMembershipResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3433>)
+
+```go
+func (response CheckMembership200JSONResponse) VisitCheckMembershipResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CheckMembership400JSONResponse"></a>
+## type [CheckMembership400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3440>)
+
+
+
+```go
+type CheckMembership400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="CheckMembership400JSONResponse.VisitCheckMembershipResponse"></a>
+### func \(CheckMembership400JSONResponse\) [VisitCheckMembershipResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3442>)
+
+```go
+func (response CheckMembership400JSONResponse) VisitCheckMembershipResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CheckMembership401JSONResponse"></a>
+## type [CheckMembership401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3449>)
+
+
+
+```go
+type CheckMembership401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="CheckMembership401JSONResponse.VisitCheckMembershipResponse"></a>
+### func \(CheckMembership401JSONResponse\) [VisitCheckMembershipResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3451>)
+
+```go
+func (response CheckMembership401JSONResponse) VisitCheckMembershipResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CheckMembership404JSONResponse"></a>
+## type [CheckMembership404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3458>)
+
+
+
+```go
+type CheckMembership404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="CheckMembership404JSONResponse.VisitCheckMembershipResponse"></a>
+### func \(CheckMembership404JSONResponse\) [VisitCheckMembershipResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3460>)
+
+```go
+func (response CheckMembership404JSONResponse) VisitCheckMembershipResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CheckMembership500JSONResponse"></a>
+## type [CheckMembership500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3467-L3469>)
+
+
+
+```go
+type CheckMembership500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="CheckMembership500JSONResponse.VisitCheckMembershipResponse"></a>
+### func \(CheckMembership500JSONResponse\) [VisitCheckMembershipResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3471>)
+
+```go
+func (response CheckMembership500JSONResponse) VisitCheckMembershipResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CheckMembershipRequestObject"></a>
+## type [CheckMembershipRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3422-L3425>)
+
+
+
+```go
+type CheckMembershipRequestObject struct {
+    CourseId  openapi_types.UUID `json:"course_id"`
+    SectionId openapi_types.UUID `json:"section_id"`
+}
+```
+
+<a name="CheckMembershipResponseObject"></a>
+## type [CheckMembershipResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3427-L3429>)
+
+
+
+```go
+type CheckMembershipResponseObject interface {
+    VisitCheckMembershipResponse(w http.ResponseWriter) error
+}
+```
+
 <a name="ChiServerOptions"></a>
-## type [ChiServerOptions](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L615-L620>)
+## type [ChiServerOptions](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2999-L3004>)
 
 
 
@@ -260,8 +1400,822 @@ type ChiServerOptions struct {
 }
 ```
 
+<a name="Conflict"></a>
+## type [Conflict](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1195>)
+
+Conflict Standardized error response structure matching application error domains
+
+```go
+type Conflict = AppError
+```
+
+<a name="ConflictJSONResponse"></a>
+## type [ConflictJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3134>)
+
+
+
+```go
+type ConflictJSONResponse AppError
+```
+
+<a name="CourseDetailResponse"></a>
+## type [CourseDetailResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L678-L689>)
+
+CourseDetailResponse A course with its school summary and the full list of sections
+
+```go
+type CourseDetailResponse struct {
+    CreatedAt   time.Time          `json:"created_at"`
+    Department  string             `json:"department"`
+    Description *string            `json:"description,omitempty"`
+    Id          openapi_types.UUID `json:"id"`
+    Number      string             `json:"number"`
+
+    // School Compact school payload embedded inside other resources (courses, study guides)
+    School   SchoolSummary    `json:"school"`
+    Sections []SectionSummary `json:"sections"`
+    Title    string           `json:"title"`
+}
+```
+
+<a name="CourseMemberResponse"></a>
+## type [CourseMemberResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L692-L697>)
+
+CourseMemberResponse A user's membership in a course section
+
+```go
+type CourseMemberResponse struct {
+    JoinedAt  time.Time                `json:"joined_at"`
+    Role      CourseMemberResponseRole `json:"role"`
+    SectionId openapi_types.UUID       `json:"section_id"`
+    UserId    openapi_types.UUID       `json:"user_id"`
+}
+```
+
+<a name="CourseMemberResponseRole"></a>
+## type [CourseMemberResponseRole](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L700>)
+
+CourseMemberResponseRole defines model for CourseMemberResponse.Role.
+
+```go
+type CourseMemberResponseRole string
+```
+
+<a name="CourseMemberResponseRoleInstructor"></a>Defines values for CourseMemberResponseRole.
+
+```go
+const (
+    CourseMemberResponseRoleInstructor CourseMemberResponseRole = "instructor"
+    CourseMemberResponseRoleStudent    CourseMemberResponseRole = "student"
+    CourseMemberResponseRoleTa         CourseMemberResponseRole = "ta"
+)
+```
+
+<a name="CourseMemberResponseRole.Valid"></a>
+### func \(CourseMemberResponseRole\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L98>)
+
+```go
+func (e CourseMemberResponseRole) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the CourseMemberResponseRole enum.
+
+<a name="CourseResponse"></a>
+## type [CourseResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L703-L713>)
+
+CourseResponse A course \(e.g. CPTS 322\) with its school summary embedded
+
+```go
+type CourseResponse struct {
+    CreatedAt   time.Time          `json:"created_at"`
+    Department  string             `json:"department"`
+    Description *string            `json:"description,omitempty"`
+    Id          openapi_types.UUID `json:"id"`
+    Number      string             `json:"number"`
+
+    // School Compact school payload embedded inside other resources (courses, study guides)
+    School SchoolSummary `json:"school"`
+    Title  string        `json:"title"`
+}
+```
+
+<a name="CreateFile201JSONResponse"></a>
+## type [CreateFile201JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3598>)
+
+
+
+```go
+type CreateFile201JSONResponse CreateFileResponse
+```
+
+<a name="CreateFile201JSONResponse.VisitCreateFileResponse"></a>
+### func \(CreateFile201JSONResponse\) [VisitCreateFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3600>)
+
+```go
+func (response CreateFile201JSONResponse) VisitCreateFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateFile400JSONResponse"></a>
+## type [CreateFile400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3607>)
+
+
+
+```go
+type CreateFile400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="CreateFile400JSONResponse.VisitCreateFileResponse"></a>
+### func \(CreateFile400JSONResponse\) [VisitCreateFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3609>)
+
+```go
+func (response CreateFile400JSONResponse) VisitCreateFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateFile401JSONResponse"></a>
+## type [CreateFile401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3616>)
+
+
+
+```go
+type CreateFile401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="CreateFile401JSONResponse.VisitCreateFileResponse"></a>
+### func \(CreateFile401JSONResponse\) [VisitCreateFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3618>)
+
+```go
+func (response CreateFile401JSONResponse) VisitCreateFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateFile500JSONResponse"></a>
+## type [CreateFile500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3625-L3627>)
+
+
+
+```go
+type CreateFile500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="CreateFile500JSONResponse.VisitCreateFileResponse"></a>
+### func \(CreateFile500JSONResponse\) [VisitCreateFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3629>)
+
+```go
+func (response CreateFile500JSONResponse) VisitCreateFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateFileJSONRequestBody"></a>
+## type [CreateFileJSONRequestBody](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1371>)
+
+CreateFileJSONRequestBody defines body for CreateFile for application/json ContentType.
+
+```go
+type CreateFileJSONRequestBody = CreateFileRequest
+```
+
+<a name="CreateFileRequest"></a>
+## type [CreateFileRequest](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L716-L720>)
+
+CreateFileRequest Payload to create a new file reference
+
+```go
+type CreateFileRequest struct {
+    MimeType CreateFileRequestMimeType `json:"mime_type"`
+    Name     string                    `json:"name"`
+    Size     int64                     `json:"size"`
+}
+```
+
+<a name="CreateFileRequestMimeType"></a>
+## type [CreateFileRequestMimeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L723>)
+
+CreateFileRequestMimeType defines model for CreateFileRequest.MimeType.
+
+```go
+type CreateFileRequestMimeType string
+```
+
+<a name="CreateFileRequestMimeTypeApplicationepubZip"></a>Defines values for CreateFileRequestMimeType.
+
+```go
+const (
+    CreateFileRequestMimeTypeApplicationepubZip                                                   CreateFileRequestMimeType = "application/epub+zip"
+    CreateFileRequestMimeTypeApplicationpdf                                                       CreateFileRequestMimeType = "application/pdf"
+    CreateFileRequestMimeTypeApplicationvndOpenxmlformatsOfficedocumentPresentationmlPresentation CreateFileRequestMimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    CreateFileRequestMimeTypeApplicationvndOpenxmlformatsOfficedocumentWordprocessingmlDocument   CreateFileRequestMimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    CreateFileRequestMimeTypeImagejpeg                                                            CreateFileRequestMimeType = "image/jpeg"
+    CreateFileRequestMimeTypeImagepng                                                             CreateFileRequestMimeType = "image/png"
+    CreateFileRequestMimeTypeImagewebp                                                            CreateFileRequestMimeType = "image/webp"
+    CreateFileRequestMimeTypeTextplain                                                            CreateFileRequestMimeType = "text/plain"
+)
+```
+
+<a name="CreateFileRequestMimeType.Valid"></a>
+### func \(CreateFileRequestMimeType\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L124>)
+
+```go
+func (e CreateFileRequestMimeType) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the CreateFileRequestMimeType enum.
+
+<a name="CreateFileRequestObject"></a>
+## type [CreateFileRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3590-L3592>)
+
+
+
+```go
+type CreateFileRequestObject struct {
+    Body *CreateFileJSONRequestBody
+}
+```
+
+<a name="CreateFileResponse"></a>
+## type [CreateFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L726-L730>)
+
+CreateFileResponse Created file reference with a presigned upload URL
+
+```go
+type CreateFileResponse struct {
+    // File Complete metadata payload describing an uploaded file
+    File      FileResponse `json:"file"`
+    UploadUrl string       `json:"upload_url"`
+}
+```
+
+<a name="CreateFileResponseObject"></a>
+## type [CreateFileResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3594-L3596>)
+
+
+
+```go
+type CreateFileResponseObject interface {
+    VisitCreateFileResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="CreateGrant201JSONResponse"></a>
+## type [CreateGrant201JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3865>)
+
+
+
+```go
+type CreateGrant201JSONResponse GrantResponse
+```
+
+<a name="CreateGrant201JSONResponse.VisitCreateGrantResponse"></a>
+### func \(CreateGrant201JSONResponse\) [VisitCreateGrantResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3867>)
+
+```go
+func (response CreateGrant201JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateGrant400JSONResponse"></a>
+## type [CreateGrant400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3874>)
+
+
+
+```go
+type CreateGrant400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="CreateGrant400JSONResponse.VisitCreateGrantResponse"></a>
+### func \(CreateGrant400JSONResponse\) [VisitCreateGrantResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3876>)
+
+```go
+func (response CreateGrant400JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateGrant401JSONResponse"></a>
+## type [CreateGrant401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3883>)
+
+
+
+```go
+type CreateGrant401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="CreateGrant401JSONResponse.VisitCreateGrantResponse"></a>
+### func \(CreateGrant401JSONResponse\) [VisitCreateGrantResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3885>)
+
+```go
+func (response CreateGrant401JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateGrant404JSONResponse"></a>
+## type [CreateGrant404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3892>)
+
+
+
+```go
+type CreateGrant404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="CreateGrant404JSONResponse.VisitCreateGrantResponse"></a>
+### func \(CreateGrant404JSONResponse\) [VisitCreateGrantResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3894>)
+
+```go
+func (response CreateGrant404JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateGrant500JSONResponse"></a>
+## type [CreateGrant500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3901-L3903>)
+
+
+
+```go
+type CreateGrant500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="CreateGrant500JSONResponse.VisitCreateGrantResponse"></a>
+### func \(CreateGrant500JSONResponse\) [VisitCreateGrantResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3905>)
+
+```go
+func (response CreateGrant500JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateGrantJSONRequestBody"></a>
+## type [CreateGrantJSONRequestBody](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1380>)
+
+CreateGrantJSONRequestBody defines body for CreateGrant for application/json ContentType.
+
+```go
+type CreateGrantJSONRequestBody = CreateGrantRequest
+```
+
+<a name="CreateGrantRequest"></a>
+## type [CreateGrantRequest](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L733-L737>)
+
+CreateGrantRequest Request body for creating a file grant
+
+```go
+type CreateGrantRequest struct {
+    GranteeId   openapi_types.UUID            `json:"grantee_id"`
+    GranteeType CreateGrantRequestGranteeType `json:"grantee_type"`
+    Permission  CreateGrantRequestPermission  `json:"permission"`
+}
+```
+
+<a name="CreateGrantRequestGranteeType"></a>
+## type [CreateGrantRequestGranteeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L740>)
+
+CreateGrantRequestGranteeType defines model for CreateGrantRequest.GranteeType.
+
+```go
+type CreateGrantRequestGranteeType string
+```
+
+<a name="CreateGrantRequestGranteeTypeCourse"></a>Defines values for CreateGrantRequestGranteeType.
+
+```go
+const (
+    CreateGrantRequestGranteeTypeCourse     CreateGrantRequestGranteeType = "course"
+    CreateGrantRequestGranteeTypeStudyGuide CreateGrantRequestGranteeType = "study_guide"
+    CreateGrantRequestGranteeTypeUser       CreateGrantRequestGranteeType = "user"
+)
+```
+
+<a name="CreateGrantRequestGranteeType.Valid"></a>
+### func \(CreateGrantRequestGranteeType\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L155>)
+
+```go
+func (e CreateGrantRequestGranteeType) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the CreateGrantRequestGranteeType enum.
+
+<a name="CreateGrantRequestObject"></a>
+## type [CreateGrantRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3856-L3859>)
+
+
+
+```go
+type CreateGrantRequestObject struct {
+    FileId openapi_types.UUID `json:"file_id"`
+    Body   *CreateGrantJSONRequestBody
+}
+```
+
+<a name="CreateGrantRequestPermission"></a>
+## type [CreateGrantRequestPermission](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L743>)
+
+CreateGrantRequestPermission defines model for CreateGrantRequest.Permission.
+
+```go
+type CreateGrantRequestPermission string
+```
+
+<a name="CreateGrantRequestPermissionDelete"></a>Defines values for CreateGrantRequestPermission.
+
+```go
+const (
+    CreateGrantRequestPermissionDelete CreateGrantRequestPermission = "delete"
+    CreateGrantRequestPermissionShare  CreateGrantRequestPermission = "share"
+    CreateGrantRequestPermissionView   CreateGrantRequestPermission = "view"
+)
+```
+
+<a name="CreateGrantRequestPermission.Valid"></a>
+### func \(CreateGrantRequestPermission\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L176>)
+
+```go
+func (e CreateGrantRequestPermission) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the CreateGrantRequestPermission enum.
+
+<a name="CreateGrantResponseObject"></a>
+## type [CreateGrantResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3861-L3863>)
+
+
+
+```go
+type CreateGrantResponseObject interface {
+    VisitCreateGrantResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="CreateQuiz201JSONResponse"></a>
+## type [CreateQuiz201JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4435>)
+
+
+
+```go
+type CreateQuiz201JSONResponse QuizDetailResponse
+```
+
+<a name="CreateQuiz201JSONResponse.VisitCreateQuizResponse"></a>
+### func \(CreateQuiz201JSONResponse\) [VisitCreateQuizResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4437>)
+
+```go
+func (response CreateQuiz201JSONResponse) VisitCreateQuizResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateQuiz400JSONResponse"></a>
+## type [CreateQuiz400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4444>)
+
+
+
+```go
+type CreateQuiz400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="CreateQuiz400JSONResponse.VisitCreateQuizResponse"></a>
+### func \(CreateQuiz400JSONResponse\) [VisitCreateQuizResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4446>)
+
+```go
+func (response CreateQuiz400JSONResponse) VisitCreateQuizResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateQuiz401JSONResponse"></a>
+## type [CreateQuiz401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4453>)
+
+
+
+```go
+type CreateQuiz401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="CreateQuiz401JSONResponse.VisitCreateQuizResponse"></a>
+### func \(CreateQuiz401JSONResponse\) [VisitCreateQuizResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4455>)
+
+```go
+func (response CreateQuiz401JSONResponse) VisitCreateQuizResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateQuiz404JSONResponse"></a>
+## type [CreateQuiz404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4462>)
+
+
+
+```go
+type CreateQuiz404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="CreateQuiz404JSONResponse.VisitCreateQuizResponse"></a>
+### func \(CreateQuiz404JSONResponse\) [VisitCreateQuizResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4464>)
+
+```go
+func (response CreateQuiz404JSONResponse) VisitCreateQuizResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateQuiz500JSONResponse"></a>
+## type [CreateQuiz500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4471-L4473>)
+
+
+
+```go
+type CreateQuiz500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="CreateQuiz500JSONResponse.VisitCreateQuizResponse"></a>
+### func \(CreateQuiz500JSONResponse\) [VisitCreateQuizResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4475>)
+
+```go
+func (response CreateQuiz500JSONResponse) VisitCreateQuizResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateQuizJSONRequestBody"></a>
+## type [CreateQuizJSONRequestBody](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1386>)
+
+CreateQuizJSONRequestBody defines body for CreateQuiz for application/json ContentType.
+
+```go
+type CreateQuizJSONRequestBody = CreateQuizRequest
+```
+
+<a name="CreateQuizMCQOption"></a>
+## type [CreateQuizMCQOption](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L749-L752>)
+
+CreateQuizMCQOption A single option for a \`multiple\-choice\` question on the create request. Exactly one option per MCQ question must have \`is\_correct: true\`. The text is rendered to the student verbatim; no normalization is applied server\-side.
+
+```go
+type CreateQuizMCQOption struct {
+    IsCorrect bool   `json:"is_correct"`
+    Text      string `json:"text"`
+}
+```
+
+<a name="CreateQuizQuestion"></a>
+## type [CreateQuizQuestion](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L765-L778>)
+
+CreateQuizQuestion A single question on the create\-quiz request. The \`type\` field discriminates which other fields are meaningful:
+
+- \`multiple\-choice\` \-\- requires \`options\`; ignores \`correct\_answer\`.
+- \`true\-false\` \-\- requires \`correct\_answer\` as a boolean; ignores \`options\`.
+- \`freeform\` \-\- requires \`correct\_answer\` as a non\-empty string; ignores \`options\`.
+
+Cross\-field validation is enforced by the service layer with per\-field 400 error details when the rules above are violated.
+
+```go
+type CreateQuizQuestion struct {
+    // CorrectAnswer For `true-false` questions this is a boolean; for `freeform`
+    // questions this is a non-empty string (max 500 chars).
+    // Ignored for `multiple-choice` questions (correctness is
+    // embedded in `options[].is_correct`).
+    CorrectAnswer     interface{}            `json:"correct_answer,omitempty"`
+    FeedbackCorrect   *string                `json:"feedback_correct,omitempty"`
+    FeedbackIncorrect *string                `json:"feedback_incorrect,omitempty"`
+    Hint              *string                `json:"hint,omitempty"`
+    Options           *[]CreateQuizMCQOption `json:"options,omitempty"`
+    Question          string                 `json:"question"`
+    SortOrder         *int                   `json:"sort_order,omitempty"`
+    Type              CreateQuizQuestionType `json:"type"`
+}
+```
+
+<a name="CreateQuizQuestionType"></a>
+## type [CreateQuizQuestionType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L781>)
+
+CreateQuizQuestionType defines model for CreateQuizQuestion.Type.
+
+```go
+type CreateQuizQuestionType string
+```
+
+<a name="CreateQuizQuestionTypeFreeform"></a>Defines values for CreateQuizQuestionType.
+
+```go
+const (
+    CreateQuizQuestionTypeFreeform       CreateQuizQuestionType = "freeform"
+    CreateQuizQuestionTypeMultipleChoice CreateQuizQuestionType = "multiple-choice"
+    CreateQuizQuestionTypeTrueFalse      CreateQuizQuestionType = "true-false"
+)
+```
+
+<a name="CreateQuizQuestionType.Valid"></a>
+### func \(CreateQuizQuestionType\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L197>)
+
+```go
+func (e CreateQuizQuestionType) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the CreateQuizQuestionType enum.
+
+<a name="CreateQuizRequest"></a>
+## type [CreateQuizRequest](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L791-L795>)
+
+CreateQuizRequest Request body for POST /api/study\-guides/\{study\_guide\_id\}/quizzes. The entire quiz \(title \+ N questions \+ each question's options\) is created atomically. If any question fails validation, the whole request is rejected and no rows are written.
+
+\`creator\_id\` is set from the JWT; any value supplied here is ignored \(sending one is not an error to keep the wire shape forgiving for frontend builders\).
+
+```go
+type CreateQuizRequest struct {
+    Description *string              `json:"description,omitempty"`
+    Questions   []CreateQuizQuestion `json:"questions"`
+    Title       string               `json:"title"`
+}
+```
+
+<a name="CreateQuizRequestObject"></a>
+## type [CreateQuizRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4426-L4429>)
+
+
+
+```go
+type CreateQuizRequestObject struct {
+    StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+    Body         *CreateQuizJSONRequestBody
+}
+```
+
+<a name="CreateQuizResponseObject"></a>
+## type [CreateQuizResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4431-L4433>)
+
+
+
+```go
+type CreateQuizResponseObject interface {
+    VisitCreateQuizResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="CreateStudyGuide201JSONResponse"></a>
+## type [CreateStudyGuide201JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3543>)
+
+
+
+```go
+type CreateStudyGuide201JSONResponse StudyGuideDetailResponse
+```
+
+<a name="CreateStudyGuide201JSONResponse.VisitCreateStudyGuideResponse"></a>
+### func \(CreateStudyGuide201JSONResponse\) [VisitCreateStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3545>)
+
+```go
+func (response CreateStudyGuide201JSONResponse) VisitCreateStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateStudyGuide400JSONResponse"></a>
+## type [CreateStudyGuide400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3552>)
+
+
+
+```go
+type CreateStudyGuide400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="CreateStudyGuide400JSONResponse.VisitCreateStudyGuideResponse"></a>
+### func \(CreateStudyGuide400JSONResponse\) [VisitCreateStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3554>)
+
+```go
+func (response CreateStudyGuide400JSONResponse) VisitCreateStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateStudyGuide401JSONResponse"></a>
+## type [CreateStudyGuide401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3561>)
+
+
+
+```go
+type CreateStudyGuide401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="CreateStudyGuide401JSONResponse.VisitCreateStudyGuideResponse"></a>
+### func \(CreateStudyGuide401JSONResponse\) [VisitCreateStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3563>)
+
+```go
+func (response CreateStudyGuide401JSONResponse) VisitCreateStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateStudyGuide404JSONResponse"></a>
+## type [CreateStudyGuide404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3570>)
+
+
+
+```go
+type CreateStudyGuide404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="CreateStudyGuide404JSONResponse.VisitCreateStudyGuideResponse"></a>
+### func \(CreateStudyGuide404JSONResponse\) [VisitCreateStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3572>)
+
+```go
+func (response CreateStudyGuide404JSONResponse) VisitCreateStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateStudyGuide500JSONResponse"></a>
+## type [CreateStudyGuide500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3579-L3581>)
+
+
+
+```go
+type CreateStudyGuide500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="CreateStudyGuide500JSONResponse.VisitCreateStudyGuideResponse"></a>
+### func \(CreateStudyGuide500JSONResponse\) [VisitCreateStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3583>)
+
+```go
+func (response CreateStudyGuide500JSONResponse) VisitCreateStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="CreateStudyGuideJSONRequestBody"></a>
+## type [CreateStudyGuideJSONRequestBody](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1368>)
+
+CreateStudyGuideJSONRequestBody defines body for CreateStudyGuide for application/json ContentType.
+
+```go
+type CreateStudyGuideJSONRequestBody = CreateStudyGuideRequest
+```
+
+<a name="CreateStudyGuideRequest"></a>
+## type [CreateStudyGuideRequest](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L802-L807>)
+
+CreateStudyGuideRequest Request body for POST /api/courses/\{course\_id\}/study\-guides. Only \`title\` is required. Tags are normalized server\-side \(trim \+ lowercase \+ dedupe\); empty tags after trim are rejected with 400. \`creator\_id\` is set from the JWT and ignored if supplied here.
+
+```go
+type CreateStudyGuideRequest struct {
+    Content     *string   `json:"content,omitempty"`
+    Description *string   `json:"description,omitempty"`
+    Tags        *[]string `json:"tags,omitempty"`
+    Title       string    `json:"title"`
+}
+```
+
+<a name="CreateStudyGuideRequestObject"></a>
+## type [CreateStudyGuideRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3534-L3537>)
+
+
+
+```go
+type CreateStudyGuideRequestObject struct {
+    CourseId openapi_types.UUID `json:"course_id"`
+    Body     *CreateStudyGuideJSONRequestBody
+}
+```
+
+<a name="CreateStudyGuideResponseObject"></a>
+## type [CreateStudyGuideResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3539-L3541>)
+
+
+
+```go
+type CreateStudyGuideResponseObject interface {
+    VisitCreateStudyGuideResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="CreatorSummary"></a>
+## type [CreatorSummary](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L811-L815>)
+
+CreatorSummary Compact user payload used as the \`creator\` of a study guide. Same privacy floor as SectionMemberResponse \-\- no email, no clerk\_id.
+
+```go
+type CreatorSummary struct {
+    FirstName string             `json:"first_name"`
+    Id        openapi_types.UUID `json:"id"`
+    LastName  string             `json:"last_name"`
+}
+```
+
 <a name="DeleteFile204Response"></a>
-## type [DeleteFile204Response](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L688-L689>)
+## type [DeleteFile204Response](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3644-L3645>)
 
 
 
@@ -271,7 +2225,7 @@ type DeleteFile204Response struct {
 ```
 
 <a name="DeleteFile204Response.VisitDeleteFileResponse"></a>
-### func \(DeleteFile204Response\) [VisitDeleteFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L691>)
+### func \(DeleteFile204Response\) [VisitDeleteFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3647>)
 
 ```go
 func (response DeleteFile204Response) VisitDeleteFileResponse(w http.ResponseWriter) error
@@ -280,7 +2234,7 @@ func (response DeleteFile204Response) VisitDeleteFileResponse(w http.ResponseWri
 
 
 <a name="DeleteFile401JSONResponse"></a>
-## type [DeleteFile401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L696>)
+## type [DeleteFile401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3652>)
 
 
 
@@ -289,7 +2243,7 @@ type DeleteFile401JSONResponse struct{ UnauthorizedJSONResponse }
 ```
 
 <a name="DeleteFile401JSONResponse.VisitDeleteFileResponse"></a>
-### func \(DeleteFile401JSONResponse\) [VisitDeleteFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L698>)
+### func \(DeleteFile401JSONResponse\) [VisitDeleteFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3654>)
 
 ```go
 func (response DeleteFile401JSONResponse) VisitDeleteFileResponse(w http.ResponseWriter) error
@@ -298,7 +2252,7 @@ func (response DeleteFile401JSONResponse) VisitDeleteFileResponse(w http.Respons
 
 
 <a name="DeleteFile404JSONResponse"></a>
-## type [DeleteFile404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L705>)
+## type [DeleteFile404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3661>)
 
 
 
@@ -307,7 +2261,7 @@ type DeleteFile404JSONResponse struct{ NotFoundJSONResponse }
 ```
 
 <a name="DeleteFile404JSONResponse.VisitDeleteFileResponse"></a>
-### func \(DeleteFile404JSONResponse\) [VisitDeleteFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L707>)
+### func \(DeleteFile404JSONResponse\) [VisitDeleteFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3663>)
 
 ```go
 func (response DeleteFile404JSONResponse) VisitDeleteFileResponse(w http.ResponseWriter) error
@@ -316,7 +2270,7 @@ func (response DeleteFile404JSONResponse) VisitDeleteFileResponse(w http.Respons
 
 
 <a name="DeleteFile500JSONResponse"></a>
-## type [DeleteFile500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L714-L716>)
+## type [DeleteFile500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3670-L3672>)
 
 
 
@@ -327,7 +2281,7 @@ type DeleteFile500JSONResponse struct {
 ```
 
 <a name="DeleteFile500JSONResponse.VisitDeleteFileResponse"></a>
-### func \(DeleteFile500JSONResponse\) [VisitDeleteFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L718>)
+### func \(DeleteFile500JSONResponse\) [VisitDeleteFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3674>)
 
 ```go
 func (response DeleteFile500JSONResponse) VisitDeleteFileResponse(w http.ResponseWriter) error
@@ -336,7 +2290,7 @@ func (response DeleteFile500JSONResponse) VisitDeleteFileResponse(w http.Respons
 
 
 <a name="DeleteFileRequestObject"></a>
-## type [DeleteFileRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L680-L682>)
+## type [DeleteFileRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3636-L3638>)
 
 
 
@@ -347,7 +2301,7 @@ type DeleteFileRequestObject struct {
 ```
 
 <a name="DeleteFileResponseObject"></a>
-## type [DeleteFileResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L684-L686>)
+## type [DeleteFileResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3640-L3642>)
 
 
 
@@ -357,8 +2311,512 @@ type DeleteFileResponseObject interface {
 }
 ```
 
+<a name="DeleteStudyGuide204Response"></a>
+## type [DeleteStudyGuide204Response](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4113-L4114>)
+
+
+
+```go
+type DeleteStudyGuide204Response struct {
+}
+```
+
+<a name="DeleteStudyGuide204Response.VisitDeleteStudyGuideResponse"></a>
+### func \(DeleteStudyGuide204Response\) [VisitDeleteStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4116>)
+
+```go
+func (response DeleteStudyGuide204Response) VisitDeleteStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DeleteStudyGuide400JSONResponse"></a>
+## type [DeleteStudyGuide400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4121>)
+
+
+
+```go
+type DeleteStudyGuide400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="DeleteStudyGuide400JSONResponse.VisitDeleteStudyGuideResponse"></a>
+### func \(DeleteStudyGuide400JSONResponse\) [VisitDeleteStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4123>)
+
+```go
+func (response DeleteStudyGuide400JSONResponse) VisitDeleteStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DeleteStudyGuide401JSONResponse"></a>
+## type [DeleteStudyGuide401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4130>)
+
+
+
+```go
+type DeleteStudyGuide401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="DeleteStudyGuide401JSONResponse.VisitDeleteStudyGuideResponse"></a>
+### func \(DeleteStudyGuide401JSONResponse\) [VisitDeleteStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4132>)
+
+```go
+func (response DeleteStudyGuide401JSONResponse) VisitDeleteStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DeleteStudyGuide403JSONResponse"></a>
+## type [DeleteStudyGuide403JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4139>)
+
+
+
+```go
+type DeleteStudyGuide403JSONResponse struct{ ForbiddenJSONResponse }
+```
+
+<a name="DeleteStudyGuide403JSONResponse.VisitDeleteStudyGuideResponse"></a>
+### func \(DeleteStudyGuide403JSONResponse\) [VisitDeleteStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4141>)
+
+```go
+func (response DeleteStudyGuide403JSONResponse) VisitDeleteStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DeleteStudyGuide404JSONResponse"></a>
+## type [DeleteStudyGuide404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4148>)
+
+
+
+```go
+type DeleteStudyGuide404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="DeleteStudyGuide404JSONResponse.VisitDeleteStudyGuideResponse"></a>
+### func \(DeleteStudyGuide404JSONResponse\) [VisitDeleteStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4150>)
+
+```go
+func (response DeleteStudyGuide404JSONResponse) VisitDeleteStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DeleteStudyGuide500JSONResponse"></a>
+## type [DeleteStudyGuide500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4157-L4159>)
+
+
+
+```go
+type DeleteStudyGuide500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="DeleteStudyGuide500JSONResponse.VisitDeleteStudyGuideResponse"></a>
+### func \(DeleteStudyGuide500JSONResponse\) [VisitDeleteStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4161>)
+
+```go
+func (response DeleteStudyGuide500JSONResponse) VisitDeleteStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DeleteStudyGuideRequestObject"></a>
+## type [DeleteStudyGuideRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4105-L4107>)
+
+
+
+```go
+type DeleteStudyGuideRequestObject struct {
+    StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+}
+```
+
+<a name="DeleteStudyGuideResponseObject"></a>
+## type [DeleteStudyGuideResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4109-L4111>)
+
+
+
+```go
+type DeleteStudyGuideResponseObject interface {
+    VisitDeleteStudyGuideResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="DetachFile204Response"></a>
+## type [DetachFile204Response](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4297-L4298>)
+
+
+
+```go
+type DetachFile204Response struct {
+}
+```
+
+<a name="DetachFile204Response.VisitDetachFileResponse"></a>
+### func \(DetachFile204Response\) [VisitDetachFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4300>)
+
+```go
+func (response DetachFile204Response) VisitDetachFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DetachFile400JSONResponse"></a>
+## type [DetachFile400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4305>)
+
+
+
+```go
+type DetachFile400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="DetachFile400JSONResponse.VisitDetachFileResponse"></a>
+### func \(DetachFile400JSONResponse\) [VisitDetachFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4307>)
+
+```go
+func (response DetachFile400JSONResponse) VisitDetachFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DetachFile401JSONResponse"></a>
+## type [DetachFile401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4314>)
+
+
+
+```go
+type DetachFile401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="DetachFile401JSONResponse.VisitDetachFileResponse"></a>
+### func \(DetachFile401JSONResponse\) [VisitDetachFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4316>)
+
+```go
+func (response DetachFile401JSONResponse) VisitDetachFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DetachFile403JSONResponse"></a>
+## type [DetachFile403JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4323>)
+
+
+
+```go
+type DetachFile403JSONResponse struct{ ForbiddenJSONResponse }
+```
+
+<a name="DetachFile403JSONResponse.VisitDetachFileResponse"></a>
+### func \(DetachFile403JSONResponse\) [VisitDetachFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4325>)
+
+```go
+func (response DetachFile403JSONResponse) VisitDetachFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DetachFile404JSONResponse"></a>
+## type [DetachFile404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4332>)
+
+
+
+```go
+type DetachFile404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="DetachFile404JSONResponse.VisitDetachFileResponse"></a>
+### func \(DetachFile404JSONResponse\) [VisitDetachFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4334>)
+
+```go
+func (response DetachFile404JSONResponse) VisitDetachFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DetachFile500JSONResponse"></a>
+## type [DetachFile500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4341-L4343>)
+
+
+
+```go
+type DetachFile500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="DetachFile500JSONResponse.VisitDetachFileResponse"></a>
+### func \(DetachFile500JSONResponse\) [VisitDetachFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4345>)
+
+```go
+func (response DetachFile500JSONResponse) VisitDetachFileResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DetachFileRequestObject"></a>
+## type [DetachFileRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4288-L4291>)
+
+
+
+```go
+type DetachFileRequestObject struct {
+    StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+    FileId       openapi_types.UUID `json:"file_id"`
+}
+```
+
+<a name="DetachFileResponseObject"></a>
+## type [DetachFileResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4293-L4295>)
+
+
+
+```go
+type DetachFileResponseObject interface {
+    VisitDetachFileResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="DetachResource204Response"></a>
+## type [DetachResource204Response](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4692-L4693>)
+
+
+
+```go
+type DetachResource204Response struct {
+}
+```
+
+<a name="DetachResource204Response.VisitDetachResourceResponse"></a>
+### func \(DetachResource204Response\) [VisitDetachResourceResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4695>)
+
+```go
+func (response DetachResource204Response) VisitDetachResourceResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DetachResource400JSONResponse"></a>
+## type [DetachResource400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4700>)
+
+
+
+```go
+type DetachResource400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="DetachResource400JSONResponse.VisitDetachResourceResponse"></a>
+### func \(DetachResource400JSONResponse\) [VisitDetachResourceResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4702>)
+
+```go
+func (response DetachResource400JSONResponse) VisitDetachResourceResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DetachResource401JSONResponse"></a>
+## type [DetachResource401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4709>)
+
+
+
+```go
+type DetachResource401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="DetachResource401JSONResponse.VisitDetachResourceResponse"></a>
+### func \(DetachResource401JSONResponse\) [VisitDetachResourceResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4711>)
+
+```go
+func (response DetachResource401JSONResponse) VisitDetachResourceResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DetachResource403JSONResponse"></a>
+## type [DetachResource403JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4718>)
+
+
+
+```go
+type DetachResource403JSONResponse struct{ ForbiddenJSONResponse }
+```
+
+<a name="DetachResource403JSONResponse.VisitDetachResourceResponse"></a>
+### func \(DetachResource403JSONResponse\) [VisitDetachResourceResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4720>)
+
+```go
+func (response DetachResource403JSONResponse) VisitDetachResourceResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DetachResource404JSONResponse"></a>
+## type [DetachResource404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4727>)
+
+
+
+```go
+type DetachResource404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="DetachResource404JSONResponse.VisitDetachResourceResponse"></a>
+### func \(DetachResource404JSONResponse\) [VisitDetachResourceResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4729>)
+
+```go
+func (response DetachResource404JSONResponse) VisitDetachResourceResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DetachResource500JSONResponse"></a>
+## type [DetachResource500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4736-L4738>)
+
+
+
+```go
+type DetachResource500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="DetachResource500JSONResponse.VisitDetachResourceResponse"></a>
+### func \(DetachResource500JSONResponse\) [VisitDetachResourceResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4740>)
+
+```go
+func (response DetachResource500JSONResponse) VisitDetachResourceResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="DetachResourceRequestObject"></a>
+## type [DetachResourceRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4683-L4686>)
+
+
+
+```go
+type DetachResourceRequestObject struct {
+    StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+    ResourceId   openapi_types.UUID `json:"resource_id"`
+}
+```
+
+<a name="DetachResourceResponseObject"></a>
+## type [DetachResourceResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4688-L4690>)
+
+
+
+```go
+type DetachResourceResponseObject interface {
+    VisitDetachResourceResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="EnrollmentCourseSummary"></a>
+## type [EnrollmentCourseSummary](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L818-L823>)
+
+EnrollmentCourseSummary Compact course payload embedded in an EnrollmentResponse
+
+```go
+type EnrollmentCourseSummary struct {
+    Department string             `json:"department"`
+    Id         openapi_types.UUID `json:"id"`
+    Number     string             `json:"number"`
+    Title      string             `json:"title"`
+}
+```
+
+<a name="EnrollmentResponse"></a>
+## type [EnrollmentResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L826-L839>)
+
+EnrollmentResponse A single enrollment with embedded section, course, and school
+
+```go
+type EnrollmentResponse struct {
+    // Course Compact course payload embedded in an EnrollmentResponse
+    Course   EnrollmentCourseSummary `json:"course"`
+    JoinedAt time.Time               `json:"joined_at"`
+    Role     EnrollmentResponseRole  `json:"role"`
+
+    // School Compact school payload embedded in an EnrollmentResponse. Only id +
+    // acronym -- the full school summary is available via the course
+    // detail endpoint and would bloat the dashboard payload.
+    School EnrollmentSchoolSummary `json:"school"`
+
+    // Section Compact section payload embedded in an EnrollmentResponse
+    Section EnrollmentSectionSummary `json:"section"`
+}
+```
+
+<a name="EnrollmentResponseRole"></a>
+## type [EnrollmentResponseRole](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L842>)
+
+EnrollmentResponseRole defines model for EnrollmentResponse.Role.
+
+```go
+type EnrollmentResponseRole string
+```
+
+<a name="EnrollmentResponseRoleInstructor"></a>Defines values for EnrollmentResponseRole.
+
+```go
+const (
+    EnrollmentResponseRoleInstructor EnrollmentResponseRole = "instructor"
+    EnrollmentResponseRoleStudent    EnrollmentResponseRole = "student"
+    EnrollmentResponseRoleTa         EnrollmentResponseRole = "ta"
+)
+```
+
+<a name="EnrollmentResponseRole.Valid"></a>
+### func \(EnrollmentResponseRole\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L218>)
+
+```go
+func (e EnrollmentResponseRole) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the EnrollmentResponseRole enum.
+
+<a name="EnrollmentSchoolSummary"></a>
+## type [EnrollmentSchoolSummary](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L847-L850>)
+
+EnrollmentSchoolSummary Compact school payload embedded in an EnrollmentResponse. Only id \+ acronym \-\- the full school summary is available via the course detail endpoint and would bloat the dashboard payload.
+
+```go
+type EnrollmentSchoolSummary struct {
+    Acronym string             `json:"acronym"`
+    Id      openapi_types.UUID `json:"id"`
+}
+```
+
+<a name="EnrollmentSectionSummary"></a>
+## type [EnrollmentSectionSummary](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L853-L858>)
+
+EnrollmentSectionSummary Compact section payload embedded in an EnrollmentResponse
+
+```go
+type EnrollmentSectionSummary struct {
+    Id             openapi_types.UUID `json:"id"`
+    InstructorName *string            `json:"instructor_name,omitempty"`
+    SectionCode    *string            `json:"section_code,omitempty"`
+    Term           string             `json:"term"`
+}
+```
+
+<a name="FileAttachmentResponse"></a>
+## type [FileAttachmentResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L867-L871>)
+
+FileAttachmentResponse Response body for POST /api/study\-guides/\{study\_guide\_id\}/files/\{file\_id\}. Returns the join row's keys \+ creation timestamp. The file's own metadata \(name, mime\_type, size\) is intentionally NOT included \-\- the wire shape mirrors the join table since this endpoint only creates the link, not the file. Callers that want full file metadata can hit GET /api/study\-guides/\{id\} which includes the attached file list with privacy floor.
+
+```go
+type FileAttachmentResponse struct {
+    CreatedAt    time.Time          `json:"created_at"`
+    FileId       openapi_types.UUID `json:"file_id"`
+    StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+}
+```
+
 <a name="FileResponse"></a>
-## type [FileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L156-L166>)
+## type [FileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L874-L884>)
 
 FileResponse Complete metadata payload describing an uploaded file
 
@@ -377,7 +2835,7 @@ type FileResponse struct {
 ```
 
 <a name="Forbidden"></a>
-## type [Forbidden](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L184>)
+## type [Forbidden](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1198>)
 
 Forbidden Standardized error response structure matching application error domains
 
@@ -386,7 +2844,7 @@ type Forbidden = AppError
 ```
 
 <a name="ForbiddenJSONResponse"></a>
-## type [ForbiddenJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L672>)
+## type [ForbiddenJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3136>)
 
 
 
@@ -394,8 +2852,122 @@ type Forbidden = AppError
 type ForbiddenJSONResponse AppError
 ```
 
+<a name="GetCourse200JSONResponse"></a>
+## type [GetCourse200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3198>)
+
+
+
+```go
+type GetCourse200JSONResponse CourseDetailResponse
+```
+
+<a name="GetCourse200JSONResponse.VisitGetCourseResponse"></a>
+### func \(GetCourse200JSONResponse\) [VisitGetCourseResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3200>)
+
+```go
+func (response GetCourse200JSONResponse) VisitGetCourseResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="GetCourse400JSONResponse"></a>
+## type [GetCourse400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3207>)
+
+
+
+```go
+type GetCourse400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="GetCourse400JSONResponse.VisitGetCourseResponse"></a>
+### func \(GetCourse400JSONResponse\) [VisitGetCourseResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3209>)
+
+```go
+func (response GetCourse400JSONResponse) VisitGetCourseResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="GetCourse401JSONResponse"></a>
+## type [GetCourse401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3216>)
+
+
+
+```go
+type GetCourse401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="GetCourse401JSONResponse.VisitGetCourseResponse"></a>
+### func \(GetCourse401JSONResponse\) [VisitGetCourseResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3218>)
+
+```go
+func (response GetCourse401JSONResponse) VisitGetCourseResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="GetCourse404JSONResponse"></a>
+## type [GetCourse404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3225>)
+
+
+
+```go
+type GetCourse404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="GetCourse404JSONResponse.VisitGetCourseResponse"></a>
+### func \(GetCourse404JSONResponse\) [VisitGetCourseResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3227>)
+
+```go
+func (response GetCourse404JSONResponse) VisitGetCourseResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="GetCourse500JSONResponse"></a>
+## type [GetCourse500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3234-L3236>)
+
+
+
+```go
+type GetCourse500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="GetCourse500JSONResponse.VisitGetCourseResponse"></a>
+### func \(GetCourse500JSONResponse\) [VisitGetCourseResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3238>)
+
+```go
+func (response GetCourse500JSONResponse) VisitGetCourseResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="GetCourseRequestObject"></a>
+## type [GetCourseRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3190-L3192>)
+
+
+
+```go
+type GetCourseRequestObject struct {
+    CourseId openapi_types.UUID `json:"course_id"`
+}
+```
+
+<a name="GetCourseResponseObject"></a>
+## type [GetCourseResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3194-L3196>)
+
+
+
+```go
+type GetCourseResponseObject interface {
+    VisitGetCourseResponse(w http.ResponseWriter) error
+}
+```
+
 <a name="GetFile200JSONResponse"></a>
-## type [GetFile200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L733>)
+## type [GetFile200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3689>)
 
 
 
@@ -404,7 +2976,7 @@ type GetFile200JSONResponse FileResponse
 ```
 
 <a name="GetFile200JSONResponse.VisitGetFileResponse"></a>
-### func \(GetFile200JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L735>)
+### func \(GetFile200JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3691>)
 
 ```go
 func (response GetFile200JSONResponse) VisitGetFileResponse(w http.ResponseWriter) error
@@ -413,7 +2985,7 @@ func (response GetFile200JSONResponse) VisitGetFileResponse(w http.ResponseWrite
 
 
 <a name="GetFile400JSONResponse"></a>
-## type [GetFile400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L742>)
+## type [GetFile400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3698>)
 
 
 
@@ -422,7 +2994,7 @@ type GetFile400JSONResponse struct{ BadRequestJSONResponse }
 ```
 
 <a name="GetFile400JSONResponse.VisitGetFileResponse"></a>
-### func \(GetFile400JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L744>)
+### func \(GetFile400JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3700>)
 
 ```go
 func (response GetFile400JSONResponse) VisitGetFileResponse(w http.ResponseWriter) error
@@ -431,7 +3003,7 @@ func (response GetFile400JSONResponse) VisitGetFileResponse(w http.ResponseWrite
 
 
 <a name="GetFile401JSONResponse"></a>
-## type [GetFile401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L751>)
+## type [GetFile401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3707>)
 
 
 
@@ -440,7 +3012,7 @@ type GetFile401JSONResponse struct{ UnauthorizedJSONResponse }
 ```
 
 <a name="GetFile401JSONResponse.VisitGetFileResponse"></a>
-### func \(GetFile401JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L753>)
+### func \(GetFile401JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3709>)
 
 ```go
 func (response GetFile401JSONResponse) VisitGetFileResponse(w http.ResponseWriter) error
@@ -449,7 +3021,7 @@ func (response GetFile401JSONResponse) VisitGetFileResponse(w http.ResponseWrite
 
 
 <a name="GetFile403JSONResponse"></a>
-## type [GetFile403JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L760>)
+## type [GetFile403JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3716>)
 
 
 
@@ -458,7 +3030,7 @@ type GetFile403JSONResponse struct{ ForbiddenJSONResponse }
 ```
 
 <a name="GetFile403JSONResponse.VisitGetFileResponse"></a>
-### func \(GetFile403JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L762>)
+### func \(GetFile403JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3718>)
 
 ```go
 func (response GetFile403JSONResponse) VisitGetFileResponse(w http.ResponseWriter) error
@@ -467,7 +3039,7 @@ func (response GetFile403JSONResponse) VisitGetFileResponse(w http.ResponseWrite
 
 
 <a name="GetFile404JSONResponse"></a>
-## type [GetFile404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L769>)
+## type [GetFile404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3725>)
 
 
 
@@ -476,7 +3048,7 @@ type GetFile404JSONResponse struct{ NotFoundJSONResponse }
 ```
 
 <a name="GetFile404JSONResponse.VisitGetFileResponse"></a>
-### func \(GetFile404JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L771>)
+### func \(GetFile404JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3727>)
 
 ```go
 func (response GetFile404JSONResponse) VisitGetFileResponse(w http.ResponseWriter) error
@@ -485,7 +3057,7 @@ func (response GetFile404JSONResponse) VisitGetFileResponse(w http.ResponseWrite
 
 
 <a name="GetFile500JSONResponse"></a>
-## type [GetFile500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L778-L780>)
+## type [GetFile500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3734-L3736>)
 
 
 
@@ -496,7 +3068,7 @@ type GetFile500JSONResponse struct {
 ```
 
 <a name="GetFile500JSONResponse.VisitGetFileResponse"></a>
-### func \(GetFile500JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L782>)
+### func \(GetFile500JSONResponse\) [VisitGetFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3738>)
 
 ```go
 func (response GetFile500JSONResponse) VisitGetFileResponse(w http.ResponseWriter) error
@@ -505,7 +3077,7 @@ func (response GetFile500JSONResponse) VisitGetFileResponse(w http.ResponseWrite
 
 
 <a name="GetFileRequestObject"></a>
-## type [GetFileRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L725-L727>)
+## type [GetFileRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3681-L3683>)
 
 
 
@@ -516,7 +3088,7 @@ type GetFileRequestObject struct {
 ```
 
 <a name="GetFileResponseObject"></a>
-## type [GetFileResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L729-L731>)
+## type [GetFileResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3685-L3687>)
 
 
 
@@ -526,8 +3098,267 @@ type GetFileResponseObject interface {
 }
 ```
 
+<a name="GetSchool200JSONResponse"></a>
+## type [GetSchool200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4058>)
+
+
+
+```go
+type GetSchool200JSONResponse SchoolResponse
+```
+
+<a name="GetSchool200JSONResponse.VisitGetSchoolResponse"></a>
+### func \(GetSchool200JSONResponse\) [VisitGetSchoolResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4060>)
+
+```go
+func (response GetSchool200JSONResponse) VisitGetSchoolResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="GetSchool400JSONResponse"></a>
+## type [GetSchool400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4067>)
+
+
+
+```go
+type GetSchool400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="GetSchool400JSONResponse.VisitGetSchoolResponse"></a>
+### func \(GetSchool400JSONResponse\) [VisitGetSchoolResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4069>)
+
+```go
+func (response GetSchool400JSONResponse) VisitGetSchoolResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="GetSchool401JSONResponse"></a>
+## type [GetSchool401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4076>)
+
+
+
+```go
+type GetSchool401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="GetSchool401JSONResponse.VisitGetSchoolResponse"></a>
+### func \(GetSchool401JSONResponse\) [VisitGetSchoolResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4078>)
+
+```go
+func (response GetSchool401JSONResponse) VisitGetSchoolResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="GetSchool404JSONResponse"></a>
+## type [GetSchool404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4085>)
+
+
+
+```go
+type GetSchool404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="GetSchool404JSONResponse.VisitGetSchoolResponse"></a>
+### func \(GetSchool404JSONResponse\) [VisitGetSchoolResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4087>)
+
+```go
+func (response GetSchool404JSONResponse) VisitGetSchoolResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="GetSchool500JSONResponse"></a>
+## type [GetSchool500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4094-L4096>)
+
+
+
+```go
+type GetSchool500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="GetSchool500JSONResponse.VisitGetSchoolResponse"></a>
+### func \(GetSchool500JSONResponse\) [VisitGetSchoolResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4098>)
+
+```go
+func (response GetSchool500JSONResponse) VisitGetSchoolResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="GetSchoolRequestObject"></a>
+## type [GetSchoolRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4050-L4052>)
+
+
+
+```go
+type GetSchoolRequestObject struct {
+    SchoolId openapi_types.UUID `json:"school_id"`
+}
+```
+
+<a name="GetSchoolResponseObject"></a>
+## type [GetSchoolResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4054-L4056>)
+
+
+
+```go
+type GetSchoolResponseObject interface {
+    VisitGetSchoolResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="GetStudyGuide200JSONResponse"></a>
+## type [GetStudyGuide200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4176>)
+
+
+
+```go
+type GetStudyGuide200JSONResponse StudyGuideDetailResponse
+```
+
+<a name="GetStudyGuide200JSONResponse.VisitGetStudyGuideResponse"></a>
+### func \(GetStudyGuide200JSONResponse\) [VisitGetStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4178>)
+
+```go
+func (response GetStudyGuide200JSONResponse) VisitGetStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="GetStudyGuide400JSONResponse"></a>
+## type [GetStudyGuide400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4185>)
+
+
+
+```go
+type GetStudyGuide400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="GetStudyGuide400JSONResponse.VisitGetStudyGuideResponse"></a>
+### func \(GetStudyGuide400JSONResponse\) [VisitGetStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4187>)
+
+```go
+func (response GetStudyGuide400JSONResponse) VisitGetStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="GetStudyGuide401JSONResponse"></a>
+## type [GetStudyGuide401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4194>)
+
+
+
+```go
+type GetStudyGuide401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="GetStudyGuide401JSONResponse.VisitGetStudyGuideResponse"></a>
+### func \(GetStudyGuide401JSONResponse\) [VisitGetStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4196>)
+
+```go
+func (response GetStudyGuide401JSONResponse) VisitGetStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="GetStudyGuide404JSONResponse"></a>
+## type [GetStudyGuide404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4203>)
+
+
+
+```go
+type GetStudyGuide404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="GetStudyGuide404JSONResponse.VisitGetStudyGuideResponse"></a>
+### func \(GetStudyGuide404JSONResponse\) [VisitGetStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4205>)
+
+```go
+func (response GetStudyGuide404JSONResponse) VisitGetStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="GetStudyGuide500JSONResponse"></a>
+## type [GetStudyGuide500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4212-L4214>)
+
+
+
+```go
+type GetStudyGuide500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="GetStudyGuide500JSONResponse.VisitGetStudyGuideResponse"></a>
+### func \(GetStudyGuide500JSONResponse\) [VisitGetStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4216>)
+
+```go
+func (response GetStudyGuide500JSONResponse) VisitGetStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="GetStudyGuideRequestObject"></a>
+## type [GetStudyGuideRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4168-L4170>)
+
+
+
+```go
+type GetStudyGuideRequestObject struct {
+    StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+}
+```
+
+<a name="GetStudyGuideResponseObject"></a>
+## type [GetStudyGuideResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4172-L4174>)
+
+
+
+```go
+type GetStudyGuideResponseObject interface {
+    VisitGetStudyGuideResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="GrantResponse"></a>
+## type [GrantResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L887-L895>)
+
+GrantResponse A file permission grant
+
+```go
+type GrantResponse struct {
+    CreatedAt   time.Time          `json:"created_at"`
+    FileId      openapi_types.UUID `json:"file_id"`
+    GrantedBy   openapi_types.UUID `json:"granted_by"`
+    GranteeId   openapi_types.UUID `json:"grantee_id"`
+    GranteeType string             `json:"grantee_type"`
+    Id          openapi_types.UUID `json:"id"`
+    Permission  string             `json:"permission"`
+}
+```
+
+<a name="GuideCourseSummary"></a>
+## type [GuideCourseSummary](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L900-L905>)
+
+GuideCourseSummary Compact course payload embedded in StudyGuideDetailResponse. Mirrors EnrollmentCourseSummary but lives here separately so the two surfaces can evolve independently.
+
+```go
+type GuideCourseSummary struct {
+    Department string             `json:"department"`
+    Id         openapi_types.UUID `json:"id"`
+    Number     string             `json:"number"`
+    Title      string             `json:"title"`
+}
+```
+
 <a name="InternalServerError"></a>
-## type [InternalServerError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L187>)
+## type [InternalServerError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1201>)
 
 InternalServerError Standardized error response structure matching application error domains
 
@@ -536,7 +3367,7 @@ type InternalServerError = AppError
 ```
 
 <a name="InternalServerErrorJSONResponse"></a>
-## type [InternalServerErrorJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L674>)
+## type [InternalServerErrorJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3138>)
 
 
 
@@ -545,7 +3376,7 @@ type InternalServerErrorJSONResponse AppError
 ```
 
 <a name="InvalidParamFormatError"></a>
-## type [InvalidParamFormatError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L588-L591>)
+## type [InvalidParamFormatError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2972-L2975>)
 
 
 
@@ -557,7 +3388,7 @@ type InvalidParamFormatError struct {
 ```
 
 <a name="InvalidParamFormatError.Error"></a>
-### func \(\*InvalidParamFormatError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L593>)
+### func \(\*InvalidParamFormatError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2977>)
 
 ```go
 func (e *InvalidParamFormatError) Error() string
@@ -566,7 +3397,7 @@ func (e *InvalidParamFormatError) Error() string
 
 
 <a name="InvalidParamFormatError.Unwrap"></a>
-### func \(\*InvalidParamFormatError\) [Unwrap](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L597>)
+### func \(\*InvalidParamFormatError\) [Unwrap](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2981>)
 
 ```go
 func (e *InvalidParamFormatError) Unwrap() error
@@ -574,8 +3405,452 @@ func (e *InvalidParamFormatError) Unwrap() error
 
 
 
+<a name="JoinSection201JSONResponse"></a>
+## type [JoinSection201JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3311>)
+
+
+
+```go
+type JoinSection201JSONResponse CourseMemberResponse
+```
+
+<a name="JoinSection201JSONResponse.VisitJoinSectionResponse"></a>
+### func \(JoinSection201JSONResponse\) [VisitJoinSectionResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3313>)
+
+```go
+func (response JoinSection201JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="JoinSection400JSONResponse"></a>
+## type [JoinSection400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3320>)
+
+
+
+```go
+type JoinSection400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="JoinSection400JSONResponse.VisitJoinSectionResponse"></a>
+### func \(JoinSection400JSONResponse\) [VisitJoinSectionResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3322>)
+
+```go
+func (response JoinSection400JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="JoinSection401JSONResponse"></a>
+## type [JoinSection401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3329>)
+
+
+
+```go
+type JoinSection401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="JoinSection401JSONResponse.VisitJoinSectionResponse"></a>
+### func \(JoinSection401JSONResponse\) [VisitJoinSectionResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3331>)
+
+```go
+func (response JoinSection401JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="JoinSection404JSONResponse"></a>
+## type [JoinSection404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3338>)
+
+
+
+```go
+type JoinSection404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="JoinSection404JSONResponse.VisitJoinSectionResponse"></a>
+### func \(JoinSection404JSONResponse\) [VisitJoinSectionResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3340>)
+
+```go
+func (response JoinSection404JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="JoinSection409JSONResponse"></a>
+## type [JoinSection409JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3347>)
+
+
+
+```go
+type JoinSection409JSONResponse struct{ ConflictJSONResponse }
+```
+
+<a name="JoinSection409JSONResponse.VisitJoinSectionResponse"></a>
+### func \(JoinSection409JSONResponse\) [VisitJoinSectionResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3349>)
+
+```go
+func (response JoinSection409JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="JoinSection500JSONResponse"></a>
+## type [JoinSection500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3356-L3358>)
+
+
+
+```go
+type JoinSection500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="JoinSection500JSONResponse.VisitJoinSectionResponse"></a>
+### func \(JoinSection500JSONResponse\) [VisitJoinSectionResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3360>)
+
+```go
+func (response JoinSection500JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="JoinSectionRequestObject"></a>
+## type [JoinSectionRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3302-L3305>)
+
+
+
+```go
+type JoinSectionRequestObject struct {
+    CourseId  openapi_types.UUID `json:"course_id"`
+    SectionId openapi_types.UUID `json:"section_id"`
+}
+```
+
+<a name="JoinSectionResponseObject"></a>
+## type [JoinSectionResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3307-L3309>)
+
+
+
+```go
+type JoinSectionResponseObject interface {
+    VisitJoinSectionResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="LeaveSection204Response"></a>
+## type [LeaveSection204Response](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3376-L3377>)
+
+
+
+```go
+type LeaveSection204Response struct {
+}
+```
+
+<a name="LeaveSection204Response.VisitLeaveSectionResponse"></a>
+### func \(LeaveSection204Response\) [VisitLeaveSectionResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3379>)
+
+```go
+func (response LeaveSection204Response) VisitLeaveSectionResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="LeaveSection400JSONResponse"></a>
+## type [LeaveSection400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3384>)
+
+
+
+```go
+type LeaveSection400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="LeaveSection400JSONResponse.VisitLeaveSectionResponse"></a>
+### func \(LeaveSection400JSONResponse\) [VisitLeaveSectionResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3386>)
+
+```go
+func (response LeaveSection400JSONResponse) VisitLeaveSectionResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="LeaveSection401JSONResponse"></a>
+## type [LeaveSection401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3393>)
+
+
+
+```go
+type LeaveSection401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="LeaveSection401JSONResponse.VisitLeaveSectionResponse"></a>
+### func \(LeaveSection401JSONResponse\) [VisitLeaveSectionResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3395>)
+
+```go
+func (response LeaveSection401JSONResponse) VisitLeaveSectionResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="LeaveSection404JSONResponse"></a>
+## type [LeaveSection404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3402>)
+
+
+
+```go
+type LeaveSection404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="LeaveSection404JSONResponse.VisitLeaveSectionResponse"></a>
+### func \(LeaveSection404JSONResponse\) [VisitLeaveSectionResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3404>)
+
+```go
+func (response LeaveSection404JSONResponse) VisitLeaveSectionResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="LeaveSection500JSONResponse"></a>
+## type [LeaveSection500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3411-L3413>)
+
+
+
+```go
+type LeaveSection500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="LeaveSection500JSONResponse.VisitLeaveSectionResponse"></a>
+### func \(LeaveSection500JSONResponse\) [VisitLeaveSectionResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3415>)
+
+```go
+func (response LeaveSection500JSONResponse) VisitLeaveSectionResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="LeaveSectionRequestObject"></a>
+## type [LeaveSectionRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3367-L3370>)
+
+
+
+```go
+type LeaveSectionRequestObject struct {
+    CourseId  openapi_types.UUID `json:"course_id"`
+    SectionId openapi_types.UUID `json:"section_id"`
+}
+```
+
+<a name="LeaveSectionResponseObject"></a>
+## type [LeaveSectionResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3372-L3374>)
+
+
+
+```go
+type LeaveSectionResponseObject interface {
+    VisitLeaveSectionResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="ListCourses200JSONResponse"></a>
+## type [ListCourses200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3152>)
+
+
+
+```go
+type ListCourses200JSONResponse ListCoursesResponse
+```
+
+<a name="ListCourses200JSONResponse.VisitListCoursesResponse"></a>
+### func \(ListCourses200JSONResponse\) [VisitListCoursesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3154>)
+
+```go
+func (response ListCourses200JSONResponse) VisitListCoursesResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListCourses400JSONResponse"></a>
+## type [ListCourses400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3161>)
+
+
+
+```go
+type ListCourses400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="ListCourses400JSONResponse.VisitListCoursesResponse"></a>
+### func \(ListCourses400JSONResponse\) [VisitListCoursesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3163>)
+
+```go
+func (response ListCourses400JSONResponse) VisitListCoursesResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListCourses401JSONResponse"></a>
+## type [ListCourses401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3170>)
+
+
+
+```go
+type ListCourses401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="ListCourses401JSONResponse.VisitListCoursesResponse"></a>
+### func \(ListCourses401JSONResponse\) [VisitListCoursesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3172>)
+
+```go
+func (response ListCourses401JSONResponse) VisitListCoursesResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListCourses500JSONResponse"></a>
+## type [ListCourses500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3179-L3181>)
+
+
+
+```go
+type ListCourses500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="ListCourses500JSONResponse.VisitListCoursesResponse"></a>
+### func \(ListCourses500JSONResponse\) [VisitListCoursesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3183>)
+
+```go
+func (response ListCourses500JSONResponse) VisitListCoursesResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListCoursesParams"></a>
+## type [ListCoursesParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1210-L1231>)
+
+ListCoursesParams defines parameters for ListCourses.
+
+```go
+type ListCoursesParams struct {
+    // SchoolId Filter by school UUID
+    SchoolId *openapi_types.UUID `form:"school_id,omitempty" json:"school_id,omitempty"`
+
+    // Department Exact department code match (case-insensitive, e.g. "CPTS")
+    Department *string `form:"department,omitempty" json:"department,omitempty"`
+
+    // Q Search term, matches against title (trigram), department, or number (case-insensitive)
+    Q   *string `form:"q,omitempty" json:"q,omitempty"`
+
+    // SortBy Database column to sort the results by
+    SortBy *ListCoursesParamsSortBy `form:"sort_by,omitempty" json:"sort_by,omitempty"`
+
+    // SortDir Sorting direction (ascending or descending)
+    SortDir *ListCoursesParamsSortDir `form:"sort_dir,omitempty" json:"sort_dir,omitempty"`
+
+    // PageLimit Maximum number of courses to return per page
+    PageLimit *int `form:"page_limit,omitempty" json:"page_limit,omitempty"`
+
+    // Cursor Opaque pagination cursor token obtained from the previous response
+    Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+```
+
+<a name="ListCoursesParamsSortBy"></a>
+## type [ListCoursesParamsSortBy](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1234>)
+
+ListCoursesParamsSortBy defines parameters for ListCourses.
+
+```go
+type ListCoursesParamsSortBy string
+```
+
+<a name="ListCoursesParamsSortByCreatedAt"></a>Defines values for ListCoursesParamsSortBy.
+
+```go
+const (
+    ListCoursesParamsSortByCreatedAt  ListCoursesParamsSortBy = "created_at"
+    ListCoursesParamsSortByDepartment ListCoursesParamsSortBy = "department"
+    ListCoursesParamsSortByNumber     ListCoursesParamsSortBy = "number"
+    ListCoursesParamsSortByTitle      ListCoursesParamsSortBy = "title"
+)
+```
+
+<a name="ListCoursesParamsSortBy.Valid"></a>
+### func \(ListCoursesParamsSortBy\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L387>)
+
+```go
+func (e ListCoursesParamsSortBy) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the ListCoursesParamsSortBy enum.
+
+<a name="ListCoursesParamsSortDir"></a>
+## type [ListCoursesParamsSortDir](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1237>)
+
+ListCoursesParamsSortDir defines parameters for ListCourses.
+
+```go
+type ListCoursesParamsSortDir string
+```
+
+<a name="ListCoursesParamsSortDirAsc"></a>Defines values for ListCoursesParamsSortDir.
+
+```go
+const (
+    ListCoursesParamsSortDirAsc  ListCoursesParamsSortDir = "asc"
+    ListCoursesParamsSortDirDesc ListCoursesParamsSortDir = "desc"
+)
+```
+
+<a name="ListCoursesParamsSortDir.Valid"></a>
+### func \(ListCoursesParamsSortDir\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L409>)
+
+```go
+func (e ListCoursesParamsSortDir) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the ListCoursesParamsSortDir enum.
+
+<a name="ListCoursesRequestObject"></a>
+## type [ListCoursesRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3144-L3146>)
+
+
+
+```go
+type ListCoursesRequestObject struct {
+    Params ListCoursesParams
+}
+```
+
+<a name="ListCoursesResponse"></a>
+## type [ListCoursesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L908-L912>)
+
+ListCoursesResponse A paginated collection of courses
+
+```go
+type ListCoursesResponse struct {
+    Courses    []CourseResponse `json:"courses"`
+    HasMore    bool             `json:"has_more"`
+    NextCursor *string          `json:"next_cursor,omitempty"`
+}
+```
+
+<a name="ListCoursesResponseObject"></a>
+## type [ListCoursesResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3148-L3150>)
+
+
+
+```go
+type ListCoursesResponseObject interface {
+    VisitListCoursesResponse(w http.ResponseWriter) error
+}
+```
+
 <a name="ListFiles200JSONResponse"></a>
-## type [ListFiles200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L853>)
+## type [ListFiles200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3966>)
 
 
 
@@ -584,7 +3859,7 @@ type ListFiles200JSONResponse ListFilesResponse
 ```
 
 <a name="ListFiles200JSONResponse.VisitListFilesResponse"></a>
-### func \(ListFiles200JSONResponse\) [VisitListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L855>)
+### func \(ListFiles200JSONResponse\) [VisitListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3968>)
 
 ```go
 func (response ListFiles200JSONResponse) VisitListFilesResponse(w http.ResponseWriter) error
@@ -593,7 +3868,7 @@ func (response ListFiles200JSONResponse) VisitListFilesResponse(w http.ResponseW
 
 
 <a name="ListFiles400JSONResponse"></a>
-## type [ListFiles400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L862>)
+## type [ListFiles400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3975>)
 
 
 
@@ -602,7 +3877,7 @@ type ListFiles400JSONResponse struct{ BadRequestJSONResponse }
 ```
 
 <a name="ListFiles400JSONResponse.VisitListFilesResponse"></a>
-### func \(ListFiles400JSONResponse\) [VisitListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L864>)
+### func \(ListFiles400JSONResponse\) [VisitListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3977>)
 
 ```go
 func (response ListFiles400JSONResponse) VisitListFilesResponse(w http.ResponseWriter) error
@@ -611,7 +3886,7 @@ func (response ListFiles400JSONResponse) VisitListFilesResponse(w http.ResponseW
 
 
 <a name="ListFiles401JSONResponse"></a>
-## type [ListFiles401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L871>)
+## type [ListFiles401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3984>)
 
 
 
@@ -620,7 +3895,7 @@ type ListFiles401JSONResponse struct{ UnauthorizedJSONResponse }
 ```
 
 <a name="ListFiles401JSONResponse.VisitListFilesResponse"></a>
-### func \(ListFiles401JSONResponse\) [VisitListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L873>)
+### func \(ListFiles401JSONResponse\) [VisitListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3986>)
 
 ```go
 func (response ListFiles401JSONResponse) VisitListFilesResponse(w http.ResponseWriter) error
@@ -629,7 +3904,7 @@ func (response ListFiles401JSONResponse) VisitListFilesResponse(w http.ResponseW
 
 
 <a name="ListFiles500JSONResponse"></a>
-## type [ListFiles500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L880-L882>)
+## type [ListFiles500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3993-L3995>)
 
 
 
@@ -640,7 +3915,7 @@ type ListFiles500JSONResponse struct {
 ```
 
 <a name="ListFiles500JSONResponse.VisitListFilesResponse"></a>
-### func \(ListFiles500JSONResponse\) [VisitListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L884>)
+### func \(ListFiles500JSONResponse\) [VisitListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3997>)
 
 ```go
 func (response ListFiles500JSONResponse) VisitListFilesResponse(w http.ResponseWriter) error
@@ -649,7 +3924,7 @@ func (response ListFiles500JSONResponse) VisitListFilesResponse(w http.ResponseW
 
 
 <a name="ListFilesParams"></a>
-## type [ListFilesParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L196-L238>)
+## type [ListFilesParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1296-L1338>)
 
 ListFilesParams defines parameters for ListFiles.
 
@@ -700,7 +3975,7 @@ type ListFilesParams struct {
 ```
 
 <a name="ListFilesParamsMimeType"></a>
-## type [ListFilesParamsMimeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L247>)
+## type [ListFilesParamsMimeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1347>)
 
 ListFilesParamsMimeType defines parameters for ListFiles.
 
@@ -708,19 +3983,23 @@ ListFilesParamsMimeType defines parameters for ListFiles.
 type ListFilesParamsMimeType string
 ```
 
-<a name="Applicationpdf"></a>Defines values for ListFilesParamsMimeType.
+<a name="ListFilesParamsMimeTypeApplicationepubZip"></a>Defines values for ListFilesParamsMimeType.
 
 ```go
 const (
-    Applicationpdf ListFilesParamsMimeType = "application/pdf"
-    Imagejpeg      ListFilesParamsMimeType = "image/jpeg"
-    Imagepng       ListFilesParamsMimeType = "image/png"
-    Imagewebp      ListFilesParamsMimeType = "image/webp"
+    ListFilesParamsMimeTypeApplicationepubZip                                                   ListFilesParamsMimeType = "application/epub+zip"
+    ListFilesParamsMimeTypeApplicationpdf                                                       ListFilesParamsMimeType = "application/pdf"
+    ListFilesParamsMimeTypeApplicationvndOpenxmlformatsOfficedocumentPresentationmlPresentation ListFilesParamsMimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    ListFilesParamsMimeTypeApplicationvndOpenxmlformatsOfficedocumentWordprocessingmlDocument   ListFilesParamsMimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ListFilesParamsMimeTypeImagejpeg                                                            ListFilesParamsMimeType = "image/jpeg"
+    ListFilesParamsMimeTypeImagepng                                                             ListFilesParamsMimeType = "image/png"
+    ListFilesParamsMimeTypeImagewebp                                                            ListFilesParamsMimeType = "image/webp"
+    ListFilesParamsMimeTypeTextplain                                                            ListFilesParamsMimeType = "text/plain"
 )
 ```
 
 <a name="ListFilesParamsMimeType.Valid"></a>
-### func \(ListFilesParamsMimeType\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L84>)
+### func \(ListFilesParamsMimeType\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L562>)
 
 ```go
 func (e ListFilesParamsMimeType) Valid() bool
@@ -729,7 +4008,7 @@ func (e ListFilesParamsMimeType) Valid() bool
 Valid indicates whether the value is a known member of the ListFilesParamsMimeType enum.
 
 <a name="ListFilesParamsScope"></a>
-## type [ListFilesParamsScope](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L241>)
+## type [ListFilesParamsScope](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1341>)
 
 ListFilesParamsScope defines parameters for ListFiles.
 
@@ -749,7 +4028,7 @@ const (
 ```
 
 <a name="ListFilesParamsScope.Valid"></a>
-### func \(ListFilesParamsScope\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L39>)
+### func \(ListFilesParamsScope\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L513>)
 
 ```go
 func (e ListFilesParamsScope) Valid() bool
@@ -758,7 +4037,7 @@ func (e ListFilesParamsScope) Valid() bool
 Valid indicates whether the value is a known member of the ListFilesParamsScope enum.
 
 <a name="ListFilesParamsSortBy"></a>
-## type [ListFilesParamsSortBy](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L250>)
+## type [ListFilesParamsSortBy](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1350>)
 
 ListFilesParamsSortBy defines parameters for ListFiles.
 
@@ -766,21 +4045,21 @@ ListFilesParamsSortBy defines parameters for ListFiles.
 type ListFilesParamsSortBy string
 ```
 
-<a name="CreatedAt"></a>Defines values for ListFilesParamsSortBy.
+<a name="ListFilesParamsSortByCreatedAt"></a>Defines values for ListFilesParamsSortBy.
 
 ```go
 const (
-    CreatedAt ListFilesParamsSortBy = "created_at"
-    MimeType  ListFilesParamsSortBy = "mime_type"
-    Name      ListFilesParamsSortBy = "name"
-    Size      ListFilesParamsSortBy = "size"
-    Status    ListFilesParamsSortBy = "status"
-    UpdatedAt ListFilesParamsSortBy = "updated_at"
+    ListFilesParamsSortByCreatedAt ListFilesParamsSortBy = "created_at"
+    ListFilesParamsSortByMimeType  ListFilesParamsSortBy = "mime_type"
+    ListFilesParamsSortByName      ListFilesParamsSortBy = "name"
+    ListFilesParamsSortBySize      ListFilesParamsSortBy = "size"
+    ListFilesParamsSortByStatus    ListFilesParamsSortBy = "status"
+    ListFilesParamsSortByUpdatedAt ListFilesParamsSortBy = "updated_at"
 )
 ```
 
 <a name="ListFilesParamsSortBy.Valid"></a>
-### func \(ListFilesParamsSortBy\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L110>)
+### func \(ListFilesParamsSortBy\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L596>)
 
 ```go
 func (e ListFilesParamsSortBy) Valid() bool
@@ -789,7 +4068,7 @@ func (e ListFilesParamsSortBy) Valid() bool
 Valid indicates whether the value is a known member of the ListFilesParamsSortBy enum.
 
 <a name="ListFilesParamsSortDir"></a>
-## type [ListFilesParamsSortDir](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L253>)
+## type [ListFilesParamsSortDir](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1353>)
 
 ListFilesParamsSortDir defines parameters for ListFiles.
 
@@ -807,7 +4086,7 @@ const (
 ```
 
 <a name="ListFilesParamsSortDir.Valid"></a>
-### func \(ListFilesParamsSortDir\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L136>)
+### func \(ListFilesParamsSortDir\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L622>)
 
 ```go
 func (e ListFilesParamsSortDir) Valid() bool
@@ -816,7 +4095,7 @@ func (e ListFilesParamsSortDir) Valid() bool
 Valid indicates whether the value is a known member of the ListFilesParamsSortDir enum.
 
 <a name="ListFilesParamsStatus"></a>
-## type [ListFilesParamsStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L244>)
+## type [ListFilesParamsStatus](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1344>)
 
 ListFilesParamsStatus defines parameters for ListFiles.
 
@@ -835,7 +4114,7 @@ const (
 ```
 
 <a name="ListFilesParamsStatus.Valid"></a>
-### func \(ListFilesParamsStatus\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L62>)
+### func \(ListFilesParamsStatus\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L536>)
 
 ```go
 func (e ListFilesParamsStatus) Valid() bool
@@ -844,7 +4123,7 @@ func (e ListFilesParamsStatus) Valid() bool
 Valid indicates whether the value is a known member of the ListFilesParamsStatus enum.
 
 <a name="ListFilesRequestObject"></a>
-## type [ListFilesRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L845-L847>)
+## type [ListFilesRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3958-L3960>)
 
 
 
@@ -855,7 +4134,7 @@ type ListFilesRequestObject struct {
 ```
 
 <a name="ListFilesResponse"></a>
-## type [ListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L169-L173>)
+## type [ListFilesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L915-L919>)
 
 ListFilesResponse A paginated collection of files
 
@@ -868,7 +4147,7 @@ type ListFilesResponse struct {
 ```
 
 <a name="ListFilesResponseObject"></a>
-## type [ListFilesResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L849-L851>)
+## type [ListFilesResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3962-L3964>)
 
 
 
@@ -878,8 +4157,714 @@ type ListFilesResponseObject interface {
 }
 ```
 
+<a name="ListMyEnrollments200JSONResponse"></a>
+## type [ListMyEnrollments200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3920>)
+
+
+
+```go
+type ListMyEnrollments200JSONResponse ListMyEnrollmentsResponse
+```
+
+<a name="ListMyEnrollments200JSONResponse.VisitListMyEnrollmentsResponse"></a>
+### func \(ListMyEnrollments200JSONResponse\) [VisitListMyEnrollmentsResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3922>)
+
+```go
+func (response ListMyEnrollments200JSONResponse) VisitListMyEnrollmentsResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListMyEnrollments400JSONResponse"></a>
+## type [ListMyEnrollments400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3929>)
+
+
+
+```go
+type ListMyEnrollments400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="ListMyEnrollments400JSONResponse.VisitListMyEnrollmentsResponse"></a>
+### func \(ListMyEnrollments400JSONResponse\) [VisitListMyEnrollmentsResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3931>)
+
+```go
+func (response ListMyEnrollments400JSONResponse) VisitListMyEnrollmentsResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListMyEnrollments401JSONResponse"></a>
+## type [ListMyEnrollments401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3938>)
+
+
+
+```go
+type ListMyEnrollments401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="ListMyEnrollments401JSONResponse.VisitListMyEnrollmentsResponse"></a>
+### func \(ListMyEnrollments401JSONResponse\) [VisitListMyEnrollmentsResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3940>)
+
+```go
+func (response ListMyEnrollments401JSONResponse) VisitListMyEnrollmentsResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListMyEnrollments500JSONResponse"></a>
+## type [ListMyEnrollments500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3947-L3949>)
+
+
+
+```go
+type ListMyEnrollments500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="ListMyEnrollments500JSONResponse.VisitListMyEnrollmentsResponse"></a>
+### func \(ListMyEnrollments500JSONResponse\) [VisitListMyEnrollmentsResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3951>)
+
+```go
+func (response ListMyEnrollments500JSONResponse) VisitListMyEnrollmentsResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListMyEnrollmentsParams"></a>
+## type [ListMyEnrollmentsParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1284-L1290>)
+
+ListMyEnrollmentsParams defines parameters for ListMyEnrollments.
+
+```go
+type ListMyEnrollmentsParams struct {
+    // Term Exact-match term filter (e.g. "Spring 2026")
+    Term *string `form:"term,omitempty" json:"term,omitempty"`
+
+    // Role Filter to a specific course-member role
+    Role *ListMyEnrollmentsParamsRole `form:"role,omitempty" json:"role,omitempty"`
+}
+```
+
+<a name="ListMyEnrollmentsParamsRole"></a>
+## type [ListMyEnrollmentsParamsRole](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1293>)
+
+ListMyEnrollmentsParamsRole defines parameters for ListMyEnrollments.
+
+```go
+type ListMyEnrollmentsParamsRole string
+```
+
+<a name="ListMyEnrollmentsParamsRoleInstructor"></a>Defines values for ListMyEnrollmentsParamsRole.
+
+```go
+const (
+    ListMyEnrollmentsParamsRoleInstructor ListMyEnrollmentsParamsRole = "instructor"
+    ListMyEnrollmentsParamsRoleStudent    ListMyEnrollmentsParamsRole = "student"
+    ListMyEnrollmentsParamsRoleTa         ListMyEnrollmentsParamsRole = "ta"
+)
+```
+
+<a name="ListMyEnrollmentsParamsRole.Valid"></a>
+### func \(ListMyEnrollmentsParamsRole\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L491>)
+
+```go
+func (e ListMyEnrollmentsParamsRole) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the ListMyEnrollmentsParamsRole enum.
+
+<a name="ListMyEnrollmentsRequestObject"></a>
+## type [ListMyEnrollmentsRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3912-L3914>)
+
+
+
+```go
+type ListMyEnrollmentsRequestObject struct {
+    Params ListMyEnrollmentsParams
+}
+```
+
+<a name="ListMyEnrollmentsResponse"></a>
+## type [ListMyEnrollmentsResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L922-L924>)
+
+ListMyEnrollmentsResponse All enrollments for the authenticated user
+
+```go
+type ListMyEnrollmentsResponse struct {
+    Enrollments []EnrollmentResponse `json:"enrollments"`
+}
+```
+
+<a name="ListMyEnrollmentsResponseObject"></a>
+## type [ListMyEnrollmentsResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3916-L3918>)
+
+
+
+```go
+type ListMyEnrollmentsResponseObject interface {
+    VisitListMyEnrollmentsResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="ListSchools200JSONResponse"></a>
+## type [ListSchools200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4012>)
+
+
+
+```go
+type ListSchools200JSONResponse ListSchoolsResponse
+```
+
+<a name="ListSchools200JSONResponse.VisitListSchoolsResponse"></a>
+### func \(ListSchools200JSONResponse\) [VisitListSchoolsResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4014>)
+
+```go
+func (response ListSchools200JSONResponse) VisitListSchoolsResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListSchools400JSONResponse"></a>
+## type [ListSchools400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4021>)
+
+
+
+```go
+type ListSchools400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="ListSchools400JSONResponse.VisitListSchoolsResponse"></a>
+### func \(ListSchools400JSONResponse\) [VisitListSchoolsResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4023>)
+
+```go
+func (response ListSchools400JSONResponse) VisitListSchoolsResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListSchools401JSONResponse"></a>
+## type [ListSchools401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4030>)
+
+
+
+```go
+type ListSchools401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="ListSchools401JSONResponse.VisitListSchoolsResponse"></a>
+### func \(ListSchools401JSONResponse\) [VisitListSchoolsResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4032>)
+
+```go
+func (response ListSchools401JSONResponse) VisitListSchoolsResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListSchools500JSONResponse"></a>
+## type [ListSchools500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4039-L4041>)
+
+
+
+```go
+type ListSchools500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="ListSchools500JSONResponse.VisitListSchoolsResponse"></a>
+### func \(ListSchools500JSONResponse\) [VisitListSchoolsResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4043>)
+
+```go
+func (response ListSchools500JSONResponse) VisitListSchoolsResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListSchoolsParams"></a>
+## type [ListSchoolsParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1356-L1365>)
+
+ListSchoolsParams defines parameters for ListSchools.
+
+```go
+type ListSchoolsParams struct {
+    // Q Search term, partial match against school name (trigram) or exact match against acronym (case-insensitive)
+    Q   *string `form:"q,omitempty" json:"q,omitempty"`
+
+    // PageLimit Maximum number of schools to return per page
+    PageLimit *int `form:"page_limit,omitempty" json:"page_limit,omitempty"`
+
+    // Cursor Opaque pagination cursor token obtained from the previous response
+    Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+```
+
+<a name="ListSchoolsRequestObject"></a>
+## type [ListSchoolsRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4004-L4006>)
+
+
+
+```go
+type ListSchoolsRequestObject struct {
+    Params ListSchoolsParams
+}
+```
+
+<a name="ListSchoolsResponse"></a>
+## type [ListSchoolsResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L927-L931>)
+
+ListSchoolsResponse A paginated collection of schools
+
+```go
+type ListSchoolsResponse struct {
+    HasMore    bool             `json:"has_more"`
+    NextCursor *string          `json:"next_cursor,omitempty"`
+    Schools    []SchoolResponse `json:"schools"`
+}
+```
+
+<a name="ListSchoolsResponseObject"></a>
+## type [ListSchoolsResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4008-L4010>)
+
+
+
+```go
+type ListSchoolsResponseObject interface {
+    VisitListSchoolsResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="ListSectionMembers200JSONResponse"></a>
+## type [ListSectionMembers200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3255>)
+
+
+
+```go
+type ListSectionMembers200JSONResponse ListSectionMembersResponse
+```
+
+<a name="ListSectionMembers200JSONResponse.VisitListSectionMembersResponse"></a>
+### func \(ListSectionMembers200JSONResponse\) [VisitListSectionMembersResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3257>)
+
+```go
+func (response ListSectionMembers200JSONResponse) VisitListSectionMembersResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListSectionMembers400JSONResponse"></a>
+## type [ListSectionMembers400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3264>)
+
+
+
+```go
+type ListSectionMembers400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="ListSectionMembers400JSONResponse.VisitListSectionMembersResponse"></a>
+### func \(ListSectionMembers400JSONResponse\) [VisitListSectionMembersResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3266>)
+
+```go
+func (response ListSectionMembers400JSONResponse) VisitListSectionMembersResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListSectionMembers401JSONResponse"></a>
+## type [ListSectionMembers401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3273>)
+
+
+
+```go
+type ListSectionMembers401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="ListSectionMembers401JSONResponse.VisitListSectionMembersResponse"></a>
+### func \(ListSectionMembers401JSONResponse\) [VisitListSectionMembersResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3275>)
+
+```go
+func (response ListSectionMembers401JSONResponse) VisitListSectionMembersResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListSectionMembers404JSONResponse"></a>
+## type [ListSectionMembers404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3282>)
+
+
+
+```go
+type ListSectionMembers404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="ListSectionMembers404JSONResponse.VisitListSectionMembersResponse"></a>
+### func \(ListSectionMembers404JSONResponse\) [VisitListSectionMembersResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3284>)
+
+```go
+func (response ListSectionMembers404JSONResponse) VisitListSectionMembersResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListSectionMembers500JSONResponse"></a>
+## type [ListSectionMembers500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3291-L3293>)
+
+
+
+```go
+type ListSectionMembers500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="ListSectionMembers500JSONResponse.VisitListSectionMembersResponse"></a>
+### func \(ListSectionMembers500JSONResponse\) [VisitListSectionMembersResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3295>)
+
+```go
+func (response ListSectionMembers500JSONResponse) VisitListSectionMembersResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListSectionMembersParams"></a>
+## type [ListSectionMembersParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1240-L1249>)
+
+ListSectionMembersParams defines parameters for ListSectionMembers.
+
+```go
+type ListSectionMembersParams struct {
+    // Role Filter to members with a specific role
+    Role *ListSectionMembersParamsRole `form:"role,omitempty" json:"role,omitempty"`
+
+    // Limit Maximum number of members to return per page
+    Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+    // Cursor Opaque keyset cursor token from the previous page
+    Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+```
+
+<a name="ListSectionMembersParamsRole"></a>
+## type [ListSectionMembersParamsRole](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1252>)
+
+ListSectionMembersParamsRole defines parameters for ListSectionMembers.
+
+```go
+type ListSectionMembersParamsRole string
+```
+
+<a name="ListSectionMembersParamsRoleInstructor"></a>Defines values for ListSectionMembersParamsRole.
+
+```go
+const (
+    ListSectionMembersParamsRoleInstructor ListSectionMembersParamsRole = "instructor"
+    ListSectionMembersParamsRoleStudent    ListSectionMembersParamsRole = "student"
+    ListSectionMembersParamsRoleTa         ListSectionMembersParamsRole = "ta"
+)
+```
+
+<a name="ListSectionMembersParamsRole.Valid"></a>
+### func \(ListSectionMembersParamsRole\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L428>)
+
+```go
+func (e ListSectionMembersParamsRole) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the ListSectionMembersParamsRole enum.
+
+<a name="ListSectionMembersRequestObject"></a>
+## type [ListSectionMembersRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3245-L3249>)
+
+
+
+```go
+type ListSectionMembersRequestObject struct {
+    CourseId  openapi_types.UUID `json:"course_id"`
+    SectionId openapi_types.UUID `json:"section_id"`
+    Params    ListSectionMembersParams
+}
+```
+
+<a name="ListSectionMembersResponse"></a>
+## type [ListSectionMembersResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L934-L938>)
+
+ListSectionMembersResponse A paginated collection of section members
+
+```go
+type ListSectionMembersResponse struct {
+    HasMore    bool                    `json:"has_more"`
+    Members    []SectionMemberResponse `json:"members"`
+    NextCursor *string                 `json:"next_cursor,omitempty"`
+}
+```
+
+<a name="ListSectionMembersResponseObject"></a>
+## type [ListSectionMembersResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3251-L3253>)
+
+
+
+```go
+type ListSectionMembersResponseObject interface {
+    VisitListSectionMembersResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="ListStudyGuides200JSONResponse"></a>
+## type [ListStudyGuides200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3487>)
+
+
+
+```go
+type ListStudyGuides200JSONResponse ListStudyGuidesResponse
+```
+
+<a name="ListStudyGuides200JSONResponse.VisitListStudyGuidesResponse"></a>
+### func \(ListStudyGuides200JSONResponse\) [VisitListStudyGuidesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3489>)
+
+```go
+func (response ListStudyGuides200JSONResponse) VisitListStudyGuidesResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListStudyGuides400JSONResponse"></a>
+## type [ListStudyGuides400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3496>)
+
+
+
+```go
+type ListStudyGuides400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="ListStudyGuides400JSONResponse.VisitListStudyGuidesResponse"></a>
+### func \(ListStudyGuides400JSONResponse\) [VisitListStudyGuidesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3498>)
+
+```go
+func (response ListStudyGuides400JSONResponse) VisitListStudyGuidesResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListStudyGuides401JSONResponse"></a>
+## type [ListStudyGuides401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3505>)
+
+
+
+```go
+type ListStudyGuides401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="ListStudyGuides401JSONResponse.VisitListStudyGuidesResponse"></a>
+### func \(ListStudyGuides401JSONResponse\) [VisitListStudyGuidesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3507>)
+
+```go
+func (response ListStudyGuides401JSONResponse) VisitListStudyGuidesResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListStudyGuides404JSONResponse"></a>
+## type [ListStudyGuides404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3514>)
+
+
+
+```go
+type ListStudyGuides404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="ListStudyGuides404JSONResponse.VisitListStudyGuidesResponse"></a>
+### func \(ListStudyGuides404JSONResponse\) [VisitListStudyGuidesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3516>)
+
+```go
+func (response ListStudyGuides404JSONResponse) VisitListStudyGuidesResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListStudyGuides500JSONResponse"></a>
+## type [ListStudyGuides500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3523-L3525>)
+
+
+
+```go
+type ListStudyGuides500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="ListStudyGuides500JSONResponse.VisitListStudyGuidesResponse"></a>
+### func \(ListStudyGuides500JSONResponse\) [VisitListStudyGuidesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3527>)
+
+```go
+func (response ListStudyGuides500JSONResponse) VisitListStudyGuidesResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="ListStudyGuidesParams"></a>
+## type [ListStudyGuidesParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1255-L1275>)
+
+ListStudyGuidesParams defines parameters for ListStudyGuides.
+
+```go
+type ListStudyGuidesParams struct {
+    // Q Case-insensitive partial match against title and tags
+    Q   *string `form:"q,omitempty" json:"q,omitempty"`
+
+    // Tag Filter by exact tag (case-sensitive). Repeatable; multiple
+    // values are AND-matched (a guide must carry every supplied
+    // tag to be returned).
+    Tag *[]string `form:"tag,omitempty" json:"tag,omitempty"`
+
+    // SortBy Sort field
+    SortBy *ListStudyGuidesParamsSortBy `form:"sort_by,omitempty" json:"sort_by,omitempty"`
+
+    // SortDir Sort direction
+    SortDir *ListStudyGuidesParamsSortDir `form:"sort_dir,omitempty" json:"sort_dir,omitempty"`
+
+    // PageLimit Maximum number of guides per page
+    PageLimit *int `form:"page_limit,omitempty" json:"page_limit,omitempty"`
+
+    // Cursor Opaque keyset cursor token from the previous page
+    Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+```
+
+<a name="ListStudyGuidesParamsSortBy"></a>
+## type [ListStudyGuidesParamsSortBy](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1278>)
+
+ListStudyGuidesParamsSortBy defines parameters for ListStudyGuides.
+
+```go
+type ListStudyGuidesParamsSortBy string
+```
+
+<a name="Newest"></a>Defines values for ListStudyGuidesParamsSortBy.
+
+```go
+const (
+    Newest  ListStudyGuidesParamsSortBy = "newest"
+    Score   ListStudyGuidesParamsSortBy = "score"
+    Updated ListStudyGuidesParamsSortBy = "updated"
+    Views   ListStudyGuidesParamsSortBy = "views"
+)
+```
+
+<a name="ListStudyGuidesParamsSortBy.Valid"></a>
+### func \(ListStudyGuidesParamsSortBy\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L450>)
+
+```go
+func (e ListStudyGuidesParamsSortBy) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the ListStudyGuidesParamsSortBy enum.
+
+<a name="ListStudyGuidesParamsSortDir"></a>
+## type [ListStudyGuidesParamsSortDir](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1281>)
+
+ListStudyGuidesParamsSortDir defines parameters for ListStudyGuides.
+
+```go
+type ListStudyGuidesParamsSortDir string
+```
+
+<a name="ListStudyGuidesParamsSortDirAsc"></a>Defines values for ListStudyGuidesParamsSortDir.
+
+```go
+const (
+    ListStudyGuidesParamsSortDirAsc  ListStudyGuidesParamsSortDir = "asc"
+    ListStudyGuidesParamsSortDirDesc ListStudyGuidesParamsSortDir = "desc"
+)
+```
+
+<a name="ListStudyGuidesParamsSortDir.Valid"></a>
+### func \(ListStudyGuidesParamsSortDir\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L472>)
+
+```go
+func (e ListStudyGuidesParamsSortDir) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the ListStudyGuidesParamsSortDir enum.
+
+<a name="ListStudyGuidesRequestObject"></a>
+## type [ListStudyGuidesRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3478-L3481>)
+
+
+
+```go
+type ListStudyGuidesRequestObject struct {
+    CourseId openapi_types.UUID `json:"course_id"`
+    Params   ListStudyGuidesParams
+}
+```
+
+<a name="ListStudyGuidesResponse"></a>
+## type [ListStudyGuidesResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L941-L945>)
+
+ListStudyGuidesResponse A paginated collection of study guides for a course
+
+```go
+type ListStudyGuidesResponse struct {
+    HasMore     bool                         `json:"has_more"`
+    NextCursor  *string                      `json:"next_cursor,omitempty"`
+    StudyGuides []StudyGuideListItemResponse `json:"study_guides"`
+}
+```
+
+<a name="ListStudyGuidesResponseObject"></a>
+## type [ListStudyGuidesResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3483-L3485>)
+
+
+
+```go
+type ListStudyGuidesResponseObject interface {
+    VisitListStudyGuidesResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="MembershipCheckResponse"></a>
+## type [MembershipCheckResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L951-L955>)
+
+MembershipCheckResponse Per\-section membership status for the authenticated user. \`enrolled\` is always present; \`role\` and \`joined\_at\` are non\-null only when \`enrolled\` is true. Both nullable fields are emitted as JSON null \(not omitted\) so the frontend can safely destructure.
+
+```go
+type MembershipCheckResponse struct {
+    Enrolled bool                         `json:"enrolled"`
+    JoinedAt *time.Time                   `json:"joined_at"`
+    Role     *MembershipCheckResponseRole `json:"role"`
+}
+```
+
+<a name="MembershipCheckResponseRole"></a>
+## type [MembershipCheckResponseRole](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L958>)
+
+MembershipCheckResponseRole defines model for MembershipCheckResponse.Role.
+
+```go
+type MembershipCheckResponseRole string
+```
+
+<a name="MembershipCheckResponseRoleInstructor"></a>Defines values for MembershipCheckResponseRole.
+
+```go
+const (
+    MembershipCheckResponseRoleInstructor MembershipCheckResponseRole = "instructor"
+    MembershipCheckResponseRoleStudent    MembershipCheckResponseRole = "student"
+    MembershipCheckResponseRoleTa         MembershipCheckResponseRole = "ta"
+)
+```
+
+<a name="MembershipCheckResponseRole.Valid"></a>
+### func \(MembershipCheckResponseRole\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L239>)
+
+```go
+func (e MembershipCheckResponseRole) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the MembershipCheckResponseRole enum.
+
 <a name="MiddlewareFunc"></a>
-## type [MiddlewareFunc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L309>)
+## type [MiddlewareFunc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1679>)
 
 
 
@@ -888,7 +4873,7 @@ type MiddlewareFunc func(http.Handler) http.Handler
 ```
 
 <a name="NotFound"></a>
-## type [NotFound](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L190>)
+## type [NotFound](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1204>)
 
 NotFound Standardized error response structure matching application error domains
 
@@ -897,7 +4882,7 @@ type NotFound = AppError
 ```
 
 <a name="NotFoundJSONResponse"></a>
-## type [NotFoundJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L676>)
+## type [NotFoundJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3140>)
 
 
 
@@ -905,8 +4890,508 @@ type NotFound = AppError
 type NotFoundJSONResponse AppError
 ```
 
+<a name="QuizDetailResponse"></a>
+## type [QuizDetailResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L965-L977>)
+
+QuizDetailResponse Full quiz payload returned by POST /api/study\-guides/\{id\}/quizzes \(and the future GET /api/quizzes/\{quiz\_id\}\). Includes the embedded study guide id, the creator \(privacy floor: id \+ first\_name \+ last\_name only\), and every question with its options and correct answer.
+
+```go
+type QuizDetailResponse struct {
+    CreatedAt time.Time `json:"created_at"`
+
+    // Creator Compact user payload used as the `creator` of a study guide. Same
+    // privacy floor as SectionMemberResponse -- no email, no clerk_id.
+    Creator      CreatorSummary         `json:"creator"`
+    Description  *string                `json:"description"`
+    Id           openapi_types.UUID     `json:"id"`
+    Questions    []QuizQuestionResponse `json:"questions"`
+    StudyGuideId openapi_types.UUID     `json:"study_guide_id"`
+    Title        string                 `json:"title"`
+    UpdatedAt    time.Time              `json:"updated_at"`
+}
+```
+
+<a name="QuizQuestionResponse"></a>
+## type [QuizQuestionResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L984-L999>)
+
+QuizQuestionResponse A single question on the quiz detail response. The \`options\` array is present only on \`multiple\-choice\` questions and lists the option text in display order. \`correct\_answer\` is the text of the correct option for MCQ, the boolean for true\-false, and the reference answer string for freeform.
+
+```go
+type QuizQuestionResponse struct {
+    // CorrectAnswer The correct answer for this question. String for
+    // multiple-choice (the winning option's text) and freeform
+    // (the reference answer); boolean for true-false.
+    CorrectAnswer interface{} `json:"correct_answer,omitempty"`
+    Feedback      struct {
+        Correct   *string `json:"correct"`
+        Incorrect *string `json:"incorrect"`
+    }   `json:"feedback"`
+    Hint      *string                  `json:"hint"`
+    Id        openapi_types.UUID       `json:"id"`
+    Options   *[]string                `json:"options,omitempty"`
+    Question  string                   `json:"question"`
+    SortOrder int                      `json:"sort_order"`
+    Type      QuizQuestionResponseType `json:"type"`
+}
+```
+
+<a name="QuizQuestionResponseType"></a>
+## type [QuizQuestionResponseType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1002>)
+
+QuizQuestionResponseType defines model for QuizQuestionResponse.Type.
+
+```go
+type QuizQuestionResponseType string
+```
+
+<a name="QuizQuestionResponseTypeFreeform"></a>Defines values for QuizQuestionResponseType.
+
+```go
+const (
+    QuizQuestionResponseTypeFreeform       QuizQuestionResponseType = "freeform"
+    QuizQuestionResponseTypeMultipleChoice QuizQuestionResponseType = "multiple-choice"
+    QuizQuestionResponseTypeTrueFalse      QuizQuestionResponseType = "true-false"
+)
+```
+
+<a name="QuizQuestionResponseType.Valid"></a>
+### func \(QuizQuestionResponseType\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L260>)
+
+```go
+func (e QuizQuestionResponseType) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the QuizQuestionResponseType enum.
+
+<a name="QuizSummary"></a>
+## type [QuizSummary](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1009-L1013>)
+
+QuizSummary Compact quiz payload embedded in StudyGuideDetailResponse. Privacy floor: id \+ title \+ question\_count only. Creator id, quiz content, and scoring config are intentionally absent \-\- the quiz detail endpoint \(future ticket ASK\-142\) is the source of truth for those.
+
+```go
+type QuizSummary struct {
+    Id            openapi_types.UUID `json:"id"`
+    QuestionCount int64              `json:"question_count"`
+    Title         string             `json:"title"`
+}
+```
+
+<a name="RecommendStudyGuide201JSONResponse"></a>
+## type [RecommendStudyGuide201JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4553>)
+
+
+
+```go
+type RecommendStudyGuide201JSONResponse RecommendationResponse
+```
+
+<a name="RecommendStudyGuide201JSONResponse.VisitRecommendStudyGuideResponse"></a>
+### func \(RecommendStudyGuide201JSONResponse\) [VisitRecommendStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4555>)
+
+```go
+func (response RecommendStudyGuide201JSONResponse) VisitRecommendStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RecommendStudyGuide400JSONResponse"></a>
+## type [RecommendStudyGuide400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4562>)
+
+
+
+```go
+type RecommendStudyGuide400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="RecommendStudyGuide400JSONResponse.VisitRecommendStudyGuideResponse"></a>
+### func \(RecommendStudyGuide400JSONResponse\) [VisitRecommendStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4564>)
+
+```go
+func (response RecommendStudyGuide400JSONResponse) VisitRecommendStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RecommendStudyGuide401JSONResponse"></a>
+## type [RecommendStudyGuide401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4571>)
+
+
+
+```go
+type RecommendStudyGuide401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="RecommendStudyGuide401JSONResponse.VisitRecommendStudyGuideResponse"></a>
+### func \(RecommendStudyGuide401JSONResponse\) [VisitRecommendStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4573>)
+
+```go
+func (response RecommendStudyGuide401JSONResponse) VisitRecommendStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RecommendStudyGuide403JSONResponse"></a>
+## type [RecommendStudyGuide403JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4580>)
+
+
+
+```go
+type RecommendStudyGuide403JSONResponse struct{ ForbiddenJSONResponse }
+```
+
+<a name="RecommendStudyGuide403JSONResponse.VisitRecommendStudyGuideResponse"></a>
+### func \(RecommendStudyGuide403JSONResponse\) [VisitRecommendStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4582>)
+
+```go
+func (response RecommendStudyGuide403JSONResponse) VisitRecommendStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RecommendStudyGuide404JSONResponse"></a>
+## type [RecommendStudyGuide404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4589>)
+
+
+
+```go
+type RecommendStudyGuide404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="RecommendStudyGuide404JSONResponse.VisitRecommendStudyGuideResponse"></a>
+### func \(RecommendStudyGuide404JSONResponse\) [VisitRecommendStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4591>)
+
+```go
+func (response RecommendStudyGuide404JSONResponse) VisitRecommendStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RecommendStudyGuide409JSONResponse"></a>
+## type [RecommendStudyGuide409JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4598>)
+
+
+
+```go
+type RecommendStudyGuide409JSONResponse struct{ ConflictJSONResponse }
+```
+
+<a name="RecommendStudyGuide409JSONResponse.VisitRecommendStudyGuideResponse"></a>
+### func \(RecommendStudyGuide409JSONResponse\) [VisitRecommendStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4600>)
+
+```go
+func (response RecommendStudyGuide409JSONResponse) VisitRecommendStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RecommendStudyGuide500JSONResponse"></a>
+## type [RecommendStudyGuide500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4607-L4609>)
+
+
+
+```go
+type RecommendStudyGuide500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="RecommendStudyGuide500JSONResponse.VisitRecommendStudyGuideResponse"></a>
+### func \(RecommendStudyGuide500JSONResponse\) [VisitRecommendStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4611>)
+
+```go
+func (response RecommendStudyGuide500JSONResponse) VisitRecommendStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RecommendStudyGuideRequestObject"></a>
+## type [RecommendStudyGuideRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4545-L4547>)
+
+
+
+```go
+type RecommendStudyGuideRequestObject struct {
+    StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+}
+```
+
+<a name="RecommendStudyGuideResponseObject"></a>
+## type [RecommendStudyGuideResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4549-L4551>)
+
+
+
+```go
+type RecommendStudyGuideResponseObject interface {
+    VisitRecommendStudyGuideResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="RecommendationResponse"></a>
+## type [RecommendationResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1019-L1026>)
+
+RecommendationResponse Response body for POST /api/study\-guides/\{study\_guide\_id\}/recommendations. Returns the freshly\-created recommendation row plus the recommender's compact identity \(same privacy floor as CreatorSummary \-\- no email, no clerk\_id\).
+
+```go
+type RecommendationResponse struct {
+    CreatedAt time.Time `json:"created_at"`
+
+    // RecommendedBy Compact user payload used as the `creator` of a study guide. Same
+    // privacy floor as SectionMemberResponse -- no email, no clerk_id.
+    RecommendedBy CreatorSummary     `json:"recommended_by"`
+    StudyGuideId  openapi_types.UUID `json:"study_guide_id"`
+}
+```
+
+<a name="RemoveStudyGuideRecommendation204Response"></a>
+## type [RemoveStudyGuideRecommendation204Response](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4490-L4491>)
+
+
+
+```go
+type RemoveStudyGuideRecommendation204Response struct {
+}
+```
+
+<a name="RemoveStudyGuideRecommendation204Response.VisitRemoveStudyGuideRecommendationResponse"></a>
+### func \(RemoveStudyGuideRecommendation204Response\) [VisitRemoveStudyGuideRecommendationResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4493>)
+
+```go
+func (response RemoveStudyGuideRecommendation204Response) VisitRemoveStudyGuideRecommendationResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RemoveStudyGuideRecommendation400JSONResponse"></a>
+## type [RemoveStudyGuideRecommendation400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4498>)
+
+
+
+```go
+type RemoveStudyGuideRecommendation400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="RemoveStudyGuideRecommendation400JSONResponse.VisitRemoveStudyGuideRecommendationResponse"></a>
+### func \(RemoveStudyGuideRecommendation400JSONResponse\) [VisitRemoveStudyGuideRecommendationResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4500>)
+
+```go
+func (response RemoveStudyGuideRecommendation400JSONResponse) VisitRemoveStudyGuideRecommendationResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RemoveStudyGuideRecommendation401JSONResponse"></a>
+## type [RemoveStudyGuideRecommendation401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4507>)
+
+
+
+```go
+type RemoveStudyGuideRecommendation401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="RemoveStudyGuideRecommendation401JSONResponse.VisitRemoveStudyGuideRecommendationResponse"></a>
+### func \(RemoveStudyGuideRecommendation401JSONResponse\) [VisitRemoveStudyGuideRecommendationResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4509>)
+
+```go
+func (response RemoveStudyGuideRecommendation401JSONResponse) VisitRemoveStudyGuideRecommendationResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RemoveStudyGuideRecommendation403JSONResponse"></a>
+## type [RemoveStudyGuideRecommendation403JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4516>)
+
+
+
+```go
+type RemoveStudyGuideRecommendation403JSONResponse struct{ ForbiddenJSONResponse }
+```
+
+<a name="RemoveStudyGuideRecommendation403JSONResponse.VisitRemoveStudyGuideRecommendationResponse"></a>
+### func \(RemoveStudyGuideRecommendation403JSONResponse\) [VisitRemoveStudyGuideRecommendationResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4518>)
+
+```go
+func (response RemoveStudyGuideRecommendation403JSONResponse) VisitRemoveStudyGuideRecommendationResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RemoveStudyGuideRecommendation404JSONResponse"></a>
+## type [RemoveStudyGuideRecommendation404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4525>)
+
+
+
+```go
+type RemoveStudyGuideRecommendation404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="RemoveStudyGuideRecommendation404JSONResponse.VisitRemoveStudyGuideRecommendationResponse"></a>
+### func \(RemoveStudyGuideRecommendation404JSONResponse\) [VisitRemoveStudyGuideRecommendationResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4527>)
+
+```go
+func (response RemoveStudyGuideRecommendation404JSONResponse) VisitRemoveStudyGuideRecommendationResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RemoveStudyGuideRecommendation500JSONResponse"></a>
+## type [RemoveStudyGuideRecommendation500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4534-L4536>)
+
+
+
+```go
+type RemoveStudyGuideRecommendation500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="RemoveStudyGuideRecommendation500JSONResponse.VisitRemoveStudyGuideRecommendationResponse"></a>
+### func \(RemoveStudyGuideRecommendation500JSONResponse\) [VisitRemoveStudyGuideRecommendationResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4538>)
+
+```go
+func (response RemoveStudyGuideRecommendation500JSONResponse) VisitRemoveStudyGuideRecommendationResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RemoveStudyGuideRecommendationRequestObject"></a>
+## type [RemoveStudyGuideRecommendationRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4482-L4484>)
+
+
+
+```go
+type RemoveStudyGuideRecommendationRequestObject struct {
+    StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+}
+```
+
+<a name="RemoveStudyGuideRecommendationResponseObject"></a>
+## type [RemoveStudyGuideRecommendationResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4486-L4488>)
+
+
+
+```go
+type RemoveStudyGuideRecommendationResponseObject interface {
+    VisitRemoveStudyGuideRecommendationResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="RemoveStudyGuideVote204Response"></a>
+## type [RemoveStudyGuideVote204Response](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4755-L4756>)
+
+
+
+```go
+type RemoveStudyGuideVote204Response struct {
+}
+```
+
+<a name="RemoveStudyGuideVote204Response.VisitRemoveStudyGuideVoteResponse"></a>
+### func \(RemoveStudyGuideVote204Response\) [VisitRemoveStudyGuideVoteResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4758>)
+
+```go
+func (response RemoveStudyGuideVote204Response) VisitRemoveStudyGuideVoteResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RemoveStudyGuideVote400JSONResponse"></a>
+## type [RemoveStudyGuideVote400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4763>)
+
+
+
+```go
+type RemoveStudyGuideVote400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="RemoveStudyGuideVote400JSONResponse.VisitRemoveStudyGuideVoteResponse"></a>
+### func \(RemoveStudyGuideVote400JSONResponse\) [VisitRemoveStudyGuideVoteResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4765>)
+
+```go
+func (response RemoveStudyGuideVote400JSONResponse) VisitRemoveStudyGuideVoteResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RemoveStudyGuideVote401JSONResponse"></a>
+## type [RemoveStudyGuideVote401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4772>)
+
+
+
+```go
+type RemoveStudyGuideVote401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="RemoveStudyGuideVote401JSONResponse.VisitRemoveStudyGuideVoteResponse"></a>
+### func \(RemoveStudyGuideVote401JSONResponse\) [VisitRemoveStudyGuideVoteResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4774>)
+
+```go
+func (response RemoveStudyGuideVote401JSONResponse) VisitRemoveStudyGuideVoteResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RemoveStudyGuideVote404JSONResponse"></a>
+## type [RemoveStudyGuideVote404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4781>)
+
+
+
+```go
+type RemoveStudyGuideVote404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="RemoveStudyGuideVote404JSONResponse.VisitRemoveStudyGuideVoteResponse"></a>
+### func \(RemoveStudyGuideVote404JSONResponse\) [VisitRemoveStudyGuideVoteResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4783>)
+
+```go
+func (response RemoveStudyGuideVote404JSONResponse) VisitRemoveStudyGuideVoteResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RemoveStudyGuideVote500JSONResponse"></a>
+## type [RemoveStudyGuideVote500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4790-L4792>)
+
+
+
+```go
+type RemoveStudyGuideVote500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="RemoveStudyGuideVote500JSONResponse.VisitRemoveStudyGuideVoteResponse"></a>
+### func \(RemoveStudyGuideVote500JSONResponse\) [VisitRemoveStudyGuideVoteResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4794>)
+
+```go
+func (response RemoveStudyGuideVote500JSONResponse) VisitRemoveStudyGuideVoteResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RemoveStudyGuideVoteRequestObject"></a>
+## type [RemoveStudyGuideVoteRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4747-L4749>)
+
+
+
+```go
+type RemoveStudyGuideVoteRequestObject struct {
+    StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+}
+```
+
+<a name="RemoveStudyGuideVoteResponseObject"></a>
+## type [RemoveStudyGuideVoteResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4751-L4753>)
+
+
+
+```go
+type RemoveStudyGuideVoteResponseObject interface {
+    VisitRemoveStudyGuideVoteResponse(w http.ResponseWriter) error
+}
+```
+
 <a name="RequiredHeaderError"></a>
-## type [RequiredHeaderError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L575-L578>)
+## type [RequiredHeaderError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2959-L2962>)
 
 
 
@@ -918,7 +5403,7 @@ type RequiredHeaderError struct {
 ```
 
 <a name="RequiredHeaderError.Error"></a>
-### func \(\*RequiredHeaderError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L580>)
+### func \(\*RequiredHeaderError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2964>)
 
 ```go
 func (e *RequiredHeaderError) Error() string
@@ -927,7 +5412,7 @@ func (e *RequiredHeaderError) Error() string
 
 
 <a name="RequiredHeaderError.Unwrap"></a>
-### func \(\*RequiredHeaderError\) [Unwrap](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L584>)
+### func \(\*RequiredHeaderError\) [Unwrap](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2968>)
 
 ```go
 func (e *RequiredHeaderError) Unwrap() error
@@ -936,7 +5421,7 @@ func (e *RequiredHeaderError) Unwrap() error
 
 
 <a name="RequiredParamError"></a>
-## type [RequiredParamError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L567-L569>)
+## type [RequiredParamError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2951-L2953>)
 
 
 
@@ -947,7 +5432,7 @@ type RequiredParamError struct {
 ```
 
 <a name="RequiredParamError.Error"></a>
-### func \(\*RequiredParamError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L571>)
+### func \(\*RequiredParamError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2955>)
 
 ```go
 func (e *RequiredParamError) Error() string
@@ -955,30 +5440,444 @@ func (e *RequiredParamError) Error() string
 
 
 
+<a name="ResourceSummary"></a>
+## type [ResourceSummary](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1031-L1038>)
+
+ResourceSummary Compact resource payload embedded in StudyGuideDetailResponse. No creator or uploader info \-\- the study\-guide detail caller does not need to know who attached the resource.
+
+```go
+type ResourceSummary struct {
+    CreatedAt   time.Time           `json:"created_at"`
+    Description *string             `json:"description,omitempty"`
+    Id          openapi_types.UUID  `json:"id"`
+    Title       string              `json:"title"`
+    Type        ResourceSummaryType `json:"type"`
+    Url         string              `json:"url"`
+}
+```
+
+<a name="ResourceSummaryType"></a>
+## type [ResourceSummaryType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1041>)
+
+ResourceSummaryType defines model for ResourceSummary.Type.
+
+```go
+type ResourceSummaryType string
+```
+
+<a name="ResourceSummaryTypeArticle"></a>Defines values for ResourceSummaryType.
+
+```go
+const (
+    ResourceSummaryTypeArticle ResourceSummaryType = "article"
+    ResourceSummaryTypeLink    ResourceSummaryType = "link"
+    ResourceSummaryTypePdf     ResourceSummaryType = "pdf"
+    ResourceSummaryTypeVideo   ResourceSummaryType = "video"
+)
+```
+
+<a name="ResourceSummaryType.Valid"></a>
+### func \(ResourceSummaryType\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L282>)
+
+```go
+func (e ResourceSummaryType) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the ResourceSummaryType enum.
+
+<a name="RevokeGrant204Response"></a>
+## type [RevokeGrant204Response](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3810-L3811>)
+
+
+
+```go
+type RevokeGrant204Response struct {
+}
+```
+
+<a name="RevokeGrant204Response.VisitRevokeGrantResponse"></a>
+### func \(RevokeGrant204Response\) [VisitRevokeGrantResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3813>)
+
+```go
+func (response RevokeGrant204Response) VisitRevokeGrantResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RevokeGrant400JSONResponse"></a>
+## type [RevokeGrant400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3818>)
+
+
+
+```go
+type RevokeGrant400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="RevokeGrant400JSONResponse.VisitRevokeGrantResponse"></a>
+### func \(RevokeGrant400JSONResponse\) [VisitRevokeGrantResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3820>)
+
+```go
+func (response RevokeGrant400JSONResponse) VisitRevokeGrantResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RevokeGrant401JSONResponse"></a>
+## type [RevokeGrant401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3827>)
+
+
+
+```go
+type RevokeGrant401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="RevokeGrant401JSONResponse.VisitRevokeGrantResponse"></a>
+### func \(RevokeGrant401JSONResponse\) [VisitRevokeGrantResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3829>)
+
+```go
+func (response RevokeGrant401JSONResponse) VisitRevokeGrantResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RevokeGrant404JSONResponse"></a>
+## type [RevokeGrant404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3836>)
+
+
+
+```go
+type RevokeGrant404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="RevokeGrant404JSONResponse.VisitRevokeGrantResponse"></a>
+### func \(RevokeGrant404JSONResponse\) [VisitRevokeGrantResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3838>)
+
+```go
+func (response RevokeGrant404JSONResponse) VisitRevokeGrantResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RevokeGrant500JSONResponse"></a>
+## type [RevokeGrant500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3845-L3847>)
+
+
+
+```go
+type RevokeGrant500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="RevokeGrant500JSONResponse.VisitRevokeGrantResponse"></a>
+### func \(RevokeGrant500JSONResponse\) [VisitRevokeGrantResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3849>)
+
+```go
+func (response RevokeGrant500JSONResponse) VisitRevokeGrantResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="RevokeGrantJSONRequestBody"></a>
+## type [RevokeGrantJSONRequestBody](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1377>)
+
+RevokeGrantJSONRequestBody defines body for RevokeGrant for application/json ContentType.
+
+```go
+type RevokeGrantJSONRequestBody = RevokeGrantRequest
+```
+
+<a name="RevokeGrantRequest"></a>
+## type [RevokeGrantRequest](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1044-L1048>)
+
+RevokeGrantRequest Request body for revoking a file grant
+
+```go
+type RevokeGrantRequest struct {
+    GranteeId   openapi_types.UUID            `json:"grantee_id"`
+    GranteeType RevokeGrantRequestGranteeType `json:"grantee_type"`
+    Permission  RevokeGrantRequestPermission  `json:"permission"`
+}
+```
+
+<a name="RevokeGrantRequestGranteeType"></a>
+## type [RevokeGrantRequestGranteeType](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1051>)
+
+RevokeGrantRequestGranteeType defines model for RevokeGrantRequest.GranteeType.
+
+```go
+type RevokeGrantRequestGranteeType string
+```
+
+<a name="RevokeGrantRequestGranteeTypeCourse"></a>Defines values for RevokeGrantRequestGranteeType.
+
+```go
+const (
+    RevokeGrantRequestGranteeTypeCourse     RevokeGrantRequestGranteeType = "course"
+    RevokeGrantRequestGranteeTypeStudyGuide RevokeGrantRequestGranteeType = "study_guide"
+    RevokeGrantRequestGranteeTypeUser       RevokeGrantRequestGranteeType = "user"
+)
+```
+
+<a name="RevokeGrantRequestGranteeType.Valid"></a>
+### func \(RevokeGrantRequestGranteeType\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L305>)
+
+```go
+func (e RevokeGrantRequestGranteeType) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the RevokeGrantRequestGranteeType enum.
+
+<a name="RevokeGrantRequestObject"></a>
+## type [RevokeGrantRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3801-L3804>)
+
+
+
+```go
+type RevokeGrantRequestObject struct {
+    FileId openapi_types.UUID `json:"file_id"`
+    Body   *RevokeGrantJSONRequestBody
+}
+```
+
+<a name="RevokeGrantRequestPermission"></a>
+## type [RevokeGrantRequestPermission](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1054>)
+
+RevokeGrantRequestPermission defines model for RevokeGrantRequest.Permission.
+
+```go
+type RevokeGrantRequestPermission string
+```
+
+<a name="RevokeGrantRequestPermissionDelete"></a>Defines values for RevokeGrantRequestPermission.
+
+```go
+const (
+    RevokeGrantRequestPermissionDelete RevokeGrantRequestPermission = "delete"
+    RevokeGrantRequestPermissionShare  RevokeGrantRequestPermission = "share"
+    RevokeGrantRequestPermissionView   RevokeGrantRequestPermission = "view"
+)
+```
+
+<a name="RevokeGrantRequestPermission.Valid"></a>
+### func \(RevokeGrantRequestPermission\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L326>)
+
+```go
+func (e RevokeGrantRequestPermission) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the RevokeGrantRequestPermission enum.
+
+<a name="RevokeGrantResponseObject"></a>
+## type [RevokeGrantResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3806-L3808>)
+
+
+
+```go
+type RevokeGrantResponseObject interface {
+    VisitRevokeGrantResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="SchoolResponse"></a>
+## type [SchoolResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1057-L1069>)
+
+SchoolResponse A school \(university or college\)
+
+```go
+type SchoolResponse struct {
+    Acronym string  `json:"acronym"`
+    City    *string `json:"city,omitempty"`
+
+    // Country ISO 3166-1 alpha-2 country code
+    Country   *string            `json:"country,omitempty"`
+    CreatedAt time.Time          `json:"created_at"`
+    Domain    *string            `json:"domain,omitempty"`
+    Id        openapi_types.UUID `json:"id"`
+    Name      string             `json:"name"`
+    State     *string            `json:"state,omitempty"`
+    Url       *string            `json:"url,omitempty"`
+}
+```
+
+<a name="SchoolSummary"></a>
+## type [SchoolSummary](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1072-L1081>)
+
+SchoolSummary Compact school payload embedded inside other resources \(courses, study guides\)
+
+```go
+type SchoolSummary struct {
+    Acronym string  `json:"acronym"`
+    City    *string `json:"city,omitempty"`
+
+    // Country ISO 3166-1 alpha-2 country code
+    Country *string            `json:"country,omitempty"`
+    Id      openapi_types.UUID `json:"id"`
+    Name    string             `json:"name"`
+    State   *string            `json:"state,omitempty"`
+}
+```
+
+<a name="SectionMemberResponse"></a>
+## type [SectionMemberResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1087-L1093>)
+
+SectionMemberResponse Limited per\-user payload returned by ListSectionMembers. Email and clerk\_id are intentionally NOT exposed \-\- any authenticated user can list members of any section, so this is the privacy floor for member identity.
+
+```go
+type SectionMemberResponse struct {
+    FirstName string                    `json:"first_name"`
+    JoinedAt  time.Time                 `json:"joined_at"`
+    LastName  string                    `json:"last_name"`
+    Role      SectionMemberResponseRole `json:"role"`
+    UserId    openapi_types.UUID        `json:"user_id"`
+}
+```
+
+<a name="SectionMemberResponseRole"></a>
+## type [SectionMemberResponseRole](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1096>)
+
+SectionMemberResponseRole defines model for SectionMemberResponse.Role.
+
+```go
+type SectionMemberResponseRole string
+```
+
+<a name="SectionMemberResponseRoleInstructor"></a>Defines values for SectionMemberResponseRole.
+
+```go
+const (
+    SectionMemberResponseRoleInstructor SectionMemberResponseRole = "instructor"
+    SectionMemberResponseRoleStudent    SectionMemberResponseRole = "student"
+    SectionMemberResponseRoleTa         SectionMemberResponseRole = "ta"
+)
+```
+
+<a name="SectionMemberResponseRole.Valid"></a>
+### func \(SectionMemberResponseRole\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L347>)
+
+```go
+func (e SectionMemberResponseRole) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the SectionMemberResponseRole enum.
+
+<a name="SectionSummary"></a>
+## type [SectionSummary](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1099-L1105>)
+
+SectionSummary A section of a course \(term \+ instructor \+ roster size\)
+
+```go
+type SectionSummary struct {
+    Id             openapi_types.UUID `json:"id"`
+    InstructorName *string            `json:"instructor_name,omitempty"`
+    MemberCount    int64              `json:"member_count"`
+    SectionCode    *string            `json:"section_code,omitempty"`
+    Term           string             `json:"term"`
+}
+```
+
 <a name="ServerInterface"></a>
-## type [ServerInterface](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L259-L272>)
+## type [ServerInterface](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1395-L1486>)
 
 ServerInterface represents all server handlers.
 
 ```go
 type ServerInterface interface {
+    // List and search courses
+    // (GET /courses)
+    ListCourses(w http.ResponseWriter, r *http.Request, params ListCoursesParams)
+    // Get a course detail with embedded sections
+    // (GET /courses/{course_id})
+    GetCourse(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID)
+    // List the members of a course section
+    // (GET /courses/{course_id}/sections/{section_id}/members)
+    ListSectionMembers(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID, params ListSectionMembersParams)
+    // Join a section as the authenticated user
+    // (POST /courses/{course_id}/sections/{section_id}/members)
+    JoinSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID)
+    // Leave a section as the authenticated user
+    // (DELETE /courses/{course_id}/sections/{section_id}/members/me)
+    LeaveSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID)
+    // Check the authenticated user's membership in a section
+    // (GET /courses/{course_id}/sections/{section_id}/members/me)
+    CheckMembership(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID)
+    // List study guides for a course
+    // (GET /courses/{course_id}/study-guides)
+    ListStudyGuides(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, params ListStudyGuidesParams)
+    // Create a study guide for a course
+    // (POST /courses/{course_id}/study-guides)
+    CreateStudyGuide(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID)
+    // Create a file reference and get a presigned upload URL
+    // (POST /files)
+    CreateFile(w http.ResponseWriter, r *http.Request)
     // Delete a file by ID
     // (DELETE /files/{file_id})
     DeleteFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
     // Get a file by ID
     // (GET /files/{file_id})
     GetFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
-    // Update a file's metadata
+    // Rename a file
     // (PATCH /files/{file_id})
     UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+    // Revoke a permission on a file
+    // (DELETE /files/{file_id}/grants)
+    RevokeGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+    // Grant a permission on a file
+    // (POST /files/{file_id}/grants)
+    CreateGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+    // List the authenticated user's section enrollments
+    // (GET /me/courses)
+    ListMyEnrollments(w http.ResponseWriter, r *http.Request, params ListMyEnrollmentsParams)
     // List files for the current user
     // (GET /me/files)
     ListFiles(w http.ResponseWriter, r *http.Request, params ListFilesParams)
+    // List and search schools
+    // (GET /schools)
+    ListSchools(w http.ResponseWriter, r *http.Request, params ListSchoolsParams)
+    // Get a single school by ID
+    // (GET /schools/{school_id})
+    GetSchool(w http.ResponseWriter, r *http.Request, schoolId openapi_types.UUID)
+    // Soft-delete a study guide
+    // (DELETE /study-guides/{study_guide_id})
+    DeleteStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+    // Get a study guide detail
+    // (GET /study-guides/{study_guide_id})
+    GetStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+    // Update a study guide
+    // (PATCH /study-guides/{study_guide_id})
+    UpdateStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+    // Detach a file from a study guide
+    // (DELETE /study-guides/{study_guide_id}/files/{file_id})
+    DetachFile(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, fileId openapi_types.UUID)
+    // Attach a file to a study guide
+    // (POST /study-guides/{study_guide_id}/files/{file_id})
+    AttachFile(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, fileId openapi_types.UUID)
+    // Create a quiz attached to a study guide
+    // (POST /study-guides/{study_guide_id}/quizzes)
+    CreateQuiz(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+    // Remove the authenticated user's recommendation on a study guide
+    // (DELETE /study-guides/{study_guide_id}/recommendations)
+    RemoveStudyGuideRecommendation(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+    // Recommend a study guide
+    // (POST /study-guides/{study_guide_id}/recommendations)
+    RecommendStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+    // Attach an external resource to a study guide
+    // (POST /study-guides/{study_guide_id}/resources)
+    AttachResource(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+    // Detach a resource from a study guide
+    // (DELETE /study-guides/{study_guide_id}/resources/{resource_id})
+    DetachResource(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, resourceId openapi_types.UUID)
+    // Remove the authenticated user's vote on a study guide
+    // (DELETE /study-guides/{study_guide_id}/votes)
+    RemoveStudyGuideVote(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+    // Cast or change a vote on a study guide
+    // (POST /study-guides/{study_guide_id}/votes)
+    CastStudyGuideVote(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
 }
 ```
 
 <a name="NewStrictHandler"></a>
-### func [NewStrictHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L915>)
+### func [NewStrictHandler](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4959>)
 
 ```go
 func NewStrictHandler(ssi StrictServerInterface, middlewares []StrictMiddlewareFunc) ServerInterface
@@ -987,7 +5886,7 @@ func NewStrictHandler(ssi StrictServerInterface, middlewares []StrictMiddlewareF
 
 
 <a name="NewStrictHandlerWithOptions"></a>
-### func [NewStrictHandlerWithOptions](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L926>)
+### func [NewStrictHandlerWithOptions](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4970>)
 
 ```go
 func NewStrictHandlerWithOptions(ssi StrictServerInterface, middlewares []StrictMiddlewareFunc, options StrictHTTPServerOptions) ServerInterface
@@ -996,7 +5895,7 @@ func NewStrictHandlerWithOptions(ssi StrictServerInterface, middlewares []Strict
 
 
 <a name="ServerInterfaceWrapper"></a>
-## type [ServerInterfaceWrapper](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L303-L307>)
+## type [ServerInterfaceWrapper](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1673-L1677>)
 
 ServerInterfaceWrapper converts contexts to parameters.
 
@@ -1008,8 +5907,80 @@ type ServerInterfaceWrapper struct {
 }
 ```
 
+<a name="ServerInterfaceWrapper.AttachFile"></a>
+### func \(\*ServerInterfaceWrapper\) [AttachFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2660>)
+
+```go
+func (siw *ServerInterfaceWrapper) AttachFile(w http.ResponseWriter, r *http.Request)
+```
+
+AttachFile operation middleware
+
+<a name="ServerInterfaceWrapper.AttachResource"></a>
+### func \(\*ServerInterfaceWrapper\) [AttachResource](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2793>)
+
+```go
+func (siw *ServerInterfaceWrapper) AttachResource(w http.ResponseWriter, r *http.Request)
+```
+
+AttachResource operation middleware
+
+<a name="ServerInterfaceWrapper.CastStudyGuideVote"></a>
+### func \(\*ServerInterfaceWrapper\) [CastStudyGuideVote](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2895>)
+
+```go
+func (siw *ServerInterfaceWrapper) CastStudyGuideVote(w http.ResponseWriter, r *http.Request)
+```
+
+CastStudyGuideVote operation middleware
+
+<a name="ServerInterfaceWrapper.CheckMembership"></a>
+### func \(\*ServerInterfaceWrapper\) [CheckMembership](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1941>)
+
+```go
+func (siw *ServerInterfaceWrapper) CheckMembership(w http.ResponseWriter, r *http.Request)
+```
+
+CheckMembership operation middleware
+
+<a name="ServerInterfaceWrapper.CreateFile"></a>
+### func \(\*ServerInterfaceWrapper\) [CreateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2094>)
+
+```go
+func (siw *ServerInterfaceWrapper) CreateFile(w http.ResponseWriter, r *http.Request)
+```
+
+CreateFile operation middleware
+
+<a name="ServerInterfaceWrapper.CreateGrant"></a>
+### func \(\*ServerInterfaceWrapper\) [CreateGrant](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2238>)
+
+```go
+func (siw *ServerInterfaceWrapper) CreateGrant(w http.ResponseWriter, r *http.Request)
+```
+
+CreateGrant operation middleware
+
+<a name="ServerInterfaceWrapper.CreateQuiz"></a>
+### func \(\*ServerInterfaceWrapper\) [CreateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2700>)
+
+```go
+func (siw *ServerInterfaceWrapper) CreateQuiz(w http.ResponseWriter, r *http.Request)
+```
+
+CreateQuiz operation middleware
+
+<a name="ServerInterfaceWrapper.CreateStudyGuide"></a>
+### func \(\*ServerInterfaceWrapper\) [CreateStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2063>)
+
+```go
+func (siw *ServerInterfaceWrapper) CreateStudyGuide(w http.ResponseWriter, r *http.Request)
+```
+
+CreateStudyGuide operation middleware
+
 <a name="ServerInterfaceWrapper.DeleteFile"></a>
-### func \(\*ServerInterfaceWrapper\) [DeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L312>)
+### func \(\*ServerInterfaceWrapper\) [DeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2114>)
 
 ```go
 func (siw *ServerInterfaceWrapper) DeleteFile(w http.ResponseWriter, r *http.Request)
@@ -1017,8 +5988,44 @@ func (siw *ServerInterfaceWrapper) DeleteFile(w http.ResponseWriter, r *http.Req
 
 DeleteFile operation middleware
 
+<a name="ServerInterfaceWrapper.DeleteStudyGuide"></a>
+### func \(\*ServerInterfaceWrapper\) [DeleteStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2527>)
+
+```go
+func (siw *ServerInterfaceWrapper) DeleteStudyGuide(w http.ResponseWriter, r *http.Request)
+```
+
+DeleteStudyGuide operation middleware
+
+<a name="ServerInterfaceWrapper.DetachFile"></a>
+### func \(\*ServerInterfaceWrapper\) [DetachFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2620>)
+
+```go
+func (siw *ServerInterfaceWrapper) DetachFile(w http.ResponseWriter, r *http.Request)
+```
+
+DetachFile operation middleware
+
+<a name="ServerInterfaceWrapper.DetachResource"></a>
+### func \(\*ServerInterfaceWrapper\) [DetachResource](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2824>)
+
+```go
+func (siw *ServerInterfaceWrapper) DetachResource(w http.ResponseWriter, r *http.Request)
+```
+
+DetachResource operation middleware
+
+<a name="ServerInterfaceWrapper.GetCourse"></a>
+### func \(\*ServerInterfaceWrapper\) [GetCourse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1763>)
+
+```go
+func (siw *ServerInterfaceWrapper) GetCourse(w http.ResponseWriter, r *http.Request)
+```
+
+GetCourse operation middleware
+
 <a name="ServerInterfaceWrapper.GetFile"></a>
-### func \(\*ServerInterfaceWrapper\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L343>)
+### func \(\*ServerInterfaceWrapper\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2145>)
 
 ```go
 func (siw *ServerInterfaceWrapper) GetFile(w http.ResponseWriter, r *http.Request)
@@ -1026,8 +6033,53 @@ func (siw *ServerInterfaceWrapper) GetFile(w http.ResponseWriter, r *http.Reques
 
 GetFile operation middleware
 
+<a name="ServerInterfaceWrapper.GetSchool"></a>
+### func \(\*ServerInterfaceWrapper\) [GetSchool](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2496>)
+
+```go
+func (siw *ServerInterfaceWrapper) GetSchool(w http.ResponseWriter, r *http.Request)
+```
+
+GetSchool operation middleware
+
+<a name="ServerInterfaceWrapper.GetStudyGuide"></a>
+### func \(\*ServerInterfaceWrapper\) [GetStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2558>)
+
+```go
+func (siw *ServerInterfaceWrapper) GetStudyGuide(w http.ResponseWriter, r *http.Request)
+```
+
+GetStudyGuide operation middleware
+
+<a name="ServerInterfaceWrapper.JoinSection"></a>
+### func \(\*ServerInterfaceWrapper\) [JoinSection](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1861>)
+
+```go
+func (siw *ServerInterfaceWrapper) JoinSection(w http.ResponseWriter, r *http.Request)
+```
+
+JoinSection operation middleware
+
+<a name="ServerInterfaceWrapper.LeaveSection"></a>
+### func \(\*ServerInterfaceWrapper\) [LeaveSection](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1901>)
+
+```go
+func (siw *ServerInterfaceWrapper) LeaveSection(w http.ResponseWriter, r *http.Request)
+```
+
+LeaveSection operation middleware
+
+<a name="ServerInterfaceWrapper.ListCourses"></a>
+### func \(\*ServerInterfaceWrapper\) [ListCourses](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1682>)
+
+```go
+func (siw *ServerInterfaceWrapper) ListCourses(w http.ResponseWriter, r *http.Request)
+```
+
+ListCourses operation middleware
+
 <a name="ServerInterfaceWrapper.ListFiles"></a>
-### func \(\*ServerInterfaceWrapper\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L405>)
+### func \(\*ServerInterfaceWrapper\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2310>)
 
 ```go
 func (siw *ServerInterfaceWrapper) ListFiles(w http.ResponseWriter, r *http.Request)
@@ -1035,8 +6087,80 @@ func (siw *ServerInterfaceWrapper) ListFiles(w http.ResponseWriter, r *http.Requ
 
 ListFiles operation middleware
 
+<a name="ServerInterfaceWrapper.ListMyEnrollments"></a>
+### func \(\*ServerInterfaceWrapper\) [ListMyEnrollments](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2269>)
+
+```go
+func (siw *ServerInterfaceWrapper) ListMyEnrollments(w http.ResponseWriter, r *http.Request)
+```
+
+ListMyEnrollments operation middleware
+
+<a name="ServerInterfaceWrapper.ListSchools"></a>
+### func \(\*ServerInterfaceWrapper\) [ListSchools](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2447>)
+
+```go
+func (siw *ServerInterfaceWrapper) ListSchools(w http.ResponseWriter, r *http.Request)
+```
+
+ListSchools operation middleware
+
+<a name="ServerInterfaceWrapper.ListSectionMembers"></a>
+### func \(\*ServerInterfaceWrapper\) [ListSectionMembers](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1794>)
+
+```go
+func (siw *ServerInterfaceWrapper) ListSectionMembers(w http.ResponseWriter, r *http.Request)
+```
+
+ListSectionMembers operation middleware
+
+<a name="ServerInterfaceWrapper.ListStudyGuides"></a>
+### func \(\*ServerInterfaceWrapper\) [ListStudyGuides](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1981>)
+
+```go
+func (siw *ServerInterfaceWrapper) ListStudyGuides(w http.ResponseWriter, r *http.Request)
+```
+
+ListStudyGuides operation middleware
+
+<a name="ServerInterfaceWrapper.RecommendStudyGuide"></a>
+### func \(\*ServerInterfaceWrapper\) [RecommendStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2762>)
+
+```go
+func (siw *ServerInterfaceWrapper) RecommendStudyGuide(w http.ResponseWriter, r *http.Request)
+```
+
+RecommendStudyGuide operation middleware
+
+<a name="ServerInterfaceWrapper.RemoveStudyGuideRecommendation"></a>
+### func \(\*ServerInterfaceWrapper\) [RemoveStudyGuideRecommendation](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2731>)
+
+```go
+func (siw *ServerInterfaceWrapper) RemoveStudyGuideRecommendation(w http.ResponseWriter, r *http.Request)
+```
+
+RemoveStudyGuideRecommendation operation middleware
+
+<a name="ServerInterfaceWrapper.RemoveStudyGuideVote"></a>
+### func \(\*ServerInterfaceWrapper\) [RemoveStudyGuideVote](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2864>)
+
+```go
+func (siw *ServerInterfaceWrapper) RemoveStudyGuideVote(w http.ResponseWriter, r *http.Request)
+```
+
+RemoveStudyGuideVote operation middleware
+
+<a name="ServerInterfaceWrapper.RevokeGrant"></a>
+### func \(\*ServerInterfaceWrapper\) [RevokeGrant](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2207>)
+
+```go
+func (siw *ServerInterfaceWrapper) RevokeGrant(w http.ResponseWriter, r *http.Request)
+```
+
+RevokeGrant operation middleware
+
 <a name="ServerInterfaceWrapper.UpdateFile"></a>
-### func \(\*ServerInterfaceWrapper\) [UpdateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L374>)
+### func \(\*ServerInterfaceWrapper\) [UpdateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2176>)
 
 ```go
 func (siw *ServerInterfaceWrapper) UpdateFile(w http.ResponseWriter, r *http.Request)
@@ -1044,8 +6168,17 @@ func (siw *ServerInterfaceWrapper) UpdateFile(w http.ResponseWriter, r *http.Req
 
 UpdateFile operation middleware
 
+<a name="ServerInterfaceWrapper.UpdateStudyGuide"></a>
+### func \(\*ServerInterfaceWrapper\) [UpdateStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2589>)
+
+```go
+func (siw *ServerInterfaceWrapper) UpdateStudyGuide(w http.ResponseWriter, r *http.Request)
+```
+
+UpdateStudyGuide operation middleware
+
 <a name="StrictHTTPServerOptions"></a>
-## type [StrictHTTPServerOptions](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L910-L913>)
+## type [StrictHTTPServerOptions](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4954-L4957>)
 
 
 
@@ -1057,7 +6190,7 @@ type StrictHTTPServerOptions struct {
 ```
 
 <a name="StrictHandlerFunc"></a>
-## type [StrictHandlerFunc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L907>)
+## type [StrictHandlerFunc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4951>)
 
 
 
@@ -1066,7 +6199,7 @@ type StrictHandlerFunc = strictnethttp.StrictHTTPHandlerFunc
 ```
 
 <a name="StrictMiddlewareFunc"></a>
-## type [StrictMiddlewareFunc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L908>)
+## type [StrictMiddlewareFunc](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4952>)
 
 
 
@@ -1075,29 +6208,207 @@ type StrictMiddlewareFunc = strictnethttp.StrictHTTPMiddlewareFunc
 ```
 
 <a name="StrictServerInterface"></a>
-## type [StrictServerInterface](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L892-L905>)
+## type [StrictServerInterface](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4858-L4949>)
 
 StrictServerInterface represents all server handlers.
 
 ```go
 type StrictServerInterface interface {
+    // List and search courses
+    // (GET /courses)
+    ListCourses(ctx context.Context, request ListCoursesRequestObject) (ListCoursesResponseObject, error)
+    // Get a course detail with embedded sections
+    // (GET /courses/{course_id})
+    GetCourse(ctx context.Context, request GetCourseRequestObject) (GetCourseResponseObject, error)
+    // List the members of a course section
+    // (GET /courses/{course_id}/sections/{section_id}/members)
+    ListSectionMembers(ctx context.Context, request ListSectionMembersRequestObject) (ListSectionMembersResponseObject, error)
+    // Join a section as the authenticated user
+    // (POST /courses/{course_id}/sections/{section_id}/members)
+    JoinSection(ctx context.Context, request JoinSectionRequestObject) (JoinSectionResponseObject, error)
+    // Leave a section as the authenticated user
+    // (DELETE /courses/{course_id}/sections/{section_id}/members/me)
+    LeaveSection(ctx context.Context, request LeaveSectionRequestObject) (LeaveSectionResponseObject, error)
+    // Check the authenticated user's membership in a section
+    // (GET /courses/{course_id}/sections/{section_id}/members/me)
+    CheckMembership(ctx context.Context, request CheckMembershipRequestObject) (CheckMembershipResponseObject, error)
+    // List study guides for a course
+    // (GET /courses/{course_id}/study-guides)
+    ListStudyGuides(ctx context.Context, request ListStudyGuidesRequestObject) (ListStudyGuidesResponseObject, error)
+    // Create a study guide for a course
+    // (POST /courses/{course_id}/study-guides)
+    CreateStudyGuide(ctx context.Context, request CreateStudyGuideRequestObject) (CreateStudyGuideResponseObject, error)
+    // Create a file reference and get a presigned upload URL
+    // (POST /files)
+    CreateFile(ctx context.Context, request CreateFileRequestObject) (CreateFileResponseObject, error)
     // Delete a file by ID
     // (DELETE /files/{file_id})
     DeleteFile(ctx context.Context, request DeleteFileRequestObject) (DeleteFileResponseObject, error)
     // Get a file by ID
     // (GET /files/{file_id})
     GetFile(ctx context.Context, request GetFileRequestObject) (GetFileResponseObject, error)
-    // Update a file's metadata
+    // Rename a file
     // (PATCH /files/{file_id})
     UpdateFile(ctx context.Context, request UpdateFileRequestObject) (UpdateFileResponseObject, error)
+    // Revoke a permission on a file
+    // (DELETE /files/{file_id}/grants)
+    RevokeGrant(ctx context.Context, request RevokeGrantRequestObject) (RevokeGrantResponseObject, error)
+    // Grant a permission on a file
+    // (POST /files/{file_id}/grants)
+    CreateGrant(ctx context.Context, request CreateGrantRequestObject) (CreateGrantResponseObject, error)
+    // List the authenticated user's section enrollments
+    // (GET /me/courses)
+    ListMyEnrollments(ctx context.Context, request ListMyEnrollmentsRequestObject) (ListMyEnrollmentsResponseObject, error)
     // List files for the current user
     // (GET /me/files)
     ListFiles(ctx context.Context, request ListFilesRequestObject) (ListFilesResponseObject, error)
+    // List and search schools
+    // (GET /schools)
+    ListSchools(ctx context.Context, request ListSchoolsRequestObject) (ListSchoolsResponseObject, error)
+    // Get a single school by ID
+    // (GET /schools/{school_id})
+    GetSchool(ctx context.Context, request GetSchoolRequestObject) (GetSchoolResponseObject, error)
+    // Soft-delete a study guide
+    // (DELETE /study-guides/{study_guide_id})
+    DeleteStudyGuide(ctx context.Context, request DeleteStudyGuideRequestObject) (DeleteStudyGuideResponseObject, error)
+    // Get a study guide detail
+    // (GET /study-guides/{study_guide_id})
+    GetStudyGuide(ctx context.Context, request GetStudyGuideRequestObject) (GetStudyGuideResponseObject, error)
+    // Update a study guide
+    // (PATCH /study-guides/{study_guide_id})
+    UpdateStudyGuide(ctx context.Context, request UpdateStudyGuideRequestObject) (UpdateStudyGuideResponseObject, error)
+    // Detach a file from a study guide
+    // (DELETE /study-guides/{study_guide_id}/files/{file_id})
+    DetachFile(ctx context.Context, request DetachFileRequestObject) (DetachFileResponseObject, error)
+    // Attach a file to a study guide
+    // (POST /study-guides/{study_guide_id}/files/{file_id})
+    AttachFile(ctx context.Context, request AttachFileRequestObject) (AttachFileResponseObject, error)
+    // Create a quiz attached to a study guide
+    // (POST /study-guides/{study_guide_id}/quizzes)
+    CreateQuiz(ctx context.Context, request CreateQuizRequestObject) (CreateQuizResponseObject, error)
+    // Remove the authenticated user's recommendation on a study guide
+    // (DELETE /study-guides/{study_guide_id}/recommendations)
+    RemoveStudyGuideRecommendation(ctx context.Context, request RemoveStudyGuideRecommendationRequestObject) (RemoveStudyGuideRecommendationResponseObject, error)
+    // Recommend a study guide
+    // (POST /study-guides/{study_guide_id}/recommendations)
+    RecommendStudyGuide(ctx context.Context, request RecommendStudyGuideRequestObject) (RecommendStudyGuideResponseObject, error)
+    // Attach an external resource to a study guide
+    // (POST /study-guides/{study_guide_id}/resources)
+    AttachResource(ctx context.Context, request AttachResourceRequestObject) (AttachResourceResponseObject, error)
+    // Detach a resource from a study guide
+    // (DELETE /study-guides/{study_guide_id}/resources/{resource_id})
+    DetachResource(ctx context.Context, request DetachResourceRequestObject) (DetachResourceResponseObject, error)
+    // Remove the authenticated user's vote on a study guide
+    // (DELETE /study-guides/{study_guide_id}/votes)
+    RemoveStudyGuideVote(ctx context.Context, request RemoveStudyGuideVoteRequestObject) (RemoveStudyGuideVoteResponseObject, error)
+    // Cast or change a vote on a study guide
+    // (POST /study-guides/{study_guide_id}/votes)
+    CastStudyGuideVote(ctx context.Context, request CastStudyGuideVoteRequestObject) (CastStudyGuideVoteResponseObject, error)
+}
+```
+
+<a name="StudyGuideDetailResponse"></a>
+## type [StudyGuideDetailResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1111-L1136>)
+
+StudyGuideDetailResponse Full study\-guide payload for the detail endpoint. Includes content \(excluded from the list payload\) plus the authenticated user's own vote state and the nested recommenders / quizzes / resources / files arrays.
+
+```go
+type StudyGuideDetailResponse struct {
+    Content *string `json:"content,omitempty"`
+
+    // Course Compact course payload embedded in StudyGuideDetailResponse.
+    // Mirrors EnrollmentCourseSummary but lives here separately so
+    // the two surfaces can evolve independently.
+    Course    GuideCourseSummary `json:"course"`
+    CreatedAt time.Time          `json:"created_at"`
+
+    // Creator Compact user payload used as the `creator` of a study guide. Same
+    // privacy floor as SectionMemberResponse -- no email, no clerk_id.
+    Creator       CreatorSummary                    `json:"creator"`
+    Description   *string                           `json:"description,omitempty"`
+    Files         []StudyGuideFileSummary           `json:"files"`
+    Id            openapi_types.UUID                `json:"id"`
+    IsRecommended bool                              `json:"is_recommended"`
+    Quizzes       []QuizSummary                     `json:"quizzes"`
+    RecommendedBy []CreatorSummary                  `json:"recommended_by"`
+    Resources     []ResourceSummary                 `json:"resources"`
+    Tags          []string                          `json:"tags"`
+    Title         string                            `json:"title"`
+    UpdatedAt     time.Time                         `json:"updated_at"`
+    UserVote      *StudyGuideDetailResponseUserVote `json:"user_vote"`
+    ViewCount     int64                             `json:"view_count"`
+    VoteScore     int64                             `json:"vote_score"`
+}
+```
+
+<a name="StudyGuideDetailResponseUserVote"></a>
+## type [StudyGuideDetailResponseUserVote](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1139>)
+
+StudyGuideDetailResponseUserVote defines model for StudyGuideDetailResponse.UserVote.
+
+```go
+type StudyGuideDetailResponseUserVote string
+```
+
+<a name="Down"></a>Defines values for StudyGuideDetailResponseUserVote.
+
+```go
+const (
+    Down StudyGuideDetailResponseUserVote = "down"
+    Up   StudyGuideDetailResponseUserVote = "up"
+)
+```
+
+<a name="StudyGuideDetailResponseUserVote.Valid"></a>
+### func \(StudyGuideDetailResponseUserVote\) [Valid](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L367>)
+
+```go
+func (e StudyGuideDetailResponseUserVote) Valid() bool
+```
+
+Valid indicates whether the value is a known member of the StudyGuideDetailResponseUserVote enum.
+
+<a name="StudyGuideFileSummary"></a>
+## type [StudyGuideFileSummary](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1144-L1149>)
+
+StudyGuideFileSummary Compact file payload embedded in StudyGuideDetailResponse. Privacy floor: id \+ name \+ mime\_type \+ size only. Owner, s3\_key, and checksum are intentionally absent.
+
+```go
+type StudyGuideFileSummary struct {
+    Id       openapi_types.UUID `json:"id"`
+    MimeType string             `json:"mime_type"`
+    Name     string             `json:"name"`
+    Size     int64              `json:"size"`
+}
+```
+
+<a name="StudyGuideListItemResponse"></a>
+## type [StudyGuideListItemResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1155-L1171>)
+
+StudyGuideListItemResponse A study guide as it appears in the list response. Excludes \`content\` \(only returned by the get\-by\-id endpoint\) to keep the list payload small. Per\-row aggregates \(\`vote\_score\`, \`is\_recommended\`, \`quiz\_count\`\) are computed inline.
+
+```go
+type StudyGuideListItemResponse struct {
+    CourseId  openapi_types.UUID `json:"course_id"`
+    CreatedAt time.Time          `json:"created_at"`
+
+    // Creator Compact user payload used as the `creator` of a study guide. Same
+    // privacy floor as SectionMemberResponse -- no email, no clerk_id.
+    Creator       CreatorSummary     `json:"creator"`
+    Description   *string            `json:"description,omitempty"`
+    Id            openapi_types.UUID `json:"id"`
+    IsRecommended bool               `json:"is_recommended"`
+    QuizCount     int64              `json:"quiz_count"`
+    Tags          []string           `json:"tags"`
+    Title         string             `json:"title"`
+    UpdatedAt     time.Time          `json:"updated_at"`
+    ViewCount     int64              `json:"view_count"`
+    VoteScore     int64              `json:"vote_score"`
 }
 ```
 
 <a name="TooManyValuesForParamError"></a>
-## type [TooManyValuesForParamError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L601-L604>)
+## type [TooManyValuesForParamError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2985-L2988>)
 
 
 
@@ -1109,7 +6420,7 @@ type TooManyValuesForParamError struct {
 ```
 
 <a name="TooManyValuesForParamError.Error"></a>
-### func \(\*TooManyValuesForParamError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L606>)
+### func \(\*TooManyValuesForParamError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2990>)
 
 ```go
 func (e *TooManyValuesForParamError) Error() string
@@ -1118,7 +6429,7 @@ func (e *TooManyValuesForParamError) Error() string
 
 
 <a name="Unauthorized"></a>
-## type [Unauthorized](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L193>)
+## type [Unauthorized](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1207>)
 
 Unauthorized Standardized error response structure matching application error domains
 
@@ -1127,7 +6438,7 @@ type Unauthorized = AppError
 ```
 
 <a name="UnauthorizedJSONResponse"></a>
-## type [UnauthorizedJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L678>)
+## type [UnauthorizedJSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3142>)
 
 
 
@@ -1136,7 +6447,7 @@ type UnauthorizedJSONResponse AppError
 ```
 
 <a name="UnescapedCookieParamError"></a>
-## type [UnescapedCookieParamError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L541-L544>)
+## type [UnescapedCookieParamError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2925-L2928>)
 
 
 
@@ -1148,7 +6459,7 @@ type UnescapedCookieParamError struct {
 ```
 
 <a name="UnescapedCookieParamError.Error"></a>
-### func \(\*UnescapedCookieParamError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L546>)
+### func \(\*UnescapedCookieParamError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2930>)
 
 ```go
 func (e *UnescapedCookieParamError) Error() string
@@ -1157,7 +6468,7 @@ func (e *UnescapedCookieParamError) Error() string
 
 
 <a name="UnescapedCookieParamError.Unwrap"></a>
-### func \(\*UnescapedCookieParamError\) [Unwrap](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L550>)
+### func \(\*UnescapedCookieParamError\) [Unwrap](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2934>)
 
 ```go
 func (e *UnescapedCookieParamError) Unwrap() error
@@ -1166,7 +6477,7 @@ func (e *UnescapedCookieParamError) Unwrap() error
 
 
 <a name="Unimplemented"></a>
-## type [Unimplemented](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L276>)
+## type [Unimplemented](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1490>)
 
 
 
@@ -1174,8 +6485,80 @@ func (e *UnescapedCookieParamError) Unwrap() error
 type Unimplemented struct{}
 ```
 
+<a name="Unimplemented.AttachFile"></a>
+### func \(Unimplemented\) [AttachFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1626>)
+
+```go
+func (_ Unimplemented) AttachFile(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, fileId openapi_types.UUID)
+```
+
+Attach a file to a study guide \(POST /study\-guides/\{study\_guide\_id\}/files/\{file\_id\}\)
+
+<a name="Unimplemented.AttachResource"></a>
+### func \(Unimplemented\) [AttachResource](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1650>)
+
+```go
+func (_ Unimplemented) AttachResource(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+Attach an external resource to a study guide \(POST /study\-guides/\{study\_guide\_id\}/resources\)
+
+<a name="Unimplemented.CastStudyGuideVote"></a>
+### func \(Unimplemented\) [CastStudyGuideVote](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1668>)
+
+```go
+func (_ Unimplemented) CastStudyGuideVote(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+Cast or change a vote on a study guide \(POST /study\-guides/\{study\_guide\_id\}/votes\)
+
+<a name="Unimplemented.CheckMembership"></a>
+### func \(Unimplemented\) [CheckMembership](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1524>)
+
+```go
+func (_ Unimplemented) CheckMembership(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID)
+```
+
+Check the authenticated user's membership in a section \(GET /courses/\{course\_id\}/sections/\{section\_id\}/members/me\)
+
+<a name="Unimplemented.CreateFile"></a>
+### func \(Unimplemented\) [CreateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1542>)
+
+```go
+func (_ Unimplemented) CreateFile(w http.ResponseWriter, r *http.Request)
+```
+
+Create a file reference and get a presigned upload URL \(POST /files\)
+
+<a name="Unimplemented.CreateGrant"></a>
+### func \(Unimplemented\) [CreateGrant](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1572>)
+
+```go
+func (_ Unimplemented) CreateGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+```
+
+Grant a permission on a file \(POST /files/\{file\_id\}/grants\)
+
+<a name="Unimplemented.CreateQuiz"></a>
+### func \(Unimplemented\) [CreateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1632>)
+
+```go
+func (_ Unimplemented) CreateQuiz(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+Create a quiz attached to a study guide \(POST /study\-guides/\{study\_guide\_id\}/quizzes\)
+
+<a name="Unimplemented.CreateStudyGuide"></a>
+### func \(Unimplemented\) [CreateStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1536>)
+
+```go
+func (_ Unimplemented) CreateStudyGuide(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID)
+```
+
+Create a study guide for a course \(POST /courses/\{course\_id\}/study\-guides\)
+
 <a name="Unimplemented.DeleteFile"></a>
-### func \(Unimplemented\) [DeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L280>)
+### func \(Unimplemented\) [DeleteFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1548>)
 
 ```go
 func (_ Unimplemented) DeleteFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
@@ -1183,8 +6566,44 @@ func (_ Unimplemented) DeleteFile(w http.ResponseWriter, r *http.Request, fileId
 
 Delete a file by ID \(DELETE /files/\{file\_id\}\)
 
+<a name="Unimplemented.DeleteStudyGuide"></a>
+### func \(Unimplemented\) [DeleteStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1602>)
+
+```go
+func (_ Unimplemented) DeleteStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+Soft\-delete a study guide \(DELETE /study\-guides/\{study\_guide\_id\}\)
+
+<a name="Unimplemented.DetachFile"></a>
+### func \(Unimplemented\) [DetachFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1620>)
+
+```go
+func (_ Unimplemented) DetachFile(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, fileId openapi_types.UUID)
+```
+
+Detach a file from a study guide \(DELETE /study\-guides/\{study\_guide\_id\}/files/\{file\_id\}\)
+
+<a name="Unimplemented.DetachResource"></a>
+### func \(Unimplemented\) [DetachResource](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1656>)
+
+```go
+func (_ Unimplemented) DetachResource(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, resourceId openapi_types.UUID)
+```
+
+Detach a resource from a study guide \(DELETE /study\-guides/\{study\_guide\_id\}/resources/\{resource\_id\}\)
+
+<a name="Unimplemented.GetCourse"></a>
+### func \(Unimplemented\) [GetCourse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1500>)
+
+```go
+func (_ Unimplemented) GetCourse(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID)
+```
+
+Get a course detail with embedded sections \(GET /courses/\{course\_id\}\)
+
 <a name="Unimplemented.GetFile"></a>
-### func \(Unimplemented\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L286>)
+### func \(Unimplemented\) [GetFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1554>)
 
 ```go
 func (_ Unimplemented) GetFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
@@ -1192,8 +6611,53 @@ func (_ Unimplemented) GetFile(w http.ResponseWriter, r *http.Request, fileId op
 
 Get a file by ID \(GET /files/\{file\_id\}\)
 
+<a name="Unimplemented.GetSchool"></a>
+### func \(Unimplemented\) [GetSchool](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1596>)
+
+```go
+func (_ Unimplemented) GetSchool(w http.ResponseWriter, r *http.Request, schoolId openapi_types.UUID)
+```
+
+Get a single school by ID \(GET /schools/\{school\_id\}\)
+
+<a name="Unimplemented.GetStudyGuide"></a>
+### func \(Unimplemented\) [GetStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1608>)
+
+```go
+func (_ Unimplemented) GetStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+Get a study guide detail \(GET /study\-guides/\{study\_guide\_id\}\)
+
+<a name="Unimplemented.JoinSection"></a>
+### func \(Unimplemented\) [JoinSection](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1512>)
+
+```go
+func (_ Unimplemented) JoinSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID)
+```
+
+Join a section as the authenticated user \(POST /courses/\{course\_id\}/sections/\{section\_id\}/members\)
+
+<a name="Unimplemented.LeaveSection"></a>
+### func \(Unimplemented\) [LeaveSection](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1518>)
+
+```go
+func (_ Unimplemented) LeaveSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID)
+```
+
+Leave a section as the authenticated user \(DELETE /courses/\{course\_id\}/sections/\{section\_id\}/members/me\)
+
+<a name="Unimplemented.ListCourses"></a>
+### func \(Unimplemented\) [ListCourses](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1494>)
+
+```go
+func (_ Unimplemented) ListCourses(w http.ResponseWriter, r *http.Request, params ListCoursesParams)
+```
+
+List and search courses \(GET /courses\)
+
 <a name="Unimplemented.ListFiles"></a>
-### func \(Unimplemented\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L298>)
+### func \(Unimplemented\) [ListFiles](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1584>)
 
 ```go
 func (_ Unimplemented) ListFiles(w http.ResponseWriter, r *http.Request, params ListFilesParams)
@@ -1201,17 +6665,98 @@ func (_ Unimplemented) ListFiles(w http.ResponseWriter, r *http.Request, params 
 
 List files for the current user \(GET /me/files\)
 
+<a name="Unimplemented.ListMyEnrollments"></a>
+### func \(Unimplemented\) [ListMyEnrollments](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1578>)
+
+```go
+func (_ Unimplemented) ListMyEnrollments(w http.ResponseWriter, r *http.Request, params ListMyEnrollmentsParams)
+```
+
+List the authenticated user's section enrollments \(GET /me/courses\)
+
+<a name="Unimplemented.ListSchools"></a>
+### func \(Unimplemented\) [ListSchools](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1590>)
+
+```go
+func (_ Unimplemented) ListSchools(w http.ResponseWriter, r *http.Request, params ListSchoolsParams)
+```
+
+List and search schools \(GET /schools\)
+
+<a name="Unimplemented.ListSectionMembers"></a>
+### func \(Unimplemented\) [ListSectionMembers](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1506>)
+
+```go
+func (_ Unimplemented) ListSectionMembers(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID, params ListSectionMembersParams)
+```
+
+List the members of a course section \(GET /courses/\{course\_id\}/sections/\{section\_id\}/members\)
+
+<a name="Unimplemented.ListStudyGuides"></a>
+### func \(Unimplemented\) [ListStudyGuides](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1530>)
+
+```go
+func (_ Unimplemented) ListStudyGuides(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, params ListStudyGuidesParams)
+```
+
+List study guides for a course \(GET /courses/\{course\_id\}/study\-guides\)
+
+<a name="Unimplemented.RecommendStudyGuide"></a>
+### func \(Unimplemented\) [RecommendStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1644>)
+
+```go
+func (_ Unimplemented) RecommendStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+Recommend a study guide \(POST /study\-guides/\{study\_guide\_id\}/recommendations\)
+
+<a name="Unimplemented.RemoveStudyGuideRecommendation"></a>
+### func \(Unimplemented\) [RemoveStudyGuideRecommendation](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1638>)
+
+```go
+func (_ Unimplemented) RemoveStudyGuideRecommendation(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+Remove the authenticated user's recommendation on a study guide \(DELETE /study\-guides/\{study\_guide\_id\}/recommendations\)
+
+<a name="Unimplemented.RemoveStudyGuideVote"></a>
+### func \(Unimplemented\) [RemoveStudyGuideVote](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1662>)
+
+```go
+func (_ Unimplemented) RemoveStudyGuideVote(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+Remove the authenticated user's vote on a study guide \(DELETE /study\-guides/\{study\_guide\_id\}/votes\)
+
+<a name="Unimplemented.RevokeGrant"></a>
+### func \(Unimplemented\) [RevokeGrant](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1566>)
+
+```go
+func (_ Unimplemented) RevokeGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+```
+
+Revoke a permission on a file \(DELETE /files/\{file\_id\}/grants\)
+
 <a name="Unimplemented.UpdateFile"></a>
-### func \(Unimplemented\) [UpdateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L292>)
+### func \(Unimplemented\) [UpdateFile](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1560>)
 
 ```go
 func (_ Unimplemented) UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
 ```
 
-Update a file's metadata \(PATCH /files/\{file\_id\}\)
+Rename a file \(PATCH /files/\{file\_id\}\)
+
+<a name="Unimplemented.UpdateStudyGuide"></a>
+### func \(Unimplemented\) [UpdateStudyGuide](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1614>)
+
+```go
+func (_ Unimplemented) UpdateStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+```
+
+Update a study guide \(PATCH /study\-guides/\{study\_guide\_id\}\)
 
 <a name="UnmarshalingParamError"></a>
-## type [UnmarshalingParamError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L554-L557>)
+## type [UnmarshalingParamError](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2938-L2941>)
 
 
 
@@ -1223,7 +6768,7 @@ type UnmarshalingParamError struct {
 ```
 
 <a name="UnmarshalingParamError.Error"></a>
-### func \(\*UnmarshalingParamError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L559>)
+### func \(\*UnmarshalingParamError\) [Error](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2943>)
 
 ```go
 func (e *UnmarshalingParamError) Error() string
@@ -1232,7 +6777,7 @@ func (e *UnmarshalingParamError) Error() string
 
 
 <a name="UnmarshalingParamError.Unwrap"></a>
-### func \(\*UnmarshalingParamError\) [Unwrap](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L563>)
+### func \(\*UnmarshalingParamError\) [Unwrap](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L2947>)
 
 ```go
 func (e *UnmarshalingParamError) Unwrap() error
@@ -1241,7 +6786,7 @@ func (e *UnmarshalingParamError) Unwrap() error
 
 
 <a name="UpdateFile200JSONResponse"></a>
-## type [UpdateFile200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L798>)
+## type [UpdateFile200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3754>)
 
 
 
@@ -1250,7 +6795,7 @@ type UpdateFile200JSONResponse FileResponse
 ```
 
 <a name="UpdateFile200JSONResponse.VisitUpdateFileResponse"></a>
-### func \(UpdateFile200JSONResponse\) [VisitUpdateFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L800>)
+### func \(UpdateFile200JSONResponse\) [VisitUpdateFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3756>)
 
 ```go
 func (response UpdateFile200JSONResponse) VisitUpdateFileResponse(w http.ResponseWriter) error
@@ -1259,7 +6804,7 @@ func (response UpdateFile200JSONResponse) VisitUpdateFileResponse(w http.Respons
 
 
 <a name="UpdateFile400JSONResponse"></a>
-## type [UpdateFile400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L807>)
+## type [UpdateFile400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3763>)
 
 
 
@@ -1268,7 +6813,7 @@ type UpdateFile400JSONResponse struct{ BadRequestJSONResponse }
 ```
 
 <a name="UpdateFile400JSONResponse.VisitUpdateFileResponse"></a>
-### func \(UpdateFile400JSONResponse\) [VisitUpdateFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L809>)
+### func \(UpdateFile400JSONResponse\) [VisitUpdateFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3765>)
 
 ```go
 func (response UpdateFile400JSONResponse) VisitUpdateFileResponse(w http.ResponseWriter) error
@@ -1277,7 +6822,7 @@ func (response UpdateFile400JSONResponse) VisitUpdateFileResponse(w http.Respons
 
 
 <a name="UpdateFile401JSONResponse"></a>
-## type [UpdateFile401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L816>)
+## type [UpdateFile401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3772>)
 
 
 
@@ -1286,7 +6831,7 @@ type UpdateFile401JSONResponse struct{ UnauthorizedJSONResponse }
 ```
 
 <a name="UpdateFile401JSONResponse.VisitUpdateFileResponse"></a>
-### func \(UpdateFile401JSONResponse\) [VisitUpdateFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L818>)
+### func \(UpdateFile401JSONResponse\) [VisitUpdateFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3774>)
 
 ```go
 func (response UpdateFile401JSONResponse) VisitUpdateFileResponse(w http.ResponseWriter) error
@@ -1295,7 +6840,7 @@ func (response UpdateFile401JSONResponse) VisitUpdateFileResponse(w http.Respons
 
 
 <a name="UpdateFile404JSONResponse"></a>
-## type [UpdateFile404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L825>)
+## type [UpdateFile404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3781>)
 
 
 
@@ -1304,7 +6849,7 @@ type UpdateFile404JSONResponse struct{ NotFoundJSONResponse }
 ```
 
 <a name="UpdateFile404JSONResponse.VisitUpdateFileResponse"></a>
-### func \(UpdateFile404JSONResponse\) [VisitUpdateFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L827>)
+### func \(UpdateFile404JSONResponse\) [VisitUpdateFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3783>)
 
 ```go
 func (response UpdateFile404JSONResponse) VisitUpdateFileResponse(w http.ResponseWriter) error
@@ -1313,7 +6858,7 @@ func (response UpdateFile404JSONResponse) VisitUpdateFileResponse(w http.Respons
 
 
 <a name="UpdateFile500JSONResponse"></a>
-## type [UpdateFile500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L834-L836>)
+## type [UpdateFile500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3790-L3792>)
 
 
 
@@ -1324,7 +6869,7 @@ type UpdateFile500JSONResponse struct {
 ```
 
 <a name="UpdateFile500JSONResponse.VisitUpdateFileResponse"></a>
-### func \(UpdateFile500JSONResponse\) [VisitUpdateFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L838>)
+### func \(UpdateFile500JSONResponse\) [VisitUpdateFileResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3794>)
 
 ```go
 func (response UpdateFile500JSONResponse) VisitUpdateFileResponse(w http.ResponseWriter) error
@@ -1333,7 +6878,7 @@ func (response UpdateFile500JSONResponse) VisitUpdateFileResponse(w http.Respons
 
 
 <a name="UpdateFileJSONRequestBody"></a>
-## type [UpdateFileJSONRequestBody](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L256>)
+## type [UpdateFileJSONRequestBody](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1374>)
 
 UpdateFileJSONRequestBody defines body for UpdateFile for application/json ContentType.
 
@@ -1342,7 +6887,7 @@ type UpdateFileJSONRequestBody = UpdateFileRequest
 ```
 
 <a name="UpdateFileRequest"></a>
-## type [UpdateFileRequest](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L176-L178>)
+## type [UpdateFileRequest](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1174-L1176>)
 
 UpdateFileRequest Request body for updating file metadata
 
@@ -1353,7 +6898,7 @@ type UpdateFileRequest struct {
 ```
 
 <a name="UpdateFileRequestObject"></a>
-## type [UpdateFileRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L789-L792>)
+## type [UpdateFileRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3745-L3748>)
 
 
 
@@ -1365,13 +6910,169 @@ type UpdateFileRequestObject struct {
 ```
 
 <a name="UpdateFileResponseObject"></a>
-## type [UpdateFileResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L794-L796>)
+## type [UpdateFileResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L3750-L3752>)
 
 
 
 ```go
 type UpdateFileResponseObject interface {
     VisitUpdateFileResponse(w http.ResponseWriter) error
+}
+```
+
+<a name="UpdateStudyGuide200JSONResponse"></a>
+## type [UpdateStudyGuide200JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4232>)
+
+
+
+```go
+type UpdateStudyGuide200JSONResponse StudyGuideDetailResponse
+```
+
+<a name="UpdateStudyGuide200JSONResponse.VisitUpdateStudyGuideResponse"></a>
+### func \(UpdateStudyGuide200JSONResponse\) [VisitUpdateStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4234>)
+
+```go
+func (response UpdateStudyGuide200JSONResponse) VisitUpdateStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="UpdateStudyGuide400JSONResponse"></a>
+## type [UpdateStudyGuide400JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4241>)
+
+
+
+```go
+type UpdateStudyGuide400JSONResponse struct{ BadRequestJSONResponse }
+```
+
+<a name="UpdateStudyGuide400JSONResponse.VisitUpdateStudyGuideResponse"></a>
+### func \(UpdateStudyGuide400JSONResponse\) [VisitUpdateStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4243>)
+
+```go
+func (response UpdateStudyGuide400JSONResponse) VisitUpdateStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="UpdateStudyGuide401JSONResponse"></a>
+## type [UpdateStudyGuide401JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4250>)
+
+
+
+```go
+type UpdateStudyGuide401JSONResponse struct{ UnauthorizedJSONResponse }
+```
+
+<a name="UpdateStudyGuide401JSONResponse.VisitUpdateStudyGuideResponse"></a>
+### func \(UpdateStudyGuide401JSONResponse\) [VisitUpdateStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4252>)
+
+```go
+func (response UpdateStudyGuide401JSONResponse) VisitUpdateStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="UpdateStudyGuide403JSONResponse"></a>
+## type [UpdateStudyGuide403JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4259>)
+
+
+
+```go
+type UpdateStudyGuide403JSONResponse struct{ ForbiddenJSONResponse }
+```
+
+<a name="UpdateStudyGuide403JSONResponse.VisitUpdateStudyGuideResponse"></a>
+### func \(UpdateStudyGuide403JSONResponse\) [VisitUpdateStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4261>)
+
+```go
+func (response UpdateStudyGuide403JSONResponse) VisitUpdateStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="UpdateStudyGuide404JSONResponse"></a>
+## type [UpdateStudyGuide404JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4268>)
+
+
+
+```go
+type UpdateStudyGuide404JSONResponse struct{ NotFoundJSONResponse }
+```
+
+<a name="UpdateStudyGuide404JSONResponse.VisitUpdateStudyGuideResponse"></a>
+### func \(UpdateStudyGuide404JSONResponse\) [VisitUpdateStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4270>)
+
+```go
+func (response UpdateStudyGuide404JSONResponse) VisitUpdateStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="UpdateStudyGuide500JSONResponse"></a>
+## type [UpdateStudyGuide500JSONResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4277-L4279>)
+
+
+
+```go
+type UpdateStudyGuide500JSONResponse struct {
+    InternalServerErrorJSONResponse
+}
+```
+
+<a name="UpdateStudyGuide500JSONResponse.VisitUpdateStudyGuideResponse"></a>
+### func \(UpdateStudyGuide500JSONResponse\) [VisitUpdateStudyGuideResponse](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4281>)
+
+```go
+func (response UpdateStudyGuide500JSONResponse) VisitUpdateStudyGuideResponse(w http.ResponseWriter) error
+```
+
+
+
+<a name="UpdateStudyGuideJSONRequestBody"></a>
+## type [UpdateStudyGuideJSONRequestBody](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1383>)
+
+UpdateStudyGuideJSONRequestBody defines body for UpdateStudyGuide for application/json ContentType.
+
+```go
+type UpdateStudyGuideJSONRequestBody = UpdateStudyGuideRequest
+```
+
+<a name="UpdateStudyGuideRequest"></a>
+## type [UpdateStudyGuideRequest](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L1184-L1189>)
+
+UpdateStudyGuideRequest Request body for PATCH /api/study\-guides/\{study\_guide\_id\}. All fields are optional; absent fields preserve their current value. Tags, when provided, REPLACE all existing tags \(no merge\) and are normalized server\-side \(trim \+ lowercase \+ dedupe\). At least one field must be provided \-\- an empty body \`\{\}\` is rejected with 400.
+
+```go
+type UpdateStudyGuideRequest struct {
+    Content     *string   `json:"content,omitempty"`
+    Description *string   `json:"description,omitempty"`
+    Tags        *[]string `json:"tags,omitempty"`
+    Title       *string   `json:"title,omitempty"`
+}
+```
+
+<a name="UpdateStudyGuideRequestObject"></a>
+## type [UpdateStudyGuideRequestObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4223-L4226>)
+
+
+
+```go
+type UpdateStudyGuideRequestObject struct {
+    StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+    Body         *UpdateStudyGuideJSONRequestBody
+}
+```
+
+<a name="UpdateStudyGuideResponseObject"></a>
+## type [UpdateStudyGuideResponseObject](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/api/api.gen.go#L4228-L4230>)
+
+
+
+```go
+type UpdateStudyGuideResponseObject interface {
+    VisitUpdateStudyGuideResponse(w http.ResponseWriter) error
 }
 ```
 
