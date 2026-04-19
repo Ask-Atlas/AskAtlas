@@ -1692,3 +1692,206 @@ func TestStudyGuidesHandler_Detach_InternalError_500(t *testing.T) {
 	r.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
+
+// ---------------------------------------------------------------------
+// AttachFile (ASK-121)
+// ---------------------------------------------------------------------
+
+func TestStudyGuidesHandler_AttachFile_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := fmt.Sprintf("/study-guides/%s/files/%s", uuid.NewString(), uuid.NewString())
+	req := httptest.NewRequest(http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestStudyGuidesHandler_AttachFile_Success_201(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	guideID, fileID := uuid.New(), uuid.New()
+	now := time.Now().UTC()
+	captured := &studyguides.AttachFileParams{}
+	mockSvc.EXPECT().
+		AttachFile(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, p studyguides.AttachFileParams) {
+			*captured = p
+		}).
+		Return(studyguides.FileAttachment{
+			FileID: fileID, StudyGuideID: guideID, CreatedAt: now,
+		}, nil)
+
+	url := fmt.Sprintf("/study-guides/%s/files/%s", guideID, fileID)
+	req := authedRequestMethod(t, http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusCreated, w.Code)
+	var resp api.FileAttachmentResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, fileID, uuid.UUID(resp.FileId))
+	assert.Equal(t, guideID, uuid.UUID(resp.StudyGuideId))
+	// Both path params + viewer flow into service params.
+	assert.Equal(t, guideID, captured.StudyGuideID)
+	assert.Equal(t, fileID, captured.FileID)
+	assert.NotEqual(t, uuid.Nil, captured.AttacherID)
+}
+
+func TestStudyGuidesHandler_AttachFile_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+	mockSvc.EXPECT().
+		AttachFile(mock.Anything, mock.Anything).
+		Return(studyguides.FileAttachment{}, apperrors.NewNotFound("Study guide or file not found"))
+
+	url := fmt.Sprintf("/study-guides/%s/files/%s", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestStudyGuidesHandler_AttachFile_Forbidden_403(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+	mockSvc.EXPECT().
+		AttachFile(mock.Anything, mock.Anything).
+		Return(studyguides.FileAttachment{}, &apperrors.AppError{
+			Code: http.StatusForbidden, Status: "Forbidden",
+			Message: "You can only attach files you own",
+		})
+
+	url := fmt.Sprintf("/study-guides/%s/files/%s", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestStudyGuidesHandler_AttachFile_Conflict_409(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+	mockSvc.EXPECT().
+		AttachFile(mock.Anything, mock.Anything).
+		Return(studyguides.FileAttachment{}, &apperrors.AppError{
+			Code: http.StatusConflict, Status: "Conflict",
+			Message: "File is already attached to this study guide",
+		})
+
+	url := fmt.Sprintf("/study-guides/%s/files/%s", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusConflict, w.Code)
+}
+
+func TestStudyGuidesHandler_AttachFile_InternalError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+	mockSvc.EXPECT().
+		AttachFile(mock.Anything, mock.Anything).
+		Return(studyguides.FileAttachment{}, errors.New("db down"))
+
+	url := fmt.Sprintf("/study-guides/%s/files/%s", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, nil)
+	w := httptest.NewRecorder()
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// ---------------------------------------------------------------------
+// DetachFile (ASK-124)
+// ---------------------------------------------------------------------
+
+func TestStudyGuidesHandler_DetachFile_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	url := fmt.Sprintf("/study-guides/%s/files/%s", uuid.NewString(), uuid.NewString())
+	req := httptest.NewRequest(http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestStudyGuidesHandler_DetachFile_Success_204(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	guideID, fileID := uuid.New(), uuid.New()
+	captured := &studyguides.DetachFileParams{}
+	mockSvc.EXPECT().
+		DetachFile(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, p studyguides.DetachFileParams) {
+			*captured = p
+		}).
+		Return(nil)
+
+	url := fmt.Sprintf("/study-guides/%s/files/%s", guideID, fileID)
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusNoContent, w.Code)
+	assert.Empty(t, w.Body.String())
+	assert.Equal(t, guideID, captured.StudyGuideID)
+	assert.Equal(t, fileID, captured.FileID)
+	assert.NotEqual(t, uuid.Nil, captured.ViewerID)
+}
+
+func TestStudyGuidesHandler_DetachFile_Forbidden_403(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+	mockSvc.EXPECT().
+		DetachFile(mock.Anything, mock.Anything).
+		Return(apperrors.NewForbidden())
+
+	url := fmt.Sprintf("/study-guides/%s/files/%s", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestStudyGuidesHandler_DetachFile_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+	mockSvc.EXPECT().
+		DetachFile(mock.Anything, mock.Anything).
+		Return(apperrors.NewNotFound("File attachment not found"))
+
+	url := fmt.Sprintf("/study-guides/%s/files/%s", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestStudyGuidesHandler_DetachFile_InternalError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+	mockSvc.EXPECT().
+		DetachFile(mock.Anything, mock.Anything).
+		Return(errors.New("db down"))
+
+	url := fmt.Sprintf("/study-guides/%s/files/%s", uuid.NewString(), uuid.NewString())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
