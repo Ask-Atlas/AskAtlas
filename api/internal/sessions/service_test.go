@@ -1024,9 +1024,14 @@ func TestSubmitAnswer_QuestionDeletedAfterSnapshotCheck_400(t *testing.T) {
 
 // completeSessionFixture wires a happy-path locked SELECT so per-
 // test setup focuses on what's distinctive (correct/total values
-// for score testing, or the failure branch).
+// for score testing, or the failure branch). The LockSession-
+// ForCompletion expectation is pinned to the passed-in sessionID
+// so a service that ever queried with a different ID would fail
+// the test (copilot PR #156 review feedback: previously used
+// mock.Anything which silently accepted any ID and let mismatched
+// fixture setup pass).
 func completeSessionFixture(repo *mock_sessions.MockRepository, sessionID, userID, quizID uuid.UUID, total, correct int32, completedAt pgtype.Timestamptz) {
-	repo.EXPECT().LockSessionForCompletion(mock.Anything, mock.Anything).
+	repo.EXPECT().LockSessionForCompletion(mock.Anything, utils.UUID(sessionID)).
 		Return(db.PracticeSession{
 			ID:             utils.UUID(sessionID),
 			UserID:         utils.UUID(userID),
@@ -1036,6 +1041,14 @@ func completeSessionFixture(repo *mock_sessions.MockRepository, sessionID, userI
 			TotalQuestions: total,
 			CorrectAnswers: correct,
 		}, nil)
+}
+
+// expectMarkCompleted wires MarkSessionCompleted's expectation
+// pinned to the passed-in sessionID so the test fails if the
+// service tries to mark a different row complete.
+func expectMarkCompleted(repo *mock_sessions.MockRepository, sessionID uuid.UUID, completedAt pgtype.Timestamptz, returnErr error) {
+	repo.EXPECT().MarkSessionCompleted(mock.Anything, utils.UUID(sessionID)).
+		Return(completedAt, returnErr)
 }
 
 // TestCompleteSession_AC1_HappyPath covers AC1: 7/10 -> 70%, 200,
@@ -1050,8 +1063,7 @@ func TestCompleteSession_AC1_HappyPath(t *testing.T) {
 	completedAt := fixtureTime.Add(15 * time.Minute)
 
 	completeSessionFixture(repo, sessionID, userID, quizID, 10, 7, pgtype.Timestamptz{})
-	repo.EXPECT().MarkSessionCompleted(mock.Anything, mock.Anything).
-		Return(pgtype.Timestamptz{Time: completedAt, Valid: true}, nil)
+	expectMarkCompleted(repo, sessionID, pgtype.Timestamptz{Time: completedAt, Valid: true}, nil)
 
 	svc := sessions.NewService(repo)
 	got, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
@@ -1075,8 +1087,7 @@ func TestCompleteSession_AC2_AllSkipped(t *testing.T) {
 	sessionID := uuid.New()
 	userID := uuid.New()
 	completeSessionFixture(repo, sessionID, userID, uuid.New(), 10, 0, pgtype.Timestamptz{})
-	repo.EXPECT().MarkSessionCompleted(mock.Anything, mock.Anything).
-		Return(pgtype.Timestamptz{Time: fixtureTime, Valid: true}, nil)
+	expectMarkCompleted(repo, sessionID, pgtype.Timestamptz{Time: fixtureTime, Valid: true}, nil)
 
 	svc := sessions.NewService(repo)
 	got, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
@@ -1092,15 +1103,16 @@ func TestCompleteSession_AC2_AllSkipped(t *testing.T) {
 func TestCompleteSession_AC4_AlreadyCompleted_409(t *testing.T) {
 	repo := mock_sessions.NewMockRepository(t)
 	inTxRunsFn(repo)
+	sessionID := uuid.New()
 	userID := uuid.New()
 
-	completeSessionFixture(repo, uuid.New(), userID, uuid.New(), 10, 5,
+	completeSessionFixture(repo, sessionID, userID, uuid.New(), 10, 5,
 		pgtype.Timestamptz{Time: fixtureTime, Valid: true}) // already completed
 	// No MarkSessionCompleted expectation -- service short-circuits.
 
 	svc := sessions.NewService(repo)
 	_, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
-		SessionID: uuid.New(),
+		SessionID: sessionID,
 		UserID:    userID,
 	})
 	require.Error(t, err)
@@ -1112,15 +1124,16 @@ func TestCompleteSession_AC4_AlreadyCompleted_409(t *testing.T) {
 func TestCompleteSession_AC5_NotOwner_403(t *testing.T) {
 	repo := mock_sessions.NewMockRepository(t)
 	inTxRunsFn(repo)
+	sessionID := uuid.New()
 	owner := uuid.New()
 	other := uuid.New()
 
-	completeSessionFixture(repo, uuid.New(), owner, uuid.New(), 5, 3, pgtype.Timestamptz{})
+	completeSessionFixture(repo, sessionID, owner, uuid.New(), 5, 3, pgtype.Timestamptz{})
 	// No MarkSessionCompleted expectation.
 
 	svc := sessions.NewService(repo)
 	_, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
-		SessionID: uuid.New(),
+		SessionID: sessionID,
 		UserID:    other,
 	})
 	require.Error(t, err)
@@ -1132,12 +1145,13 @@ func TestCompleteSession_AC5_NotOwner_403(t *testing.T) {
 func TestCompleteSession_AC6_NotFound_404(t *testing.T) {
 	repo := mock_sessions.NewMockRepository(t)
 	inTxRunsFn(repo)
-	repo.EXPECT().LockSessionForCompletion(mock.Anything, mock.Anything).
+	sessionID := uuid.New()
+	repo.EXPECT().LockSessionForCompletion(mock.Anything, utils.UUID(sessionID)).
 		Return(db.PracticeSession{}, sql.ErrNoRows)
 
 	svc := sessions.NewService(repo)
 	_, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
-		SessionID: uuid.New(),
+		SessionID: sessionID,
 		UserID:    uuid.New(),
 	})
 	require.Error(t, err)
@@ -1148,12 +1162,13 @@ func TestCompleteSession_AC6_NotFound_404(t *testing.T) {
 func TestCompleteSession_LockError_500(t *testing.T) {
 	repo := mock_sessions.NewMockRepository(t)
 	inTxRunsFn(repo)
-	repo.EXPECT().LockSessionForCompletion(mock.Anything, mock.Anything).
+	sessionID := uuid.New()
+	repo.EXPECT().LockSessionForCompletion(mock.Anything, utils.UUID(sessionID)).
 		Return(db.PracticeSession{}, errors.New("connection refused"))
 
 	svc := sessions.NewService(repo)
 	_, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
-		SessionID: uuid.New(), UserID: uuid.New(),
+		SessionID: sessionID, UserID: uuid.New(),
 	})
 	require.Error(t, err)
 	sysErr := apperrors.ToHTTPError(err)
@@ -1163,14 +1178,14 @@ func TestCompleteSession_LockError_500(t *testing.T) {
 func TestCompleteSession_MarkError_500(t *testing.T) {
 	repo := mock_sessions.NewMockRepository(t)
 	inTxRunsFn(repo)
+	sessionID := uuid.New()
 	userID := uuid.New()
-	completeSessionFixture(repo, uuid.New(), userID, uuid.New(), 5, 3, pgtype.Timestamptz{})
-	repo.EXPECT().MarkSessionCompleted(mock.Anything, mock.Anything).
-		Return(pgtype.Timestamptz{}, errors.New("constraint violation"))
+	completeSessionFixture(repo, sessionID, userID, uuid.New(), 5, 3, pgtype.Timestamptz{})
+	expectMarkCompleted(repo, sessionID, pgtype.Timestamptz{}, errors.New("constraint violation"))
 
 	svc := sessions.NewService(repo)
 	_, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
-		SessionID: uuid.New(), UserID: userID,
+		SessionID: sessionID, UserID: userID,
 	})
 	require.Error(t, err)
 	sysErr := apperrors.ToHTTPError(err)
@@ -1184,14 +1199,14 @@ func TestCompleteSession_MarkError_500(t *testing.T) {
 func TestCompleteSession_MarkReturnedInvalidTimestamp_500(t *testing.T) {
 	repo := mock_sessions.NewMockRepository(t)
 	inTxRunsFn(repo)
+	sessionID := uuid.New()
 	userID := uuid.New()
-	completeSessionFixture(repo, uuid.New(), userID, uuid.New(), 5, 3, pgtype.Timestamptz{})
-	repo.EXPECT().MarkSessionCompleted(mock.Anything, mock.Anything).
-		Return(pgtype.Timestamptz{}, nil) // Valid=false
+	completeSessionFixture(repo, sessionID, userID, uuid.New(), 5, 3, pgtype.Timestamptz{})
+	expectMarkCompleted(repo, sessionID, pgtype.Timestamptz{}, nil) // Valid=false
 
 	svc := sessions.NewService(repo)
 	_, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
-		SessionID: uuid.New(), UserID: userID,
+		SessionID: sessionID, UserID: userID,
 	})
 	require.Error(t, err)
 	sysErr := apperrors.ToHTTPError(err)
@@ -1208,8 +1223,7 @@ func TestCompleteSession_PartialAnswered(t *testing.T) {
 	sessionID := uuid.New()
 	userID := uuid.New()
 	completeSessionFixture(repo, sessionID, userID, uuid.New(), 10, 2, pgtype.Timestamptz{})
-	repo.EXPECT().MarkSessionCompleted(mock.Anything, mock.Anything).
-		Return(pgtype.Timestamptz{Time: fixtureTime, Valid: true}, nil)
+	expectMarkCompleted(repo, sessionID, pgtype.Timestamptz{Time: fixtureTime, Valid: true}, nil)
 
 	svc := sessions.NewService(repo)
 	got, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
@@ -1246,14 +1260,14 @@ func TestComputeScorePercentage(t *testing.T) {
 			// path callers hit.
 			repo := mock_sessions.NewMockRepository(t)
 			inTxRunsFn(repo)
+			sessionID := uuid.New()
 			userID := uuid.New()
-			completeSessionFixture(repo, uuid.New(), userID, uuid.New(), tc.total, tc.correct, pgtype.Timestamptz{})
-			repo.EXPECT().MarkSessionCompleted(mock.Anything, mock.Anything).
-				Return(pgtype.Timestamptz{Time: fixtureTime, Valid: true}, nil)
+			completeSessionFixture(repo, sessionID, userID, uuid.New(), tc.total, tc.correct, pgtype.Timestamptz{})
+			expectMarkCompleted(repo, sessionID, pgtype.Timestamptz{Time: fixtureTime, Valid: true}, nil)
 
 			svc := sessions.NewService(repo)
 			got, err := svc.CompleteSession(context.Background(), sessions.CompleteSessionParams{
-				SessionID: uuid.New(), UserID: userID,
+				SessionID: sessionID, UserID: userID,
 			})
 			require.NoError(t, err)
 			assert.Equal(t, tc.want, got.ScorePercentage)
