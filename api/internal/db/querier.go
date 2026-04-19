@@ -11,6 +11,30 @@ import (
 )
 
 type Querier interface {
+	// Practice session queries (ASK-128 start/resume).
+	//
+	// The StartPracticeSession service flow stitches these together:
+	//   1. CheckQuizLiveForSession  -- 404 dispatch (quiz live + parent live)
+	//   2. DeleteStaleIncompleteSessions -- hard-delete this user's
+	//      incomplete session for this quiz if started_at > 7 days ago
+	//   3. FindIncompleteSession -- if found, hydrate + return 200 (resume)
+	//   4. CountQuizQuestions (reused from ASK-115) -- snapshot count
+	//   5. Inside InTx:
+	//        a. InsertPracticeSessionIfAbsent -- ON CONFLICT DO NOTHING
+	//           backed by the partial unique index added in
+	//           20260419083647_add_practice_sessions_partial_unique_index.
+	//           Returns 0 rows on race -> service falls back to step 3.
+	//        b. SnapshotQuizQuestions -- bulk insert practice_session_questions
+	//           rows from quiz_questions
+	//   6. ListSessionAnswers -- for the resume response (empty array on
+	//      newly-created sessions because no answers exist yet)
+	// Returns TRUE when both the quiz row AND its parent study guide are
+	// live (deleted_at IS NULL on both). The service uses this as the
+	// 404 gate before any writes -- a soft-deleted quiz, a quiz under a
+	// soft-deleted guide, and a missing quiz all return FALSE here, which
+	// the service maps to a single 404 response so the caller cannot
+	// distinguish them (info-leak prevention).
+	CheckQuizLiveForSession(ctx context.Context, quizID pgtype.UUID) (bool, error)
 	// Recomputes the guide's vote_score from study_guide_votes. Returned
 	// as int64 to match the wire shape on CastVoteResponse. Run after
 	// the upsert in the same logical request so the response reflects the
@@ -46,6 +70,21 @@ type Querier interface {
 	// detach. Returns rows-affected so the service can detect
 	// already-detached races (0 rows -> 404) vs success (1 row -> nil).
 	DeleteGuideResource(ctx context.Context, arg DeleteGuideResourceParams) (int64, error)
+	// Hard-deletes this user's incomplete session for this quiz when it
+	// has been sitting around for more than 7 days. CASCADE deletes the
+	// attached practice_session_questions and practice_answers rows.
+	//
+	// Scoped per (user_id, quiz_id): we don't want a global cleanup job
+	// here -- the spec wants stale-cleanup to run on the start-session
+	// path so a user explicitly choosing to start fresh sees a clean
+	// slate without waiting for a background job. Other users' stale
+	// sessions on this same quiz are left alone (they'll be cleaned up
+	// the next time THEY hit start-session).
+	//
+	// The partial unique index makes this idempotent -- at most one row
+	// can match the WHERE clause, so DELETE is a no-op when there's no
+	// stale session, and a single-row DELETE otherwise.
+	DeleteStaleIncompleteSessions(ctx context.Context, arg DeleteStaleIncompleteSessionsParams) error
 	// Hard-delete the (viewer, guide) recommendation row. Returns the
 	// rows-affected count so the service can distinguish "viewer never
 	// recommended this guide" (0 rows -> 404 'Recommendation not found')
@@ -60,6 +99,14 @@ type Querier interface {
 	// runs in the service so a missing guide doesn't leak through as
 	// "vote not found".
 	DeleteStudyGuideVote(ctx context.Context, arg DeleteStudyGuideVoteParams) (int64, error)
+	// Resume probe -- returns this user's current in-progress session for
+	// the quiz, if any. The partial unique index on
+	// (user_id, quiz_id) WHERE completed_at IS NULL guarantees AT MOST
+	// one row matches, so LIMIT 1 is belt-and-suspenders.
+	//
+	// Returns sql.ErrNoRows when no incomplete session exists; the
+	// service treats that as the "create new" signal.
+	FindIncompleteSession(ctx context.Context, arg FindIncompleteSessionParams) (FindIncompleteSessionRow, error)
 	GetCourse(ctx context.Context, id pgtype.UUID) (GetCourseRow, error)
 	// Fetches a file only if it belongs to the given user and has not been soft-deleted.
 	// Returns sql.ErrNoRows if not found or already in a deletion state.
@@ -219,6 +266,23 @@ type Querier interface {
 	// failure mode is the narrow concurrency-race: two attachers slip
 	// through the pre-check between query 1 and query 4.
 	InsertGuideResource(ctx context.Context, arg InsertGuideResourceParams) error
+	// Race-safe insert backed by the partial unique index from migration
+	// 20260419083647. ON CONFLICT DO NOTHING means a concurrent start by
+	// the same user on the same quiz collapses to "no row inserted"
+	// (sqlc returns sql.ErrNoRows for the :one annotation), and the
+	// service catches that and falls back to FindIncompleteSession.
+	//
+	// total_questions is intentionally NOT supplied here -- the column
+	// defaults to 0 and is set to the authoritative snapshot row count
+	// by SnapshotQuizQuestionsAndUpdateCount in the same tx. This
+	// avoids the race window that existed when total_questions was
+	// pre-computed via CountQuizQuestions and could disagree with the
+	// actual snapshot row count under concurrent quiz edits at
+	// READ COMMITTED isolation (gemini + copilot PR #153 feedback).
+	//
+	// The losing request never touches the quiz_questions snapshot --
+	// the winner already created it.
+	InsertPracticeSessionIfAbsent(ctx context.Context, arg InsertPracticeSessionIfAbsentParams) (InsertPracticeSessionIfAbsentRow, error)
 	// Insert a new quiz row. Returns the columns the service needs to
 	// build the QuizDetailResponse without an extra round trip on the
 	// write side -- the read-side hydration still happens via
@@ -415,6 +479,13 @@ type Querier interface {
 	// (multiple users can join in the same second on a busy section), so
 	// user_id is the tiebreaker that keeps the keyset a strict total order.
 	ListSectionMembers(ctx context.Context, arg ListSectionMembersParams) ([]ListSectionMembersRow, error)
+	// All answers submitted in a session, ordered by answered_at ASC so
+	// the response renders them in the order the user produced them.
+	// Used by the resume path to populate the `answers` array in
+	// PracticeSessionResponse. Returns an empty slice (not nil) for
+	// freshly-created sessions where no answers exist yet -- the
+	// mapper renders that as `[]` rather than `null` per spec.
+	ListSessionAnswers(ctx context.Context, sessionID pgtype.UUID) ([]ListSessionAnswersRow, error)
 	ListStudyGuidesNewestAsc(ctx context.Context, arg ListStudyGuidesNewestAscParams) ([]ListStudyGuidesNewestAscRow, error)
 	ListStudyGuidesNewestDesc(ctx context.Context, arg ListStudyGuidesNewestDescParams) ([]ListStudyGuidesNewestDescRow, error)
 	ListStudyGuidesScoreAsc(ctx context.Context, arg ListStudyGuidesScoreAscParams) ([]ListStudyGuidesScoreAscRow, error)
@@ -437,6 +508,30 @@ type Querier interface {
 	SectionInCourseExists(ctx context.Context, arg SectionInCourseExistsParams) (bool, error)
 	// Records the QStash message ID after publishing the async cleanup job.
 	SetFileDeletionJobID(ctx context.Context, arg SetFileDeletionJobIDParams) error
+	// Atomic snapshot + total_questions fix-up. Inserts one
+	// practice_session_questions row per current quiz_questions row in
+	// a single CTE, then updates the session's total_questions to the
+	// count of rows actually inserted. Returns the new total_questions
+	// so the caller can sync its in-memory session state.
+	//
+	// The single-statement CTE eliminates the race that existed in the
+	// prior two-step approach (CountQuizQuestions sets total_questions
+	// on insert, then a separate SnapshotQuizQuestions writes the
+	// snapshot). Under Postgres' default READ COMMITTED isolation each
+	// statement gets its own snapshot, so a concurrent quiz edit
+	// between count and snapshot could leave the two out of sync.
+	// Within a single CTE statement, both reads share the same
+	// statement-level snapshot, so the count and the snapshot are
+	// guaranteed identical (gemini + copilot PR #153 feedback).
+	//
+	// Subsequent edits to the quiz do not retroactively affect this
+	// snapshot:
+	//   * New questions added AFTER this statement are not in the snapshot.
+	//   * Deleted questions trigger ON DELETE SET NULL on
+	//     practice_session_questions.question_id -- the snapshot row
+	//     persists with question_id = NULL so total_questions stays
+	//     stable.
+	SnapshotQuizQuestionsAndUpdateCount(ctx context.Context, arg SnapshotQuizQuestionsAndUpdateCountParams) (int32, error)
 	// Marks a file as pending deletion. Only applies if the file is owned by the caller
 	// and has not already entered a deletion state (idempotency-safe).
 	SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)

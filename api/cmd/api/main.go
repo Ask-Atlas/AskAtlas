@@ -26,6 +26,7 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/quizzes"
 	s3client "github.com/Ask-Atlas/AskAtlas/api/internal/s3"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/schools"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/sessions"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/studyguides"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/user"
 	"github.com/getkin/kin-openapi/openapi3filter"
@@ -103,6 +104,10 @@ func main() {
 	quizzesService := quizzes.NewService(quizzesRepo)
 	quizzesHandler := handlers.NewQuizzesHandler(quizzesService)
 
+	sessionsRepo := sessions.NewSQLCRepository(connPool, queries)
+	sessionsService := sessions.NewService(sessionsRepo)
+	sessionsHandler := handlers.NewSessionsHandler(sessionsService)
+
 	clerkAuth := middleware.ClerkAuth(userService)
 
 	r.Use(chiMiddleware.Timeout(60 * time.Second))
@@ -132,7 +137,7 @@ func main() {
 		},
 	}
 
-	compositeHandler := handlers.NewCompositeHandler(fileHandler, grantHandler, schoolsHandler, coursesHandler, studyGuidesHandler, quizzesHandler)
+	compositeHandler := handlers.NewCompositeHandler(fileHandler, grantHandler, schoolsHandler, coursesHandler, studyGuidesHandler, quizzesHandler, sessionsHandler)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(clerkAuth)
