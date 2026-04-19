@@ -28,6 +28,8 @@ type Repository interface {
 	ListQuizzesByStudyGuide(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListQuizzesByStudyGuideRow, error)
 	GetQuizByIDForUpdate(ctx context.Context, id pgtype.UUID) (db.GetQuizByIDForUpdateRow, error)
 	SoftDeleteQuiz(ctx context.Context, id pgtype.UUID) error
+	GetQuizForUpdateWithParentStatus(ctx context.Context, id pgtype.UUID) (db.GetQuizForUpdateWithParentStatusRow, error)
+	UpdateQuiz(ctx context.Context, arg db.UpdateQuizParams) error
 
 	// InTx runs fn inside a single Postgres transaction. The
 	// Repository passed to fn is scoped to the tx via
@@ -91,6 +93,124 @@ func (s *Service) ListQuizzes(ctx context.Context, p ListQuizzesParams) ([]QuizL
 		out = append(out, item)
 	}
 	return out, nil
+}
+
+// UpdateQuiz partially updates a quiz's title and/or description
+// (ASK-153, creator-only). At least one field must be provided
+// (an empty body is a 400 before SQL is touched).
+//
+// Order of operations (single transaction):
+//  1. validateUpdateParams -- per-field caps + at-least-one-field
+//     rule.
+//  2. GetQuizForUpdateWithParentStatus -- locked SELECT inside the
+//     tx so a concurrent delete cannot race the update.
+//  3. 404 if quiz missing OR quiz soft-deleted OR parent guide
+//     soft-deleted (per spec AC5 + AC6).
+//  4. 403 if creator_id != viewer_id.
+//  5. UpdateQuiz -- COALESCE on title; CASE on description (so
+//     null clears, absent leaves alone).
+//
+// After the tx commits, re-hydrates the full QuizDetail via the
+// shared hydrate path used by CreateQuiz so the response carries
+// the same wire shape (QuizDetailResponse) as the create endpoint.
+//
+// Title trim semantics: a body field of "  " is rejected by
+// validateUpdateParams (must not be empty after trim). When set,
+// the trimmed value is what gets persisted. Description trim
+// semantics: "  " is treated as 'no change' (matches the
+// trimmed-non-empty pattern on CreateQuiz / studyguides).
+func (s *Service) UpdateQuiz(ctx context.Context, p UpdateQuizParams) (QuizDetail, error) {
+	if err := validateUpdateQuizParams(p); err != nil {
+		return QuizDetail{}, err
+	}
+
+	quizPgxID := utils.UUID(p.QuizID)
+
+	// Resolve SQL args before opening the tx. Any normalisation
+	// surface (none on this endpoint, but keeping the structure
+	// matches studyguides.UpdateStudyGuide so a future drift is
+	// easy to spot).
+	sqlArgs := db.UpdateQuizParams{ID: quizPgxID}
+	if p.Title != nil {
+		sqlArgs.Title = pgtype.Text{String: strings.TrimSpace(*p.Title), Valid: true}
+	}
+	if p.ClearDescription {
+		sqlArgs.ClearDescription = true
+		if p.Description != nil {
+			// trim+drop-empty pattern: a description of "  " on
+			// an explicit clear is treated as the explicit clear
+			// (set to NULL), not a no-op. The handler dispatches
+			// to ClearDescription=true only when the JSON key was
+			// present, so this branch is reachable only when the
+			// caller explicitly intended an action.
+			if t := trimmedNonEmpty(p.Description); t != nil {
+				sqlArgs.Description = pgtype.Text{String: *t, Valid: true}
+			}
+		}
+	}
+
+	if err := s.repo.InTx(ctx, func(tx Repository) error {
+		row, err := tx.GetQuizForUpdateWithParentStatus(ctx, quizPgxID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return apperrors.NewNotFound("Quiz not found")
+			}
+			return fmt.Errorf("UpdateQuiz: lock: %w", err)
+		}
+		if row.DeletedAt.Valid || row.GuideDeletedAt.Valid {
+			return apperrors.NewNotFound("Quiz not found")
+		}
+		creatorID, err := utils.PgxToGoogleUUID(row.CreatorID)
+		if err != nil {
+			return fmt.Errorf("UpdateQuiz: creator id: %w", err)
+		}
+		if creatorID != p.ViewerID {
+			return apperrors.NewForbidden()
+		}
+		if err := tx.UpdateQuiz(ctx, sqlArgs); err != nil {
+			return fmt.Errorf("UpdateQuiz: update: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return QuizDetail{}, err
+	}
+
+	return s.hydrate(ctx, quizPgxID)
+}
+
+// validateUpdateQuizParams runs the service-layer defensive
+// re-validation for UpdateQuiz. The openapi wrapper enforces the
+// per-field caps at request time in production; this re-check
+// covers Go callers and adds the at-least-one-field rule that
+// openapi cannot express directly.
+func validateUpdateQuizParams(p UpdateQuizParams) error {
+	if p.Title == nil && !p.ClearDescription {
+		return apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"body": "at least one field must be provided",
+		})
+	}
+	if p.Title != nil {
+		trimmed := strings.TrimSpace(*p.Title)
+		if trimmed == "" {
+			return apperrors.NewBadRequest("Invalid request body", map[string]string{
+				"title": "must not be empty",
+			})
+		}
+		if len(trimmed) > MaxTitleLength {
+			return apperrors.NewBadRequest("Invalid request body", map[string]string{
+				"title": fmt.Sprintf("must be %d characters or fewer", MaxTitleLength),
+			})
+		}
+	}
+	if p.ClearDescription && p.Description != nil {
+		trimmed := strings.TrimSpace(*p.Description)
+		if len(trimmed) > MaxDescriptionLength {
+			return apperrors.NewBadRequest("Invalid request body", map[string]string{
+				"description": fmt.Sprintf("must be %d characters or fewer", MaxDescriptionLength),
+			})
+		}
+	}
+	return nil
 }
 
 // DeleteQuiz soft-deletes a quiz (creator-only, ASK-102). Wraps
@@ -305,30 +425,35 @@ func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID p
 	return nil
 }
 
-// hydrate loads the freshly-created quiz + its questions + their
-// answer options and assembles them into a QuizDetail. Runs three
-// reads (detail, questions, options) and groups options by
-// question_id in Go. The reads run sequentially (not parallel) --
-// the row counts are tiny (<=100 questions, <=10 options each) and
-// the latency overhead of a goroutine + sync is more than the wall-
-// clock savings.
+// hydrate loads a quiz + its questions + their answer options and
+// assembles them into a QuizDetail. Shared between CreateQuiz and
+// UpdateQuiz; the error-wrap prefix is "hydrate" rather than the
+// caller name so server logs reflect where the failure actually
+// happened (PR #150 review feedback -- otherwise UpdateQuiz
+// failures would be misattributed to CreateQuiz in observability).
+//
+// Runs three reads (detail, questions, options) and groups options
+// by question_id in Go. The reads run sequentially (not parallel)
+// -- the row counts are tiny (<=100 questions, <=10 options each)
+// and the latency overhead of a goroutine + sync is more than the
+// wall-clock savings.
 func (s *Service) hydrate(ctx context.Context, quizPgxID pgtype.UUID) (QuizDetail, error) {
 	row, err := s.repo.GetQuizDetail(ctx, quizPgxID)
 	if err != nil {
-		return QuizDetail{}, fmt.Errorf("CreateQuiz: hydrate detail: %w", err)
+		return QuizDetail{}, fmt.Errorf("hydrate: detail: %w", err)
 	}
 	questionRows, err := s.repo.ListQuizQuestionsByQuiz(ctx, quizPgxID)
 	if err != nil {
-		return QuizDetail{}, fmt.Errorf("CreateQuiz: hydrate questions: %w", err)
+		return QuizDetail{}, fmt.Errorf("hydrate: questions: %w", err)
 	}
 	optionRows, err := s.repo.ListQuizAnswerOptionsByQuiz(ctx, quizPgxID)
 	if err != nil {
-		return QuizDetail{}, fmt.Errorf("CreateQuiz: hydrate options: %w", err)
+		return QuizDetail{}, fmt.Errorf("hydrate: options: %w", err)
 	}
 
 	detail, err := mapQuizDetail(row, questionRows, optionRows)
 	if err != nil {
-		return QuizDetail{}, fmt.Errorf("CreateQuiz: map detail: %w", err)
+		return QuizDetail{}, fmt.Errorf("hydrate: map detail: %w", err)
 	}
 	return detail, nil
 }

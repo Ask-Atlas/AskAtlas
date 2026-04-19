@@ -110,3 +110,27 @@ type DeleteQuizParams struct {
 	QuizID   uuid.UUID
 	ViewerID uuid.UUID
 }
+
+// UpdateQuizParams is the input to Service.UpdateQuiz (ASK-153).
+// Tri-state semantics for description require an explicit
+// ClearDescription flag because Go cannot distinguish "field
+// absent in JSON" from "field explicitly null" with a *string
+// alone (both decode to nil pointers). The handler decodes the
+// raw request body to detect the description key's presence and
+// drives the params accordingly:
+//
+//   - Title nil                                -> column unchanged
+//   - Title non-nil                            -> set to value (after trim)
+//   - ClearDescription false                   -> column unchanged
+//   - ClearDescription true, Description nil   -> column cleared (set to NULL)
+//   - ClearDescription true, Description set   -> column set to value (after trim)
+//
+// The service rejects an all-nil-fields call as 400 'at least one
+// field required' before SQL.
+type UpdateQuizParams struct {
+	QuizID           uuid.UUID
+	ViewerID         uuid.UUID
+	Title            *string
+	ClearDescription bool
+	Description      *string
+}

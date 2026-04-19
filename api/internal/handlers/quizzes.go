@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"math"
 	"net/http"
@@ -22,6 +23,7 @@ type QuizService interface {
 	CreateQuiz(ctx context.Context, params quizzes.CreateQuizParams) (quizzes.QuizDetail, error)
 	ListQuizzes(ctx context.Context, params quizzes.ListQuizzesParams) ([]quizzes.QuizListItem, error)
 	DeleteQuiz(ctx context.Context, params quizzes.DeleteQuizParams) error
+	UpdateQuiz(ctx context.Context, params quizzes.UpdateQuizParams) (quizzes.QuizDetail, error)
 }
 
 // QuizzesHandler manages incoming HTTP requests for the quizzes
@@ -62,6 +64,72 @@ func (h *QuizzesHandler) ListQuizzes(w http.ResponseWriter, r *http.Request, stu
 	}
 
 	respondJSON(w, http.StatusOK, mapListQuizzesResponse(items))
+}
+
+// UpdateQuiz handles PATCH /quizzes/{quiz_id} (ASK-153).
+// Decodes the raw body twice: once into a key-presence map so the
+// service can distinguish 'description absent' from 'description
+// explicitly null' (the openapi-generated CreateQuizRequest type
+// uses *string with omitempty, which loses that distinction at
+// the Go-struct level), once into the typed request body for
+// title + description values. Builds UpdateQuizParams from both
+// passes and delegates to service.UpdateQuiz.
+//
+// Creator-only authz + 404/403 dispatch lives in the service.
+// 200 on success carries the freshly re-hydrated QuizDetail
+// (same wire shape as CreateQuiz) so the frontend can patch its
+// local state without a follow-up GET.
+func (h *QuizzesHandler) UpdateQuiz(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	rawBody, err := io.ReadAll(r.Body)
+	if err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", nil))
+		return
+	}
+
+	// Two-pass decode: presence map for tri-state description,
+	// typed struct for typed values.
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal(rawBody, &keys); err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", nil))
+		return
+	}
+	var body api.UpdateQuizJSONRequestBody
+	if err := json.Unmarshal(rawBody, &body); err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", nil))
+		return
+	}
+
+	params := quizzes.UpdateQuizParams{
+		QuizID:   uuid.UUID(quizId),
+		ViewerID: viewerID,
+		Title:    body.Title,
+	}
+	if _, present := keys["description"]; present {
+		// Explicit clear: the JSON key was present (whether the
+		// value was a string or null). The service uses
+		// ClearDescription=true to drive the SQL CASE that
+		// distinguishes "leave alone" from "set to null".
+		params.ClearDescription = true
+		params.Description = body.Description
+	}
+
+	detail, err := h.service.UpdateQuiz(r.Context(), params)
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("UpdateQuiz failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, mapQuizDetailResponse(detail))
 }
 
 // DeleteQuiz handles DELETE /quizzes/{quiz_id} (ASK-102).

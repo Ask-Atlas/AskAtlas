@@ -1,0 +1,1 @@
+{"parameters":[{"name":"quiz_id","in":"path","description":"The unique UUID of the quiz to update","required":true,"schema":{"type":"string","format":"uuid"}}]}

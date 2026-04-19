@@ -29,6 +29,8 @@ Package quizzes hosts the domain types, params, mappers, and service logic for t
   - [func \(s \*Service\) CreateQuiz\(ctx context.Context, p CreateQuizParams\) \(QuizDetail, error\)](<#Service.CreateQuiz>)
   - [func \(s \*Service\) DeleteQuiz\(ctx context.Context, p DeleteQuizParams\) error](<#Service.DeleteQuiz>)
   - [func \(s \*Service\) ListQuizzes\(ctx context.Context, p ListQuizzesParams\) \(\[\]QuizListItem, error\)](<#Service.ListQuizzes>)
+  - [func \(s \*Service\) UpdateQuiz\(ctx context.Context, p UpdateQuizParams\) \(QuizDetail, error\)](<#Service.UpdateQuiz>)
+- [type UpdateQuizParams](<#UpdateQuizParams>)
 
 
 ## Constants
@@ -249,7 +251,7 @@ type QuizListItem struct {
 ```
 
 <a name="Repository"></a>
-## type [Repository](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L20-L39>)
+## type [Repository](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L20-L41>)
 
 Repository is the data\-access surface required by Service. Mirrors the studyguides.Repository pattern \-\- the production implementation is sqlc\-backed and lives in sqlc\_repository.go; tests inject a mockery\-generated mock.
 
@@ -265,6 +267,8 @@ type Repository interface {
     ListQuizzesByStudyGuide(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListQuizzesByStudyGuideRow, error)
     GetQuizByIDForUpdate(ctx context.Context, id pgtype.UUID) (db.GetQuizByIDForUpdateRow, error)
     SoftDeleteQuiz(ctx context.Context, id pgtype.UUID) error
+    GetQuizForUpdateWithParentStatus(ctx context.Context, id pgtype.UUID) (db.GetQuizForUpdateWithParentStatusRow, error)
+    UpdateQuiz(ctx context.Context, arg db.UpdateQuizParams) error
 
     // InTx runs fn inside a single Postgres transaction. The
     // Repository passed to fn is scoped to the tx via
@@ -286,7 +290,7 @@ func NewSQLCRepository(pool *pgxpool.Pool, queries *db.Queries) Repository
 NewSQLCRepository returns a Repository backed by sqlc\-generated Postgres queries. Takes the pgxpool.Pool alongside the Queries instance so InTx can begin transactions.
 
 <a name="Service"></a>
-## type [Service](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L42-L44>)
+## type [Service](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L44-L46>)
 
 Service is the business\-logic layer for the quizzes feature.
 
@@ -297,7 +301,7 @@ type Service struct {
 ```
 
 <a name="NewService"></a>
-### func [NewService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L47>)
+### func [NewService](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L49>)
 
 ```go
 func NewService(repo Repository) *Service
@@ -306,7 +310,7 @@ func NewService(repo Repository) *Service
 NewService creates a new Service backed by the given Repository.
 
 <a name="Service.CreateQuiz"></a>
-### func \(\*Service\) [CreateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L167>)
+### func \(\*Service\) [CreateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L287>)
 
 ```go
 func (s *Service) CreateQuiz(ctx context.Context, p CreateQuizParams) (QuizDetail, error)
@@ -324,7 +328,7 @@ True/false questions auto\-expand to 2 quiz\_answer\_options rows \("True", "Fal
 After the tx commits, hydrates the response by loading the quiz \+ creator \(privacy floor\) \+ questions \+ options via three separate reads. The two\-list \(questions \+ options\) fan\-out matches the studyguides detail pattern; mapping options back onto questions happens in Go via group\-by\-question\_id.
 
 <a name="Service.DeleteQuiz"></a>
-### func \(\*Service\) [DeleteQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L115>)
+### func \(\*Service\) [DeleteQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L235>)
 
 ```go
 func (s *Service) DeleteQuiz(ctx context.Context, p DeleteQuizParams) error
@@ -337,7 +341,7 @@ DeleteQuiz soft\-deletes a quiz \(creator\-only, ASK\-102\). Wraps the locked SE
 No cascade: practice sessions, questions, and answer options stay intact. The quiz simply becomes invisible to the list/ detail endpoints \(which all filter q.deleted\_at IS NULL\). This preserves historical practice data per the spec.
 
 <a name="Service.ListQuizzes"></a>
-### func \(\*Service\) [ListQuizzes](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L69>)
+### func \(\*Service\) [ListQuizzes](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L71>)
 
 ```go
 func (s *Service) ListQuizzes(ctx context.Context, p ListQuizzesParams) ([]QuizListItem, error)
@@ -351,5 +355,49 @@ Order of operations:
 2. ListQuizzesByStudyGuide.
 
 No transaction wrapping \-\- both reads are snapshot\-safe and a race where a guide gets soft\-deleted between the live check and the list returns the live\-time list, which is acceptable eventual\-consistency behavior for a read endpoint.
+
+<a name="Service.UpdateQuiz"></a>
+### func \(\*Service\) [UpdateQuiz](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/service.go#L122>)
+
+```go
+func (s *Service) UpdateQuiz(ctx context.Context, p UpdateQuizParams) (QuizDetail, error)
+```
+
+UpdateQuiz partially updates a quiz's title and/or description \(ASK\-153, creator\-only\). At least one field must be provided \(an empty body is a 400 before SQL is touched\).
+
+Order of operations \(single transaction\):
+
+1. validateUpdateParams \-\- per\-field caps \+ at\-least\-one\-field rule.
+2. GetQuizForUpdateWithParentStatus \-\- locked SELECT inside the tx so a concurrent delete cannot race the update.
+3. 404 if quiz missing OR quiz soft\-deleted OR parent guide soft\-deleted \(per spec AC5 \+ AC6\).
+4. 403 if creator\_id \!= viewer\_id.
+5. UpdateQuiz \-\- COALESCE on title; CASE on description \(so null clears, absent leaves alone\).
+
+After the tx commits, re\-hydrates the full QuizDetail via the shared hydrate path used by CreateQuiz so the response carries the same wire shape \(QuizDetailResponse\) as the create endpoint.
+
+Title trim semantics: a body field of " " is rejected by validateUpdateParams \(must not be empty after trim\). When set, the trimmed value is what gets persisted. Description trim semantics: " " is treated as 'no change' \(matches the trimmed\-non\-empty pattern on CreateQuiz / studyguides\).
+
+<a name="UpdateQuizParams"></a>
+## type [UpdateQuizParams](<https://github.com/Ask-Atlas/AskAtlas/blob/main/api/internal/quizzes/params.go#L130-L136>)
+
+UpdateQuizParams is the input to Service.UpdateQuiz \(ASK\-153\). Tri\-state semantics for description require an explicit ClearDescription flag because Go cannot distinguish "field absent in JSON" from "field explicitly null" with a \*string alone \(both decode to nil pointers\). The handler decodes the raw request body to detect the description key's presence and drives the params accordingly:
+
+- Title nil \-\> column unchanged
+- Title non\-nil \-\> set to value \(after trim\)
+- ClearDescription false \-\> column unchanged
+- ClearDescription true, Description nil \-\> column cleared \(set to NULL\)
+- ClearDescription true, Description set \-\> column set to value \(after trim\)
+
+The service rejects an all\-nil\-fields call as 400 'at least one field required' before SQL.
+
+```go
+type UpdateQuizParams struct {
+    QuizID           uuid.UUID
+    ViewerID         uuid.UUID
+    Title            *string
+    ClearDescription bool
+    Description      *string
+}
+```
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)
