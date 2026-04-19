@@ -144,6 +144,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/add-quiz-question",
+          label: "Add a question to an existing quiz",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "api/recommend-study-guide",
           label: "Recommend a study guide",
           className: "api-method post",

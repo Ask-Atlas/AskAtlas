@@ -717,3 +717,275 @@ func TestQuizzesHandler_List_Success_FullPayload(t *testing.T) {
 	assert.Nil(t, second.Description, "nil description must serialize as JSON null per spec")
 	assert.Equal(t, int64(0), second.QuestionCount)
 }
+
+// ---- AddQuizQuestion (ASK-115) ----
+
+// validAddQuestionBody returns a wire-shaped CreateQuizQuestion (the
+// AddQuizQuestion endpoint reuses that schema verbatim) with a
+// well-formed MCQ. Per-test variants override individual fields to
+// exercise specific edge cases.
+func validAddQuestionBody() api.AddQuizQuestionJSONRequestBody {
+	hint := "Think about which node comes first."
+	return api.AddQuizQuestionJSONRequestBody{
+		Type:     api.CreateQuizQuestionTypeMultipleChoice,
+		Question: "Which traversal visits the root node first?",
+		Options: &[]api.CreateQuizMCQOption{
+			{Text: "In-order", IsCorrect: false},
+			{Text: "Pre-order", IsCorrect: true},
+			{Text: "Post-order", IsCorrect: false},
+			{Text: "Level-order", IsCorrect: false},
+		},
+		Hint: &hint,
+	}
+}
+
+func TestQuizzesHandler_AddQuestion_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	body, err := json.Marshal(validAddQuestionBody())
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("/quizzes/%s/questions", uuid.NewString())
+	req := httptest.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestQuizzesHandler_AddQuestion_InvalidJSON_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	url := fmt.Sprintf("/quizzes/%s/questions", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, bytes.NewReader([]byte("{not-json")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestQuizzesHandler_AddQuestion_SortOrderOverflow_400 verifies the
+// handler's int->int32 narrowing guard surfaces a 400 BEFORE the
+// service is invoked. Same protection as CreateQuiz; the endpoint
+// reuses convertCreateQuizQuestion.
+func TestQuizzesHandler_AddQuestion_SortOrderOverflow_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	body := validAddQuestionBody()
+	overflow := math.MaxInt32 + 1
+	body.SortOrder = &overflow
+
+	raw, err := json.Marshal(body)
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("/quizzes/%s/questions", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, bytes.NewReader(raw))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	// Detail key collapses to bare `sort_order` (no `questions[i]` prefix)
+	// because the question is the entire request body.
+	var appErr apperrors.AppError
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&appErr))
+	require.Contains(t, appErr.Details, "sort_order")
+}
+
+func TestQuizzesHandler_AddQuestion_ServiceValidationError_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().AddQuestion(mock.Anything, mock.Anything).
+		Return(quizzes.Question{}, apperrors.NewBadRequest("Validation failed", map[string]string{
+			"options": "exactly one option must be correct",
+		}))
+
+	body, err := json.Marshal(validAddQuestionBody())
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("/quizzes/%s/questions", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestQuizzesHandler_AddQuestion_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().AddQuestion(mock.Anything, mock.Anything).
+		Return(quizzes.Question{}, apperrors.NewNotFound("Quiz not found"))
+
+	body, err := json.Marshal(validAddQuestionBody())
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("/quizzes/%s/questions", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestQuizzesHandler_AddQuestion_NotCreator_403(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().AddQuestion(mock.Anything, mock.Anything).
+		Return(quizzes.Question{}, apperrors.NewForbidden())
+
+	body, err := json.Marshal(validAddQuestionBody())
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("/quizzes/%s/questions", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestQuizzesHandler_AddQuestion_ServiceError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().AddQuestion(mock.Anything, mock.Anything).
+		Return(quizzes.Question{}, errors.New("connection refused"))
+
+	body, err := json.Marshal(validAddQuestionBody())
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("/quizzes/%s/questions", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodPost, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// TestQuizzesHandler_AddQuestion_Success exercises the full happy
+// path: body decodes, the path-param quiz_id surfaces in the
+// service params, the response renders the QuizQuestionResponse
+// wire shape with the resolved correct_answer, options array, and
+// non-null feedback envelope.
+func TestQuizzesHandler_AddQuestion_Success(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	quizID := uuid.New()
+	questionID := uuid.New()
+
+	mockSvc.EXPECT().AddQuestion(mock.Anything, mock.MatchedBy(func(p quizzes.AddQuestionParams) bool {
+		return p.QuizID == quizID &&
+			p.Question.Type == quizzes.QuestionTypeMultipleChoice &&
+			p.Question.Question == "Which traversal visits the root node first?" &&
+			len(p.Question.Options) == 4
+	})).Return(quizzes.Question{
+		ID:            questionID,
+		Type:          quizzes.QuestionTypeMultipleChoice,
+		Question:      "Which traversal visits the root node first?",
+		CorrectAnswer: "Pre-order",
+		Options: []quizzes.MCQOption{
+			{ID: uuid.New(), Text: "In-order", IsCorrect: false, SortOrder: 0},
+			{ID: uuid.New(), Text: "Pre-order", IsCorrect: true, SortOrder: 1},
+			{ID: uuid.New(), Text: "Post-order", IsCorrect: false, SortOrder: 2},
+			{ID: uuid.New(), Text: "Level-order", IsCorrect: false, SortOrder: 3},
+		},
+		Hint:      ptrStrQ("Think about which node comes first."),
+		SortOrder: 5,
+	}, nil)
+
+	body, err := json.Marshal(validAddQuestionBody())
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("/quizzes/%s/questions", quizID.String())
+	req := authedRequestMethod(t, http.MethodPost, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusCreated, w.Code)
+
+	var resp api.QuizQuestionResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+
+	assert.Equal(t, questionID, uuid.UUID(resp.Id))
+	assert.Equal(t, api.QuizQuestionResponseType("multiple-choice"), resp.Type)
+	assert.Equal(t, "Pre-order", resp.CorrectAnswer)
+	require.NotNil(t, resp.Options)
+	assert.Equal(t, []string{"In-order", "Pre-order", "Post-order", "Level-order"}, *resp.Options)
+	assert.Equal(t, 5, resp.SortOrder)
+	require.NotNil(t, resp.Hint)
+}
+
+// TestQuizzesHandler_AddQuestion_TF_Success verifies the TF wire
+// shape: options is nil (no array on the response), correct_answer
+// is the boolean.
+func TestQuizzesHandler_AddQuestion_TF_Success(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	quizID := uuid.New()
+	questionID := uuid.New()
+
+	mockSvc.EXPECT().AddQuestion(mock.Anything, mock.Anything).
+		Return(quizzes.Question{
+			ID:            questionID,
+			Type:          quizzes.QuestionTypeTrueFalse,
+			Question:      "Is BFS optimal in unweighted graphs?",
+			CorrectAnswer: true,
+			SortOrder:     2,
+		}, nil)
+
+	body, err := json.Marshal(api.AddQuizQuestionJSONRequestBody{
+		Type:          api.CreateQuizQuestionTypeTrueFalse,
+		Question:      "Is BFS optimal in unweighted graphs?",
+		CorrectAnswer: true,
+	})
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("/quizzes/%s/questions", quizID.String())
+	req := authedRequestMethod(t, http.MethodPost, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusCreated, w.Code)
+
+	var resp api.QuizQuestionResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+
+	assert.Equal(t, api.QuizQuestionResponseType("true-false"), resp.Type)
+	assert.Nil(t, resp.Options, "TF must not emit an options array on the wire")
+	assert.Equal(t, true, resp.CorrectAnswer)
+}

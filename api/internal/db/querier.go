@@ -16,6 +16,13 @@ type Querier interface {
 	// the upsert in the same logical request so the response reflects the
 	// post-mutation state.
 	ComputeGuideVoteScore(ctx context.Context, studyGuideID pgtype.UUID) (int64, error)
+	// Count of all questions on a quiz. Used by AddQuizQuestion (ASK-115)
+	// to enforce the per-quiz 100-question cap inside the same
+	// transaction as the insert, so two concurrent adds at the boundary
+	// can't both squeeze through. Also doubles as the default
+	// sort_order resolution (a new question lands at index = current
+	// count when the caller doesn't supply an explicit value).
+	CountQuizQuestions(ctx context.Context, quizID pgtype.UUID) (int64, error)
 	// Single-row existence probe used by join/leave to disambiguate the
 	// "Course not found" 404 from the "Section not found" 404 the spec
 	// requires (see ASK-132 / ASK-138).
@@ -110,6 +117,12 @@ type Querier interface {
 	// choose 404 (missing quiz / deleted quiz / deleted guide) vs
 	// 403 (not creator) vs proceed.
 	GetQuizForUpdateWithParentStatus(ctx context.Context, id pgtype.UUID) (GetQuizForUpdateWithParentStatusRow, error)
+	// Hydrates a single question row by id. Used by AddQuizQuestion
+	// (ASK-115) to project the freshly-inserted row onto the
+	// QuizQuestionResponse wire shape after the tx commits. Mirrors
+	// the field selection of ListQuizQuestionsByQuiz so the same Go
+	// mapper (mapQuestion) can consume both row types.
+	GetQuizQuestionByID(ctx context.Context, id pgtype.UUID) (GetQuizQuestionByIDRow, error)
 	// Lookup pair for UpsertResource above. Returns the resources row
 	// the viewer owns for this URL; always succeeds because the upsert
 	// runs immediately before this in the same tx (either the INSERT
@@ -335,6 +348,13 @@ type Querier interface {
 	ListOwnedFilesStatusDesc(ctx context.Context, arg ListOwnedFilesStatusDescParams) ([]ListOwnedFilesStatusDescRow, error)
 	ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFilesUpdatedAscParams) ([]ListOwnedFilesUpdatedAscRow, error)
 	ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFilesUpdatedDescParams) ([]ListOwnedFilesUpdatedDescRow, error)
+	// All answer options for one question, ordered by sort_order then
+	// id. Used by AddQuizQuestion (ASK-115) to attach the freshly-
+	// inserted option rows to the question on the response. The
+	// single-question scope keeps the read narrow -- no need to load
+	// every option on the parent quiz when the caller only wants the
+	// new question.
+	ListQuizAnswerOptionsByQuestion(ctx context.Context, questionID pgtype.UUID) ([]QuizAnswerOption, error)
 	// All answer options for every question in a quiz, ordered by
 	// question_id then sort_order then id. The mapper groups by
 	// question_id in Go to attach options to their parent question.
@@ -439,6 +459,14 @@ type Querier interface {
 	// transaction wraps this + SoftDeleteQuizzesForGuide.
 	SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUID) error
 	SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
+	// Bumps quizzes.updated_at = now() without touching any other
+	// column. Called by AddQuizQuestion (ASK-115) so the quiz row's
+	// modified-time reflects the structural change. Kept as a focused
+	// single-column UPDATE rather than reusing the broader UpdateQuiz
+	// query so a future AddQuizQuestion review can spot the intent at
+	// a glance and so a CASE expression with both args nil isn't
+	// relied on as the "no-op write that bumps updated_at" path.
+	TouchQuizUpdatedAt(ctx context.Context, id pgtype.UUID) error
 	// Pre-flight conflict check for AttachResource (ASK-111). Returns
 	// TRUE when ANY resource with this URL is already attached to the
 	// given guide -- regardless of who created the resource row. Lets

@@ -30,6 +30,10 @@ type Repository interface {
 	SoftDeleteQuiz(ctx context.Context, id pgtype.UUID) error
 	GetQuizForUpdateWithParentStatus(ctx context.Context, id pgtype.UUID) (db.GetQuizForUpdateWithParentStatusRow, error)
 	UpdateQuiz(ctx context.Context, arg db.UpdateQuizParams) error
+	CountQuizQuestions(ctx context.Context, quizID pgtype.UUID) (int64, error)
+	TouchQuizUpdatedAt(ctx context.Context, id pgtype.UUID) error
+	GetQuizQuestionByID(ctx context.Context, id pgtype.UUID) (db.GetQuizQuestionByIDRow, error)
+	ListQuizAnswerOptionsByQuestion(ctx context.Context, questionID pgtype.UUID) ([]db.QuizAnswerOption, error)
 
 	// InTx runs fn inside a single Postgres transaction. The
 	// Repository passed to fn is scoped to the tx via
@@ -319,7 +323,7 @@ func (s *Service) CreateQuiz(ctx context.Context, p CreateQuizParams) (QuizDetai
 		quizPgxID = inserted.ID
 
 		for i, q := range p.Questions {
-			if err := s.insertQuestion(ctx, tx, quizPgxID, i, q); err != nil {
+			if _, err := s.insertQuestion(ctx, tx, quizPgxID, i, fmt.Sprintf("questions[%d]", i), q); err != nil {
 				return err
 			}
 		}
@@ -331,19 +335,160 @@ func (s *Service) CreateQuiz(ctx context.Context, p CreateQuizParams) (QuizDetai
 	return s.hydrate(ctx, quizPgxID)
 }
 
+// AddQuestion appends a single question to an existing quiz
+// (ASK-115, creator-only). The validation rules are identical to
+// the per-question rules used by CreateQuiz -- a question that
+// would have been accepted on create is also accepted on add.
+//
+// Order of operations (single transaction):
+//  1. validateQuestion -- per-type well-formedness +
+//     defense-in-depth sort_order >= 0 check.
+//  2. GetQuizForUpdateWithParentStatus -- locked SELECT inside the
+//     tx so a concurrent delete cannot race the auth check + insert.
+//  3. 404 if quiz missing OR quiz soft-deleted OR parent guide
+//     soft-deleted (per spec AC5 + AC6).
+//  4. 403 if creator_id != viewer_id.
+//  5. CountQuizQuestions -- enforce the per-quiz 100-question cap
+//     INSIDE the tx so two concurrent adds at the boundary cannot
+//     both squeeze through (the FOR UPDATE on the quiz row in step
+//     2 serializes the auth check; the count happens inside that
+//     same serialization window).
+//  6. Resolve sort_order: caller-supplied value when present,
+//     otherwise the current count (so the new question lands at
+//     the end of the existing sequence).
+//  7. insertQuestion -- the same helper CreateQuiz uses, so the
+//     per-type branching (MCQ options, TF auto-expansion, freeform
+//     reference_answer) stays in one place.
+//  8. TouchQuizUpdatedAt -- bump quizzes.updated_at = now() so the
+//     quiz row reflects the structural change.
+//
+// After the tx commits, hydrates JUST the new question (not the
+// whole quiz) via GetQuizQuestionByID + ListQuizAnswerOptionsByQuestion
+// so the response is the lightweight QuizQuestionResponse shape
+// the spec requires.
+//
+// Note: existing practice sessions are NOT affected -- the new
+// question is not retro-injected into existing
+// practice_session_questions snapshots (the snapshot rows were
+// frozen at session-start time). Only sessions started after this
+// add will include the new question.
+func (s *Service) AddQuestion(ctx context.Context, p AddQuestionParams) (Question, error) {
+	if err := validateQuestion("", p.Question); err != nil {
+		return Question{}, err
+	}
+
+	quizPgxID := utils.UUID(p.QuizID)
+
+	var newQuestionPgxID pgtype.UUID
+	if err := s.repo.InTx(ctx, func(tx Repository) error {
+		row, err := tx.GetQuizForUpdateWithParentStatus(ctx, quizPgxID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return apperrors.NewNotFound("Quiz not found")
+			}
+			return fmt.Errorf("AddQuestion: lock: %w", err)
+		}
+		if row.DeletedAt.Valid || row.GuideDeletedAt.Valid {
+			return apperrors.NewNotFound("Quiz not found")
+		}
+		creatorID, err := utils.PgxToGoogleUUID(row.CreatorID)
+		if err != nil {
+			return fmt.Errorf("AddQuestion: creator id: %w", err)
+		}
+		if creatorID != p.ViewerID {
+			return apperrors.NewForbidden()
+		}
+
+		count, err := tx.CountQuizQuestions(ctx, quizPgxID)
+		if err != nil {
+			return fmt.Errorf("AddQuestion: count: %w", err)
+		}
+		if count >= int64(MaxQuestionsCount) {
+			return apperrors.NewBadRequest("Validation failed", map[string]string{
+				"questions": fmt.Sprintf("quiz cannot have more than %d questions", MaxQuestionsCount),
+			})
+		}
+
+		// Default sort_order to the current count -- the new question
+		// lands at the end of the existing sequence. The caller's
+		// explicit value (including 0) is honored verbatim by
+		// resolveSortOrder (called inside insertQuestion via the
+		// `idx` arg), so a frontend that wants to interleave can do
+		// so by sending its own value.
+		insertedID, err := s.insertQuestion(ctx, tx, quizPgxID, int(count), "", p.Question)
+		if err != nil {
+			return err
+		}
+		newQuestionPgxID = insertedID
+
+		if err := tx.TouchQuizUpdatedAt(ctx, quizPgxID); err != nil {
+			return fmt.Errorf("AddQuestion: touch: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return Question{}, err
+	}
+
+	return s.hydrateQuestion(ctx, newQuestionPgxID)
+}
+
+// hydrateQuestion loads a single question row + its option rows and
+// projects them onto a domain Question. Used by AddQuestion to build
+// the response after the tx commits. Adapts the GetQuizQuestionByIDRow
+// shape onto the ListQuizQuestionsByQuizRow shape expected by the
+// shared mapQuestion mapper -- the two row types are field-identical
+// so the conversion is mechanical, and reusing mapQuestion keeps the
+// per-type CorrectAnswer resolution rules in one place.
+func (s *Service) hydrateQuestion(ctx context.Context, questionPgxID pgtype.UUID) (Question, error) {
+	qr, err := s.repo.GetQuizQuestionByID(ctx, questionPgxID)
+	if err != nil {
+		return Question{}, fmt.Errorf("hydrateQuestion: row: %w", err)
+	}
+	options, err := s.repo.ListQuizAnswerOptionsByQuestion(ctx, questionPgxID)
+	if err != nil {
+		return Question{}, fmt.Errorf("hydrateQuestion: options: %w", err)
+	}
+	// Direct conversion: the two row types are field-identical
+	// (sqlc emits separate types per query but the SELECT lists
+	// match), so a struct conversion is sound and lets the shared
+	// mapQuestion mapper consume the row without bespoke logic.
+	q, err := mapQuestion(db.ListQuizQuestionsByQuizRow(qr), options)
+	if err != nil {
+		return Question{}, fmt.Errorf("hydrateQuestion: map: %w", err)
+	}
+	return q, nil
+}
+
 // insertQuestion writes a single question row + (for MCQ/TF) its
 // answer option rows. Pulled out of CreateQuiz's tx body to keep
 // the transaction loop scannable and the per-type branching in one
-// place. The caller has already validated `q` -- this function is
-// allowed to assume well-formed input (CorrectAnswer of the right
-// type, options counts within bounds).
-func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID pgtype.UUID, idx int, q CreateQuizQuestionInput) error {
+// place. Returns the freshly-inserted question's id so a caller
+// (AddQuestion) can hydrate the response after commit; CreateQuiz
+// discards the id because it re-loads the whole quiz via hydrate.
+//
+// `idx` is the per-question array position used for sort_order
+// fallback (resolveSortOrder) and for log-context wraps so a tx-
+// level failure points back at the offending question. `prefix` is
+// the dotted-path key prefix prepended to defense-in-depth 400
+// detail keys -- `questions[i]` for CreateQuiz so per-question
+// errors surface as e.g. `questions[i].correct_answer`, and `""`
+// for AddQuestion (the question is the whole body) so keys
+// collapse to bare names like `correct_answer`. Without the
+// prefix split a Go caller that bypassed validateQuestion (the
+// only practical route into these defense-in-depth branches)
+// would see `questions[0].correct_answer` errors out of an
+// endpoint that takes a single question.
+//
+// The caller has already validated `q` -- this function is allowed
+// to assume well-formed input (CorrectAnswer of the right type,
+// options counts within bounds).
+func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID pgtype.UUID, idx int, prefix string, q CreateQuizQuestionInput) (pgtype.UUID, error) {
 	dbType, ok := questionTypeToDB(q.Type)
 	if !ok {
 		// Defense in depth -- validateCreateParams should have caught
 		// this. Still surface a typed 400 rather than crashing the SQL.
-		return apperrors.NewBadRequest("Invalid request body", map[string]string{
-			fmt.Sprintf("questions[%d].type", idx): "must be multiple-choice, true-false, or freeform",
+		return pgtype.UUID{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
+			fieldKey(prefix, "type"): "must be multiple-choice, true-false, or freeform",
 		})
 	}
 
@@ -365,8 +510,8 @@ func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID p
 		// reference_answer.
 		ans, ok := q.CorrectAnswer.(string)
 		if !ok {
-			return apperrors.NewBadRequest("Invalid request body", map[string]string{
-				fmt.Sprintf("questions[%d].correct_answer", idx): "is required for freeform questions",
+			return pgtype.UUID{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
+				fieldKey(prefix, "correct_answer"): "is required for freeform questions",
 			})
 		}
 		args.ReferenceAnswer = pgtype.Text{String: strings.TrimSpace(ans), Valid: true}
@@ -374,7 +519,7 @@ func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID p
 
 	questionID, err := tx.InsertQuizQuestion(ctx, args)
 	if err != nil {
-		return fmt.Errorf("CreateQuiz: insert question[%d]: %w", idx, err)
+		return pgtype.UUID{}, fmt.Errorf("insertQuestion: insert question[%d]: %w", idx, err)
 	}
 
 	switch q.Type {
@@ -386,7 +531,7 @@ func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID p
 				IsCorrect:  opt.IsCorrect,
 				SortOrder:  int32(j),
 			}); err != nil {
-				return fmt.Errorf("CreateQuiz: insert option[%d][%d]: %w", idx, j, err)
+				return pgtype.UUID{}, fmt.Errorf("insertQuestion: insert option[%d][%d]: %w", idx, j, err)
 			}
 		}
 	case QuestionTypeTrueFalse:
@@ -397,8 +542,8 @@ func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID p
 		// persisting a wrong canonical answer.
 		correct, ok := q.CorrectAnswer.(bool)
 		if !ok {
-			return apperrors.NewBadRequest("Invalid request body", map[string]string{
-				fmt.Sprintf("questions[%d].correct_answer", idx): "must be boolean for true-false questions",
+			return pgtype.UUID{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
+				fieldKey(prefix, "correct_answer"): "must be boolean for true-false questions",
 			})
 		}
 		// Order matters for the response: True first (sort_order 0),
@@ -419,7 +564,7 @@ func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID p
 				IsCorrect:  opt.isCorrect,
 				SortOrder:  int32(j),
 			}); err != nil {
-				return fmt.Errorf("CreateQuiz: insert tf option[%d][%d]: %w", idx, j, err)
+				return pgtype.UUID{}, fmt.Errorf("insertQuestion: insert tf option[%d][%d]: %w", idx, j, err)
 			}
 		}
 	case QuestionTypeFreeform:
@@ -427,7 +572,7 @@ func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID p
 		// reference answer was written to
 		// quiz_questions.reference_answer above.
 	}
-	return nil
+	return questionID, nil
 }
 
 // hydrate loads a quiz + its questions + their answer options and
@@ -507,47 +652,62 @@ func validateCreateParams(p CreateQuizParams) error {
 		})
 	}
 	for i, q := range p.Questions {
-		if err := validateQuestion(i, q); err != nil {
+		if err := validateQuestion(fmt.Sprintf("questions[%d]", i), q); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// validateQuestion checks one question's well-formedness. Returns
-// 400 with a field key like `questions[i].correct_answer` or
-// `questions[i].options` so the frontend can highlight the right
-// field.
-func validateQuestion(idx int, q CreateQuizQuestionInput) error {
-	prefix := fmt.Sprintf("questions[%d]", idx)
+// fieldKey joins a dotted error-detail path. An empty prefix
+// collapses to just the field name so AddQuestion (where the
+// question is the whole request body) renders bare keys like
+// `correct_answer` rather than `.correct_answer`. CreateQuiz
+// passes a non-empty `questions[i]` prefix so per-question errors
+// surface as `questions[i].correct_answer`.
+func fieldKey(prefix, field string) string {
+	if prefix == "" {
+		return field
+	}
+	return prefix + "." + field
+}
+
+// validateQuestion checks one question's well-formedness. The
+// `prefix` is the dotted-path prefix prepended to each detail key
+// -- empty for AddQuestion (the question IS the whole body,
+// fields surface as e.g. `correct_answer`), `questions[i]` for
+// CreateQuiz (so per-question errors surface as
+// `questions[i].correct_answer` to let the frontend highlight the
+// right row).
+func validateQuestion(prefix string, q CreateQuizQuestionInput) error {
 	if _, ok := questionTypeToDB(q.Type); !ok {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
-			prefix + ".type": "must be multiple-choice, true-false, or freeform",
+			fieldKey(prefix, "type"): "must be multiple-choice, true-false, or freeform",
 		})
 	}
 	if strings.TrimSpace(q.Question) == "" {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
-			prefix + ".question": "must not be empty",
+			fieldKey(prefix, "question"): "must not be empty",
 		})
 	}
 	if len(q.Question) > MaxQuestionLength {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
-			prefix + ".question": fmt.Sprintf("must be %d characters or fewer", MaxQuestionLength),
+			fieldKey(prefix, "question"): fmt.Sprintf("must be %d characters or fewer", MaxQuestionLength),
 		})
 	}
 	if q.Hint != nil && len(*q.Hint) > MaxHintLength {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
-			prefix + ".hint": fmt.Sprintf("must be %d characters or fewer", MaxHintLength),
+			fieldKey(prefix, "hint"): fmt.Sprintf("must be %d characters or fewer", MaxHintLength),
 		})
 	}
 	if q.FeedbackCorrect != nil && len(*q.FeedbackCorrect) > MaxFeedbackLength {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
-			prefix + ".feedback_correct": fmt.Sprintf("must be %d characters or fewer", MaxFeedbackLength),
+			fieldKey(prefix, "feedback_correct"): fmt.Sprintf("must be %d characters or fewer", MaxFeedbackLength),
 		})
 	}
 	if q.FeedbackIncorrect != nil && len(*q.FeedbackIncorrect) > MaxFeedbackLength {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
-			prefix + ".feedback_incorrect": fmt.Sprintf("must be %d characters or fewer", MaxFeedbackLength),
+			fieldKey(prefix, "feedback_incorrect"): fmt.Sprintf("must be %d characters or fewer", MaxFeedbackLength),
 		})
 	}
 	// Service-layer defense in depth on sort_order >= 0 (copilot PR
@@ -558,7 +718,7 @@ func validateQuestion(idx int, q CreateQuizQuestionInput) error {
 	// persist a negative sort_order to the DB.
 	if q.SortOrder != nil && *q.SortOrder < 0 {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
-			prefix + ".sort_order": "must be 0 or greater",
+			fieldKey(prefix, "sort_order"): "must be 0 or greater",
 		})
 	}
 
@@ -576,20 +736,21 @@ func validateQuestion(idx int, q CreateQuizQuestionInput) error {
 func validateMCQ(prefix string, q CreateQuizQuestionInput) error {
 	if len(q.Options) < MinMCQOptions || len(q.Options) > MaxMCQOptions {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
-			prefix + ".options": fmt.Sprintf("must have %d to %d options", MinMCQOptions, MaxMCQOptions),
+			fieldKey(prefix, "options"): fmt.Sprintf("must have %d to %d options", MinMCQOptions, MaxMCQOptions),
 		})
 	}
 	correctCount := 0
 	for j, opt := range q.Options {
 		trimmedText := strings.TrimSpace(opt.Text)
+		optKey := fieldKey(prefix, fmt.Sprintf("options[%d].text", j))
 		if trimmedText == "" {
 			return apperrors.NewBadRequest("Invalid request body", map[string]string{
-				fmt.Sprintf("%s.options[%d].text", prefix, j): "must not be empty",
+				optKey: "must not be empty",
 			})
 		}
 		if len(trimmedText) > MaxOptionTextLength {
 			return apperrors.NewBadRequest("Invalid request body", map[string]string{
-				fmt.Sprintf("%s.options[%d].text", prefix, j): fmt.Sprintf("must be %d characters or fewer", MaxOptionTextLength),
+				optKey: fmt.Sprintf("must be %d characters or fewer", MaxOptionTextLength),
 			})
 		}
 		if opt.IsCorrect {
@@ -598,7 +759,7 @@ func validateMCQ(prefix string, q CreateQuizQuestionInput) error {
 	}
 	if correctCount != 1 {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
-			prefix + ".options": "exactly one option must be correct",
+			fieldKey(prefix, "options"): "exactly one option must be correct",
 		})
 	}
 	return nil
@@ -607,7 +768,7 @@ func validateMCQ(prefix string, q CreateQuizQuestionInput) error {
 func validateTrueFalse(prefix string, q CreateQuizQuestionInput) error {
 	if _, ok := q.CorrectAnswer.(bool); !ok {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
-			prefix + ".correct_answer": "must be boolean for true-false questions",
+			fieldKey(prefix, "correct_answer"): "must be boolean for true-false questions",
 		})
 	}
 	return nil
@@ -617,20 +778,20 @@ func validateFreeform(prefix string, q CreateQuizQuestionInput) error {
 	ans, ok := q.CorrectAnswer.(string)
 	if !ok {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
-			prefix + ".correct_answer": "is required for freeform questions",
+			fieldKey(prefix, "correct_answer"): "is required for freeform questions",
 		})
 	}
 	trimmed := strings.TrimSpace(ans)
 	if trimmed == "" {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
-			prefix + ".correct_answer": "is required for freeform questions",
+			fieldKey(prefix, "correct_answer"): "is required for freeform questions",
 		})
 	}
 	// Length check on TRIMMED value -- the service trims before
 	// persisting to reference_answer (gemini PR feedback).
 	if len(trimmed) > MaxFreeformAnswerLength {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
-			prefix + ".correct_answer": fmt.Sprintf("must be %d characters or fewer", MaxFreeformAnswerLength),
+			fieldKey(prefix, "correct_answer"): fmt.Sprintf("must be %d characters or fewer", MaxFreeformAnswerLength),
 		})
 	}
 	return nil

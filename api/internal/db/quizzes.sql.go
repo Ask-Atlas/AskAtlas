@@ -11,6 +11,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countQuizQuestions = `-- name: CountQuizQuestions :one
+SELECT COUNT(*)::bigint AS count
+FROM quiz_questions
+WHERE quiz_id = $1::uuid
+`
+
+// Count of all questions on a quiz. Used by AddQuizQuestion (ASK-115)
+// to enforce the per-quiz 100-question cap inside the same
+// transaction as the insert, so two concurrent adds at the boundary
+// can't both squeeze through. Also doubles as the default
+// sort_order resolution (a new question lands at index = current
+// count when the caller doesn't supply an explicit value).
+func (q *Queries) CountQuizQuestions(ctx context.Context, quizID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countQuizQuestions, quizID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getQuizByIDForUpdate = `-- name: GetQuizByIDForUpdate :one
 SELECT id, creator_id, deleted_at
 FROM quizzes
@@ -126,6 +145,46 @@ func (q *Queries) GetQuizForUpdateWithParentStatus(ctx context.Context, id pgtyp
 		&i.CreatorID,
 		&i.DeletedAt,
 		&i.GuideDeletedAt,
+	)
+	return i, err
+}
+
+const getQuizQuestionByID = `-- name: GetQuizQuestionByID :one
+SELECT
+  id, type, question_text, hint,
+  feedback_correct, feedback_incorrect, reference_answer, sort_order
+FROM quiz_questions
+WHERE id = $1::uuid
+`
+
+type GetQuizQuestionByIDRow struct {
+	ID                pgtype.UUID  `json:"id"`
+	Type              QuestionType `json:"type"`
+	QuestionText      string       `json:"question_text"`
+	Hint              pgtype.Text  `json:"hint"`
+	FeedbackCorrect   pgtype.Text  `json:"feedback_correct"`
+	FeedbackIncorrect pgtype.Text  `json:"feedback_incorrect"`
+	ReferenceAnswer   pgtype.Text  `json:"reference_answer"`
+	SortOrder         int32        `json:"sort_order"`
+}
+
+// Hydrates a single question row by id. Used by AddQuizQuestion
+// (ASK-115) to project the freshly-inserted row onto the
+// QuizQuestionResponse wire shape after the tx commits. Mirrors
+// the field selection of ListQuizQuestionsByQuiz so the same Go
+// mapper (mapQuestion) can consume both row types.
+func (q *Queries) GetQuizQuestionByID(ctx context.Context, id pgtype.UUID) (GetQuizQuestionByIDRow, error) {
+	row := q.db.QueryRow(ctx, getQuizQuestionByID, id)
+	var i GetQuizQuestionByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.Type,
+		&i.QuestionText,
+		&i.Hint,
+		&i.FeedbackCorrect,
+		&i.FeedbackIncorrect,
+		&i.ReferenceAnswer,
+		&i.SortOrder,
 	)
 	return i, err
 }
@@ -289,6 +348,45 @@ func (q *Queries) InsertQuizQuestion(ctx context.Context, arg InsertQuizQuestion
 	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const listQuizAnswerOptionsByQuestion = `-- name: ListQuizAnswerOptionsByQuestion :many
+SELECT id, question_id, text, is_correct, sort_order
+FROM quiz_answer_options
+WHERE question_id = $1::uuid
+ORDER BY sort_order ASC, id ASC
+`
+
+// All answer options for one question, ordered by sort_order then
+// id. Used by AddQuizQuestion (ASK-115) to attach the freshly-
+// inserted option rows to the question on the response. The
+// single-question scope keeps the read narrow -- no need to load
+// every option on the parent quiz when the caller only wants the
+// new question.
+func (q *Queries) ListQuizAnswerOptionsByQuestion(ctx context.Context, questionID pgtype.UUID) ([]QuizAnswerOption, error) {
+	rows, err := q.db.Query(ctx, listQuizAnswerOptionsByQuestion, questionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []QuizAnswerOption
+	for rows.Next() {
+		var i QuizAnswerOption
+		if err := rows.Scan(
+			&i.ID,
+			&i.QuestionID,
+			&i.Text,
+			&i.IsCorrect,
+			&i.SortOrder,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listQuizAnswerOptionsByQuiz = `-- name: ListQuizAnswerOptionsByQuiz :many
@@ -484,6 +582,24 @@ WHERE id = $1::uuid
 // simply becomes invisible to list/detail endpoints").
 func (q *Queries) SoftDeleteQuiz(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, softDeleteQuiz, id)
+	return err
+}
+
+const touchQuizUpdatedAt = `-- name: TouchQuizUpdatedAt :exec
+UPDATE quizzes
+SET updated_at = now()
+WHERE id = $1::uuid
+`
+
+// Bumps quizzes.updated_at = now() without touching any other
+// column. Called by AddQuizQuestion (ASK-115) so the quiz row's
+// modified-time reflects the structural change. Kept as a focused
+// single-column UPDATE rather than reusing the broader UpdateQuiz
+// query so a future AddQuizQuestion review can spot the intent at
+// a glance and so a CASE expression with both args nil isn't
+// relied on as the "no-op write that bumps updated_at" path.
+func (q *Queries) TouchQuizUpdatedAt(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, touchQuizUpdatedAt, id)
 	return err
 }
 
