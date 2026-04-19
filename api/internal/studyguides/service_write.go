@@ -682,14 +682,13 @@ func (s *Service) AttachResource(ctx context.Context, p AttachResourceParams) (R
 			return fmt.Errorf("AttachResource: insert join: %w", err)
 		}
 
-		mapped, err := mapResource(db.ListGuideResourcesRow{
-			ID:          row.ID,
-			Title:       row.Title,
-			Url:         row.Url,
-			Type:        row.Type,
-			Description: row.Description,
-			CreatedAt:   row.CreatedAt,
-		})
+		// gosimple S1016: GetResourceByCreatorURLRow + ListGuideResourcesRow
+		// have identical field shapes, so a direct conversion is allowed
+		// (and the linter prefers it). If sqlc ever generates divergent
+		// fields for either query, this conversion stops compiling --
+		// which is the right failure mode (forces a deliberate
+		// re-projection rather than a silent shape drift).
+		mapped, err := mapResource(db.ListGuideResourcesRow(row))
 		if err != nil {
 			return fmt.Errorf("AttachResource: map: %w", err)
 		}
