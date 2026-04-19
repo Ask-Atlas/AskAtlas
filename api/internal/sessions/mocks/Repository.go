@@ -40,6 +40,72 @@ func (_m *MockRepository) EXPECT() *MockRepository_Expecter {
 	return &MockRepository_Expecter{mock: &_m.Mock}
 }
 
+// CheckQuestionInSessionSnapshot provides a mock function for the type MockRepository
+func (_mock *MockRepository) CheckQuestionInSessionSnapshot(ctx context.Context, arg db.CheckQuestionInSessionSnapshotParams) (bool, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckQuestionInSessionSnapshot")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.CheckQuestionInSessionSnapshotParams) (bool, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.CheckQuestionInSessionSnapshotParams) bool); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.CheckQuestionInSessionSnapshotParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_CheckQuestionInSessionSnapshot_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckQuestionInSessionSnapshot'
+type MockRepository_CheckQuestionInSessionSnapshot_Call struct {
+	*mock.Call
+}
+
+// CheckQuestionInSessionSnapshot is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.CheckQuestionInSessionSnapshotParams
+func (_e *MockRepository_Expecter) CheckQuestionInSessionSnapshot(ctx interface{}, arg interface{}) *MockRepository_CheckQuestionInSessionSnapshot_Call {
+	return &MockRepository_CheckQuestionInSessionSnapshot_Call{Call: _e.mock.On("CheckQuestionInSessionSnapshot", ctx, arg)}
+}
+
+func (_c *MockRepository_CheckQuestionInSessionSnapshot_Call) Run(run func(ctx context.Context, arg db.CheckQuestionInSessionSnapshotParams)) *MockRepository_CheckQuestionInSessionSnapshot_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.CheckQuestionInSessionSnapshotParams
+		if args[1] != nil {
+			arg1 = args[1].(db.CheckQuestionInSessionSnapshotParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_CheckQuestionInSessionSnapshot_Call) Return(b bool, err error) *MockRepository_CheckQuestionInSessionSnapshot_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *MockRepository_CheckQuestionInSessionSnapshot_Call) RunAndReturn(run func(ctx context.Context, arg db.CheckQuestionInSessionSnapshotParams) (bool, error)) *MockRepository_CheckQuestionInSessionSnapshot_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CheckQuizLiveForSession provides a mock function for the type MockRepository
 func (_mock *MockRepository) CheckQuizLiveForSession(ctx context.Context, quizID pgtype.UUID) (bool, error) {
 	ret := _mock.Called(ctx, quizID)
@@ -229,6 +295,204 @@ func (_c *MockRepository_FindIncompleteSession_Call) RunAndReturn(run func(ctx c
 	return _c
 }
 
+// GetCorrectOptionText provides a mock function for the type MockRepository
+func (_mock *MockRepository) GetCorrectOptionText(ctx context.Context, questionID pgtype.UUID) (string, error) {
+	ret := _mock.Called(ctx, questionID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetCorrectOptionText")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) (string, error)); ok {
+		return returnFunc(ctx, questionID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) string); ok {
+		r0 = returnFunc(ctx, questionID)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, pgtype.UUID) error); ok {
+		r1 = returnFunc(ctx, questionID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_GetCorrectOptionText_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetCorrectOptionText'
+type MockRepository_GetCorrectOptionText_Call struct {
+	*mock.Call
+}
+
+// GetCorrectOptionText is a helper method to define mock.On call
+//   - ctx context.Context
+//   - questionID pgtype.UUID
+func (_e *MockRepository_Expecter) GetCorrectOptionText(ctx interface{}, questionID interface{}) *MockRepository_GetCorrectOptionText_Call {
+	return &MockRepository_GetCorrectOptionText_Call{Call: _e.mock.On("GetCorrectOptionText", ctx, questionID)}
+}
+
+func (_c *MockRepository_GetCorrectOptionText_Call) Run(run func(ctx context.Context, questionID pgtype.UUID)) *MockRepository_GetCorrectOptionText_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_GetCorrectOptionText_Call) Return(s string, err error) *MockRepository_GetCorrectOptionText_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *MockRepository_GetCorrectOptionText_Call) RunAndReturn(run func(ctx context.Context, questionID pgtype.UUID) (string, error)) *MockRepository_GetCorrectOptionText_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetQuizQuestionByID provides a mock function for the type MockRepository
+func (_mock *MockRepository) GetQuizQuestionByID(ctx context.Context, id pgtype.UUID) (db.GetQuizQuestionByIDRow, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetQuizQuestionByID")
+	}
+
+	var r0 db.GetQuizQuestionByIDRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) (db.GetQuizQuestionByIDRow, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) db.GetQuizQuestionByIDRow); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(db.GetQuizQuestionByIDRow)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, pgtype.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_GetQuizQuestionByID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetQuizQuestionByID'
+type MockRepository_GetQuizQuestionByID_Call struct {
+	*mock.Call
+}
+
+// GetQuizQuestionByID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id pgtype.UUID
+func (_e *MockRepository_Expecter) GetQuizQuestionByID(ctx interface{}, id interface{}) *MockRepository_GetQuizQuestionByID_Call {
+	return &MockRepository_GetQuizQuestionByID_Call{Call: _e.mock.On("GetQuizQuestionByID", ctx, id)}
+}
+
+func (_c *MockRepository_GetQuizQuestionByID_Call) Run(run func(ctx context.Context, id pgtype.UUID)) *MockRepository_GetQuizQuestionByID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_GetQuizQuestionByID_Call) Return(getQuizQuestionByIDRow db.GetQuizQuestionByIDRow, err error) *MockRepository_GetQuizQuestionByID_Call {
+	_c.Call.Return(getQuizQuestionByIDRow, err)
+	return _c
+}
+
+func (_c *MockRepository_GetQuizQuestionByID_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) (db.GetQuizQuestionByIDRow, error)) *MockRepository_GetQuizQuestionByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetSessionForAnswerSubmission provides a mock function for the type MockRepository
+func (_mock *MockRepository) GetSessionForAnswerSubmission(ctx context.Context, id pgtype.UUID) (db.GetSessionForAnswerSubmissionRow, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSessionForAnswerSubmission")
+	}
+
+	var r0 db.GetSessionForAnswerSubmissionRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) (db.GetSessionForAnswerSubmissionRow, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) db.GetSessionForAnswerSubmissionRow); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(db.GetSessionForAnswerSubmissionRow)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, pgtype.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_GetSessionForAnswerSubmission_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSessionForAnswerSubmission'
+type MockRepository_GetSessionForAnswerSubmission_Call struct {
+	*mock.Call
+}
+
+// GetSessionForAnswerSubmission is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id pgtype.UUID
+func (_e *MockRepository_Expecter) GetSessionForAnswerSubmission(ctx interface{}, id interface{}) *MockRepository_GetSessionForAnswerSubmission_Call {
+	return &MockRepository_GetSessionForAnswerSubmission_Call{Call: _e.mock.On("GetSessionForAnswerSubmission", ctx, id)}
+}
+
+func (_c *MockRepository_GetSessionForAnswerSubmission_Call) Run(run func(ctx context.Context, id pgtype.UUID)) *MockRepository_GetSessionForAnswerSubmission_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_GetSessionForAnswerSubmission_Call) Return(getSessionForAnswerSubmissionRow db.GetSessionForAnswerSubmissionRow, err error) *MockRepository_GetSessionForAnswerSubmission_Call {
+	_c.Call.Return(getSessionForAnswerSubmissionRow, err)
+	return _c
+}
+
+func (_c *MockRepository_GetSessionForAnswerSubmission_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) (db.GetSessionForAnswerSubmissionRow, error)) *MockRepository_GetSessionForAnswerSubmission_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // InTx provides a mock function for the type MockRepository
 func (_mock *MockRepository) InTx(ctx context.Context, fn func(sessions.Repository) error) error {
 	ret := _mock.Called(ctx, fn)
@@ -282,6 +546,129 @@ func (_c *MockRepository_InTx_Call) Return(err error) *MockRepository_InTx_Call 
 }
 
 func (_c *MockRepository_InTx_Call) RunAndReturn(run func(ctx context.Context, fn func(sessions.Repository) error) error) *MockRepository_InTx_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// IncrementSessionCorrectAnswers provides a mock function for the type MockRepository
+func (_mock *MockRepository) IncrementSessionCorrectAnswers(ctx context.Context, id pgtype.UUID) error {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IncrementSessionCorrectAnswers")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) error); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_IncrementSessionCorrectAnswers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IncrementSessionCorrectAnswers'
+type MockRepository_IncrementSessionCorrectAnswers_Call struct {
+	*mock.Call
+}
+
+// IncrementSessionCorrectAnswers is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id pgtype.UUID
+func (_e *MockRepository_Expecter) IncrementSessionCorrectAnswers(ctx interface{}, id interface{}) *MockRepository_IncrementSessionCorrectAnswers_Call {
+	return &MockRepository_IncrementSessionCorrectAnswers_Call{Call: _e.mock.On("IncrementSessionCorrectAnswers", ctx, id)}
+}
+
+func (_c *MockRepository_IncrementSessionCorrectAnswers_Call) Run(run func(ctx context.Context, id pgtype.UUID)) *MockRepository_IncrementSessionCorrectAnswers_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_IncrementSessionCorrectAnswers_Call) Return(err error) *MockRepository_IncrementSessionCorrectAnswers_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_IncrementSessionCorrectAnswers_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) error) *MockRepository_IncrementSessionCorrectAnswers_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// InsertPracticeAnswer provides a mock function for the type MockRepository
+func (_mock *MockRepository) InsertPracticeAnswer(ctx context.Context, arg db.InsertPracticeAnswerParams) (db.InsertPracticeAnswerRow, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InsertPracticeAnswer")
+	}
+
+	var r0 db.InsertPracticeAnswerRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.InsertPracticeAnswerParams) (db.InsertPracticeAnswerRow, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.InsertPracticeAnswerParams) db.InsertPracticeAnswerRow); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(db.InsertPracticeAnswerRow)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.InsertPracticeAnswerParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_InsertPracticeAnswer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InsertPracticeAnswer'
+type MockRepository_InsertPracticeAnswer_Call struct {
+	*mock.Call
+}
+
+// InsertPracticeAnswer is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.InsertPracticeAnswerParams
+func (_e *MockRepository_Expecter) InsertPracticeAnswer(ctx interface{}, arg interface{}) *MockRepository_InsertPracticeAnswer_Call {
+	return &MockRepository_InsertPracticeAnswer_Call{Call: _e.mock.On("InsertPracticeAnswer", ctx, arg)}
+}
+
+func (_c *MockRepository_InsertPracticeAnswer_Call) Run(run func(ctx context.Context, arg db.InsertPracticeAnswerParams)) *MockRepository_InsertPracticeAnswer_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.InsertPracticeAnswerParams
+		if args[1] != nil {
+			arg1 = args[1].(db.InsertPracticeAnswerParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_InsertPracticeAnswer_Call) Return(insertPracticeAnswerRow db.InsertPracticeAnswerRow, err error) *MockRepository_InsertPracticeAnswer_Call {
+	_c.Call.Return(insertPracticeAnswerRow, err)
+	return _c
+}
+
+func (_c *MockRepository_InsertPracticeAnswer_Call) RunAndReturn(run func(ctx context.Context, arg db.InsertPracticeAnswerParams) (db.InsertPracticeAnswerRow, error)) *MockRepository_InsertPracticeAnswer_Call {
 	_c.Call.Return(run)
 	return _c
 }

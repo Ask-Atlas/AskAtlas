@@ -59,6 +59,14 @@ func NewForbidden() *AppError {
 	return &AppError{Code: http.StatusForbidden, Status: "Forbidden", Message: "You do not have permission"}
 }
 
+// NewConflict creates an AppError with an HTTP 409 Conflict status.
+// First introduced for ASK-137 (SubmitAnswer on a completed
+// session); reusable for any resource-state conflict (e.g. trying
+// to vote twice, recommend the same guide twice).
+func NewConflict(message string) *AppError {
+	return &AppError{Code: http.StatusConflict, Status: "Conflict", Message: message}
+}
+
 // NewInternalError creates an AppError with an HTTP 500 Internal Server Error status.
 func NewInternalError() *AppError {
 	return &AppError{Code: http.StatusInternalServerError, Status: "Internal Server Error", Message: "Something went wrong"}

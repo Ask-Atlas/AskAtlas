@@ -1160,6 +1160,83 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /sessions/{session_id}/answers:
+    post:
+      operationId: SubmitPracticeAnswer
+      summary: Submit an answer for one question in a practice session
+      description: |
+        Records the user's answer to a single question. The backend
+        determines correctness server-side -- the client does NOT
+        send `is_correct`. Per-type validation:
+
+          * `multiple-choice` -- exact string match between
+            `user_answer` and the text of the option whose
+            `is_correct` flag is true. `verified: true`.
+          * `true-false` -- `user_answer` MUST be the lowercase
+            string `"true"` or `"false"`. The backend parses it
+            and compares against the canonical answer derived
+            from the "True" option's `is_correct` flag.
+            `verified: true`.
+          * `freeform` -- case-insensitive trimmed string compare
+            against `quiz_questions.reference_answer`. The
+            response carries `verified: false` because string-match
+            is not semantic validation.
+
+        On a correct answer, the parent session's
+        `correct_answers` counter is incremented by 1 in the
+        same transaction as the insert.
+
+        Authorization: the session must belong to the
+        authenticated user (403 otherwise). Sessions that have
+        already been completed reject submissions with 409 (the
+        SELECT FOR UPDATE on the session row serializes against
+        a concurrent complete-session call).
+
+        Duplicate submission protection: the
+        `uq_practice_answers_session_question` unique constraint
+        catches the case where a question is answered twice in
+        the same session. The service surfaces the unique
+        violation as a typed 400 with details
+        `{"question_id": "already answered"}`.
+
+        No auto-completion: even when this answer is the last
+        unanswered question in the snapshot, the session stays
+        in-progress until the client explicitly calls
+        `POST /api/sessions/{session_id}/complete` (ASK-140,
+        future).
+      parameters:
+        - name: session_id
+          in: path
+          description: The unique UUID of the practice session
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitAnswerRequest'
+      responses:
+        '201':
+          description: Answer recorded with backend-determined correctness.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeAnswerResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /study-guides/{study_guide_id}/recommendations:
     post:
       operationId: RecommendStudyGuide
@@ -2909,6 +2986,40 @@ components:
           type: string
           nullable: true
           maxLength: 2000
+    SubmitAnswerRequest:
+      type: object
+      description: |
+        Request body for POST /api/sessions/{session_id}/answers
+        (ASK-137). The client supplies only the question being
+        answered and the raw user input -- the backend is the sole
+        source of truth for `is_correct` and `verified` on the
+        response. Any extra fields a client sends (including
+        attempts to forge `is_correct` or `verified`) are silently
+        dropped by the Go JSON decoder because the
+        SubmitAnswerRequest struct has no fields for them; the
+        scoring path inside the service ignores client input
+        entirely on those two fields, so a forged value cannot
+        flow into the persisted row.
+
+        Per-type expectations on `user_answer`:
+          * `multiple-choice` -- the exact text of the chosen
+            option (e.g. `"Sorted ascending"`). Comparison is
+            byte-exact against the option's stored text.
+          * `true-false` -- the lowercase string `"true"` or
+            `"false"`. Anything else is a 400.
+          * `freeform` -- the user's free-text response. Compared
+            case-insensitively against the reference answer
+            after trimming whitespace.
+      properties:
+        question_id:
+          type: string
+          format: uuid
+        user_answer:
+          type: string
+          minLength: 1
+      required:
+        - question_id
+        - user_answer
     PracticeAnswerResponse:
       type: object
       description: |

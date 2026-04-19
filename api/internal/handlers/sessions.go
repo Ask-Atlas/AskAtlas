@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 
@@ -17,6 +18,7 @@ import (
 // consumer, and mocked via mockery for handler tests.
 type SessionService interface {
 	StartSession(ctx context.Context, params sessions.StartSessionParams) (sessions.StartSessionResult, error)
+	SubmitAnswer(ctx context.Context, params sessions.SubmitAnswerParams) (sessions.AnswerSummary, error)
 }
 
 // SessionsHandler manages incoming HTTP requests for the practice-
@@ -67,6 +69,47 @@ func (h *SessionsHandler) StartPracticeSession(w http.ResponseWriter, r *http.Re
 		status = http.StatusCreated
 	}
 	respondJSON(w, status, mapPracticeSessionResponse(result.Session))
+}
+
+// SubmitPracticeAnswer handles POST /sessions/{session_id}/answers
+// (ASK-137). The backend determines is_correct + verified
+// server-side -- the client never sends them. Per-type validation,
+// ownership/completion checks, and the insert + counter-bump
+// transaction all live in service.SubmitAnswer; the handler is a
+// thin decode -> dispatch -> render pass.
+//
+// 201 on success carries the persisted PracticeAnswerResponse so
+// the practice player can update its local state without a
+// follow-up GET.
+func (h *SessionsHandler) SubmitPracticeAnswer(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	var body api.SubmitPracticeAnswerJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", nil))
+		return
+	}
+
+	answer, err := h.service.SubmitAnswer(r.Context(), sessions.SubmitAnswerParams{
+		SessionID:  uuid.UUID(sessionId),
+		UserID:     viewerID,
+		QuestionID: uuid.UUID(body.QuestionId),
+		UserAnswer: body.UserAnswer,
+	})
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("SubmitPracticeAnswer failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, mapPracticeAnswerResponse(answer))
 }
 
 // mapPracticeSessionResponse projects a domain SessionDetail onto

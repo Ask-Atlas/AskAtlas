@@ -80,3 +80,27 @@ func (r *sqlcRepository) SnapshotQuizQuestionsAndUpdateCount(ctx context.Context
 func (r *sqlcRepository) ListSessionAnswers(ctx context.Context, sessionID pgtype.UUID) ([]db.ListSessionAnswersRow, error) {
 	return r.queries.ListSessionAnswers(ctx, sessionID)
 }
+
+func (r *sqlcRepository) GetSessionForAnswerSubmission(ctx context.Context, id pgtype.UUID) (db.GetSessionForAnswerSubmissionRow, error) {
+	return r.queries.GetSessionForAnswerSubmission(ctx, id)
+}
+
+func (r *sqlcRepository) CheckQuestionInSessionSnapshot(ctx context.Context, arg db.CheckQuestionInSessionSnapshotParams) (bool, error) {
+	return r.queries.CheckQuestionInSessionSnapshot(ctx, arg)
+}
+
+func (r *sqlcRepository) GetQuizQuestionByID(ctx context.Context, id pgtype.UUID) (db.GetQuizQuestionByIDRow, error) {
+	return r.queries.GetQuizQuestionByID(ctx, id)
+}
+
+func (r *sqlcRepository) GetCorrectOptionText(ctx context.Context, questionID pgtype.UUID) (string, error) {
+	return r.queries.GetCorrectOptionText(ctx, questionID)
+}
+
+func (r *sqlcRepository) InsertPracticeAnswer(ctx context.Context, arg db.InsertPracticeAnswerParams) (db.InsertPracticeAnswerRow, error) {
+	return r.queries.InsertPracticeAnswer(ctx, arg)
+}
+
+func (r *sqlcRepository) IncrementSessionCorrectAnswers(ctx context.Context, id pgtype.UUID) error {
+	return r.queries.IncrementSessionCorrectAnswers(ctx, id)
+}
