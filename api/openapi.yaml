@@ -856,6 +856,59 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
   /quizzes/{quiz_id}:
+    get:
+      operationId: GetQuiz
+      summary: Get a quiz with all questions and correct answers
+      description: |
+        Returns the full quiz payload — title, description, creator
+        (privacy floor: id + first_name + last_name only), and every
+        question with its options + per-type `correct_answer`. This is
+        the primary endpoint the practice player calls to render a
+        quiz.
+
+        Correct answers are intentionally included on the wire --
+        AskAtlas is a study aid, not a proctored exam. Hiding answers
+        for protected questions (the `is_protected` column) is out of
+        scope for the MVP and tracked separately.
+
+        Response shape per question type:
+          * `multiple-choice` -- `options` is a string array of option
+            text in `sort_order` ascending; `correct_answer` is the
+            text of the option whose `is_correct` flag is true.
+          * `true-false` -- `options` is omitted from the wire;
+            `correct_answer` is a boolean (resolved from the canonical
+            "True" option's `is_correct` flag).
+          * `freeform` -- `options` is omitted; `correct_answer` is
+            the `quiz_questions.reference_answer` string.
+
+        Authorization: any authenticated user can fetch any quiz that
+        is live AND whose parent study guide is live. There is no
+        per-viewer access control beyond authentication.
+
+        404 covers BOTH the quiz being missing/soft-deleted AND the
+        parent study guide being soft-deleted (matches the rest of
+        the quizzes surface).
+      parameters:
+        - name: quiz_id
+          in: path
+          description: The unique UUID of the quiz to fetch
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The full quiz payload with all questions and resolved correct answers.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     patch:
       operationId: UpdateQuiz
       summary: Update a quiz's metadata (title and/or description)

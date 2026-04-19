@@ -989,3 +989,171 @@ func TestQuizzesHandler_AddQuestion_TF_Success(t *testing.T) {
 	assert.Nil(t, resp.Options, "TF must not emit an options array on the wire")
 	assert.Equal(t, true, resp.CorrectAnswer)
 }
+
+// ---- GetQuiz (ASK-142) ----
+
+func TestQuizzesHandler_GetQuiz_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	url := fmt.Sprintf("/quizzes/%s", uuid.NewString())
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestQuizzesHandler_GetQuiz_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().GetQuiz(mock.Anything, mock.Anything).
+		Return(quizzes.QuizDetail{}, apperrors.NewNotFound("Quiz not found"))
+
+	url := fmt.Sprintf("/quizzes/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestQuizzesHandler_GetQuiz_ServiceError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().GetQuiz(mock.Anything, mock.Anything).
+		Return(quizzes.QuizDetail{}, errors.New("connection refused"))
+
+	url := fmt.Sprintf("/quizzes/%s", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// TestQuizzesHandler_GetQuiz_InvalidUUID_400 verifies the oapi-
+// codegen path-param validator rejects a malformed UUID before the
+// handler is ever invoked. The wrapper returns 400 itself; the
+// service mock must NOT be called.
+func TestQuizzesHandler_GetQuiz_InvalidUUID_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	req := authedRequestMethod(t, http.MethodGet, "/quizzes/not-a-uuid", nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestQuizzesHandler_GetQuiz_Success exercises the full happy path:
+// the handler reads the quiz_id path param, calls the service, and
+// renders the QuizDetailResponse wire shape with options for MCQ,
+// boolean correct_answer for TF, and string correct_answer for
+// freeform -- the same projection used by CreateQuiz/UpdateQuiz so
+// the practice player can render any of the three with one client
+// mapper.
+func TestQuizzesHandler_GetQuiz_Success(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	quizID := uuid.New()
+	studyGuideID := uuid.New()
+	creatorID := uuid.New()
+	mcqQID := uuid.New()
+	tfQID := uuid.New()
+	ffQID := uuid.New()
+	now := time.Date(2026, 4, 19, 10, 0, 0, 0, time.UTC)
+
+	mockSvc.EXPECT().GetQuiz(mock.Anything, mock.MatchedBy(func(p quizzes.GetQuizParams) bool {
+		return p.QuizID == quizID
+	})).Return(quizzes.QuizDetail{
+		ID:           quizID,
+		StudyGuideID: studyGuideID,
+		Title:        "Tree Traversal Quiz",
+		Description:  ptrStrQ("Test your knowledge."),
+		Creator: quizzes.Creator{
+			ID:        creatorID,
+			FirstName: "Nathaniel",
+			LastName:  "Gaines",
+		},
+		Questions: []quizzes.Question{
+			{
+				ID:            mcqQID,
+				Type:          quizzes.QuestionTypeMultipleChoice,
+				Question:      "What is the output of an in-order traversal of a BST?",
+				CorrectAnswer: "Sorted ascending",
+				Options: []quizzes.MCQOption{
+					{ID: uuid.New(), Text: "Random order", IsCorrect: false, SortOrder: 0},
+					{ID: uuid.New(), Text: "Sorted ascending", IsCorrect: true, SortOrder: 1},
+					{ID: uuid.New(), Text: "Sorted descending", IsCorrect: false, SortOrder: 2},
+					{ID: uuid.New(), Text: "Level order", IsCorrect: false, SortOrder: 3},
+				},
+				SortOrder: 0,
+			},
+			{
+				ID:            tfQID,
+				Type:          quizzes.QuestionTypeTrueFalse,
+				Question:      "A complete binary tree is always a full binary tree.",
+				CorrectAnswer: false,
+				SortOrder:     1,
+			},
+			{
+				ID:            ffQID,
+				Type:          quizzes.QuestionTypeFreeform,
+				Question:      "What is the time complexity of searching in a balanced BST?",
+				CorrectAnswer: "O(log n)",
+				SortOrder:     2,
+			},
+		},
+		CreatedAt: now,
+		UpdatedAt: now,
+	}, nil)
+
+	url := fmt.Sprintf("/quizzes/%s", quizID.String())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var resp api.QuizDetailResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+
+	assert.Equal(t, quizID, uuid.UUID(resp.Id))
+	assert.Equal(t, studyGuideID, uuid.UUID(resp.StudyGuideId))
+	assert.Equal(t, "Tree Traversal Quiz", resp.Title)
+	require.NotNil(t, resp.Description)
+	assert.Equal(t, "Test your knowledge.", *resp.Description)
+	assert.Equal(t, creatorID, uuid.UUID(resp.Creator.Id))
+	require.Len(t, resp.Questions, 3)
+
+	mcq := resp.Questions[0]
+	assert.Equal(t, api.QuizQuestionResponseType("multiple-choice"), mcq.Type)
+	require.NotNil(t, mcq.Options)
+	assert.Equal(t, []string{"Random order", "Sorted ascending", "Sorted descending", "Level order"}, *mcq.Options)
+	assert.Equal(t, "Sorted ascending", mcq.CorrectAnswer)
+
+	tf := resp.Questions[1]
+	assert.Equal(t, api.QuizQuestionResponseType("true-false"), tf.Type)
+	assert.Nil(t, tf.Options, "TF must not emit an options array on the wire")
+	assert.Equal(t, false, tf.CorrectAnswer)
+
+	ff := resp.Questions[2]
+	assert.Equal(t, api.QuizQuestionResponseType("freeform"), ff.Type)
+	assert.Nil(t, ff.Options)
+	assert.Equal(t, "O(log n)", ff.CorrectAnswer)
+}
