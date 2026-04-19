@@ -165,6 +165,13 @@ func EncodeSessionsCursor(c SessionsListCursor) (string, error) {
 // SessionsListCursor. Errors here become HTTP 400 with the
 // spec-mandated detail key {"cursor": "invalid cursor value"} --
 // see the handler's validation pass.
+//
+// Validates that BOTH StartedAt and ID are populated. A cursor
+// with a missing field would silently pass through and apply a
+// no-op `(zero_time, nil_uuid) < (started_at, id)` predicate to
+// the query (always true for any real row), effectively ignoring
+// pagination -- so we reject it here as a 400 instead. coderabbit
+// PR #158 feedback.
 func DecodeSessionsCursor(s string) (SessionsListCursor, error) {
 	b, err := base64.URLEncoding.DecodeString(s)
 	if err != nil {
@@ -173,6 +180,9 @@ func DecodeSessionsCursor(s string) (SessionsListCursor, error) {
 	var c SessionsListCursor
 	if err := json.Unmarshal(b, &c); err != nil {
 		return SessionsListCursor{}, fmt.Errorf("invalid cursor payload: %w", err)
+	}
+	if c.StartedAt.IsZero() || c.ID == (uuid.UUID{}) {
+		return SessionsListCursor{}, fmt.Errorf("invalid cursor payload: started_at and id are both required")
 	}
 	return c, nil
 }

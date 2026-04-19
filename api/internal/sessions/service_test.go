@@ -1690,12 +1690,24 @@ func TestListSessions_HasMore_TrimsAndEncodesCursor(t *testing.T) {
 	// Build 4 rows; limit=3 means service asked for 4 (limit+1).
 	// All 4 come back -> trim to 3, encode cursor at row[2] (the
 	// LAST RETAINED row), drop row[3].
+	//
+	// Rows[1] and rows[2] share the same started_at on purpose:
+	// the (started_at DESC, id DESC) tiebreaker must use id for
+	// the cursor encoding, so an id-DESC regression would still
+	// pass an all-distinct-timestamp fixture but fail this one.
+	// coderabbit PR #158 nitpick.
 	ids := []uuid.UUID{uuid.New(), uuid.New(), uuid.New(), uuid.New()}
 	rows := make([]db.ListUserSessionsForQuizRow, 4)
+	tieTime := fixtureTime.Add(-1 * time.Hour)
+	stamps := []time.Time{
+		fixtureTime,                     // row 0 -- newest
+		tieTime,                         // row 1 -- tie
+		tieTime,                         // row 2 -- tie (last retained)
+		fixtureTime.Add(-3 * time.Hour), // row 3 -- trimmed
+	}
 	for i := range rows {
-		t0 := fixtureTime.Add(-time.Duration(i) * time.Hour)
-		c := t0.Add(10 * time.Minute)
-		rows[i] = listRow(ids[i], t0, &c, 10, int32(i*3))
+		c := stamps[i].Add(10 * time.Minute)
+		rows[i] = listRow(ids[i], stamps[i], &c, 10, int32(i*3))
 	}
 	repo.EXPECT().ListUserSessionsForQuiz(mock.Anything,
 		mock.MatchedBy(func(arg db.ListUserSessionsForQuizParams) bool {

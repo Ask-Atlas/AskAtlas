@@ -281,18 +281,25 @@ RETURNING completed_at;
 --     started_at + id of the LAST row from the previous page.
 --     Both nullable args MUST be set together; the service
 --     decodes them as a pair from the opaque base64 cursor and
---     never sends one without the other.
+--     never sends one without the other. The query enforces
+--     the pair invariant defensively in SQL (see the WHERE
+--     clause below) so a half-set cursor surfaces as a clear
+--     error rather than a mysteriously empty page (Postgres
+--     tuple comparison against NULL evaluates to NULL, which
+--     filters every row out). copilot PR #158 feedback.
 --
 -- Pagination: the service passes page_limit = caller_limit + 1
 -- so it can detect has_more without an extra COUNT query --
 -- if more than caller_limit rows come back, the extra row is
 -- trimmed and has_more=true.
 --
--- No parent quiz / study_guide deletion check here: the service
--- gates the call with CheckQuizLiveForSession before invoking
--- this query. A deleted parent surfaces as 404 BEFORE we hit
--- the database, so a stale "list" call against a soft-deleted
--- quiz cannot leak rows.
+-- No parent quiz / study_guide deletion check inline here: the
+-- service gates the call with CheckQuizLiveForSession before
+-- invoking this query. A deleted parent surfaces as 404 before
+-- this list query runs, so a stale "list" call against a
+-- soft-deleted quiz cannot leak rows. (CheckQuizLiveForSession
+-- is itself a DB query -- the "no DB hit" path is from the
+-- application logic perspective, not the literal HTTP layer.)
 SELECT id, started_at, completed_at, total_questions, correct_answers
 FROM practice_sessions
 WHERE user_id = sqlc.arg(user_id)::uuid
@@ -303,11 +310,22 @@ WHERE user_id = sqlc.arg(user_id)::uuid
     OR (sqlc.narg(status_filter)::text = 'completed' AND completed_at IS NOT NULL)
   )
   AND (
-    sqlc.narg(cursor_started_at)::timestamptz IS NULL
-    OR (started_at, id) < (
-      sqlc.narg(cursor_started_at)::timestamptz,
-      sqlc.narg(cursor_id)::uuid
-    )
+    -- Half-set cursor guard: both args NULL (first page) or
+    -- both args set (subsequent page). A half-set cursor is a
+    -- caller bug -- collapse the row set to zero rows by
+    -- comparing 1 = 0, then layer the real keyset condition
+    -- on top of the both-set branch only. This makes a
+    -- half-set cursor return zero rows deterministically
+    -- instead of silently filtering everything out via
+    -- NULL-tuple comparison.
+    (sqlc.narg(cursor_started_at)::timestamptz IS NULL
+     AND sqlc.narg(cursor_id)::uuid IS NULL)
+    OR (sqlc.narg(cursor_started_at)::timestamptz IS NOT NULL
+        AND sqlc.narg(cursor_id)::uuid IS NOT NULL
+        AND (started_at, id) < (
+          sqlc.narg(cursor_started_at)::timestamptz,
+          sqlc.narg(cursor_id)::uuid
+        ))
   )
 ORDER BY started_at DESC, id DESC
 LIMIT sqlc.arg(page_limit);

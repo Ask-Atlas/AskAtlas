@@ -3241,9 +3241,11 @@ components:
       description: |
         A paginated list of the authenticated user's practice
         sessions for a quiz (ASK-149). `next_cursor` is null on the
-        last page; `has_more` is the explicit boolean for client-side
-        page-end detection so callers don't have to inspect the
-        cursor field.
+        last page (always present on the wire -- the field is
+        required + nullable so codegen renders explicit `null`
+        instead of dropping the key); `has_more` is the explicit
+        boolean for client-side page-end detection so callers don't
+        have to inspect the cursor field.
       properties:
         sessions:
           type: array
@@ -3257,6 +3259,7 @@ components:
       required:
         - sessions
         - has_more
+        - next_cursor
     SessionDetailResponse:
       type: object
       description: |
