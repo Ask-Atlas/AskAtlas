@@ -106,72 +106,6 @@ func (_c *MockRepository_CheckQuizLiveForSession_Call) RunAndReturn(run func(ctx
 	return _c
 }
 
-// CountQuizQuestions provides a mock function for the type MockRepository
-func (_mock *MockRepository) CountQuizQuestions(ctx context.Context, quizID pgtype.UUID) (int64, error) {
-	ret := _mock.Called(ctx, quizID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CountQuizQuestions")
-	}
-
-	var r0 int64
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) (int64, error)); ok {
-		return returnFunc(ctx, quizID)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) int64); ok {
-		r0 = returnFunc(ctx, quizID)
-	} else {
-		r0 = ret.Get(0).(int64)
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, pgtype.UUID) error); ok {
-		r1 = returnFunc(ctx, quizID)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockRepository_CountQuizQuestions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CountQuizQuestions'
-type MockRepository_CountQuizQuestions_Call struct {
-	*mock.Call
-}
-
-// CountQuizQuestions is a helper method to define mock.On call
-//   - ctx context.Context
-//   - quizID pgtype.UUID
-func (_e *MockRepository_Expecter) CountQuizQuestions(ctx interface{}, quizID interface{}) *MockRepository_CountQuizQuestions_Call {
-	return &MockRepository_CountQuizQuestions_Call{Call: _e.mock.On("CountQuizQuestions", ctx, quizID)}
-}
-
-func (_c *MockRepository_CountQuizQuestions_Call) Run(run func(ctx context.Context, quizID pgtype.UUID)) *MockRepository_CountQuizQuestions_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 pgtype.UUID
-		if args[1] != nil {
-			arg1 = args[1].(pgtype.UUID)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *MockRepository_CountQuizQuestions_Call) Return(n int64, err error) *MockRepository_CountQuizQuestions_Call {
-	_c.Call.Return(n, err)
-	return _c
-}
-
-func (_c *MockRepository_CountQuizQuestions_Call) RunAndReturn(run func(ctx context.Context, quizID pgtype.UUID) (int64, error)) *MockRepository_CountQuizQuestions_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // DeleteStaleIncompleteSessions provides a mock function for the type MockRepository
 func (_mock *MockRepository) DeleteStaleIncompleteSessions(ctx context.Context, arg db.DeleteStaleIncompleteSessionsParams) error {
 	ret := _mock.Called(ctx, arg)
@@ -486,44 +420,53 @@ func (_c *MockRepository_ListSessionAnswers_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
-// SnapshotQuizQuestions provides a mock function for the type MockRepository
-func (_mock *MockRepository) SnapshotQuizQuestions(ctx context.Context, arg db.SnapshotQuizQuestionsParams) error {
+// SnapshotQuizQuestionsAndUpdateCount provides a mock function for the type MockRepository
+func (_mock *MockRepository) SnapshotQuizQuestionsAndUpdateCount(ctx context.Context, arg db.SnapshotQuizQuestionsAndUpdateCountParams) (int32, error) {
 	ret := _mock.Called(ctx, arg)
 
 	if len(ret) == 0 {
-		panic("no return value specified for SnapshotQuizQuestions")
+		panic("no return value specified for SnapshotQuizQuestionsAndUpdateCount")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, db.SnapshotQuizQuestionsParams) error); ok {
+	var r0 int32
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.SnapshotQuizQuestionsAndUpdateCountParams) (int32, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.SnapshotQuizQuestionsAndUpdateCountParams) int32); ok {
 		r0 = returnFunc(ctx, arg)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(int32)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.SnapshotQuizQuestionsAndUpdateCountParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
-// MockRepository_SnapshotQuizQuestions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SnapshotQuizQuestions'
-type MockRepository_SnapshotQuizQuestions_Call struct {
+// MockRepository_SnapshotQuizQuestionsAndUpdateCount_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SnapshotQuizQuestionsAndUpdateCount'
+type MockRepository_SnapshotQuizQuestionsAndUpdateCount_Call struct {
 	*mock.Call
 }
 
-// SnapshotQuizQuestions is a helper method to define mock.On call
+// SnapshotQuizQuestionsAndUpdateCount is a helper method to define mock.On call
 //   - ctx context.Context
-//   - arg db.SnapshotQuizQuestionsParams
-func (_e *MockRepository_Expecter) SnapshotQuizQuestions(ctx interface{}, arg interface{}) *MockRepository_SnapshotQuizQuestions_Call {
-	return &MockRepository_SnapshotQuizQuestions_Call{Call: _e.mock.On("SnapshotQuizQuestions", ctx, arg)}
+//   - arg db.SnapshotQuizQuestionsAndUpdateCountParams
+func (_e *MockRepository_Expecter) SnapshotQuizQuestionsAndUpdateCount(ctx interface{}, arg interface{}) *MockRepository_SnapshotQuizQuestionsAndUpdateCount_Call {
+	return &MockRepository_SnapshotQuizQuestionsAndUpdateCount_Call{Call: _e.mock.On("SnapshotQuizQuestionsAndUpdateCount", ctx, arg)}
 }
 
-func (_c *MockRepository_SnapshotQuizQuestions_Call) Run(run func(ctx context.Context, arg db.SnapshotQuizQuestionsParams)) *MockRepository_SnapshotQuizQuestions_Call {
+func (_c *MockRepository_SnapshotQuizQuestionsAndUpdateCount_Call) Run(run func(ctx context.Context, arg db.SnapshotQuizQuestionsAndUpdateCountParams)) *MockRepository_SnapshotQuizQuestionsAndUpdateCount_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 db.SnapshotQuizQuestionsParams
+		var arg1 db.SnapshotQuizQuestionsAndUpdateCountParams
 		if args[1] != nil {
-			arg1 = args[1].(db.SnapshotQuizQuestionsParams)
+			arg1 = args[1].(db.SnapshotQuizQuestionsAndUpdateCountParams)
 		}
 		run(
 			arg0,
@@ -533,12 +476,12 @@ func (_c *MockRepository_SnapshotQuizQuestions_Call) Run(run func(ctx context.Co
 	return _c
 }
 
-func (_c *MockRepository_SnapshotQuizQuestions_Call) Return(err error) *MockRepository_SnapshotQuizQuestions_Call {
-	_c.Call.Return(err)
+func (_c *MockRepository_SnapshotQuizQuestionsAndUpdateCount_Call) Return(n int32, err error) *MockRepository_SnapshotQuizQuestionsAndUpdateCount_Call {
+	_c.Call.Return(n, err)
 	return _c
 }
 
-func (_c *MockRepository_SnapshotQuizQuestions_Call) RunAndReturn(run func(ctx context.Context, arg db.SnapshotQuizQuestionsParams) error) *MockRepository_SnapshotQuizQuestions_Call {
+func (_c *MockRepository_SnapshotQuizQuestionsAndUpdateCount_Call) RunAndReturn(run func(ctx context.Context, arg db.SnapshotQuizQuestionsAndUpdateCountParams) (int32, error)) *MockRepository_SnapshotQuizQuestionsAndUpdateCount_Call {
 	_c.Call.Return(run)
 	return _c
 }

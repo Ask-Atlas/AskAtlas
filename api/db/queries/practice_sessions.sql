@@ -75,35 +75,59 @@ LIMIT 1;
 -- (sqlc returns sql.ErrNoRows for the :one annotation), and the
 -- service catches that and falls back to FindIncompleteSession.
 --
+-- total_questions is intentionally NOT supplied here -- the column
+-- defaults to 0 and is set to the authoritative snapshot row count
+-- by SnapshotQuizQuestionsAndUpdateCount in the same tx. This
+-- avoids the race window that existed when total_questions was
+-- pre-computed via CountQuizQuestions and could disagree with the
+-- actual snapshot row count under concurrent quiz edits at
+-- READ COMMITTED isolation (gemini + copilot PR #153 feedback).
+--
 -- The losing request never touches the quiz_questions snapshot --
 -- the winner already created it.
-INSERT INTO practice_sessions (user_id, quiz_id, total_questions)
+INSERT INTO practice_sessions (user_id, quiz_id)
 VALUES (
   sqlc.arg(user_id)::uuid,
-  sqlc.arg(quiz_id)::uuid,
-  sqlc.arg(total_questions)::integer
+  sqlc.arg(quiz_id)::uuid
 )
 ON CONFLICT (user_id, quiz_id) WHERE completed_at IS NULL DO NOTHING
 RETURNING id, quiz_id, started_at, completed_at, total_questions, correct_answers;
 
--- name: SnapshotQuizQuestions :exec
--- Freezes the quiz's CURRENT question set into the new session's
--- practice_session_questions rows. Runs inside the same tx as
--- InsertPracticeSessionIfAbsent so a partial snapshot can never be
--- observed by another reader -- either the entire session + all
--- questions exist, or neither does.
+-- name: SnapshotQuizQuestionsAndUpdateCount :one
+-- Atomic snapshot + total_questions fix-up. Inserts one
+-- practice_session_questions row per current quiz_questions row in
+-- a single CTE, then updates the session's total_questions to the
+-- count of rows actually inserted. Returns the new total_questions
+-- so the caller can sync its in-memory session state.
+--
+-- The single-statement CTE eliminates the race that existed in the
+-- prior two-step approach (CountQuizQuestions sets total_questions
+-- on insert, then a separate SnapshotQuizQuestions writes the
+-- snapshot). Under Postgres' default READ COMMITTED isolation each
+-- statement gets its own snapshot, so a concurrent quiz edit
+-- between count and snapshot could leave the two out of sync.
+-- Within a single CTE statement, both reads share the same
+-- statement-level snapshot, so the count and the snapshot are
+-- guaranteed identical (gemini + copilot PR #153 feedback).
 --
 -- Subsequent edits to the quiz do not retroactively affect this
 -- snapshot:
---   * New questions added later are not in this snapshot.
+--   * New questions added AFTER this statement are not in the snapshot.
 --   * Deleted questions trigger ON DELETE SET NULL on
 --     practice_session_questions.question_id -- the snapshot row
 --     persists with question_id = NULL so total_questions stays
 --     stable.
-INSERT INTO practice_session_questions (session_id, question_id, sort_order)
-SELECT sqlc.arg(session_id)::uuid, id, sort_order
-FROM quiz_questions
-WHERE quiz_id = sqlc.arg(quiz_id)::uuid;
+WITH inserted AS (
+  INSERT INTO practice_session_questions (session_id, question_id, sort_order)
+  SELECT sqlc.arg(session_id)::uuid, id, sort_order
+  FROM quiz_questions
+  WHERE quiz_id = sqlc.arg(quiz_id)::uuid
+  RETURNING 1
+)
+UPDATE practice_sessions
+SET total_questions = (SELECT count(*)::integer FROM inserted)
+WHERE id = sqlc.arg(session_id)::uuid
+RETURNING total_questions;
 
 -- name: ListSessionAnswers :many
 -- All answers submitted in a session, ordered by answered_at ASC so

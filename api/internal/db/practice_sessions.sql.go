@@ -131,20 +131,18 @@ func (q *Queries) FindIncompleteSession(ctx context.Context, arg FindIncompleteS
 }
 
 const insertPracticeSessionIfAbsent = `-- name: InsertPracticeSessionIfAbsent :one
-INSERT INTO practice_sessions (user_id, quiz_id, total_questions)
+INSERT INTO practice_sessions (user_id, quiz_id)
 VALUES (
   $1::uuid,
-  $2::uuid,
-  $3::integer
+  $2::uuid
 )
 ON CONFLICT (user_id, quiz_id) WHERE completed_at IS NULL DO NOTHING
 RETURNING id, quiz_id, started_at, completed_at, total_questions, correct_answers
 `
 
 type InsertPracticeSessionIfAbsentParams struct {
-	UserID         pgtype.UUID `json:"user_id"`
-	QuizID         pgtype.UUID `json:"quiz_id"`
-	TotalQuestions int32       `json:"total_questions"`
+	UserID pgtype.UUID `json:"user_id"`
+	QuizID pgtype.UUID `json:"quiz_id"`
 }
 
 type InsertPracticeSessionIfAbsentRow struct {
@@ -162,10 +160,18 @@ type InsertPracticeSessionIfAbsentRow struct {
 // (sqlc returns sql.ErrNoRows for the :one annotation), and the
 // service catches that and falls back to FindIncompleteSession.
 //
+// total_questions is intentionally NOT supplied here -- the column
+// defaults to 0 and is set to the authoritative snapshot row count
+// by SnapshotQuizQuestionsAndUpdateCount in the same tx. This
+// avoids the race window that existed when total_questions was
+// pre-computed via CountQuizQuestions and could disagree with the
+// actual snapshot row count under concurrent quiz edits at
+// READ COMMITTED isolation (gemini + copilot PR #153 feedback).
+//
 // The losing request never touches the quiz_questions snapshot --
 // the winner already created it.
 func (q *Queries) InsertPracticeSessionIfAbsent(ctx context.Context, arg InsertPracticeSessionIfAbsentParams) (InsertPracticeSessionIfAbsentRow, error) {
-	row := q.db.QueryRow(ctx, insertPracticeSessionIfAbsent, arg.UserID, arg.QuizID, arg.TotalQuestions)
+	row := q.db.QueryRow(ctx, insertPracticeSessionIfAbsent, arg.UserID, arg.QuizID)
 	var i InsertPracticeSessionIfAbsentRow
 	err := row.Scan(
 		&i.ID,
@@ -225,32 +231,51 @@ func (q *Queries) ListSessionAnswers(ctx context.Context, sessionID pgtype.UUID)
 	return items, nil
 }
 
-const snapshotQuizQuestions = `-- name: SnapshotQuizQuestions :exec
-INSERT INTO practice_session_questions (session_id, question_id, sort_order)
-SELECT $1::uuid, id, sort_order
-FROM quiz_questions
-WHERE quiz_id = $2::uuid
+const snapshotQuizQuestionsAndUpdateCount = `-- name: SnapshotQuizQuestionsAndUpdateCount :one
+WITH inserted AS (
+  INSERT INTO practice_session_questions (session_id, question_id, sort_order)
+  SELECT $1::uuid, id, sort_order
+  FROM quiz_questions
+  WHERE quiz_id = $2::uuid
+  RETURNING 1
+)
+UPDATE practice_sessions
+SET total_questions = (SELECT count(*)::integer FROM inserted)
+WHERE id = $1::uuid
+RETURNING total_questions
 `
 
-type SnapshotQuizQuestionsParams struct {
+type SnapshotQuizQuestionsAndUpdateCountParams struct {
 	SessionID pgtype.UUID `json:"session_id"`
 	QuizID    pgtype.UUID `json:"quiz_id"`
 }
 
-// Freezes the quiz's CURRENT question set into the new session's
-// practice_session_questions rows. Runs inside the same tx as
-// InsertPracticeSessionIfAbsent so a partial snapshot can never be
-// observed by another reader -- either the entire session + all
-// questions exist, or neither does.
+// Atomic snapshot + total_questions fix-up. Inserts one
+// practice_session_questions row per current quiz_questions row in
+// a single CTE, then updates the session's total_questions to the
+// count of rows actually inserted. Returns the new total_questions
+// so the caller can sync its in-memory session state.
+//
+// The single-statement CTE eliminates the race that existed in the
+// prior two-step approach (CountQuizQuestions sets total_questions
+// on insert, then a separate SnapshotQuizQuestions writes the
+// snapshot). Under Postgres' default READ COMMITTED isolation each
+// statement gets its own snapshot, so a concurrent quiz edit
+// between count and snapshot could leave the two out of sync.
+// Within a single CTE statement, both reads share the same
+// statement-level snapshot, so the count and the snapshot are
+// guaranteed identical (gemini + copilot PR #153 feedback).
 //
 // Subsequent edits to the quiz do not retroactively affect this
 // snapshot:
-//   - New questions added later are not in this snapshot.
+//   - New questions added AFTER this statement are not in the snapshot.
 //   - Deleted questions trigger ON DELETE SET NULL on
 //     practice_session_questions.question_id -- the snapshot row
 //     persists with question_id = NULL so total_questions stays
 //     stable.
-func (q *Queries) SnapshotQuizQuestions(ctx context.Context, arg SnapshotQuizQuestionsParams) error {
-	_, err := q.db.Exec(ctx, snapshotQuizQuestions, arg.SessionID, arg.QuizID)
-	return err
+func (q *Queries) SnapshotQuizQuestionsAndUpdateCount(ctx context.Context, arg SnapshotQuizQuestionsAndUpdateCountParams) (int32, error) {
+	row := q.db.QueryRow(ctx, snapshotQuizQuestionsAndUpdateCount, arg.SessionID, arg.QuizID)
+	var total_questions int32
+	err := row.Scan(&total_questions)
+	return total_questions, err
 }

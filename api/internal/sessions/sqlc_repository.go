@@ -73,14 +73,10 @@ func (r *sqlcRepository) InsertPracticeSessionIfAbsent(ctx context.Context, arg 
 	return r.queries.InsertPracticeSessionIfAbsent(ctx, arg)
 }
 
-func (r *sqlcRepository) SnapshotQuizQuestions(ctx context.Context, arg db.SnapshotQuizQuestionsParams) error {
-	return r.queries.SnapshotQuizQuestions(ctx, arg)
+func (r *sqlcRepository) SnapshotQuizQuestionsAndUpdateCount(ctx context.Context, arg db.SnapshotQuizQuestionsAndUpdateCountParams) (int32, error) {
+	return r.queries.SnapshotQuizQuestionsAndUpdateCount(ctx, arg)
 }
 
 func (r *sqlcRepository) ListSessionAnswers(ctx context.Context, sessionID pgtype.UUID) ([]db.ListSessionAnswersRow, error) {
 	return r.queries.ListSessionAnswers(ctx, sessionID)
-}
-
-func (r *sqlcRepository) CountQuizQuestions(ctx context.Context, quizID pgtype.UUID) (int64, error) {
-	return r.queries.CountQuizQuestions(ctx, quizID)
 }

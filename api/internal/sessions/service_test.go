@@ -195,24 +195,20 @@ func TestStartSession_CreateNewSession_201(t *testing.T) {
 		Return(db.FindIncompleteSessionRow{}, sql.ErrNoRows)
 
 	inTxRunsFn(repo)
-	// Quiz currently has 5 questions -- this is the snapshot count
-	// frozen into total_questions on the new session.
-	repo.EXPECT().CountQuizQuestions(mock.Anything, mock.Anything).Return(int64(5), nil)
-	repo.EXPECT().InsertPracticeSessionIfAbsent(mock.Anything, mock.MatchedBy(func(arg db.InsertPracticeSessionIfAbsentParams) bool {
-		return arg.TotalQuestions == 5
-	})).Return(db.InsertPracticeSessionIfAbsentRow{
-		ID:             utils.UUID(sessionID),
-		QuizID:         utils.UUID(quizID),
-		StartedAt:      pgtype.Timestamptz{Time: fixtureTime, Valid: true},
-		TotalQuestions: 5,
-	}, nil)
-	repo.EXPECT().SnapshotQuizQuestions(mock.Anything, mock.MatchedBy(func(arg db.SnapshotQuizQuestionsParams) bool {
+	// Insert defaults total_questions to 0; the snapshot CTE
+	// updates it to the authoritative count (5).
+	repo.EXPECT().InsertPracticeSessionIfAbsent(mock.Anything, mock.Anything).
+		Return(db.InsertPracticeSessionIfAbsentRow{
+			ID:             utils.UUID(sessionID),
+			QuizID:         utils.UUID(quizID),
+			StartedAt:      pgtype.Timestamptz{Time: fixtureTime, Valid: true},
+			TotalQuestions: 0,
+		}, nil)
+	repo.EXPECT().SnapshotQuizQuestionsAndUpdateCount(mock.Anything, mock.MatchedBy(func(arg db.SnapshotQuizQuestionsAndUpdateCountParams) bool {
 		return arg.SessionID == utils.UUID(sessionID)
-	})).Return(nil)
-	// New session has no answers yet -- the empty list still gets
-	// loaded so the response renders answers: [].
-	repo.EXPECT().ListSessionAnswers(mock.Anything, mock.Anything).
-		Return([]db.ListSessionAnswersRow{}, nil)
+	})).Return(int32(5), nil)
+	// New session has no answers yet -- the service skips the
+	// ListSessionAnswers round-trip entirely (gemini PR feedback).
 
 	svc := sessions.NewService(repo)
 	got, err := svc.StartSession(context.Background(), sessions.StartSessionParams{
@@ -222,24 +218,23 @@ func TestStartSession_CreateNewSession_201(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, got.Created, "fresh creation must return Created=true (201)")
 	assert.Equal(t, sessionID, got.Session.ID)
-	assert.Equal(t, int32(5), got.Session.TotalQuestions)
+	assert.Equal(t, int32(5), got.Session.TotalQuestions, "total must reflect the snapshot CTE return value")
 	assert.Equal(t, int32(0), got.Session.CorrectAnswers)
 	assert.Empty(t, got.Session.Answers, "answers slice must be empty for new sessions")
 	assert.NotNil(t, got.Session.Answers, "answers slice must be non-nil so JSON renders []")
 }
 
-// TestStartSession_CountError_500 covers the boundary where the
-// snapshot-count query fails inside the tx -- whole tx rolls back,
-// no session created, surface as 500.
-func TestStartSession_CountError_500(t *testing.T) {
+// TestStartSession_InsertError_500 covers a non-ErrNoRows insert
+// failure -- whole tx rolls back, surface as 500.
+func TestStartSession_InsertError_500(t *testing.T) {
 	repo := mock_sessions.NewMockRepository(t)
 	expectLiveAndStaleClean(repo)
 	repo.EXPECT().FindIncompleteSession(mock.Anything, mock.Anything).
 		Return(db.FindIncompleteSessionRow{}, sql.ErrNoRows)
 
 	inTxRunsFn(repo)
-	repo.EXPECT().CountQuizQuestions(mock.Anything, mock.Anything).
-		Return(int64(0), errors.New("connection refused"))
+	repo.EXPECT().InsertPracticeSessionIfAbsent(mock.Anything, mock.Anything).
+		Return(db.InsertPracticeSessionIfAbsentRow{}, errors.New("connection refused"))
 
 	svc := sessions.NewService(repo)
 	_, err := svc.StartSession(context.Background(), validParams(t))
@@ -248,7 +243,7 @@ func TestStartSession_CountError_500(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
 }
 
-// TestStartSession_SnapshotError_500 covers the snapshot-insert
+// TestStartSession_SnapshotError_500 covers the snapshot CTE
 // failing -- the InsertPracticeSessionIfAbsent already wrote the
 // session row, but the tx rolls back so neither is observed.
 func TestStartSession_SnapshotError_500(t *testing.T) {
@@ -258,16 +253,15 @@ func TestStartSession_SnapshotError_500(t *testing.T) {
 		Return(db.FindIncompleteSessionRow{}, sql.ErrNoRows)
 
 	inTxRunsFn(repo)
-	repo.EXPECT().CountQuizQuestions(mock.Anything, mock.Anything).Return(int64(3), nil)
 	repo.EXPECT().InsertPracticeSessionIfAbsent(mock.Anything, mock.Anything).
 		Return(db.InsertPracticeSessionIfAbsentRow{
 			ID:             utils.UUID(uuid.New()),
 			QuizID:         utils.UUID(uuid.New()),
 			StartedAt:      pgtype.Timestamptz{Time: fixtureTime, Valid: true},
-			TotalQuestions: 3,
+			TotalQuestions: 0,
 		}, nil)
-	repo.EXPECT().SnapshotQuizQuestions(mock.Anything, mock.Anything).
-		Return(errors.New("foreign key violation"))
+	repo.EXPECT().SnapshotQuizQuestionsAndUpdateCount(mock.Anything, mock.Anything).
+		Return(int32(0), errors.New("foreign key violation"))
 
 	svc := sessions.NewService(repo)
 	_, err := svc.StartSession(context.Background(), validParams(t))
@@ -287,7 +281,6 @@ func TestStartSession_EmptyQuizSnapshot(t *testing.T) {
 		Return(db.FindIncompleteSessionRow{}, sql.ErrNoRows)
 
 	inTxRunsFn(repo)
-	repo.EXPECT().CountQuizQuestions(mock.Anything, mock.Anything).Return(int64(0), nil)
 	sessionID := uuid.New()
 	repo.EXPECT().InsertPracticeSessionIfAbsent(mock.Anything, mock.Anything).
 		Return(db.InsertPracticeSessionIfAbsentRow{
@@ -296,9 +289,7 @@ func TestStartSession_EmptyQuizSnapshot(t *testing.T) {
 			StartedAt:      pgtype.Timestamptz{Time: fixtureTime, Valid: true},
 			TotalQuestions: 0,
 		}, nil)
-	repo.EXPECT().SnapshotQuizQuestions(mock.Anything, mock.Anything).Return(nil)
-	repo.EXPECT().ListSessionAnswers(mock.Anything, mock.Anything).
-		Return([]db.ListSessionAnswersRow{}, nil)
+	repo.EXPECT().SnapshotQuizQuestionsAndUpdateCount(mock.Anything, mock.Anything).Return(int32(0), nil)
 
 	svc := sessions.NewService(repo)
 	got, err := svc.StartSession(context.Background(), validParams(t))
@@ -325,10 +316,9 @@ func TestStartSession_RaceLost_FallsBackToResume(t *testing.T) {
 		Return(db.FindIncompleteSessionRow{}, sql.ErrNoRows).Once()
 
 	inTxRunsFn(repo)
-	repo.EXPECT().CountQuizQuestions(mock.Anything, mock.Anything).Return(int64(5), nil)
 	// Race-loss: ON CONFLICT DO NOTHING returns 0 rows -> sqlc
 	// surfaces sql.ErrNoRows. Service must catch it cleanly and
-	// short-circuit the tx (no SnapshotQuizQuestions call).
+	// short-circuit the tx (no SnapshotQuizQuestionsAndUpdateCount call).
 	repo.EXPECT().InsertPracticeSessionIfAbsent(mock.Anything, mock.Anything).
 		Return(db.InsertPracticeSessionIfAbsentRow{}, sql.ErrNoRows)
 
@@ -368,7 +358,6 @@ func TestStartSession_RaceLost_ReFetchFails_500(t *testing.T) {
 		Return(db.FindIncompleteSessionRow{}, sql.ErrNoRows).Once()
 
 	inTxRunsFn(repo)
-	repo.EXPECT().CountQuizQuestions(mock.Anything, mock.Anything).Return(int64(1), nil)
 	repo.EXPECT().InsertPracticeSessionIfAbsent(mock.Anything, mock.Anything).
 		Return(db.InsertPracticeSessionIfAbsentRow{}, sql.ErrNoRows)
 
