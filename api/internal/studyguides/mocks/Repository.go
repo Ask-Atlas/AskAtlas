@@ -172,6 +172,72 @@ func (_c *MockRepository_CourseExistsForGuides_Call) RunAndReturn(run func(ctx c
 	return _c
 }
 
+// DeleteGuideFile provides a mock function for the type MockRepository
+func (_mock *MockRepository) DeleteGuideFile(ctx context.Context, arg db.DeleteGuideFileParams) (int64, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteGuideFile")
+	}
+
+	var r0 int64
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.DeleteGuideFileParams) (int64, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.DeleteGuideFileParams) int64); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.DeleteGuideFileParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_DeleteGuideFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteGuideFile'
+type MockRepository_DeleteGuideFile_Call struct {
+	*mock.Call
+}
+
+// DeleteGuideFile is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.DeleteGuideFileParams
+func (_e *MockRepository_Expecter) DeleteGuideFile(ctx interface{}, arg interface{}) *MockRepository_DeleteGuideFile_Call {
+	return &MockRepository_DeleteGuideFile_Call{Call: _e.mock.On("DeleteGuideFile", ctx, arg)}
+}
+
+func (_c *MockRepository_DeleteGuideFile_Call) Run(run func(ctx context.Context, arg db.DeleteGuideFileParams)) *MockRepository_DeleteGuideFile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.DeleteGuideFileParams
+		if args[1] != nil {
+			arg1 = args[1].(db.DeleteGuideFileParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_DeleteGuideFile_Call) Return(n int64, err error) *MockRepository_DeleteGuideFile_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockRepository_DeleteGuideFile_Call) RunAndReturn(run func(ctx context.Context, arg db.DeleteGuideFileParams) (int64, error)) *MockRepository_DeleteGuideFile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteGuideResource provides a mock function for the type MockRepository
 func (_mock *MockRepository) DeleteGuideResource(ctx context.Context, arg db.DeleteGuideResourceParams) (int64, error) {
 	ret := _mock.Called(ctx, arg)
@@ -366,6 +432,72 @@ func (_c *MockRepository_DeleteStudyGuideVote_Call) Return(n int64, err error) *
 }
 
 func (_c *MockRepository_DeleteStudyGuideVote_Call) RunAndReturn(run func(ctx context.Context, arg db.DeleteStudyGuideVoteParams) (int64, error)) *MockRepository_DeleteStudyGuideVote_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetFileForAttach provides a mock function for the type MockRepository
+func (_mock *MockRepository) GetFileForAttach(ctx context.Context, id pgtype.UUID) (db.GetFileForAttachRow, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetFileForAttach")
+	}
+
+	var r0 db.GetFileForAttachRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) (db.GetFileForAttachRow, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) db.GetFileForAttachRow); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(db.GetFileForAttachRow)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, pgtype.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_GetFileForAttach_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFileForAttach'
+type MockRepository_GetFileForAttach_Call struct {
+	*mock.Call
+}
+
+// GetFileForAttach is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id pgtype.UUID
+func (_e *MockRepository_Expecter) GetFileForAttach(ctx interface{}, id interface{}) *MockRepository_GetFileForAttach_Call {
+	return &MockRepository_GetFileForAttach_Call{Call: _e.mock.On("GetFileForAttach", ctx, id)}
+}
+
+func (_c *MockRepository_GetFileForAttach_Call) Run(run func(ctx context.Context, id pgtype.UUID)) *MockRepository_GetFileForAttach_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_GetFileForAttach_Call) Return(getFileForAttachRow db.GetFileForAttachRow, err error) *MockRepository_GetFileForAttach_Call {
+	_c.Call.Return(getFileForAttachRow, err)
+	return _c
+}
+
+func (_c *MockRepository_GetFileForAttach_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) (db.GetFileForAttachRow, error)) *MockRepository_GetFileForAttach_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -766,6 +898,72 @@ func (_c *MockRepository_GuideExistsAndLive_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// GuideFileAttached provides a mock function for the type MockRepository
+func (_mock *MockRepository) GuideFileAttached(ctx context.Context, arg db.GuideFileAttachedParams) (bool, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GuideFileAttached")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.GuideFileAttachedParams) (bool, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.GuideFileAttachedParams) bool); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.GuideFileAttachedParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_GuideFileAttached_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GuideFileAttached'
+type MockRepository_GuideFileAttached_Call struct {
+	*mock.Call
+}
+
+// GuideFileAttached is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.GuideFileAttachedParams
+func (_e *MockRepository_Expecter) GuideFileAttached(ctx interface{}, arg interface{}) *MockRepository_GuideFileAttached_Call {
+	return &MockRepository_GuideFileAttached_Call{Call: _e.mock.On("GuideFileAttached", ctx, arg)}
+}
+
+func (_c *MockRepository_GuideFileAttached_Call) Run(run func(ctx context.Context, arg db.GuideFileAttachedParams)) *MockRepository_GuideFileAttached_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.GuideFileAttachedParams
+		if args[1] != nil {
+			arg1 = args[1].(db.GuideFileAttachedParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_GuideFileAttached_Call) Return(b bool, err error) *MockRepository_GuideFileAttached_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *MockRepository_GuideFileAttached_Call) RunAndReturn(run func(ctx context.Context, arg db.GuideFileAttachedParams) (bool, error)) *MockRepository_GuideFileAttached_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // InTx provides a mock function for the type MockRepository
 func (_mock *MockRepository) InTx(ctx context.Context, fn func(studyguides.Repository) error) error {
 	ret := _mock.Called(ctx, fn)
@@ -819,6 +1017,72 @@ func (_c *MockRepository_InTx_Call) Return(err error) *MockRepository_InTx_Call 
 }
 
 func (_c *MockRepository_InTx_Call) RunAndReturn(run func(ctx context.Context, fn func(studyguides.Repository) error) error) *MockRepository_InTx_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// InsertGuideFile provides a mock function for the type MockRepository
+func (_mock *MockRepository) InsertGuideFile(ctx context.Context, arg db.InsertGuideFileParams) (pgtype.Timestamptz, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InsertGuideFile")
+	}
+
+	var r0 pgtype.Timestamptz
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.InsertGuideFileParams) (pgtype.Timestamptz, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.InsertGuideFileParams) pgtype.Timestamptz); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(pgtype.Timestamptz)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.InsertGuideFileParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_InsertGuideFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InsertGuideFile'
+type MockRepository_InsertGuideFile_Call struct {
+	*mock.Call
+}
+
+// InsertGuideFile is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.InsertGuideFileParams
+func (_e *MockRepository_Expecter) InsertGuideFile(ctx interface{}, arg interface{}) *MockRepository_InsertGuideFile_Call {
+	return &MockRepository_InsertGuideFile_Call{Call: _e.mock.On("InsertGuideFile", ctx, arg)}
+}
+
+func (_c *MockRepository_InsertGuideFile_Call) Run(run func(ctx context.Context, arg db.InsertGuideFileParams)) *MockRepository_InsertGuideFile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.InsertGuideFileParams
+		if args[1] != nil {
+			arg1 = args[1].(db.InsertGuideFileParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_InsertGuideFile_Call) Return(timestamptz pgtype.Timestamptz, err error) *MockRepository_InsertGuideFile_Call {
+	_c.Call.Return(timestamptz, err)
+	return _c
+}
+
+func (_c *MockRepository_InsertGuideFile_Call) RunAndReturn(run func(ctx context.Context, arg db.InsertGuideFileParams) (pgtype.Timestamptz, error)) *MockRepository_InsertGuideFile_Call {
 	_c.Call.Return(run)
 	return _c
 }

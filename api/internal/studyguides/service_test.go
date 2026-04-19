@@ -2429,3 +2429,425 @@ func TestService_DetachResource_DeleteError_500(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "delete blew up")
 }
+
+// ---------------------------------------------------------------------
+// AttachFile (ASK-121)
+// ---------------------------------------------------------------------
+
+// fileForAttachFixture constructs a synthetic GetFileForAttachRow with
+// sane defaults (status=complete, no deletion). Tests override the
+// fields they care about.
+func fileForAttachFixture(t *testing.T, fileID, ownerID uuid.UUID) db.GetFileForAttachRow {
+	t.Helper()
+	return db.GetFileForAttachRow{
+		ID:     utils.UUID(fileID),
+		UserID: utils.UUID(ownerID),
+		Status: db.UploadStatusComplete,
+	}
+}
+
+func TestService_AttachFile_Owner_Success(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, fileID, ownerID := uuid.New(), uuid.New(), uuid.New()
+	now := time.Now().UTC()
+
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().GetFileForAttach(mock.Anything, mock.Anything).
+		Return(fileForAttachFixture(t, fileID, ownerID), nil)
+
+	captured := &db.InsertGuideFileParams{}
+	repo.EXPECT().InsertGuideFile(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, arg db.InsertGuideFileParams) {
+			*captured = arg
+		}).
+		Return(pgtype.Timestamptz{Time: now, Valid: true}, nil)
+
+	svc := studyguides.NewService(repo)
+	got, err := svc.AttachFile(context.Background(), studyguides.AttachFileParams{
+		StudyGuideID: guideID, FileID: fileID, AttacherID: ownerID,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, fileID, got.FileID)
+	assert.Equal(t, guideID, got.StudyGuideID)
+	assert.WithinDuration(t, now, got.CreatedAt, time.Second)
+	require.True(t, captured.FileID.Valid)
+	assert.Equal(t, [16]byte(fileID), captured.FileID.Bytes)
+}
+
+func TestService_AttachFile_GuideMissing_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(false, nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.AttachFile(context.Background(), studyguides.AttachFileParams{
+		StudyGuideID: uuid.New(), FileID: uuid.New(), AttacherID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Study guide or file not found", appErr.Message)
+	repo.AssertNotCalled(t, "GetFileForAttach", mock.Anything, mock.Anything)
+}
+
+func TestService_AttachFile_FileMissing_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().GetFileForAttach(mock.Anything, mock.Anything).
+		Return(db.GetFileForAttachRow{}, sql.ErrNoRows)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.AttachFile(context.Background(), studyguides.AttachFileParams{
+		StudyGuideID: uuid.New(), FileID: uuid.New(), AttacherID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Study guide or file not found", appErr.Message)
+	repo.AssertNotCalled(t, "InsertGuideFile", mock.Anything, mock.Anything)
+}
+
+// File exists but viewer doesn't own it -> 403 (NOT 404). The file's
+// existence is intentionally surfaced to the caller because the spec
+// distinguishes 'not yours' from 'not there'.
+func TestService_AttachFile_NotOwner_403(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	ownerID := uuid.New()
+	otherViewer := uuid.New()
+	repo.EXPECT().GetFileForAttach(mock.Anything, mock.Anything).
+		Return(fileForAttachFixture(t, uuid.New(), ownerID), nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.AttachFile(context.Background(), studyguides.AttachFileParams{
+		StudyGuideID: uuid.New(), FileID: uuid.New(), AttacherID: otherViewer,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusForbidden, appErr.Code)
+	assert.Equal(t, "You can only attach files you own", appErr.Message)
+	repo.AssertNotCalled(t, "InsertGuideFile", mock.Anything, mock.Anything)
+}
+
+// File status not 'complete' -> 404 (collapsed with missing per spec).
+func TestService_AttachFile_StatusPending_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	ownerID, fileID := uuid.New(), uuid.New()
+	row := fileForAttachFixture(t, fileID, ownerID)
+	row.Status = db.UploadStatusPending
+	repo.EXPECT().GetFileForAttach(mock.Anything, mock.Anything).Return(row, nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.AttachFile(context.Background(), studyguides.AttachFileParams{
+		StudyGuideID: uuid.New(), FileID: fileID, AttacherID: ownerID,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestService_AttachFile_StatusFailed_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	ownerID, fileID := uuid.New(), uuid.New()
+	row := fileForAttachFixture(t, fileID, ownerID)
+	row.Status = db.UploadStatusFailed
+	repo.EXPECT().GetFileForAttach(mock.Anything, mock.Anything).Return(row, nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.AttachFile(context.Background(), studyguides.AttachFileParams{
+		StudyGuideID: uuid.New(), FileID: fileID, AttacherID: ownerID,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+// File soft-deleted -> 404. Same rationale as status not-complete.
+func TestService_AttachFile_FileSoftDeleted_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	ownerID, fileID := uuid.New(), uuid.New()
+	row := fileForAttachFixture(t, fileID, ownerID)
+	row.DeletedAt = pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true}
+	repo.EXPECT().GetFileForAttach(mock.Anything, mock.Anything).Return(row, nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.AttachFile(context.Background(), studyguides.AttachFileParams{
+		StudyGuideID: uuid.New(), FileID: fileID, AttacherID: ownerID,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+// File pending deletion (deletion_status set) -> 404.
+func TestService_AttachFile_FileInDeletion_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	ownerID, fileID := uuid.New(), uuid.New()
+	row := fileForAttachFixture(t, fileID, ownerID)
+	row.DeletionStatus = db.NullFileDeletionStatus{
+		FileDeletionStatus: db.FileDeletionStatusPendingDeletion,
+		Valid:              true,
+	}
+	repo.EXPECT().GetFileForAttach(mock.Anything, mock.Anything).Return(row, nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.AttachFile(context.Background(), studyguides.AttachFileParams{
+		StudyGuideID: uuid.New(), FileID: fileID, AttacherID: ownerID,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+// ON CONFLICT DO NOTHING + RETURNING -> sql.ErrNoRows on duplicate ->
+// 409 'File is already attached'.
+func TestService_AttachFile_Duplicate_409(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	ownerID, fileID := uuid.New(), uuid.New()
+	repo.EXPECT().GetFileForAttach(mock.Anything, mock.Anything).
+		Return(fileForAttachFixture(t, fileID, ownerID), nil)
+	repo.EXPECT().InsertGuideFile(mock.Anything, mock.Anything).
+		Return(pgtype.Timestamptz{}, sql.ErrNoRows)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.AttachFile(context.Background(), studyguides.AttachFileParams{
+		StudyGuideID: uuid.New(), FileID: fileID, AttacherID: ownerID,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusConflict, appErr.Code)
+	assert.Equal(t, "File is already attached to this study guide", appErr.Message)
+}
+
+func TestService_AttachFile_LiveCheckError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).
+		Return(false, errors.New("db down"))
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.AttachFile(context.Background(), studyguides.AttachFileParams{
+		StudyGuideID: uuid.New(), FileID: uuid.New(), AttacherID: uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "db down")
+}
+
+func TestService_AttachFile_InsertError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GuideExistsAndLive(mock.Anything, mock.Anything).Return(true, nil)
+	ownerID, fileID := uuid.New(), uuid.New()
+	repo.EXPECT().GetFileForAttach(mock.Anything, mock.Anything).
+		Return(fileForAttachFixture(t, fileID, ownerID), nil)
+	repo.EXPECT().InsertGuideFile(mock.Anything, mock.Anything).
+		Return(pgtype.Timestamptz{}, errors.New("insert blew up"))
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.AttachFile(context.Background(), studyguides.AttachFileParams{
+		StudyGuideID: uuid.New(), FileID: fileID, AttacherID: ownerID,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "insert blew up")
+}
+
+// ---------------------------------------------------------------------
+// DetachFile (ASK-124)
+// ---------------------------------------------------------------------
+
+// detachFileFixture wires the InTx + locked-guide-SELECT + file
+// lookup. Tests pick the viewer to exercise authz cases.
+func detachFileFixture(t *testing.T, repo *mock_studyguides.MockRepository, guideID, creatorID, fileID, ownerID uuid.UUID) {
+	t.Helper()
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{
+			ID:        utils.UUID(guideID),
+			CreatorID: utils.UUID(creatorID),
+		}, nil)
+	repo.EXPECT().GetFileForAttach(mock.Anything, mock.Anything).
+		Return(fileForAttachFixture(t, fileID, ownerID), nil)
+	repo.EXPECT().GuideFileAttached(mock.Anything, mock.Anything).Return(true, nil)
+}
+
+func TestService_DetachFile_Owner_Success(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID, fileID, ownerID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	detachFileFixture(t, repo, guideID, creatorID, fileID, ownerID)
+	repo.EXPECT().DeleteGuideFile(mock.Anything, mock.Anything).Return(int64(1), nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachFile(context.Background(), studyguides.DetachFileParams{
+		StudyGuideID: guideID, FileID: fileID, ViewerID: ownerID,
+	})
+	require.NoError(t, err)
+}
+
+// Guide creator who doesn't own the file can still detach.
+func TestService_DetachFile_GuideCreator_Success(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID, fileID, ownerID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	detachFileFixture(t, repo, guideID, creatorID, fileID, ownerID)
+	repo.EXPECT().DeleteGuideFile(mock.Anything, mock.Anything).Return(int64(1), nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachFile(context.Background(), studyguides.DetachFileParams{
+		StudyGuideID: guideID, FileID: fileID, ViewerID: creatorID,
+	})
+	require.NoError(t, err)
+}
+
+func TestService_DetachFile_Stranger_403(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID, fileID, ownerID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	stranger := uuid.New()
+	detachFileFixture(t, repo, guideID, creatorID, fileID, ownerID)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachFile(context.Background(), studyguides.DetachFileParams{
+		StudyGuideID: guideID, FileID: fileID, ViewerID: stranger,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusForbidden, appErr.Code)
+	repo.AssertNotCalled(t, "DeleteGuideFile", mock.Anything, mock.Anything)
+}
+
+func TestService_DetachFile_GuideMissing_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{}, sql.ErrNoRows)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachFile(context.Background(), studyguides.DetachFileParams{
+		StudyGuideID: uuid.New(), FileID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "File attachment not found", appErr.Message)
+}
+
+func TestService_DetachFile_GuideAlreadyDeleted_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{
+			ID:        utils.UUID(uuid.New()),
+			CreatorID: utils.UUID(uuid.New()),
+			DeletedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		}, nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachFile(context.Background(), studyguides.DetachFileParams{
+		StudyGuideID: uuid.New(), FileID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestService_DetachFile_FileMissing_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{
+			ID:        utils.UUID(uuid.New()),
+			CreatorID: utils.UUID(uuid.New()),
+		}, nil)
+	repo.EXPECT().GetFileForAttach(mock.Anything, mock.Anything).
+		Return(db.GetFileForAttachRow{}, sql.ErrNoRows)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachFile(context.Background(), studyguides.DetachFileParams{
+		StudyGuideID: uuid.New(), FileID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+// File exists but isn't attached to this guide -> 404 (BEFORE
+// dual-authz so 'not attached' wins over 'forbidden').
+func TestService_DetachFile_NotAttached_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID, fileID, ownerID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	inTxRunsFnReturning(repo)
+	repo.EXPECT().GetStudyGuideByIDForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetStudyGuideByIDForUpdateRow{
+			ID:        utils.UUID(guideID),
+			CreatorID: utils.UUID(creatorID),
+		}, nil)
+	repo.EXPECT().GetFileForAttach(mock.Anything, mock.Anything).
+		Return(fileForAttachFixture(t, fileID, ownerID), nil)
+	repo.EXPECT().GuideFileAttached(mock.Anything, mock.Anything).Return(false, nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachFile(context.Background(), studyguides.DetachFileParams{
+		StudyGuideID: guideID, FileID: fileID, ViewerID: creatorID,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "File attachment not found", appErr.Message)
+}
+
+// Concurrency race: pre-checks pass, but parallel detach removes the
+// row first -> 0 rows -> 404.
+func TestService_DetachFile_ZeroRowsAfterRace_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID, fileID, ownerID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	detachFileFixture(t, repo, guideID, creatorID, fileID, ownerID)
+	repo.EXPECT().DeleteGuideFile(mock.Anything, mock.Anything).Return(int64(0), nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachFile(context.Background(), studyguides.DetachFileParams{
+		StudyGuideID: guideID, FileID: fileID, ViewerID: creatorID,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestService_DetachFile_DeleteError_500(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID, creatorID, fileID, ownerID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+	detachFileFixture(t, repo, guideID, creatorID, fileID, ownerID)
+	repo.EXPECT().DeleteGuideFile(mock.Anything, mock.Anything).
+		Return(int64(0), errors.New("delete blew up"))
+
+	svc := studyguides.NewService(repo)
+	err := svc.DetachFile(context.Background(), studyguides.DetachFileParams{
+		StudyGuideID: guideID, FileID: fileID, ViewerID: creatorID,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "delete blew up")
+}

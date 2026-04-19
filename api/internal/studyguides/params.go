@@ -237,3 +237,34 @@ type DetachResourceParams struct {
 	ResourceID   uuid.UUID
 	ViewerID     uuid.UUID
 }
+
+// AttachFileParams is the input to Service.AttachFile (ASK-121).
+// AttacherID comes from the JWT viewer; the request body is empty so
+// the only inputs are the two path params + viewer. The service
+// rejects non-owner attachers with 403 (only the file owner can put
+// their files on guides).
+type AttachFileParams struct {
+	StudyGuideID uuid.UUID
+	FileID       uuid.UUID
+	AttacherID   uuid.UUID
+}
+
+// FileAttachment is the output of Service.AttachFile. Mirrors the
+// study_guide_files join row -- intentionally narrow (no expanded
+// file metadata) so the wire shape matches the join table and the
+// privacy floor for full file metadata stays on GET /study-guides/{id}.
+type FileAttachment struct {
+	FileID       uuid.UUID
+	StudyGuideID uuid.UUID
+	CreatedAt    time.Time
+}
+
+// DetachFileParams is the input to Service.DetachFile (ASK-124).
+// ViewerID drives the dual-authz check (file owner OR guide creator);
+// broader than POST (which is owner-only) so a guide creator can
+// curate their guide's attached files without owning every file.
+type DetachFileParams struct {
+	StudyGuideID uuid.UUID
+	FileID       uuid.UUID
+	ViewerID     uuid.UUID
+}

@@ -191,3 +191,19 @@ func (r *sqlcRepository) GetGuideResourceAttacher(ctx context.Context, arg db.Ge
 func (r *sqlcRepository) DeleteGuideResource(ctx context.Context, arg db.DeleteGuideResourceParams) (int64, error) {
 	return r.queries.DeleteGuideResource(ctx, arg)
 }
+
+func (r *sqlcRepository) GetFileForAttach(ctx context.Context, id pgtype.UUID) (db.GetFileForAttachRow, error) {
+	return r.queries.GetFileForAttach(ctx, id)
+}
+
+func (r *sqlcRepository) InsertGuideFile(ctx context.Context, arg db.InsertGuideFileParams) (pgtype.Timestamptz, error) {
+	return r.queries.InsertGuideFile(ctx, arg)
+}
+
+func (r *sqlcRepository) GuideFileAttached(ctx context.Context, arg db.GuideFileAttachedParams) (bool, error) {
+	return r.queries.GuideFileAttached(ctx, arg)
+}
+
+func (r *sqlcRepository) DeleteGuideFile(ctx context.Context, arg db.DeleteGuideFileParams) (int64, error) {
+	return r.queries.DeleteGuideFile(ctx, arg)
+}

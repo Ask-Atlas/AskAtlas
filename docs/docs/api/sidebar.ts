@@ -108,6 +108,18 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/attach-file",
+          label: "Attach a file to a study guide",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "api/detach-file",
+          label: "Detach a file from a study guide",
+          className: "api-method delete",
+        },
+        {
+          type: "doc",
           id: "api/recommend-study-guide",
           label: "Recommend a study guide",
           className: "api-method post",

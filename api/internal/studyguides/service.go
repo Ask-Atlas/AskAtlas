@@ -68,6 +68,11 @@ type Repository interface {
 	GetGuideResourceAttacher(ctx context.Context, arg db.GetGuideResourceAttacherParams) (pgtype.UUID, error)
 	DeleteGuideResource(ctx context.Context, arg db.DeleteGuideResourceParams) (int64, error)
 
+	GetFileForAttach(ctx context.Context, id pgtype.UUID) (db.GetFileForAttachRow, error)
+	InsertGuideFile(ctx context.Context, arg db.InsertGuideFileParams) (pgtype.Timestamptz, error)
+	GuideFileAttached(ctx context.Context, arg db.GuideFileAttachedParams) (bool, error)
+	DeleteGuideFile(ctx context.Context, arg db.DeleteGuideFileParams) (int64, error)
+
 	// InTx runs fn inside a single Postgres transaction. The Repository
 	// passed to fn is scoped to the tx; commits on a nil return,
 	// rolls back on any error. Used by DeleteStudyGuide for the
