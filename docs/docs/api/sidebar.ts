@@ -252,6 +252,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/list-recents",
+          label: "List the authenticated user's most recently viewed items",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "api/check-membership",
           label: "Check the authenticated user's membership in a section",
           className: "api-method get",

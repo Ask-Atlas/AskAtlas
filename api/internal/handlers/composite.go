@@ -10,12 +10,13 @@ type CompositeHandler struct {
 	*StudyGuideHandler
 	*QuizzesHandler
 	*SessionsHandler
+	*RecentsHandler
 }
 
 // NewCompositeHandler creates a handler that delegates to FileHandler,
 // GrantHandler, SchoolsHandler, CoursesHandler, StudyGuideHandler,
-// QuizzesHandler, and SessionsHandler.
-func NewCompositeHandler(fh *FileHandler, gh *GrantHandler, sh *SchoolsHandler, ch *CoursesHandler, sgh *StudyGuideHandler, qh *QuizzesHandler, ssh *SessionsHandler) *CompositeHandler {
+// QuizzesHandler, SessionsHandler, and RecentsHandler.
+func NewCompositeHandler(fh *FileHandler, gh *GrantHandler, sh *SchoolsHandler, ch *CoursesHandler, sgh *StudyGuideHandler, qh *QuizzesHandler, ssh *SessionsHandler, rh *RecentsHandler) *CompositeHandler {
 	return &CompositeHandler{
 		FileHandler:       fh,
 		GrantHandler:      gh,
@@ -24,5 +25,6 @@ func NewCompositeHandler(fh *FileHandler, gh *GrantHandler, sh *SchoolsHandler, 
 		StudyGuideHandler: sgh,
 		QuizzesHandler:    qh,
 		SessionsHandler:   ssh,
+		RecentsHandler:    rh,
 	}
 }
