@@ -1514,6 +1514,29 @@ func TestListCourseSections_TermTooLong_400(t *testing.T) {
 	assert.Contains(t, sysErr.Details["term"], "30")
 }
 
+// TestListCourseSections_MultiByteTerm_CountsRunesNotBytes pins
+// the rune-vs-byte fix from gemini PR #160 review. A 30-character
+// multi-byte CJK term is 90 bytes but 30 runes, so a byte-count
+// check would (incorrectly) reject it. This test would fail
+// under len(trimmed) but pass under utf8.RuneCountInString --
+// making the expected behavior an explicit contract.
+func TestListCourseSections_MultiByteTerm_CountsRunesNotBytes(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	courseID := uuid.New()
+
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().ListSectionsForCourse(mock.Anything, mock.Anything).
+		Return([]db.ListSectionsForCourseRow{}, nil)
+
+	// "春" is 3 bytes in UTF-8; 30 of them = 90 bytes / 30 runes.
+	multibyte := strings.Repeat("春", courses.MaxTermLength)
+	svc := courses.NewService(repo)
+	_, err := svc.ListCourseSections(context.Background(), courses.ListCourseSectionsParams{
+		CourseID: courseID, Term: &multibyte,
+	})
+	require.NoError(t, err, "30-rune multi-byte term must not be rejected as too long")
+}
+
 // TestListCourseSections_EmptyTerm_TreatedAsNoFilter: a pointer
 // to an empty/whitespace string collapses to "no filter" rather
 // than being passed to the query as an empty string (which would

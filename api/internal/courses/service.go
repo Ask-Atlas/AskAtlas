@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
@@ -700,8 +701,15 @@ func (s *Service) ListSectionMembers(ctx context.Context, p ListSectionMembersPa
 //     state vs the regular "no matching sections" empty state.
 //  3. ListSectionsForCourse -- the actual query. LEFT JOIN keeps
 //     zero-member sections in the page. Ordered server-side by
-//     term DESC, section_code ASC so the response is rendered
-//     newest-first within term.
+//     term DESC, section_code ASC; the term ordering is
+//     LEXICOGRAPHIC on the term string, NOT chronological.
+//     "Spring 2026" sorts before "Fall 2026" because S<F is
+//     false but in DESC order the alphabetic decides; "Summer
+//     2025" sorts before "Spring 2025" alphabetically (Su>Sp).
+//     Acceptable per the spec; the inline ListCourseSections
+//     query (used by GetCourse) sorts by start_date DESC instead
+//     for the chronological case. coderabbit + copilot + gemini
+//     PR #160 feedback.
 //  4. Map rows to []SectionListing. Always emits a non-nil slice
 //     so the wire JSON is "sections": [] rather than null on
 //     courses with no sections.
@@ -715,7 +723,13 @@ func (s *Service) ListCourseSections(ctx context.Context, p ListCourseSectionsPa
 	if p.Term != nil {
 		trimmed := strings.TrimSpace(*p.Term)
 		if trimmed != "" {
-			if len(trimmed) > MaxTermLength {
+			// Count runes, not bytes -- a 30-character term made
+			// of multi-byte runes (e.g., 30x CJK chars = 90 bytes)
+			// must NOT be rejected as too long. The openapi
+			// maxLength validator at the wrapper layer also counts
+			// runes, so this stays consistent with the HTTP-side
+			// behavior. gemini + coderabbit PR #160 feedback.
+			if utf8.RuneCountInString(trimmed) > MaxTermLength {
 				return ListCourseSectionsResult{}, apperrors.NewBadRequest("Invalid query parameters", map[string]string{
 					"term": fmt.Sprintf("must be %d characters or fewer", MaxTermLength),
 				})

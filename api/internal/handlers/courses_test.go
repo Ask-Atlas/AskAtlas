@@ -1332,6 +1332,10 @@ func TestCoursesHandler_ListCourseSections_Success_200(t *testing.T) {
 	require.NotNil(t, resp.Sections[0].InstructorName)
 	assert.Equal(t, "Dr. Ananth Jillepalli", *resp.Sections[0].InstructorName)
 	assert.Equal(t, int64(34), resp.Sections[0].MemberCount)
+	// Required field per the openapi schema -- pin it in the
+	// success wire test so a regression that drops it from the
+	// mapper would be caught. coderabbit PR #160 feedback.
+	assert.True(t, resp.Sections[0].CreatedAt.Equal(now))
 }
 
 // TestCoursesHandler_ListCourseSections_EmptyRendersBracket

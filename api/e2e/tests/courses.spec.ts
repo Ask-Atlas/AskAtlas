@@ -30,7 +30,7 @@ test.describe("ListCourseSections (ASK-127)", () => {
 
   // ---------- Validation (no seed data required) ----------
 
-  test("rejects unauthenticated", async ({ playwright }) => {
+  test("rejects unauthenticated with 401", async ({ playwright }) => {
     const noAuth = await playwright.request.newContext({
       baseURL: process.env.E2E_BASE_URL,
       extraHTTPHeaders: {},
@@ -38,7 +38,8 @@ test.describe("ListCourseSections (ASK-127)", () => {
     const resp = await noAuth.get(
       "/api/courses/00000000-0000-0000-0000-000000000000/sections",
     );
-    expect([401, 403]).toContain(resp.status());
+    // Spec is explicit: 401, not 403. coderabbit PR #160 feedback.
+    expect(resp.status()).toBe(401);
     await noAuth.dispose();
   });
 
@@ -153,10 +154,13 @@ test.describe("ListCourseSections (ASK-127)", () => {
       return;
     }
 
-    // Use a deliberately-implausible term value that no seed
-    // section is going to have.
+    // Use an epoch-stamped sentinel under MaxTermLength=30 so a
+    // future seed run that adds "Summer 2099" or similar can't
+    // turn this into a flaky failure. Term is 24 chars max.
+    // coderabbit PR #160 feedback.
+    const noMatchTerm = `__nomatch_${Date.now().toString(36)}`;
     const resp = await request.get(`/api/courses/${courseId}/sections`, {
-      params: { term: "Summer 2099" },
+      params: { term: noMatchTerm },
     });
     expect(resp.status()).toBe(200);
     const body = await resp.json();

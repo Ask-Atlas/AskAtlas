@@ -564,10 +564,15 @@ type Querier interface {
 	//   * Returns course_id and created_at (the inline payload omits
 	//     them because the parent course already carries the id and
 	//     created_at is irrelevant to the inline render).
-	//   * Different ORDER BY: term DESC, section_code ASC -- ranks
-	//     the most-recent term first per the ASK-127 spec, with
-	//     section codes ascending within a term. The inline query
-	//     sorts by start_date DESC for the course detail UI.
+	//   * Different ORDER BY: term DESC, section_code ASC -- sorts
+	//     terms in DESCENDING LEXICOGRAPHIC order per the ASK-127
+	//     spec, with section codes ascending within a term. NOT
+	//     chronological: "Spring 2026" sorts before "Fall 2026"
+	//     because S<F false but in DESC order alphabetic decides;
+	//     "Summer 2025" sorts before "Spring 2025" alphabetically
+	//     (Su>Sp). Acceptable per the spec. The inline
+	//     ListCourseSections query sorts by start_date DESC for
+	//     the chronological course-detail UI instead.
 	//
 	// LEFT JOIN keeps zero-member sections in the result set; COUNT
 	// is wrapped in a GROUP BY cs.id so member_count is per-section,
