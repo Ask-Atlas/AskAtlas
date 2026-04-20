@@ -1,0 +1,89 @@
+---
+id: delete-quiz-question
+title: "Delete a question from a quiz (ASK-119)"
+description: "Hard-delete one question from a quiz. The `quiz_answer_options`"
+sidebar_label: "Delete a question from a quiz (ASK-119)"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV1Fv20YM/ivEvawFFMdps4e5T26TYtmKol0S7CEKbFpHW9fKdwqPl8wx/N8HSrLj1sYeugHZg58sn8jjR34kRS5NqIlRXPAX1gzMGVUk9Dm5x8+Joh6bzFiKBbu6+TcwvyLbI9vIQfAEd50gTDnMAeEuucceXJUEY30coY8PxKPQ6Mdx7qeBQcotxXfDy3fDs/Pu0jfANCUmX1Bs7sz9uGYsxBU0ihSjC3601o299dPI2TGgt9vSrenvZZjg8vwKPl5/+AAxQOmiBHYFVrnvrgeLguAi1EyR+J4sPDgpAVulDfAN0F7ucz9sXId5igJYPeAiQoHMC0CBijAKnGxU3wB6QBGa1wISct8FVONSqSjTHJ13frZtTRL7CKf9fgMn9+PcPJks8Z72mcrNuKWjCMkLFCUVX4GTj7l3PjrbGo04JxBGHzV2wQPG5rzDFQPIQ4Ai+CIxk5c14ggqC6+ONjAbRAX6nwQmQUqIqSiIbBuiJGVg99gk3AAKJpTAR8FXixYjJinJiytQyEKKxK1zE8p9k06PFHudmrKpcVxAkJJ4n+6MROP1ujF+2j+FItwTR8CqgjAddIS5GJ2fHccwlS4HbQY1qpsQJdlF7mdJA/WtxMbj7oKtkwlVwc+UPQmAubdu2mSKtNWhaDbepNoq4BHKWFOOacoUS7IaWLonXrQRjHGaqo6OXq5lWSPjnIQ4msHN0nickxk0CTFy1mTGabXWKOVOCWukk3d3ieD6+uIMwrQrSGUueOkyb7tITWaY7pJjsmYgnCgzsShpjmawNLKo1XQUdn5mMjMNPEcxA5OSs2a1yrbQbSrxxxB2AZbQheJf4bpV5VgHrXuVf9U/1Z9voawbYWfQmlVmTvv9XcG3aEGxUBSTGY0jeVExrOtKs9IFf/wlquxyF2SYfKFCdgJxKegtsnWPZIGYA8MaMkThVEhigjlKUSplW6Y6aRu0kUTNF9ZeL671tQiWtsw7LzQjVueioKS4G79VZuYUI85o7ztLgq6K+1xCa51CwurTNxi+u2O12ibzpoW4wfNk/TYz4qRS1WFdn6ubqtzwcrLLy7XHru2QPRDzXMS83iXmfeCJs5b8gZXnYmVPv/sYBKYh+UOtPBMrP+/7uFx4IfZYQTOPchuXA0PPwVADUMqg+9JmCGmmmIE57qa642U3h62ON6uKnm2mn5VabKhsp7fElapj7YyOJZGKxE4Wzbu3hEyss7MZ3Nxuv75Uelsnt4U2LpcitekmIv0/aYRM1j28X89Dv/15pWOacX4aGvW13/HrUCqMMPx0YTKjaNt8Oen1e32low5R5tjkWjfitStkswjuLobwYnj5+9HJyS8vv0/B5VMqH1bMw4p5WDH/Dytm10aE/pLjukLnteSbVrXsOt6N6YyYzAyeds9N8bTHT0vfbWbKEEUVl8sJRrrmarXS47tErP3uNjP3yA4n2oFulsa6qM/WDKZYRfqHtvHij66rv4Qf23D3utsdol9oB8Qq6T+Tma+02Fq3dcf9b5Hu2XR/CN9T7Fe3q8yUhJa4iWwrMSwKqmVLd2eO0C/O5ot3dv7h/OrcrFZ/A6KrO4c=
+sidebar_class_name: "delete api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Delete a question from a quiz (ASK-119)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"delete"}
+  path={"/quizzes/{quiz_id}/questions/{question_id}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Hard-delete one question from a quiz. The `quiz_answer_options`
+for the question CASCADE-delete; references from
+`practice_session_questions.question_id` and
+`practice_answers.question_id` are SET NULL so historical
+session data is preserved with a NULL question reference.
+
+A quiz must always carry at least 1 question; an attempt to
+delete the last remaining question returns 400 with
+`"quiz must have at least 1 question"`. The count check runs
+inside the same transaction as the delete so two concurrent
+deletes on a 2-question quiz can't both succeed.
+
+Authorization: creator-only. The authenticated user must be
+`quizzes.creator_id`; any other authenticated user gets 403.
+
+404 covers all of: quiz missing/soft-deleted, parent study
+guide soft-deleted, question missing, question belonging to a
+different quiz.
+
+`quizzes.updated_at` is refreshed on every successful delete.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./delete-quiz-question.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./delete-quiz-question.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./delete-quiz-question.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

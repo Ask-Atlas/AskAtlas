@@ -30,6 +30,51 @@ func (q *Queries) CountQuizQuestions(ctx context.Context, quizID pgtype.UUID) (i
 	return count, err
 }
 
+const deleteQuizAnswerOptionsByQuestion = `-- name: DeleteQuizAnswerOptionsByQuestion :exec
+DELETE FROM quiz_answer_options
+WHERE question_id = $1::uuid
+`
+
+// Wipe all answer options for one question for ASK-108. Used inside
+// the ReplaceQuestion transaction between the existence/ownership
+// probe and the new InsertQuizAnswerOption rows -- the delete +
+// insert pair is the PUT semantics for the question's option set.
+func (q *Queries) DeleteQuizAnswerOptionsByQuestion(ctx context.Context, questionID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteQuizAnswerOptionsByQuestion, questionID)
+	return err
+}
+
+const deleteQuizQuestion = `-- name: DeleteQuizQuestion :execrows
+DELETE FROM quiz_questions
+WHERE id      = $1::uuid
+  AND quiz_id = $2::uuid
+`
+
+type DeleteQuizQuestionParams struct {
+	ID     pgtype.UUID `json:"id"`
+	QuizID pgtype.UUID `json:"quiz_id"`
+}
+
+// Hard-delete a single question for DELETE /api/quizzes/{quiz_id}/questions/{question_id}
+// (ASK-119). The composite WHERE clause guards against a question
+// being deleted from the wrong quiz (defense in depth -- the
+// service has already validated quiz_id ownership but the WHERE
+// enforces it at the SQL boundary). Returns rows-affected so the
+// service can surface a phantom 0-row case as 404.
+//
+// CASCADE: quiz_answer_options have ON DELETE CASCADE from
+// quiz_questions so option rows are auto-removed.
+// SET NULL: practice_session_questions.question_id +
+// practice_answers.question_id have ON DELETE SET NULL so historical
+// session data is preserved with a NULL question reference.
+func (q *Queries) DeleteQuizQuestion(ctx context.Context, arg DeleteQuizQuestionParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteQuizQuestion, arg.ID, arg.QuizID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getQuizByIDForUpdate = `-- name: GetQuizByIDForUpdate :one
 SELECT id, creator_id, deleted_at
 FROM quizzes
@@ -186,6 +231,35 @@ func (q *Queries) GetQuizQuestionByID(ctx context.Context, id pgtype.UUID) (GetQ
 		&i.ReferenceAnswer,
 		&i.SortOrder,
 	)
+	return i, err
+}
+
+const getQuizQuestionQuizID = `-- name: GetQuizQuestionQuizID :one
+SELECT id, quiz_id
+FROM quiz_questions
+WHERE id = $1::uuid
+`
+
+type GetQuizQuestionQuizIDRow struct {
+	ID     pgtype.UUID `json:"id"`
+	QuizID pgtype.UUID `json:"quiz_id"`
+}
+
+// Existence + ownership probe used by ASK-108 + ASK-119. Returns the
+// question's parent quiz_id so the service can:
+//   - 404 when the row is missing (sql.ErrNoRows).
+//   - 404 when the question exists under a sibling quiz (the URL's
+//     quiz_id != the returned quiz_id) -- prevents a leak between
+//     siblings.
+//
+// Kept separate from GetQuizQuestionByID because that query is
+// shape-shared with ListQuizQuestionsByQuizRow via a struct
+// conversion in hydrateQuestion -- adding a column there would
+// break that conversion.
+func (q *Queries) GetQuizQuestionQuizID(ctx context.Context, id pgtype.UUID) (GetQuizQuestionQuizIDRow, error) {
+	row := q.db.QueryRow(ctx, getQuizQuestionQuizID, id)
+	var i GetQuizQuestionQuizIDRow
+	err := row.Scan(&i.ID, &i.QuizID)
 	return i, err
 }
 
@@ -645,6 +719,57 @@ func (q *Queries) UpdateQuiz(ctx context.Context, arg UpdateQuizParams) error {
 		arg.Title,
 		arg.ClearDescription,
 		arg.Description,
+		arg.ID,
+	)
+	return err
+}
+
+const updateQuizQuestion = `-- name: UpdateQuizQuestion :exec
+UPDATE quiz_questions
+SET
+  type               = $1::question_type,
+  question_text      = $2::text,
+  hint               = $3::text,
+  feedback_correct   = $4::text,
+  feedback_incorrect = $5::text,
+  reference_answer   = $6::text,
+  sort_order         = $7::integer,
+  updated_at         = NOW()
+WHERE id = $8::uuid
+`
+
+type UpdateQuizQuestionParams struct {
+	Type              QuestionType `json:"type"`
+	QuestionText      string       `json:"question_text"`
+	Hint              pgtype.Text  `json:"hint"`
+	FeedbackCorrect   pgtype.Text  `json:"feedback_correct"`
+	FeedbackIncorrect pgtype.Text  `json:"feedback_incorrect"`
+	ReferenceAnswer   pgtype.Text  `json:"reference_answer"`
+	SortOrder         int32        `json:"sort_order"`
+	ID                pgtype.UUID  `json:"id"`
+}
+
+// Full replace of a single question row for PUT /api/quizzes/{quiz_id}/questions/{question_id}
+// (ASK-108). The handler/service has already validated the type +
+// per-type fields. ALL columns are written explicitly (PUT
+// semantics): a freeform replacement passes a non-NULL trimmed
+// string for reference_answer; an MCQ/TF replacement passes NULL
+// so the column is cleared. Hint + feedback columns follow the same
+// "narg means SQL NULL when absent" convention used by InsertQuizQuestion.
+// updated_at is bumped to now() so the row reflects the structural change.
+//
+// Existence + ownership are gated by GetQuizForUpdateWithParentStatus
+// (creator check) and GetQuizQuestionByID (quiz_id match) BEFORE
+// this UPDATE runs, so it trusts inputs.
+func (q *Queries) UpdateQuizQuestion(ctx context.Context, arg UpdateQuizQuestionParams) error {
+	_, err := q.db.Exec(ctx, updateQuizQuestion,
+		arg.Type,
+		arg.QuestionText,
+		arg.Hint,
+		arg.FeedbackCorrect,
+		arg.FeedbackIncorrect,
+		arg.ReferenceAnswer,
+		arg.SortOrder,
 		arg.ID,
 	)
 	return err

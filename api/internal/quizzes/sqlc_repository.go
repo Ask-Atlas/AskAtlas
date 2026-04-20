@@ -122,3 +122,19 @@ func (r *sqlcRepository) GetQuizQuestionByID(ctx context.Context, id pgtype.UUID
 func (r *sqlcRepository) ListQuizAnswerOptionsByQuestion(ctx context.Context, questionID pgtype.UUID) ([]db.QuizAnswerOption, error) {
 	return r.queries.ListQuizAnswerOptionsByQuestion(ctx, questionID)
 }
+
+func (r *sqlcRepository) DeleteQuizQuestion(ctx context.Context, arg db.DeleteQuizQuestionParams) (int64, error) {
+	return r.queries.DeleteQuizQuestion(ctx, arg)
+}
+
+func (r *sqlcRepository) GetQuizQuestionQuizID(ctx context.Context, id pgtype.UUID) (db.GetQuizQuestionQuizIDRow, error) {
+	return r.queries.GetQuizQuestionQuizID(ctx, id)
+}
+
+func (r *sqlcRepository) UpdateQuizQuestion(ctx context.Context, arg db.UpdateQuizQuestionParams) error {
+	return r.queries.UpdateQuizQuestion(ctx, arg)
+}
+
+func (r *sqlcRepository) DeleteQuizAnswerOptionsByQuestion(ctx context.Context, questionID pgtype.UUID) error {
+	return r.queries.DeleteQuizAnswerOptionsByQuestion(ctx, questionID)
+}

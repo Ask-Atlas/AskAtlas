@@ -1158,3 +1158,210 @@ func TestQuizzesHandler_GetQuiz_Success(t *testing.T) {
 	assert.Nil(t, ff.Options)
 	assert.Equal(t, "O(log n)", ff.CorrectAnswer)
 }
+
+// ----------------------------------------------------------------------
+// ReplaceQuizQuestion (ASK-108) -- wire-level coverage.
+// Service tests carry the full behavioral matrix; handler tests
+// verify the method + path mapping and status-code projection.
+// ----------------------------------------------------------------------
+
+func TestQuizzesHandler_ReplaceQuestion_Success(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	quizID := uuid.New()
+	questionID := uuid.New()
+
+	mockSvc.EXPECT().
+		ReplaceQuestion(mock.Anything, mock.MatchedBy(func(p quizzes.ReplaceQuestionParams) bool {
+			return p.QuizID == quizID && p.QuestionID == questionID &&
+				p.Question.Type == quizzes.QuestionTypeMultipleChoice
+		})).
+		Return(quizzes.Question{
+			ID:            questionID,
+			Type:          quizzes.QuestionTypeMultipleChoice,
+			Question:      "Which traversal visits the root node first?",
+			CorrectAnswer: "Pre-order",
+			Options: []quizzes.MCQOption{
+				{ID: uuid.New(), Text: "In-order", IsCorrect: false, SortOrder: 0},
+				{ID: uuid.New(), Text: "Pre-order", IsCorrect: true, SortOrder: 1},
+				{ID: uuid.New(), Text: "Post-order", IsCorrect: false, SortOrder: 2},
+				{ID: uuid.New(), Text: "Level-order", IsCorrect: false, SortOrder: 3},
+			},
+			SortOrder: 0,
+		}, nil)
+
+	body, err := json.Marshal(validAddQuestionBody())
+	require.NoError(t, err)
+	url := fmt.Sprintf("/quizzes/%s/questions/%s", quizID.String(), questionID.String())
+	req := authedRequestMethod(t, http.MethodPut, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp api.QuizQuestionResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, questionID, uuid.UUID(resp.Id))
+	assert.Equal(t, "Pre-order", resp.CorrectAnswer)
+}
+
+func TestQuizzesHandler_ReplaceQuestion_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	quizID := uuid.New()
+	questionID := uuid.New()
+
+	mockSvc.EXPECT().ReplaceQuestion(mock.Anything, mock.Anything).
+		Return(quizzes.Question{}, apperrors.NewNotFound("Question not found"))
+
+	body, _ := json.Marshal(validAddQuestionBody())
+	url := fmt.Sprintf("/quizzes/%s/questions/%s", quizID.String(), questionID.String())
+	req := authedRequestMethod(t, http.MethodPut, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestQuizzesHandler_ReplaceQuestion_Forbidden_403(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().ReplaceQuestion(mock.Anything, mock.Anything).
+		Return(quizzes.Question{}, apperrors.NewForbidden())
+
+	body, _ := json.Marshal(validAddQuestionBody())
+	url := fmt.Sprintf("/quizzes/%s/questions/%s", uuid.New().String(), uuid.New().String())
+	req := authedRequestMethod(t, http.MethodPut, url, bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestQuizzesHandler_ReplaceQuestion_InvalidBody_400(t *testing.T) {
+	// Malformed JSON is rejected at decode time -- service is never
+	// reached (mock with no expectations would fail on any call).
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	url := fmt.Sprintf("/quizzes/%s/questions/%s", uuid.New().String(), uuid.New().String())
+	req := authedRequestMethod(t, http.MethodPut, url, bytes.NewReader([]byte("{not-json}")))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// ----------------------------------------------------------------------
+// DeleteQuizQuestion (ASK-119) -- wire-level coverage.
+// ----------------------------------------------------------------------
+
+func TestQuizzesHandler_DeleteQuestion_204(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	quizID := uuid.New()
+	questionID := uuid.New()
+
+	mockSvc.EXPECT().
+		DeleteQuestion(mock.Anything, mock.MatchedBy(func(p quizzes.DeleteQuestionParams) bool {
+			return p.QuizID == quizID && p.QuestionID == questionID
+		})).
+		Return(nil)
+
+	url := fmt.Sprintf("/quizzes/%s/questions/%s", quizID.String(), questionID.String())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	assert.Empty(t, w.Body.String())
+}
+
+func TestQuizzesHandler_DeleteQuestion_LastQuestion_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().DeleteQuestion(mock.Anything, mock.Anything).
+		Return(apperrors.NewBadRequest("Cannot delete the last question", map[string]string{
+			"question_id": "quiz must have at least 1 question",
+		}))
+
+	url := fmt.Sprintf("/quizzes/%s/questions/%s", uuid.New().String(), uuid.New().String())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var body apperrors.AppError
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&body))
+	assert.Equal(t, "quiz must have at least 1 question", body.Details["question_id"])
+}
+
+func TestQuizzesHandler_DeleteQuestion_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().DeleteQuestion(mock.Anything, mock.Anything).
+		Return(apperrors.NewNotFound("Question not found"))
+
+	url := fmt.Sprintf("/quizzes/%s/questions/%s", uuid.New().String(), uuid.New().String())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestQuizzesHandler_DeleteQuestion_Forbidden_403(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+
+	mockSvc.EXPECT().DeleteQuestion(mock.Anything, mock.Anything).
+		Return(apperrors.NewForbidden())
+
+	url := fmt.Sprintf("/quizzes/%s/questions/%s", uuid.New().String(), uuid.New().String())
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestQuizzesHandler_DeleteQuestion_BadUUID_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockQuizService(t)
+	h := handlers.NewQuizzesHandler(mockSvc)
+	// Service mock intentionally has no expectation -- chi/oapi
+	// rejects the invalid UUID before dispatch.
+
+	url := "/quizzes/not-a-uuid/questions/" + uuid.New().String()
+	req := authedRequestMethod(t, http.MethodDelete, url, nil)
+	w := httptest.NewRecorder()
+
+	r := quizzesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}

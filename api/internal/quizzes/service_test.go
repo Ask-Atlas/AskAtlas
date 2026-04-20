@@ -1994,3 +1994,560 @@ func TestGetQuiz_EmptyQuestions_200(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, got.Questions, "empty Questions slice on a question-less quiz")
 }
+
+// ----------------------------------------------------------------------
+// DeleteQuestion -- ASK-119.
+//
+// Coverage matrix (mapped to the 7 acceptance criteria):
+//   AC1: 3-question quiz, creator deletes one  -> success
+//   AC2: 1-question quiz, last-question guard  -> 400
+//   AC4: not creator                            -> 403
+//   AC5: question_id under sibling quiz        -> 404
+//   AC6: quiz soft-deleted                     -> 404
+//   AC7: parent guide soft-deleted             -> 404
+// Plus: missing quiz / missing question / DB error.
+// ----------------------------------------------------------------------
+
+// expectDeleteQuestionTxLockSuccess wires the locked SELECT happy
+// path: viewer matches creator, quiz live, parent guide live.
+func expectDeleteQuestionTxLockSuccess(repo *mock_quizzes.MockRepository, quizID, creatorID uuid.UUID) {
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, utils.UUID(quizID)).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			ID:        utils.UUID(quizID),
+			CreatorID: utils.UUID(creatorID),
+		}, nil)
+}
+
+func TestDeleteQuestion_Success(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	quizID := uuid.New()
+	questionID := uuid.New()
+
+	expectDeleteQuestionTxLockSuccess(repo, quizID, creatorID)
+	repo.EXPECT().GetQuizQuestionQuizID(mock.Anything, utils.UUID(questionID)).
+		Return(db.GetQuizQuestionQuizIDRow{
+			ID:     utils.UUID(questionID),
+			QuizID: utils.UUID(quizID),
+		}, nil)
+	repo.EXPECT().CountQuizQuestions(mock.Anything, utils.UUID(quizID)).Return(int64(3), nil)
+	repo.EXPECT().DeleteQuizQuestion(mock.Anything, mock.MatchedBy(func(arg db.DeleteQuizQuestionParams) bool {
+		return arg.ID == utils.UUID(questionID) && arg.QuizID == utils.UUID(quizID)
+	})).Return(int64(1), nil)
+	repo.EXPECT().TouchQuizUpdatedAt(mock.Anything, utils.UUID(quizID)).Return(nil)
+
+	svc := quizzes.NewService(repo)
+	err := svc.DeleteQuestion(context.Background(), quizzes.DeleteQuestionParams{
+		QuizID:     quizID,
+		QuestionID: questionID,
+		ViewerID:   creatorID,
+	})
+	require.NoError(t, err)
+}
+
+func TestDeleteQuestion_LastQuestion_400(t *testing.T) {
+	// AC2: deleting would leave the quiz with 0 questions.
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	quizID := uuid.New()
+	questionID := uuid.New()
+
+	expectDeleteQuestionTxLockSuccess(repo, quizID, creatorID)
+	repo.EXPECT().GetQuizQuestionQuizID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionQuizIDRow{ID: utils.UUID(questionID), QuizID: utils.UUID(quizID)}, nil)
+	repo.EXPECT().CountQuizQuestions(mock.Anything, mock.Anything).Return(int64(1), nil)
+	// DeleteQuizQuestion + TouchQuizUpdatedAt must NOT be called.
+
+	svc := quizzes.NewService(repo)
+	err := svc.DeleteQuestion(context.Background(), quizzes.DeleteQuestionParams{
+		QuizID: quizID, QuestionID: questionID, ViewerID: creatorID,
+	})
+	require.Error(t, err)
+	appErr := extractAppError(t, err)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+	assert.Equal(t, "quiz must have at least 1 question", appErr.Details["question_id"])
+}
+
+func TestDeleteQuestion_NotCreator_403(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	owner := uuid.New()
+	caller := uuid.New()
+	quizID := uuid.New()
+
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			ID:        utils.UUID(quizID),
+			CreatorID: utils.UUID(owner),
+		}, nil)
+
+	svc := quizzes.NewService(repo)
+	err := svc.DeleteQuestion(context.Background(), quizzes.DeleteQuestionParams{
+		QuizID: quizID, QuestionID: uuid.New(), ViewerID: caller,
+	})
+	require.Error(t, err)
+	appErr := extractAppError(t, err)
+	assert.Equal(t, http.StatusForbidden, appErr.Code)
+}
+
+func TestDeleteQuestion_QuestionInSiblingQuiz_404(t *testing.T) {
+	// AC5: question_id resolves to a question that belongs to a
+	// sibling quiz under the same creator. The probe returns a
+	// different quiz_id; service maps to 404 (no leak).
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	urlQuizID := uuid.New()
+	siblingQuizID := uuid.New()
+	questionID := uuid.New()
+
+	expectDeleteQuestionTxLockSuccess(repo, urlQuizID, creatorID)
+	repo.EXPECT().GetQuizQuestionQuizID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionQuizIDRow{
+			ID:     utils.UUID(questionID),
+			QuizID: utils.UUID(siblingQuizID), // sibling, not URL's
+		}, nil)
+
+	svc := quizzes.NewService(repo)
+	err := svc.DeleteQuestion(context.Background(), quizzes.DeleteQuestionParams{
+		QuizID: urlQuizID, QuestionID: questionID, ViewerID: creatorID,
+	})
+	require.Error(t, err)
+	appErr := extractAppError(t, err)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestDeleteQuestion_QuizNotFound_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{}, sql.ErrNoRows)
+
+	svc := quizzes.NewService(repo)
+	err := svc.DeleteQuestion(context.Background(), quizzes.DeleteQuestionParams{
+		QuizID: uuid.New(), QuestionID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	appErr := extractAppError(t, err)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestDeleteQuestion_QuizSoftDeleted_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			ID:        utils.UUID(uuid.New()),
+			CreatorID: utils.UUID(uuid.New()),
+			DeletedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		}, nil)
+
+	svc := quizzes.NewService(repo)
+	err := svc.DeleteQuestion(context.Background(), quizzes.DeleteQuestionParams{
+		QuizID: uuid.New(), QuestionID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	appErr := extractAppError(t, err)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestDeleteQuestion_GuideSoftDeleted_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			ID:             utils.UUID(uuid.New()),
+			CreatorID:      utils.UUID(uuid.New()),
+			GuideDeletedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		}, nil)
+
+	svc := quizzes.NewService(repo)
+	err := svc.DeleteQuestion(context.Background(), quizzes.DeleteQuestionParams{
+		QuizID: uuid.New(), QuestionID: uuid.New(), ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	appErr := extractAppError(t, err)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestDeleteQuestion_QuestionNotFound_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	quizID := uuid.New()
+
+	expectDeleteQuestionTxLockSuccess(repo, quizID, creatorID)
+	repo.EXPECT().GetQuizQuestionQuizID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionQuizIDRow{}, sql.ErrNoRows)
+
+	svc := quizzes.NewService(repo)
+	err := svc.DeleteQuestion(context.Background(), quizzes.DeleteQuestionParams{
+		QuizID: quizID, QuestionID: uuid.New(), ViewerID: creatorID,
+	})
+	require.Error(t, err)
+	appErr := extractAppError(t, err)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestDeleteQuestion_DBError_500(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	quizID := uuid.New()
+
+	expectDeleteQuestionTxLockSuccess(repo, quizID, creatorID)
+	repo.EXPECT().GetQuizQuestionQuizID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionQuizIDRow{ID: utils.UUID(uuid.New()), QuizID: utils.UUID(quizID)}, nil)
+	repo.EXPECT().CountQuizQuestions(mock.Anything, mock.Anything).Return(int64(3), nil)
+	repo.EXPECT().DeleteQuizQuestion(mock.Anything, mock.Anything).
+		Return(int64(0), errors.New("connection lost"))
+
+	svc := quizzes.NewService(repo)
+	err := svc.DeleteQuestion(context.Background(), quizzes.DeleteQuestionParams{
+		QuizID: quizID, QuestionID: uuid.New(), ViewerID: creatorID,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "connection lost")
+}
+
+// ----------------------------------------------------------------------
+// ReplaceQuestion -- ASK-108.
+//
+// Coverage matrix (mapped to 8 acceptance criteria):
+//   AC1: MCQ -> MCQ replacement                -> 200
+//   AC2: MCQ -> TF type change                 -> 200, options rebuilt
+//   AC3: TF -> freeform                        -> 200, no new option rows
+//   AC4: not creator                           -> 403
+//   AC5: question in sibling quiz              -> 404
+//   AC6: quiz soft-deleted                     -> 404
+//   AC7: parent guide soft-deleted             -> 404
+//   AC8: existing practice_answers untouched   -> implicit (UPDATE not DELETE on question row)
+// Plus: validation gate, missing quiz, missing question.
+// ----------------------------------------------------------------------
+
+func TestReplaceQuestion_BlankQuestionText_400(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	svc := quizzes.NewService(repo)
+
+	_, err := svc.ReplaceQuestion(context.Background(), quizzes.ReplaceQuestionParams{
+		QuizID: uuid.New(), QuestionID: uuid.New(), ViewerID: uuid.New(),
+		Question: quizzes.CreateQuizQuestionInput{
+			Type:     quizzes.QuestionTypeMultipleChoice,
+			Question: "   ",
+		},
+	})
+	require.Error(t, err)
+	assertBadRequest(t, err, "question")
+}
+
+func TestReplaceQuestion_QuizNotFound_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{}, sql.ErrNoRows)
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.ReplaceQuestion(context.Background(), quizzes.ReplaceQuestionParams{
+		QuizID: uuid.New(), QuestionID: uuid.New(), ViewerID: uuid.New(),
+		Question: mcqQuestion("Replacement?", 0),
+	})
+	require.Error(t, err)
+	appErr := extractAppError(t, err)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestReplaceQuestion_QuizSoftDeleted_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			ID: utils.UUID(uuid.New()), CreatorID: utils.UUID(uuid.New()),
+			DeletedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		}, nil)
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.ReplaceQuestion(context.Background(), quizzes.ReplaceQuestionParams{
+		QuizID: uuid.New(), QuestionID: uuid.New(), ViewerID: uuid.New(),
+		Question: mcqQuestion("R?", 0),
+	})
+	require.Error(t, err)
+	appErr := extractAppError(t, err)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestReplaceQuestion_GuideSoftDeleted_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			ID: utils.UUID(uuid.New()), CreatorID: utils.UUID(uuid.New()),
+			GuideDeletedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		}, nil)
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.ReplaceQuestion(context.Background(), quizzes.ReplaceQuestionParams{
+		QuizID: uuid.New(), QuestionID: uuid.New(), ViewerID: uuid.New(),
+		Question: mcqQuestion("R?", 0),
+	})
+	require.Error(t, err)
+	appErr := extractAppError(t, err)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestReplaceQuestion_NotCreator_403(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			ID:        utils.UUID(uuid.New()),
+			CreatorID: utils.UUID(uuid.New()), // different from caller
+		}, nil)
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.ReplaceQuestion(context.Background(), quizzes.ReplaceQuestionParams{
+		QuizID: uuid.New(), QuestionID: uuid.New(), ViewerID: uuid.New(),
+		Question: mcqQuestion("R?", 0),
+	})
+	require.Error(t, err)
+	appErr := extractAppError(t, err)
+	assert.Equal(t, http.StatusForbidden, appErr.Code)
+}
+
+func TestReplaceQuestion_QuestionInSiblingQuiz_404(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	urlQuizID := uuid.New()
+	siblingQuizID := uuid.New()
+
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			ID:        utils.UUID(urlQuizID),
+			CreatorID: utils.UUID(creatorID),
+		}, nil)
+	repo.EXPECT().GetQuizQuestionQuizID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionQuizIDRow{
+			ID:     utils.UUID(uuid.New()),
+			QuizID: utils.UUID(siblingQuizID),
+		}, nil)
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.ReplaceQuestion(context.Background(), quizzes.ReplaceQuestionParams{
+		QuizID: urlQuizID, QuestionID: uuid.New(), ViewerID: creatorID,
+		Question: mcqQuestion("R?", 0),
+	})
+	require.Error(t, err)
+	appErr := extractAppError(t, err)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestReplaceQuestion_MCQ_Success(t *testing.T) {
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	quizID := uuid.New()
+	questionID := uuid.New()
+
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			ID:        utils.UUID(quizID),
+			CreatorID: utils.UUID(creatorID),
+		}, nil)
+	repo.EXPECT().GetQuizQuestionQuizID(mock.Anything, utils.UUID(questionID)).
+		Return(db.GetQuizQuestionQuizIDRow{
+			ID:     utils.UUID(questionID),
+			QuizID: utils.UUID(quizID),
+		}, nil)
+	repo.EXPECT().DeleteQuizAnswerOptionsByQuestion(mock.Anything, utils.UUID(questionID)).Return(nil)
+
+	var capturedUpdate db.UpdateQuizQuestionParams
+	repo.EXPECT().UpdateQuizQuestion(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, arg db.UpdateQuizQuestionParams) error {
+			capturedUpdate = arg
+			return nil
+		})
+
+	var capturedOptions []db.InsertQuizAnswerOptionParams
+	repo.EXPECT().InsertQuizAnswerOption(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, arg db.InsertQuizAnswerOptionParams) error {
+			capturedOptions = append(capturedOptions, arg)
+			return nil
+		}).Times(4)
+	repo.EXPECT().TouchQuizUpdatedAt(mock.Anything, utils.UUID(quizID)).Return(nil)
+
+	expectAddHydration(repo, questionID, db.QuestionTypeMultipleChoice,
+		"Replaced MCQ?", 0, pgtype.Text{},
+		[]db.QuizAnswerOption{
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "A", IsCorrect: true, SortOrder: 0},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "B", IsCorrect: false, SortOrder: 1},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "C", IsCorrect: false, SortOrder: 2},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "D", IsCorrect: false, SortOrder: 3},
+		},
+	)
+
+	svc := quizzes.NewService(repo)
+	got, err := svc.ReplaceQuestion(context.Background(), quizzes.ReplaceQuestionParams{
+		QuizID:     quizID,
+		QuestionID: questionID,
+		ViewerID:   creatorID,
+		Question:   mcqQuestion("Replaced MCQ?", 0),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, questionID, got.ID)
+	assert.Equal(t, db.QuestionTypeMultipleChoice, capturedUpdate.Type)
+	assert.False(t, capturedUpdate.ReferenceAnswer.Valid, "MCQ replacement must clear reference_answer")
+	require.Len(t, capturedOptions, 4)
+}
+
+func TestReplaceQuestion_MCQToTF_TypeChange_Success(t *testing.T) {
+	// AC2: MCQ -> TF replacement. The DeleteQuizAnswerOptionsByQuestion
+	// wipes the MCQ rows; the new TF auto-expansion writes 2.
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	quizID := uuid.New()
+	questionID := uuid.New()
+
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			ID: utils.UUID(quizID), CreatorID: utils.UUID(creatorID),
+		}, nil)
+	repo.EXPECT().GetQuizQuestionQuizID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionQuizIDRow{
+			ID: utils.UUID(questionID), QuizID: utils.UUID(quizID),
+		}, nil)
+	repo.EXPECT().DeleteQuizAnswerOptionsByQuestion(mock.Anything, mock.Anything).Return(nil)
+	repo.EXPECT().UpdateQuizQuestion(mock.Anything, mock.Anything).Return(nil)
+
+	var captured []db.InsertQuizAnswerOptionParams
+	repo.EXPECT().InsertQuizAnswerOption(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, arg db.InsertQuizAnswerOptionParams) error {
+			captured = append(captured, arg)
+			return nil
+		}).Times(2)
+	repo.EXPECT().TouchQuizUpdatedAt(mock.Anything, mock.Anything).Return(nil)
+
+	expectAddHydration(repo, questionID, db.QuestionTypeTrueFalse,
+		"Is BST in-order sorted?", 0, pgtype.Text{},
+		[]db.QuizAnswerOption{
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "True", IsCorrect: true, SortOrder: 0},
+			{ID: utils.UUID(uuid.New()), QuestionID: utils.UUID(questionID), Text: "False", IsCorrect: false, SortOrder: 1},
+		},
+	)
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.ReplaceQuestion(context.Background(), quizzes.ReplaceQuestionParams{
+		QuizID:     quizID,
+		QuestionID: questionID,
+		ViewerID:   creatorID,
+		Question:   tfQuestion("Is BST in-order sorted?", true),
+	})
+	require.NoError(t, err)
+	require.Len(t, captured, 2)
+	assert.Equal(t, "True", captured[0].Text)
+	assert.True(t, captured[0].IsCorrect)
+	assert.Equal(t, "False", captured[1].Text)
+	assert.False(t, captured[1].IsCorrect)
+}
+
+func TestReplaceQuestion_TFToFreeform_NoNewOptions_Success(t *testing.T) {
+	// AC3: TF -> freeform replacement. Old options wiped; no new
+	// option rows inserted; reference_answer set on the question row.
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	quizID := uuid.New()
+	questionID := uuid.New()
+
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			ID: utils.UUID(quizID), CreatorID: utils.UUID(creatorID),
+		}, nil)
+	repo.EXPECT().GetQuizQuestionQuizID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionQuizIDRow{
+			ID: utils.UUID(questionID), QuizID: utils.UUID(quizID),
+		}, nil)
+	repo.EXPECT().DeleteQuizAnswerOptionsByQuestion(mock.Anything, mock.Anything).Return(nil)
+
+	var capturedUpdate db.UpdateQuizQuestionParams
+	repo.EXPECT().UpdateQuizQuestion(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, arg db.UpdateQuizQuestionParams) error {
+			capturedUpdate = arg
+			return nil
+		})
+	// InsertQuizAnswerOption must NOT be called for freeform.
+	repo.EXPECT().TouchQuizUpdatedAt(mock.Anything, mock.Anything).Return(nil)
+	expectAddHydration(repo, questionID, db.QuestionTypeFreeform,
+		"Define BST.", 0,
+		pgtype.Text{String: "A binary search tree", Valid: true},
+		nil,
+	)
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.ReplaceQuestion(context.Background(), quizzes.ReplaceQuestionParams{
+		QuizID: quizID, QuestionID: questionID, ViewerID: creatorID,
+		Question: freeformQuestion("Define BST.", "A binary search tree"),
+	})
+	require.NoError(t, err)
+	assert.True(t, capturedUpdate.ReferenceAnswer.Valid, "freeform replacement must set reference_answer")
+	assert.Equal(t, "A binary search tree", capturedUpdate.ReferenceAnswer.String)
+}
+
+func TestReplaceQuestion_TrimsWhitespace(t *testing.T) {
+	// Defensive: leading/trailing whitespace in question_text +
+	// freeform reference must be trimmed before persist.
+	repo := mock_quizzes.NewMockRepository(t)
+	inTxRunsFn(repo)
+
+	creatorID := uuid.New()
+	quizID := uuid.New()
+	questionID := uuid.New()
+
+	repo.EXPECT().GetQuizForUpdateWithParentStatus(mock.Anything, mock.Anything).
+		Return(db.GetQuizForUpdateWithParentStatusRow{
+			ID: utils.UUID(quizID), CreatorID: utils.UUID(creatorID),
+		}, nil)
+	repo.EXPECT().GetQuizQuestionQuizID(mock.Anything, mock.Anything).
+		Return(db.GetQuizQuestionQuizIDRow{ID: utils.UUID(questionID), QuizID: utils.UUID(quizID)}, nil)
+	repo.EXPECT().DeleteQuizAnswerOptionsByQuestion(mock.Anything, mock.Anything).Return(nil)
+
+	var capturedUpdate db.UpdateQuizQuestionParams
+	repo.EXPECT().UpdateQuizQuestion(mock.Anything, mock.Anything).
+		RunAndReturn(func(ctx context.Context, arg db.UpdateQuizQuestionParams) error {
+			capturedUpdate = arg
+			return nil
+		})
+	repo.EXPECT().TouchQuizUpdatedAt(mock.Anything, mock.Anything).Return(nil)
+	expectAddHydration(repo, questionID, db.QuestionTypeFreeform,
+		"trimmed?", 0, pgtype.Text{String: "trimmed answer", Valid: true}, nil,
+	)
+
+	svc := quizzes.NewService(repo)
+	_, err := svc.ReplaceQuestion(context.Background(), quizzes.ReplaceQuestionParams{
+		QuizID: quizID, QuestionID: questionID, ViewerID: creatorID,
+		Question: freeformQuestion("  trimmed?  ", "  trimmed answer  "),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "trimmed?", capturedUpdate.QuestionText)
+	assert.Equal(t, "trimmed answer", capturedUpdate.ReferenceAnswer.String)
+	// Defensive: keep the strings import non-stale even if other
+	// tests in this file stop referencing it.
+	_ = strings.TrimSpace
+}

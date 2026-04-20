@@ -26,6 +26,8 @@ type QuizService interface {
 	DeleteQuiz(ctx context.Context, params quizzes.DeleteQuizParams) error
 	UpdateQuiz(ctx context.Context, params quizzes.UpdateQuizParams) (quizzes.QuizDetail, error)
 	AddQuestion(ctx context.Context, params quizzes.AddQuestionParams) (quizzes.Question, error)
+	DeleteQuestion(ctx context.Context, params quizzes.DeleteQuestionParams) error
+	ReplaceQuestion(ctx context.Context, params quizzes.ReplaceQuestionParams) (quizzes.Question, error)
 }
 
 // QuizzesHandler manages incoming HTTP requests for the quizzes
@@ -291,6 +293,86 @@ func (h *QuizzesHandler) AddQuizQuestion(w http.ResponseWriter, r *http.Request,
 	}
 
 	respondJSON(w, http.StatusCreated, mapQuizQuestionResponse(created))
+}
+
+// ReplaceQuizQuestion handles PUT /quizzes/{quiz_id}/questions/{question_id}
+// (ASK-108). Creator-only -- the service runs the locked SELECT +
+// creator check + question existence/quiz-mismatch check + option
+// delete + question UPDATE + option re-insert + updated_at touch in a
+// single transaction. The wire request body shares the
+// CreateQuizQuestion shape with AddQuizQuestion / CreateQuiz so the
+// per-question converter (convertCreateQuizQuestion) is reused;
+// service-level validation is also shared (validateQuestion), so a
+// question accepted on create / add is also accepted on replace.
+//
+// 200 on success carries the freshly-hydrated QuizQuestionResponse
+// (id + per-type correct_answer resolution + non-null feedback
+// envelope) so the frontend can patch its local state without a
+// follow-up GET on the parent quiz.
+func (h *QuizzesHandler) ReplaceQuizQuestion(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID, questionId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	var body api.ReplaceQuizQuestionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", nil))
+		return
+	}
+
+	question, convErr := convertCreateQuizQuestion(body, "")
+	if convErr != nil {
+		apperrors.RespondWithError(w, convErr)
+		return
+	}
+
+	updated, err := h.service.ReplaceQuestion(r.Context(), quizzes.ReplaceQuestionParams{
+		QuizID:     uuid.UUID(quizId),
+		QuestionID: uuid.UUID(questionId),
+		ViewerID:   viewerID,
+		Question:   question,
+	})
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("ReplaceQuizQuestion failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, mapQuizQuestionResponse(updated))
+}
+
+// DeleteQuizQuestion handles DELETE /quizzes/{quiz_id}/questions/{question_id}
+// (ASK-119). Creator-only -- the service runs the locked SELECT +
+// creator check + question existence/quiz-mismatch check + last-
+// question guard + DELETE + updated_at touch in a single transaction.
+// Returns 204 No Content on success; CASCADE / SET NULL semantics on
+// the FK columns are documented in the openapi description.
+func (h *QuizzesHandler) DeleteQuizQuestion(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID, questionId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	if err := h.service.DeleteQuestion(r.Context(), quizzes.DeleteQuestionParams{
+		QuizID:     uuid.UUID(quizId),
+		QuestionID: uuid.UUID(questionId),
+		ViewerID:   viewerID,
+	}); err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("DeleteQuizQuestion failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // convertCreateQuizQuestions projects the openapi-generated request
