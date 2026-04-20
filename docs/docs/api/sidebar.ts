@@ -42,6 +42,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/record-file-view",
+          label: "Record a file view (ASK-134)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "api/toggle-file-favorite",
           label: "Toggle the file favorite (ASK-130)",
           className: "api-method post",
