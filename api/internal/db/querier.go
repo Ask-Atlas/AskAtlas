@@ -56,6 +56,13 @@ type Querier interface {
 	// (ASK-156). Returns sql.ErrNoRows when missing or soft-deleted.
 	// Same rationale as CheckFileExists -- favoriting is permission-less.
 	CheckStudyGuideExists(ctx context.Context, studyGuideID pgtype.UUID) (int32, error)
+	// Grantee-existence probe for ASK-122 when grantee_type='user'.
+	// Returns sql.ErrNoRows when the referenced user does not exist;
+	// the service maps this to a 400 VALIDATION_ERROR ("no user with
+	// this ID") rather than 404. The public sentinel UUID
+	// 00000000-0000-0000-0000-000000000000 is handled in the service
+	// layer (skipped before this query ever runs).
+	CheckUserExists(ctx context.Context, userID pgtype.UUID) (int32, error)
 	// Recomputes the guide's vote_score from study_guide_votes. Returned
 	// as int64 to match the wire shape on CastVoteResponse. Run after
 	// the upsert in the same logical request so the response reflects the
@@ -368,6 +375,13 @@ type Querier interface {
 	// never disagree.
 	IncrementSessionCorrectAnswers(ctx context.Context, id pgtype.UUID) error
 	InsertFile(ctx context.Context, arg InsertFileParams) (File, error)
+	// Inserts a new file_grants row for POST /api/files/{file_id}/grants
+	// (ASK-122). Plain INSERT -- no ON CONFLICT DO UPDATE because the
+	// spec requires returning 409 Conflict on a duplicate (not silently
+	// updating granted_by). A unique-key violation (sqlstate 23505)
+	// propagates up as a pgx PgError; the service translates it to
+	// apperrors.ErrConflict so the handler emits a 409.
+	InsertFileGrant(ctx context.Context, arg InsertFileGrantParams) (FileGrant, error)
 	// Append-only analytics row for POST /api/files/{file_id}/view (ASK-134).
 	// Each call inserts a fresh row -- no dedup, no upsert. The viewed_at
 	// column defaults to now() so the wall-clock stamp lives at the DB
@@ -834,9 +848,13 @@ type Querier interface {
 	// newly seeded data). Fall back to lexicographic order, which
 	// matches the convention "Spring 2026" > "Fall 2025" alphabetically.
 	ResolveCurrentTermLexLatest(ctx context.Context, viewerID pgtype.UUID) (string, error)
-	// Deletes a file grant matching the exact composite key. No-op if the grant
-	// does not exist (idempotent).
-	RevokeFileGrant(ctx context.Context, arg RevokeFileGrantParams) error
+	// Deletes a file grant matching the exact composite key for DELETE
+	// /api/files/{file_id}/grants (ASK-125). Returns the rows-affected
+	// count so the service can distinguish "grant exists and was
+	// deleted" (1 row -> 204) from "no matching grant" (0 rows -> 404).
+	// The spec requires 404 when the grant is missing -- this replaces
+	// the previous idempotent no-op behavior.
+	RevokeFileGrant(ctx context.Context, arg RevokeFileGrantParams) (int64, error)
 	// Verifies the section exists AND belongs to the supplied course. A
 	// section UUID that targets a different course is treated as not found
 	// to avoid leaking the existence of unrelated sections via the URL path.
@@ -972,11 +990,6 @@ type Querier interface {
 	// empty-body 400 check prevents that case from reaching SQL).
 	UpdateStudyGuide(ctx context.Context, arg UpdateStudyGuideParams) error
 	UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
-	// Inserts a new file grant, returning the row. If the grant already exists
-	// (same file_id, grantee_type, grantee_id, permission), updates granted_by
-	// and returns the row. Using DO UPDATE SET avoids a race window where
-	// concurrent inserts could cause both INSERT and fallback SELECT to miss.
-	UpsertFileGrant(ctx context.Context, arg UpsertFileGrantParams) (FileGrant, error)
 	// Per-(user, file) most-recent-view timestamp for POST /api/files/{file_id}/view
 	// (ASK-134). Powers the recents sidebar (ASK-145). The PK is
 	// (user_id, file_id) so a repeat view by the same user is a write to

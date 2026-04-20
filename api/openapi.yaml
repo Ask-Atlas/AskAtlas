@@ -389,7 +389,21 @@ paths:
   /files/{file_id}/grants:
     post:
       operationId: CreateGrant
-      summary: Grant a permission on a file
+      summary: Grant a permission on a file (ASK-122)
+      description: |
+        Creates a new file_grants row scoped to (file_id, grantee_type,
+        grantee_id, permission). Only the file owner may create grants.
+
+        The grantee_id is validated against the corresponding table:
+        users for grantee_type=user, courses for course, and study_guides
+        (filtered by deleted_at IS NULL) for study_guide. The public
+        sentinel UUID 00000000-0000-0000-0000-000000000000 is exempt
+        from the users lookup when grantee_type=user (represents
+        "public access").
+
+        A duplicate grant returns 409 Conflict; this endpoint does NOT
+        upsert. Permission hierarchy (delete >= share >= view) is
+        enforced by the read-side queries, not here.
       parameters:
         - name: file_id
           in: path
@@ -406,7 +420,7 @@ paths:
               $ref: '#/components/schemas/CreateGrantRequest'
       responses:
         '201':
-          description: Grant created (or already existed)
+          description: Grant created
           content:
             application/json:
               schema:
@@ -415,13 +429,24 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/InternalServerError'
     delete:
       operationId: RevokeGrant
-      summary: Revoke a permission on a file
+      summary: Revoke a permission on a file (ASK-125)
+      description: |
+        Removes the file_grants row matched by (file_id, grantee_type,
+        grantee_id, permission). Only the file owner may revoke.
+        Returns 204 when a row was deleted, 404 when no matching grant
+        exists. Each (grantee_type, grantee_id, permission) tuple is a
+        distinct grant -- revoking `view` does NOT cascade to `share`
+        or `delete`.
       parameters:
         - name: file_id
           in: path
@@ -438,11 +463,13 @@ paths:
               $ref: '#/components/schemas/RevokeGrantRequest'
       responses:
         '204':
-          description: Grant revoked (or did not exist)
+          description: Grant revoked
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
