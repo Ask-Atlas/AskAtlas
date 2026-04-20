@@ -53,6 +53,18 @@ type Querier interface {
 	// sort_order resolution (a new question lands at index = current
 	// count when the caller doesn't supply an explicit value).
 	CountQuizQuestions(ctx context.Context, quizID pgtype.UUID) (int64, error)
+	// Per-spec: total_questions_answered is the number of submitted
+	// answers across completed sessions, NOT the snapshot total from
+	// practice_sessions.total_questions. Computed via a join on
+	// practice_answers since that's where actual submissions live.
+	CountUserAnsweredQuestions(ctx context.Context, viewerID pgtype.UUID) (int64, error)
+	// =============================================================================
+	// Study-guides section: count + recent (5).
+	// =============================================================================
+	// Number of non-deleted study guides the viewer created. Filters
+	// deleted_at IS NULL because the home page should never surface a
+	// count that includes recently-deleted guides.
+	CountUserStudyGuides(ctx context.Context, viewerID pgtype.UUID) (int64, error)
 	// Single-row existence probe used by join/leave to disambiguate the
 	// "Course not found" 404 from the "Section not found" 404 the spec
 	// requires (see ASK-132 / ASK-138).
@@ -267,7 +279,25 @@ type Querier interface {
 	// Privacy floor: no email, no clerk_id. Creator exposes only
 	// id/first_name/last_name.
 	GetStudyGuideDetail(ctx context.Context, id pgtype.UUID) (GetStudyGuideDetailRow, error)
+	// =============================================================================
+	// Files section: aggregate stats + recent files.
+	// =============================================================================
+	// Total count + total bytes of complete (non-deletion-lifecycle)
+	// files the viewer owns. Filters status='complete' because pending
+	// and failed uploads aren't user-facing storage.
+	GetUserFileStats(ctx context.Context, viewerID pgtype.UUID) (GetUserFileStatsRow, error)
 	GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtype.UUID, error)
+	// =============================================================================
+	// Practice section: aggregate stats + answer count + recent sessions.
+	// =============================================================================
+	// One-shot aggregate over completed sessions: count + sum(correct)
+	// + sum(total). The accuracy percentage is computed in Go as
+	// ROUND(100 * total_correct / NULLIF(total_questions, 0)) so we
+	// can avoid a SQL CASE/COALESCE that would shadow the divide-by-
+	// zero behavior. COALESCE on the SUMs returns 0 (not NULL) when
+	// the user has no completed sessions -- the spec requires zeros
+	// in that case rather than nulls.
+	GetUserPracticeStats(ctx context.Context, viewerID pgtype.UUID) (GetUserPracticeStatsRow, error)
 	// Returns the viewer's own vote on the guide, or sql.ErrNoRows when
 	// the viewer has not voted. The service maps ErrNoRows to a nil
 	// user_vote in the response (JSON null, not omitted).
@@ -456,6 +486,15 @@ type Querier interface {
 	ListCoursesNumberDesc(ctx context.Context, arg ListCoursesNumberDescParams) ([]ListCoursesNumberDescRow, error)
 	ListCoursesTitleAsc(ctx context.Context, arg ListCoursesTitleAscParams) ([]ListCoursesTitleAscRow, error)
 	ListCoursesTitleDesc(ctx context.Context, arg ListCoursesTitleDescParams) ([]ListCoursesTitleDescRow, error)
+	// =============================================================================
+	// Courses section: enrollment list capped at 10 for the resolved term.
+	// =============================================================================
+	// Returns the viewer's enrollments for the resolved current term,
+	// capped at 10. The dashboard cares about course-level info plus
+	// the viewer's role in that section (TAs, instructors render
+	// differently in the UI). joined_at DESC, id DESC for a stable
+	// order across calls.
+	ListEnrolledCoursesForTerm(ctx context.Context, arg ListEnrolledCoursesForTermParams) ([]ListEnrolledCoursesForTermRow, error)
 	// Per-viewer file favorites (ASK-151). Joins file_favorites onto
 	// files so the row carries name + mime_type without a follow-up
 	// GET. Filters f.deletion_status IS NULL to exclude files in any
@@ -587,6 +626,17 @@ type Querier interface {
 	// Index used: idx_study_guide_last_viewed_user_viewed
 	// (user_id, viewed_at, study_guide_id).
 	ListRecentStudyGuides(ctx context.Context, arg ListRecentStudyGuidesParams) ([]ListRecentStudyGuidesRow, error)
+	// 5 most recently updated complete files the viewer owns.
+	ListRecentUserFiles(ctx context.Context, arg ListRecentUserFilesParams) ([]ListRecentUserFilesRow, error)
+	// 5 most recently completed sessions. Joins quiz + study_guide so
+	// each row carries the labels the home page needs (no follow-up
+	// GETs). score_percentage is computed in Go from total_questions
+	// + correct_answers (consistent with the overall_accuracy formula).
+	ListRecentUserSessions(ctx context.Context, arg ListRecentUserSessionsParams) ([]ListRecentUserSessionsRow, error)
+	// 5 most recently updated guides the viewer created. Joins courses
+	// so the UI can render "<dept> <num> -- <title>" inline. Sorted by
+	// updated_at DESC for the home-page "recently updated" affordance.
+	ListRecentUserStudyGuides(ctx context.Context, arg ListRecentUserStudyGuidesParams) ([]ListRecentUserStudyGuidesRow, error)
 	ListSchools(ctx context.Context, arg ListSchoolsParams) ([]School, error)
 	// Returns the section roster joined against users for first/last name.
 	// Privacy floor: SELECT lists ONLY the five fields exposed in the
@@ -721,6 +771,24 @@ type Querier interface {
 	// LockSessionForCompletion + the FOR UPDATE row lock. By the
 	// time this runs, the only legitimate outcome is "row updated".
 	MarkSessionCompleted(ctx context.Context, id pgtype.UUID) (pgtype.Timestamptz, error)
+	// Dashboard queries (ASK-155). Each section of GET /api/me/dashboard
+	// has 1-2 dedicated queries; the service orchestrates the ~10 queries
+	// in parallel-equivalent fan-out and assembles the response.
+	// =============================================================================
+	// Current-term resolution waterfall (3 attempts).
+	// =============================================================================
+	// Step 1 of the current-term waterfall: find the term whose section
+	// window contains today. If multiple terms overlap (rare), use the
+	// one with the latest end_date.
+	ResolveCurrentTermActive(ctx context.Context, viewerID pgtype.UUID) (string, error)
+	// Step 2 of the waterfall: nothing is active right now (e.g.,
+	// between semesters). Pick the term whose latest end_date is
+	// closest to today but in the past.
+	ResolveCurrentTermLastEnded(ctx context.Context, viewerID pgtype.UUID) (string, error)
+	// Step 3 of the waterfall: no sections have dates at all (e.g.,
+	// newly seeded data). Fall back to lexicographic order, which
+	// matches the convention "Spring 2026" > "Fall 2025" alphabetically.
+	ResolveCurrentTermLexLatest(ctx context.Context, viewerID pgtype.UUID) (string, error)
 	// Deletes a file grant matching the exact composite key. No-op if the grant
 	// does not exist (idempotent).
 	RevokeFileGrant(ctx context.Context, arg RevokeFileGrantParams) error
