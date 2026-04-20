@@ -597,6 +597,72 @@ func (_c *MockStudyGuideService_GetStudyGuide_Call) RunAndReturn(run func(ctx co
 	return _c
 }
 
+// ListMyStudyGuides provides a mock function for the type MockStudyGuideService
+func (_mock *MockStudyGuideService) ListMyStudyGuides(ctx context.Context, params studyguides.ListMyStudyGuidesParams) (studyguides.ListMyStudyGuidesResult, error) {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListMyStudyGuides")
+	}
+
+	var r0 studyguides.ListMyStudyGuidesResult
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, studyguides.ListMyStudyGuidesParams) (studyguides.ListMyStudyGuidesResult, error)); ok {
+		return returnFunc(ctx, params)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, studyguides.ListMyStudyGuidesParams) studyguides.ListMyStudyGuidesResult); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Get(0).(studyguides.ListMyStudyGuidesResult)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, studyguides.ListMyStudyGuidesParams) error); ok {
+		r1 = returnFunc(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockStudyGuideService_ListMyStudyGuides_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListMyStudyGuides'
+type MockStudyGuideService_ListMyStudyGuides_Call struct {
+	*mock.Call
+}
+
+// ListMyStudyGuides is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params studyguides.ListMyStudyGuidesParams
+func (_e *MockStudyGuideService_Expecter) ListMyStudyGuides(ctx interface{}, params interface{}) *MockStudyGuideService_ListMyStudyGuides_Call {
+	return &MockStudyGuideService_ListMyStudyGuides_Call{Call: _e.mock.On("ListMyStudyGuides", ctx, params)}
+}
+
+func (_c *MockStudyGuideService_ListMyStudyGuides_Call) Run(run func(ctx context.Context, params studyguides.ListMyStudyGuidesParams)) *MockStudyGuideService_ListMyStudyGuides_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 studyguides.ListMyStudyGuidesParams
+		if args[1] != nil {
+			arg1 = args[1].(studyguides.ListMyStudyGuidesParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockStudyGuideService_ListMyStudyGuides_Call) Return(listMyStudyGuidesResult studyguides.ListMyStudyGuidesResult, err error) *MockStudyGuideService_ListMyStudyGuides_Call {
+	_c.Call.Return(listMyStudyGuidesResult, err)
+	return _c
+}
+
+func (_c *MockStudyGuideService_ListMyStudyGuides_Call) RunAndReturn(run func(ctx context.Context, params studyguides.ListMyStudyGuidesParams) (studyguides.ListMyStudyGuidesResult, error)) *MockStudyGuideService_ListMyStudyGuides_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListStudyGuides provides a mock function for the type MockStudyGuideService
 func (_mock *MockStudyGuideService) ListStudyGuides(ctx context.Context, params studyguides.ListStudyGuidesParams) (studyguides.ListStudyGuidesResult, error) {
 	ret := _mock.Called(ctx, params)

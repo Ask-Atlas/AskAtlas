@@ -2851,3 +2851,260 @@ func TestService_DetachFile_DeleteError_500(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "delete blew up")
 }
+
+// ----------------------------------------------------------------------
+// ListMyStudyGuides -- ASK-131.
+//
+// Coverage matrix (mapped to the 10 acceptance criteria):
+//   AC1: includes soft-deleted                  Updated_Default
+//   AC2: default sort=updated DESC              Updated_Default
+//   AC3: sort=newest DESC                       Newest
+//   AC4: sort=title ASC                         Title
+//   AC5: course_id filter flows to repo         CourseIDFilter
+//   AC6: limit+1 -> has_more + next_cursor      HasMore_EmitsCursor
+//   AC7: cursor round-trip advances page        CursorRoundTrip
+//   AC8: 0 guides -> empty (non-nil) slice      Empty
+//   AC10: nonexistent course -> empty, not 404  (via Empty with a filter)
+// Plus: unknown sort_by -> 400, repo error propagation, limit clamp.
+// ----------------------------------------------------------------------
+
+func myUpdatedRow(t *testing.T, id uuid.UUID, title string, createdAt, updatedAt time.Time, deletedAt *time.Time) db.ListMyStudyGuidesUpdatedRow {
+	t.Helper()
+	row := db.ListMyStudyGuidesUpdatedRow{
+		ID:               utils.UUID(id),
+		Title:            title,
+		CourseID:         utils.UUID(uuid.New()),
+		CreatorID:        utils.UUID(uuid.New()),
+		CreatorFirstName: "Ada",
+		CreatorLastName:  "Lovelace",
+		Tags:             []string{},
+		CreatedAt:        pgtype.Timestamptz{Time: createdAt, Valid: true},
+		UpdatedAt:        pgtype.Timestamptz{Time: updatedAt, Valid: true},
+		VoteScore:        0,
+		ViewCount:        0,
+		IsRecommended:    false,
+		QuizCount:        0,
+	}
+	if deletedAt != nil {
+		row.DeletedAt = pgtype.Timestamptz{Time: *deletedAt, Valid: true}
+	}
+	return row
+}
+
+func TestListMyStudyGuides_Updated_Default(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+
+	viewer := uuid.New()
+	now := time.Now().UTC()
+	deleted := now.Add(-time.Hour)
+	id1, id2 := uuid.New(), uuid.New()
+
+	repo.EXPECT().
+		ListMyStudyGuidesUpdated(mock.Anything, mock.MatchedBy(func(arg db.ListMyStudyGuidesUpdatedParams) bool {
+			return arg.CreatorID == utils.UUID(viewer) && !arg.CourseID.Valid
+		})).
+		Return([]db.ListMyStudyGuidesUpdatedRow{
+			myUpdatedRow(t, id1, "Newer", now.Add(-10*time.Minute), now, nil),
+			myUpdatedRow(t, id2, "Deleted One", now.Add(-48*time.Hour), now.Add(-24*time.Hour), &deleted),
+		}, nil)
+
+	res, err := svc.ListMyStudyGuides(context.Background(), studyguides.ListMyStudyGuidesParams{
+		ViewerID: viewer,
+	})
+	require.NoError(t, err)
+	require.Len(t, res.StudyGuides, 2)
+	assert.Equal(t, id1, res.StudyGuides[0].ID)
+	assert.Nil(t, res.StudyGuides[0].DeletedAt)
+	assert.Equal(t, id2, res.StudyGuides[1].ID)
+	require.NotNil(t, res.StudyGuides[1].DeletedAt)
+	assert.True(t, res.StudyGuides[1].DeletedAt.Equal(deleted))
+	assert.False(t, res.HasMore)
+	assert.Nil(t, res.NextCursor)
+}
+
+func TestListMyStudyGuides_Newest(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+
+	now := time.Now().UTC()
+	repo.EXPECT().
+		ListMyStudyGuidesNewest(mock.Anything, mock.Anything).
+		Return([]db.ListMyStudyGuidesNewestRow{
+			{
+				ID: utils.UUID(uuid.New()), Title: "Fresh", CourseID: utils.UUID(uuid.New()),
+				CreatorID: utils.UUID(uuid.New()), CreatorFirstName: "A", CreatorLastName: "B",
+				Tags: []string{}, CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+				UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			},
+		}, nil)
+
+	res, err := svc.ListMyStudyGuides(context.Background(), studyguides.ListMyStudyGuidesParams{
+		ViewerID: uuid.New(),
+		SortBy:   studyguides.MySortFieldNewest,
+	})
+	require.NoError(t, err)
+	require.Len(t, res.StudyGuides, 1)
+	assert.Equal(t, "Fresh", res.StudyGuides[0].Title)
+}
+
+func TestListMyStudyGuides_Title(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+
+	now := time.Now().UTC()
+	repo.EXPECT().
+		ListMyStudyGuidesTitle(mock.Anything, mock.MatchedBy(func(arg db.ListMyStudyGuidesTitleParams) bool {
+			return !arg.CursorTitleLower.Valid && !arg.CourseID.Valid
+		})).
+		Return([]db.ListMyStudyGuidesTitleRow{
+			{
+				ID: utils.UUID(uuid.New()), Title: "Alpha", CourseID: utils.UUID(uuid.New()),
+				CreatorID: utils.UUID(uuid.New()), CreatorFirstName: "A", CreatorLastName: "B",
+				Tags: []string{}, CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+				UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
+			},
+		}, nil)
+
+	res, err := svc.ListMyStudyGuides(context.Background(), studyguides.ListMyStudyGuidesParams{
+		ViewerID: uuid.New(),
+		SortBy:   studyguides.MySortFieldTitle,
+	})
+	require.NoError(t, err)
+	require.Len(t, res.StudyGuides, 1)
+}
+
+func TestListMyStudyGuides_CourseIDFilter(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+
+	courseID := uuid.New()
+	repo.EXPECT().
+		ListMyStudyGuidesUpdated(mock.Anything, mock.MatchedBy(func(arg db.ListMyStudyGuidesUpdatedParams) bool {
+			return arg.CourseID.Valid && arg.CourseID == utils.UUID(courseID)
+		})).
+		Return([]db.ListMyStudyGuidesUpdatedRow{}, nil)
+
+	_, err := svc.ListMyStudyGuides(context.Background(), studyguides.ListMyStudyGuidesParams{
+		ViewerID: uuid.New(),
+		CourseID: &courseID,
+	})
+	require.NoError(t, err)
+}
+
+func TestListMyStudyGuides_HasMore_EmitsCursor(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+
+	now := time.Now().UTC()
+	rows := make([]db.ListMyStudyGuidesUpdatedRow, 0, 3)
+	for i := 0; i < 3; i++ {
+		rows = append(rows, myUpdatedRow(t, uuid.New(), "G", now.Add(-time.Duration(i)*time.Minute), now.Add(-time.Duration(i)*time.Minute), nil))
+	}
+	repo.EXPECT().ListMyStudyGuidesUpdated(mock.Anything, mock.MatchedBy(func(arg db.ListMyStudyGuidesUpdatedParams) bool {
+		return arg.PageLimit == 3 // limit=2 + 1 for hasMore
+	})).Return(rows, nil)
+
+	res, err := svc.ListMyStudyGuides(context.Background(), studyguides.ListMyStudyGuidesParams{
+		ViewerID: uuid.New(),
+		Limit:    2,
+	})
+	require.NoError(t, err)
+	assert.Len(t, res.StudyGuides, 2)
+	assert.True(t, res.HasMore)
+	require.NotNil(t, res.NextCursor)
+
+	// Round-trip: the cursor encodes the LAST visible row (row[1]),
+	// not the trimmed overflow row (row[2]).
+	decoded, err := studyguides.DecodeMyCursor(*res.NextCursor)
+	require.NoError(t, err)
+	assert.Equal(t, res.StudyGuides[1].ID, decoded.ID)
+	require.NotNil(t, decoded.UpdatedAt)
+}
+
+func TestListMyStudyGuides_CursorRoundTrip(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+
+	cursorID := uuid.New()
+	cursorTime := time.Now().UTC().Truncate(time.Microsecond)
+	cursor := &studyguides.MyCursor{ID: cursorID, UpdatedAt: &cursorTime}
+
+	repo.EXPECT().
+		ListMyStudyGuidesUpdated(mock.Anything, mock.MatchedBy(func(arg db.ListMyStudyGuidesUpdatedParams) bool {
+			return arg.CursorUpdatedAt.Valid &&
+				arg.CursorUpdatedAt.Time.Equal(cursorTime) &&
+				arg.CursorID.Valid &&
+				arg.CursorID == utils.UUID(cursorID)
+		})).
+		Return([]db.ListMyStudyGuidesUpdatedRow{}, nil)
+
+	_, err := svc.ListMyStudyGuides(context.Background(), studyguides.ListMyStudyGuidesParams{
+		ViewerID: uuid.New(),
+		Cursor:   cursor,
+	})
+	require.NoError(t, err)
+}
+
+func TestListMyStudyGuides_Empty(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+
+	repo.EXPECT().ListMyStudyGuidesUpdated(mock.Anything, mock.Anything).
+		Return([]db.ListMyStudyGuidesUpdatedRow{}, nil)
+
+	res, err := svc.ListMyStudyGuides(context.Background(), studyguides.ListMyStudyGuidesParams{
+		ViewerID: uuid.New(),
+	})
+	require.NoError(t, err)
+	assert.NotNil(t, res.StudyGuides)
+	assert.Empty(t, res.StudyGuides)
+	assert.False(t, res.HasMore)
+	assert.Nil(t, res.NextCursor)
+}
+
+func TestListMyStudyGuides_UnknownSort_400(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+
+	_, err := svc.ListMyStudyGuides(context.Background(), studyguides.ListMyStudyGuidesParams{
+		ViewerID: uuid.New(),
+		SortBy:   studyguides.MySortField("popularity"),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.True(t, errors.As(err, &appErr))
+	assert.Equal(t, 400, appErr.Code)
+	assert.Contains(t, appErr.Details["sort_by"], "updated, newest, title")
+}
+
+func TestListMyStudyGuides_RepoError_Propagates(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+
+	repo.EXPECT().ListMyStudyGuidesUpdated(mock.Anything, mock.Anything).
+		Return(nil, errors.New("connection lost"))
+
+	_, err := svc.ListMyStudyGuides(context.Background(), studyguides.ListMyStudyGuidesParams{
+		ViewerID: uuid.New(),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "connection lost")
+}
+
+func TestListMyStudyGuides_LimitClampedToMax(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	svc := studyguides.NewService(repo)
+
+	repo.EXPECT().
+		ListMyStudyGuidesUpdated(mock.Anything, mock.MatchedBy(func(arg db.ListMyStudyGuidesUpdatedParams) bool {
+			return arg.PageLimit == studyguides.MaxPageLimit+1 // clamped + 1
+		})).
+		Return([]db.ListMyStudyGuidesUpdatedRow{}, nil)
+
+	_, err := svc.ListMyStudyGuides(context.Background(), studyguides.ListMyStudyGuidesParams{
+		ViewerID: uuid.New(),
+		Limit:    500,
+	})
+	require.NoError(t, err)
+}

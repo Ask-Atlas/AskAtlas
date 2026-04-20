@@ -37,6 +37,13 @@ type Repository interface {
 	ListStudyGuidesUpdatedDesc(ctx context.Context, arg db.ListStudyGuidesUpdatedDescParams) ([]db.ListStudyGuidesUpdatedDescRow, error)
 	ListStudyGuidesUpdatedAsc(ctx context.Context, arg db.ListStudyGuidesUpdatedAscParams) ([]db.ListStudyGuidesUpdatedAscRow, error)
 
+	// ListMyStudyGuides* power GET /api/me/study-guides (ASK-131).
+	// Scoped by creator_id (JWT viewer); optional course_id filter;
+	// include soft-deleted rows so the owner can see them.
+	ListMyStudyGuidesUpdated(ctx context.Context, arg db.ListMyStudyGuidesUpdatedParams) ([]db.ListMyStudyGuidesUpdatedRow, error)
+	ListMyStudyGuidesNewest(ctx context.Context, arg db.ListMyStudyGuidesNewestParams) ([]db.ListMyStudyGuidesNewestRow, error)
+	ListMyStudyGuidesTitle(ctx context.Context, arg db.ListMyStudyGuidesTitleParams) ([]db.ListMyStudyGuidesTitleRow, error)
+
 	CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error)
 
 	GetStudyGuideDetail(ctx context.Context, id pgtype.UUID) (db.GetStudyGuideDetailRow, error)

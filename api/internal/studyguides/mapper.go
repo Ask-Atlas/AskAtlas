@@ -261,3 +261,93 @@ func fromUpdatedAscRow(r db.ListStudyGuidesUpdatedAscRow) sharedGuideRow {
 		VoteScore: r.VoteScore, IsRecommended: r.IsRecommended, QuizCount: r.QuizCount,
 	}
 }
+
+// sharedMyGuideRow is the shape common to every
+// ListMyStudyGuides*Row variant (ASK-131). Same fields as
+// sharedGuideRow plus a nullable DeletedAt so the mapper can emit
+// MyStudyGuide.DeletedAt as *time.Time.
+type sharedMyGuideRow struct {
+	ID               pgtype.UUID
+	Title            string
+	Description      pgtype.Text
+	Tags             []string
+	CourseID         pgtype.UUID
+	ViewCount        int32
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+	DeletedAt        pgtype.Timestamptz
+	CreatorID        pgtype.UUID
+	CreatorFirstName string
+	CreatorLastName  string
+	VoteScore        int64
+	IsRecommended    bool
+	QuizCount        int64
+}
+
+// mapMyStudyGuide projects a sharedMyGuideRow into the domain
+// MyStudyGuide. DeletedAt renders as *time.Time -- nil for live
+// guides, non-nil for soft-deleted ones. Every other field mirrors
+// mapStudyGuide's projection.
+func mapMyStudyGuide(r sharedMyGuideRow) (MyStudyGuide, error) {
+	id, err := utils.PgxToGoogleUUID(r.ID)
+	if err != nil {
+		return MyStudyGuide{}, fmt.Errorf("mapMyStudyGuide: id: %w", err)
+	}
+	courseID, err := utils.PgxToGoogleUUID(r.CourseID)
+	if err != nil {
+		return MyStudyGuide{}, fmt.Errorf("mapMyStudyGuide: course id: %w", err)
+	}
+	creatorID, err := utils.PgxToGoogleUUID(r.CreatorID)
+	if err != nil {
+		return MyStudyGuide{}, fmt.Errorf("mapMyStudyGuide: creator id: %w", err)
+	}
+	return MyStudyGuide{
+		ID: id,
+		Creator: Creator{
+			ID:        creatorID,
+			FirstName: r.CreatorFirstName,
+			LastName:  r.CreatorLastName,
+		},
+		CourseID:      courseID,
+		Title:         r.Title,
+		Description:   utils.TextPtr(r.Description),
+		Tags:          append([]string(nil), r.Tags...),
+		VoteScore:     r.VoteScore,
+		ViewCount:     int64(r.ViewCount),
+		IsRecommended: r.IsRecommended,
+		QuizCount:     r.QuizCount,
+		CreatedAt:     r.CreatedAt.Time,
+		UpdatedAt:     r.UpdatedAt.Time,
+		DeletedAt:     utils.TimestamptzPtr(r.DeletedAt),
+	}, nil
+}
+
+func fromMyUpdatedRow(r db.ListMyStudyGuidesUpdatedRow) sharedMyGuideRow {
+	return sharedMyGuideRow{
+		ID: r.ID, Title: r.Title, Description: r.Description, Tags: r.Tags,
+		CourseID: r.CourseID, ViewCount: r.ViewCount,
+		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, DeletedAt: r.DeletedAt,
+		CreatorID: r.CreatorID, CreatorFirstName: r.CreatorFirstName, CreatorLastName: r.CreatorLastName,
+		VoteScore: r.VoteScore, IsRecommended: r.IsRecommended, QuizCount: r.QuizCount,
+	}
+}
+
+func fromMyNewestRow(r db.ListMyStudyGuidesNewestRow) sharedMyGuideRow {
+	return sharedMyGuideRow{
+		ID: r.ID, Title: r.Title, Description: r.Description, Tags: r.Tags,
+		CourseID: r.CourseID, ViewCount: r.ViewCount,
+		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, DeletedAt: r.DeletedAt,
+		CreatorID: r.CreatorID, CreatorFirstName: r.CreatorFirstName, CreatorLastName: r.CreatorLastName,
+		VoteScore: r.VoteScore, IsRecommended: r.IsRecommended, QuizCount: r.QuizCount,
+	}
+}
+
+func fromMyTitleRow(r db.ListMyStudyGuidesTitleRow) sharedMyGuideRow {
+	return sharedMyGuideRow{
+		ID: r.ID, Title: r.Title, Description: r.Description, Tags: r.Tags,
+		CourseID: r.CourseID, ViewCount: r.ViewCount,
+		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, DeletedAt: r.DeletedAt,
+		CreatorID: r.CreatorID, CreatorFirstName: r.CreatorFirstName, CreatorLastName: r.CreatorLastName,
+		VoteScore: r.VoteScore, IsRecommended: r.IsRecommended, QuizCount: r.QuizCount,
+	}
+}

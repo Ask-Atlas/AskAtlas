@@ -590,6 +590,148 @@ WHERE (
 ORDER BY updated_at ASC, id ASC
 LIMIT sqlc.arg(page_limit);
 
+-- name: ListMyStudyGuidesUpdated :many
+-- Per-creator study-guide list for GET /api/me/study-guides (ASK-131).
+-- Differences vs ListStudyGuides*:
+--   * Scoped by creator_id (the JWT viewer), not course_id.
+--   * Optional course_id narg -- when present, filter to that course;
+--     when null, return across all courses.
+--   * NO `sg.deleted_at IS NULL` filter -- the spec explicitly
+--     requires soft-deleted guides to surface so the owner can see
+--     (and eventually restore) them. The response includes a
+--     `deleted_at` column for the frontend to render a "Deleted"
+--     badge. The creator's own deleted_at still filters (a soft-
+--     deleted user's content stays hidden everywhere).
+--   * Single direction per sort variant (updated DESC only -- the
+--     spec doesn't expose a sort_dir here; the shape is simpler).
+--
+-- Keyset cursor: (updated_at, id) DESC matches the ORDER BY so the
+-- "(updated_at, id) < cursor" clause advances past the last visible
+-- row. id is always the tiebreaker.
+WITH scored AS (
+  SELECT
+    sg.id, sg.title, sg.description, sg.tags, sg.course_id,
+    sg.view_count, sg.created_at, sg.updated_at, sg.deleted_at,
+    u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
+    COALESCE((
+      SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
+      FROM study_guide_votes
+      WHERE study_guide_id = sg.id
+    ), 0)::bigint AS vote_score,
+    EXISTS (
+      SELECT 1 FROM study_guide_recommendations
+      WHERE study_guide_id = sg.id
+    ) AS is_recommended,
+    (
+      SELECT COUNT(*) FROM quizzes
+      WHERE study_guide_id = sg.id AND deleted_at IS NULL
+    )::bigint AS quiz_count
+  FROM study_guides sg
+  JOIN users u ON u.id = sg.creator_id
+  WHERE sg.creator_id = sqlc.arg(creator_id)::uuid
+    AND u.deleted_at IS NULL
+    AND (sqlc.narg(course_id)::uuid IS NULL OR sg.course_id = sqlc.narg(course_id)::uuid)
+)
+SELECT id, title, description, tags, course_id, view_count,
+       created_at, updated_at, deleted_at,
+       creator_id, creator_first_name, creator_last_name,
+       vote_score, is_recommended, quiz_count
+FROM scored
+WHERE (
+  sqlc.narg(cursor_updated_at)::timestamptz IS NULL
+  OR (updated_at, id) < (
+    sqlc.narg(cursor_updated_at)::timestamptz,
+    sqlc.narg(cursor_id)::uuid
+  )
+)
+ORDER BY updated_at DESC, id DESC
+LIMIT sqlc.arg(page_limit);
+
+-- name: ListMyStudyGuidesNewest :many
+-- created_at DESC variant (ASK-131). Same shape + filters as
+-- ListMyStudyGuidesUpdated; the cursor comparison uses created_at.
+WITH scored AS (
+  SELECT
+    sg.id, sg.title, sg.description, sg.tags, sg.course_id,
+    sg.view_count, sg.created_at, sg.updated_at, sg.deleted_at,
+    u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
+    COALESCE((
+      SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
+      FROM study_guide_votes
+      WHERE study_guide_id = sg.id
+    ), 0)::bigint AS vote_score,
+    EXISTS (
+      SELECT 1 FROM study_guide_recommendations
+      WHERE study_guide_id = sg.id
+    ) AS is_recommended,
+    (
+      SELECT COUNT(*) FROM quizzes
+      WHERE study_guide_id = sg.id AND deleted_at IS NULL
+    )::bigint AS quiz_count
+  FROM study_guides sg
+  JOIN users u ON u.id = sg.creator_id
+  WHERE sg.creator_id = sqlc.arg(creator_id)::uuid
+    AND u.deleted_at IS NULL
+    AND (sqlc.narg(course_id)::uuid IS NULL OR sg.course_id = sqlc.narg(course_id)::uuid)
+)
+SELECT id, title, description, tags, course_id, view_count,
+       created_at, updated_at, deleted_at,
+       creator_id, creator_first_name, creator_last_name,
+       vote_score, is_recommended, quiz_count
+FROM scored
+WHERE (
+  sqlc.narg(cursor_created_at)::timestamptz IS NULL
+  OR (created_at, id) < (
+    sqlc.narg(cursor_created_at)::timestamptz,
+    sqlc.narg(cursor_id)::uuid
+  )
+)
+ORDER BY created_at DESC, id DESC
+LIMIT sqlc.arg(page_limit);
+
+-- name: ListMyStudyGuidesTitle :many
+-- title ASC variant (ASK-131). Case-insensitive via LOWER(title).
+-- Cursor: (lower(title), id) keyset for stable pagination across
+-- duplicate titles.
+WITH scored AS (
+  SELECT
+    sg.id, sg.title, sg.description, sg.tags, sg.course_id,
+    sg.view_count, sg.created_at, sg.updated_at, sg.deleted_at,
+    u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
+    COALESCE((
+      SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
+      FROM study_guide_votes
+      WHERE study_guide_id = sg.id
+    ), 0)::bigint AS vote_score,
+    EXISTS (
+      SELECT 1 FROM study_guide_recommendations
+      WHERE study_guide_id = sg.id
+    ) AS is_recommended,
+    (
+      SELECT COUNT(*) FROM quizzes
+      WHERE study_guide_id = sg.id AND deleted_at IS NULL
+    )::bigint AS quiz_count
+  FROM study_guides sg
+  JOIN users u ON u.id = sg.creator_id
+  WHERE sg.creator_id = sqlc.arg(creator_id)::uuid
+    AND u.deleted_at IS NULL
+    AND (sqlc.narg(course_id)::uuid IS NULL OR sg.course_id = sqlc.narg(course_id)::uuid)
+)
+SELECT id, title, description, tags, course_id, view_count,
+       created_at, updated_at, deleted_at,
+       creator_id, creator_first_name, creator_last_name,
+       vote_score, is_recommended, quiz_count
+FROM scored
+WHERE (
+  sqlc.narg(cursor_title_lower)::text IS NULL
+  OR (LOWER(title), id) > (
+    sqlc.narg(cursor_title_lower)::text,
+    sqlc.narg(cursor_id)::uuid
+  )
+)
+ORDER BY LOWER(title) ASC, id ASC
+LIMIT sqlc.arg(page_limit);
+
 -- name: GuideExistsAndLive :one
 -- Live-presence probe used by both vote endpoints. Returns TRUE only
 -- when the guide row exists AND is not soft-deleted. The vote service

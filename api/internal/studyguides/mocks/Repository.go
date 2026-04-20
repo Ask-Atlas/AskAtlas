@@ -1548,6 +1548,210 @@ func (_c *MockRepository_ListGuideResources_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// ListMyStudyGuidesNewest provides a mock function for the type MockRepository
+func (_mock *MockRepository) ListMyStudyGuidesNewest(ctx context.Context, arg db.ListMyStudyGuidesNewestParams) ([]db.ListMyStudyGuidesNewestRow, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListMyStudyGuidesNewest")
+	}
+
+	var r0 []db.ListMyStudyGuidesNewestRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListMyStudyGuidesNewestParams) ([]db.ListMyStudyGuidesNewestRow, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListMyStudyGuidesNewestParams) []db.ListMyStudyGuidesNewestRow); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.ListMyStudyGuidesNewestRow)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListMyStudyGuidesNewestParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_ListMyStudyGuidesNewest_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListMyStudyGuidesNewest'
+type MockRepository_ListMyStudyGuidesNewest_Call struct {
+	*mock.Call
+}
+
+// ListMyStudyGuidesNewest is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.ListMyStudyGuidesNewestParams
+func (_e *MockRepository_Expecter) ListMyStudyGuidesNewest(ctx interface{}, arg interface{}) *MockRepository_ListMyStudyGuidesNewest_Call {
+	return &MockRepository_ListMyStudyGuidesNewest_Call{Call: _e.mock.On("ListMyStudyGuidesNewest", ctx, arg)}
+}
+
+func (_c *MockRepository_ListMyStudyGuidesNewest_Call) Run(run func(ctx context.Context, arg db.ListMyStudyGuidesNewestParams)) *MockRepository_ListMyStudyGuidesNewest_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ListMyStudyGuidesNewestParams
+		if args[1] != nil {
+			arg1 = args[1].(db.ListMyStudyGuidesNewestParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_ListMyStudyGuidesNewest_Call) Return(listMyStudyGuidesNewestRows []db.ListMyStudyGuidesNewestRow, err error) *MockRepository_ListMyStudyGuidesNewest_Call {
+	_c.Call.Return(listMyStudyGuidesNewestRows, err)
+	return _c
+}
+
+func (_c *MockRepository_ListMyStudyGuidesNewest_Call) RunAndReturn(run func(ctx context.Context, arg db.ListMyStudyGuidesNewestParams) ([]db.ListMyStudyGuidesNewestRow, error)) *MockRepository_ListMyStudyGuidesNewest_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListMyStudyGuidesTitle provides a mock function for the type MockRepository
+func (_mock *MockRepository) ListMyStudyGuidesTitle(ctx context.Context, arg db.ListMyStudyGuidesTitleParams) ([]db.ListMyStudyGuidesTitleRow, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListMyStudyGuidesTitle")
+	}
+
+	var r0 []db.ListMyStudyGuidesTitleRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListMyStudyGuidesTitleParams) ([]db.ListMyStudyGuidesTitleRow, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListMyStudyGuidesTitleParams) []db.ListMyStudyGuidesTitleRow); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.ListMyStudyGuidesTitleRow)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListMyStudyGuidesTitleParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_ListMyStudyGuidesTitle_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListMyStudyGuidesTitle'
+type MockRepository_ListMyStudyGuidesTitle_Call struct {
+	*mock.Call
+}
+
+// ListMyStudyGuidesTitle is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.ListMyStudyGuidesTitleParams
+func (_e *MockRepository_Expecter) ListMyStudyGuidesTitle(ctx interface{}, arg interface{}) *MockRepository_ListMyStudyGuidesTitle_Call {
+	return &MockRepository_ListMyStudyGuidesTitle_Call{Call: _e.mock.On("ListMyStudyGuidesTitle", ctx, arg)}
+}
+
+func (_c *MockRepository_ListMyStudyGuidesTitle_Call) Run(run func(ctx context.Context, arg db.ListMyStudyGuidesTitleParams)) *MockRepository_ListMyStudyGuidesTitle_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ListMyStudyGuidesTitleParams
+		if args[1] != nil {
+			arg1 = args[1].(db.ListMyStudyGuidesTitleParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_ListMyStudyGuidesTitle_Call) Return(listMyStudyGuidesTitleRows []db.ListMyStudyGuidesTitleRow, err error) *MockRepository_ListMyStudyGuidesTitle_Call {
+	_c.Call.Return(listMyStudyGuidesTitleRows, err)
+	return _c
+}
+
+func (_c *MockRepository_ListMyStudyGuidesTitle_Call) RunAndReturn(run func(ctx context.Context, arg db.ListMyStudyGuidesTitleParams) ([]db.ListMyStudyGuidesTitleRow, error)) *MockRepository_ListMyStudyGuidesTitle_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListMyStudyGuidesUpdated provides a mock function for the type MockRepository
+func (_mock *MockRepository) ListMyStudyGuidesUpdated(ctx context.Context, arg db.ListMyStudyGuidesUpdatedParams) ([]db.ListMyStudyGuidesUpdatedRow, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListMyStudyGuidesUpdated")
+	}
+
+	var r0 []db.ListMyStudyGuidesUpdatedRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListMyStudyGuidesUpdatedParams) ([]db.ListMyStudyGuidesUpdatedRow, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListMyStudyGuidesUpdatedParams) []db.ListMyStudyGuidesUpdatedRow); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.ListMyStudyGuidesUpdatedRow)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListMyStudyGuidesUpdatedParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_ListMyStudyGuidesUpdated_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListMyStudyGuidesUpdated'
+type MockRepository_ListMyStudyGuidesUpdated_Call struct {
+	*mock.Call
+}
+
+// ListMyStudyGuidesUpdated is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.ListMyStudyGuidesUpdatedParams
+func (_e *MockRepository_Expecter) ListMyStudyGuidesUpdated(ctx interface{}, arg interface{}) *MockRepository_ListMyStudyGuidesUpdated_Call {
+	return &MockRepository_ListMyStudyGuidesUpdated_Call{Call: _e.mock.On("ListMyStudyGuidesUpdated", ctx, arg)}
+}
+
+func (_c *MockRepository_ListMyStudyGuidesUpdated_Call) Run(run func(ctx context.Context, arg db.ListMyStudyGuidesUpdatedParams)) *MockRepository_ListMyStudyGuidesUpdated_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ListMyStudyGuidesUpdatedParams
+		if args[1] != nil {
+			arg1 = args[1].(db.ListMyStudyGuidesUpdatedParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_ListMyStudyGuidesUpdated_Call) Return(listMyStudyGuidesUpdatedRows []db.ListMyStudyGuidesUpdatedRow, err error) *MockRepository_ListMyStudyGuidesUpdated_Call {
+	_c.Call.Return(listMyStudyGuidesUpdatedRows, err)
+	return _c
+}
+
+func (_c *MockRepository_ListMyStudyGuidesUpdated_Call) RunAndReturn(run func(ctx context.Context, arg db.ListMyStudyGuidesUpdatedParams) ([]db.ListMyStudyGuidesUpdatedRow, error)) *MockRepository_ListMyStudyGuidesUpdated_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListStudyGuidesNewestAsc provides a mock function for the type MockRepository
 func (_mock *MockRepository) ListStudyGuidesNewestAsc(ctx context.Context, arg db.ListStudyGuidesNewestAscParams) ([]db.ListStudyGuidesNewestAscRow, error) {
 	ret := _mock.Called(ctx, arg)

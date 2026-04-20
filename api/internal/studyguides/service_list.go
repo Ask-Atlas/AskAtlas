@@ -9,6 +9,7 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -309,4 +310,194 @@ func (s *Service) queryUpdatedAsc(ctx context.Context, f dbFilters, limit int32)
 		return nil, err
 	}
 	return mapListRows(rows, fromUpdatedAscRow)
+}
+
+// ListMyStudyGuides returns the viewer's own study guides (ASK-131).
+// Unlike ListStudyGuides, this endpoint INCLUDES soft-deleted rows so
+// the owner can see (and eventually restore) their own deleted
+// content. The `deleted_at` column surfaces on every row --
+// `MyStudyGuide.DeletedAt` is nil for live guides, non-nil for
+// soft-deleted ones.
+//
+// Sort resolution:
+//   - MySortFieldUpdated (default) -> ORDER BY updated_at DESC
+//   - MySortFieldNewest            -> ORDER BY created_at DESC
+//   - MySortFieldTitle             -> ORDER BY LOWER(title) ASC
+//
+// Unlike ListStudyGuides, there is NO sort_dir knob; each sort
+// variant has a single canonical direction per the spec.
+func (s *Service) ListMyStudyGuides(ctx context.Context, p ListMyStudyGuidesParams) (ListMyStudyGuidesResult, error) {
+	limit := p.Limit
+	if limit <= 0 {
+		limit = DefaultPageLimit
+	}
+	if limit > MaxPageLimit {
+		limit = MaxPageLimit
+	}
+
+	sortBy := p.SortBy
+	if sortBy == "" {
+		sortBy = MySortFieldUpdated
+	}
+
+	var (
+		rows []MyStudyGuide
+		err  error
+	)
+	switch sortBy {
+	case MySortFieldUpdated:
+		rows, err = s.queryMyUpdated(ctx, p, limit+1)
+	case MySortFieldNewest:
+		rows, err = s.queryMyNewest(ctx, p, limit+1)
+	case MySortFieldTitle:
+		rows, err = s.queryMyTitle(ctx, p, limit+1)
+	default:
+		return ListMyStudyGuidesResult{}, apperrors.NewBadRequest("Invalid query parameters", map[string]string{
+			"sort_by": "must be one of: updated, newest, title",
+		})
+	}
+	if err != nil {
+		return ListMyStudyGuidesResult{}, fmt.Errorf("ListMyStudyGuides: %w", err)
+	}
+
+	hasMore := int32(len(rows)) > limit
+	if hasMore {
+		rows = rows[:limit]
+	}
+
+	var nextCursor *string
+	if hasMore {
+		last := rows[len(rows)-1]
+		token, encErr := EncodeMyCursor(buildMyCursor(last, sortBy))
+		if encErr != nil {
+			return ListMyStudyGuidesResult{}, fmt.Errorf("ListMyStudyGuides: encode cursor: %w", encErr)
+		}
+		nextCursor = &token
+	}
+
+	return ListMyStudyGuidesResult{
+		StudyGuides: rows,
+		HasMore:     hasMore,
+		NextCursor:  nextCursor,
+	}, nil
+}
+
+// buildMyCursor populates only the sort-relevant field on the
+// MyCursor so the encoded token carries the minimum state needed to
+// advance past the last visible row. ID is always the tiebreaker.
+func buildMyCursor(g MyStudyGuide, sortBy MySortField) MyCursor {
+	c := MyCursor{ID: g.ID}
+	switch sortBy {
+	case MySortFieldUpdated:
+		t := g.UpdatedAt
+		c.UpdatedAt = &t
+	case MySortFieldNewest:
+		t := g.CreatedAt
+		c.CreatedAt = &t
+	case MySortFieldTitle:
+		lower := strings.ToLower(g.Title)
+		c.TitleLower = &lower
+	}
+	return c
+}
+
+// optionalCourseIDPgx converts *uuid.UUID into a pgtype.UUID where
+// Valid=false encodes SQL NULL. The ListMyStudyGuides* queries use
+// `(sqlc.narg(course_id) IS NULL OR sg.course_id = sqlc.narg(course_id))`
+// to short-circuit the filter, so a nil pointer here disables the
+// filter entirely.
+func optionalCourseIDPgx(id *uuid.UUID) pgtype.UUID {
+	if id == nil {
+		return pgtype.UUID{}
+	}
+	return utils.UUID(*id)
+}
+
+// myCursorTimestamptz / myCursorText / myCursorUUID mirror the
+// utils.Cursor* helpers but over the MyCursor shape. Kept local so
+// the Cursor and MyCursor types can evolve independently.
+func myCursorTimestamptz(c *MyCursor, pick func(*MyCursor) *time.Time) pgtype.Timestamptz {
+	if c == nil {
+		return pgtype.Timestamptz{}
+	}
+	t := pick(c)
+	if t == nil {
+		return pgtype.Timestamptz{}
+	}
+	return pgtype.Timestamptz{Time: *t, Valid: true}
+}
+
+func myCursorText(c *MyCursor, pick func(*MyCursor) *string) pgtype.Text {
+	if c == nil {
+		return pgtype.Text{}
+	}
+	s := pick(c)
+	if s == nil {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: *s, Valid: true}
+}
+
+func myCursorUUID(c *MyCursor) pgtype.UUID {
+	if c == nil {
+		return pgtype.UUID{}
+	}
+	return utils.UUID(c.ID)
+}
+
+func (s *Service) queryMyUpdated(ctx context.Context, p ListMyStudyGuidesParams, limit int32) ([]MyStudyGuide, error) {
+	rows, err := s.repo.ListMyStudyGuidesUpdated(ctx, db.ListMyStudyGuidesUpdatedParams{
+		CreatorID:       utils.UUID(p.ViewerID),
+		CourseID:        optionalCourseIDPgx(p.CourseID),
+		PageLimit:       limit,
+		CursorUpdatedAt: myCursorTimestamptz(p.Cursor, func(c *MyCursor) *time.Time { return c.UpdatedAt }),
+		CursorID:        myCursorUUID(p.Cursor),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mapMyListRows(rows, fromMyUpdatedRow)
+}
+
+func (s *Service) queryMyNewest(ctx context.Context, p ListMyStudyGuidesParams, limit int32) ([]MyStudyGuide, error) {
+	rows, err := s.repo.ListMyStudyGuidesNewest(ctx, db.ListMyStudyGuidesNewestParams{
+		CreatorID:       utils.UUID(p.ViewerID),
+		CourseID:        optionalCourseIDPgx(p.CourseID),
+		PageLimit:       limit,
+		CursorCreatedAt: myCursorTimestamptz(p.Cursor, func(c *MyCursor) *time.Time { return c.CreatedAt }),
+		CursorID:        myCursorUUID(p.Cursor),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mapMyListRows(rows, fromMyNewestRow)
+}
+
+func (s *Service) queryMyTitle(ctx context.Context, p ListMyStudyGuidesParams, limit int32) ([]MyStudyGuide, error) {
+	rows, err := s.repo.ListMyStudyGuidesTitle(ctx, db.ListMyStudyGuidesTitleParams{
+		CreatorID:        utils.UUID(p.ViewerID),
+		CourseID:         optionalCourseIDPgx(p.CourseID),
+		PageLimit:        limit,
+		CursorTitleLower: myCursorText(p.Cursor, func(c *MyCursor) *string { return c.TitleLower }),
+		CursorID:         myCursorUUID(p.Cursor),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mapMyListRows(rows, fromMyTitleRow)
+}
+
+// mapMyListRows mirrors mapListRows but for the MyStudyGuide variants.
+// Generic over the sqlc-generated row type so all three query helpers
+// share the mapping loop.
+func mapMyListRows[R any](rows []R, project func(R) sharedMyGuideRow) ([]MyStudyGuide, error) {
+	out := make([]MyStudyGuide, 0, len(rows))
+	for _, r := range rows {
+		g, err := mapMyStudyGuide(project(r))
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, g)
+	}
+	return out, nil
 }

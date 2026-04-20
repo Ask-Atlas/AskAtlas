@@ -38,6 +38,30 @@ type StudyGuide struct {
 	UpdatedAt     time.Time
 }
 
+// MyStudyGuide is the list-row domain type returned by
+// Service.ListMyStudyGuides (ASK-131). Same projection as StudyGuide
+// plus a nullable DeletedAt so the owner can see their own soft-
+// deleted guides. Live guides have DeletedAt nil; soft-deleted
+// guides carry a non-nil timestamp. The wire shape renders the
+// field as `deleted_at: null` vs `deleted_at: "<timestamp>"` so
+// the frontend can distinguish via `=== null` without an undefined
+// case.
+type MyStudyGuide struct {
+	ID            uuid.UUID
+	Title         string
+	Description   *string
+	Tags          []string
+	Creator       Creator
+	CourseID      uuid.UUID
+	VoteScore     int64
+	ViewCount     int64
+	IsRecommended bool
+	QuizCount     int64
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+	DeletedAt     *time.Time
+}
+
 // GuideVote is the domain enum for a vote direction on a study guide.
 // Mirrors the vote_direction Postgres enum and the openapi
 // StudyGuideDetailResponse.user_vote enum.

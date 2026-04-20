@@ -92,6 +92,18 @@ func (r *sqlcRepository) ListStudyGuidesUpdatedAsc(ctx context.Context, arg db.L
 	return r.queries.ListStudyGuidesUpdatedAsc(ctx, arg)
 }
 
+func (r *sqlcRepository) ListMyStudyGuidesUpdated(ctx context.Context, arg db.ListMyStudyGuidesUpdatedParams) ([]db.ListMyStudyGuidesUpdatedRow, error) {
+	return r.queries.ListMyStudyGuidesUpdated(ctx, arg)
+}
+
+func (r *sqlcRepository) ListMyStudyGuidesNewest(ctx context.Context, arg db.ListMyStudyGuidesNewestParams) ([]db.ListMyStudyGuidesNewestRow, error) {
+	return r.queries.ListMyStudyGuidesNewest(ctx, arg)
+}
+
+func (r *sqlcRepository) ListMyStudyGuidesTitle(ctx context.Context, arg db.ListMyStudyGuidesTitleParams) ([]db.ListMyStudyGuidesTitleRow, error) {
+	return r.queries.ListMyStudyGuidesTitle(ctx, arg)
+}
+
 func (r *sqlcRepository) CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error) {
 	return r.queries.CourseExistsForGuides(ctx, id)
 }

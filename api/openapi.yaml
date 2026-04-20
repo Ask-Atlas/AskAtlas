@@ -2349,6 +2349,72 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /me/study-guides:
+    get:
+      operationId: ListMyStudyGuides
+      summary: List study guides created by the authenticated user (ASK-131)
+      description: |
+        Returns study guides authored by the viewer as a paginated
+        list. Unlike the course-scoped list, this endpoint DOES
+        surface soft-deleted guides -- the response includes a
+        nullable `deleted_at` field so the owner can see (and
+        eventually restore) their own deleted content.
+
+        Sort options: `updated` (default, updated_at DESC),
+        `newest` (created_at DESC), `title` (case-insensitive ASC).
+        Single direction per variant -- the endpoint does not
+        expose a `sort_dir` query param.
+
+        Optional `course_id` filters to one course. A non-existent
+        course yields an empty array, not 404 (the filter just
+        yields no results).
+      parameters:
+        - name: course_id
+          in: query
+          description: Filter results to guides in this course.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: sort_by
+          in: query
+          description: Sort field
+          required: false
+          schema:
+            type: string
+            enum:
+              - updated
+              - newest
+              - title
+            default: updated
+        - name: limit
+          in: query
+          description: Maximum number of guides per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          description: Opaque keyset cursor token from the previous page
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A paginated list of the viewer's study guides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListMyStudyGuidesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /me/favorites:
     get:
       operationId: ListFavorites
@@ -3528,6 +3594,92 @@ components:
           type: boolean
       required:
         - study_guides
+        - has_more
+    MyStudyGuideSummary:
+      type: object
+      description: |
+        Row shape for GET /api/me/study-guides (ASK-131). Same fields
+        as StudyGuideListItemResponse plus a nullable `deleted_at` so
+        the viewer can see (and eventually restore) their own
+        soft-deleted guides. Live guides render `deleted_at: null`;
+        soft-deleted guides render a timestamp.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        creator:
+          $ref: '#/components/schemas/CreatorSummary'
+        course_id:
+          type: string
+          format: uuid
+        vote_score:
+          type: integer
+          format: int64
+        view_count:
+          type: integer
+          format: int64
+          minimum: 0
+        is_recommended:
+          type: boolean
+        quiz_count:
+          type: integer
+          format: int64
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            Null for live guides; a timestamp for soft-deleted ones.
+            Required + nullable so the field is always present on the
+            wire (the frontend can check `=== null` without worrying
+            about an undefined case).
+      required:
+        - id
+        - title
+        - tags
+        - creator
+        - course_id
+        - vote_score
+        - view_count
+        - is_recommended
+        - quiz_count
+        - created_at
+        - updated_at
+        - deleted_at
+    ListMyStudyGuidesResponse:
+      type: object
+      description: |
+        Paginated envelope for GET /api/me/study-guides (ASK-131).
+        Includes soft-deleted guides authored by the viewer.
+      properties:
+        study_guides:
+          type: array
+          items:
+            $ref: '#/components/schemas/MyStudyGuideSummary'
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+      required:
+        - study_guides
+        - next_cursor
         - has_more
     MembershipCheckResponse:
       type: object
