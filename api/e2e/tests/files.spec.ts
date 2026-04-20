@@ -278,4 +278,111 @@ test.describe("Files API", () => {
       expect(response.status()).toBe(404);
     });
   });
+
+  // POST /api/files (ASK-105). Validation-only coverage; we do NOT
+  // exercise the 201 happy path here because it would create
+  // dangling `pending` file records on staging that no subsequent
+  // PATCH would ever clear. The Go handler tests already pin the
+  // 201 response shape (FileResponse, no upload_url wrapper).
+  test.describe("POST /files validation", () => {
+    test("rejects unauthenticated with 401", async ({ playwright }) => {
+      const noAuth = await playwright.request.newContext({
+        baseURL: process.env.E2E_BASE_URL,
+        extraHTTPHeaders: {},
+      });
+      const resp = await noAuth.post("/api/files", {
+        data: {
+          name: "doc.pdf",
+          mime_type: "application/pdf",
+          size: 100,
+          s3_key: "uploads/abc/doc.pdf",
+        },
+      });
+      expect(resp.status()).toBe(401);
+      await noAuth.dispose();
+    });
+
+    test("rejects body missing s3_key with 400", async ({ request }) => {
+      const resp = await request.post("/api/files", {
+        data: {
+          name: "doc.pdf",
+          mime_type: "application/pdf",
+          size: 100,
+        },
+      });
+      expect(resp.status()).toBe(400);
+    });
+
+    test("rejects empty s3_key with 400", async ({ request }) => {
+      const resp = await request.post("/api/files", {
+        data: {
+          name: "doc.pdf",
+          mime_type: "application/pdf",
+          size: 100,
+          s3_key: "",
+        },
+      });
+      expect(resp.status()).toBe(400);
+    });
+
+    test("rejects s3_key over 1024 chars with 400", async ({ request }) => {
+      const resp = await request.post("/api/files", {
+        data: {
+          name: "doc.pdf",
+          mime_type: "application/pdf",
+          size: 100,
+          s3_key: "a".repeat(1025),
+        },
+      });
+      expect(resp.status()).toBe(400);
+    });
+
+    test("rejects unsupported mime_type with 400", async ({ request }) => {
+      const resp = await request.post("/api/files", {
+        data: {
+          name: "doc.zip",
+          mime_type: "application/zip",
+          size: 100,
+          s3_key: "uploads/abc/doc.zip",
+        },
+      });
+      expect(resp.status()).toBe(400);
+    });
+
+    test("rejects size=0 with 400", async ({ request }) => {
+      const resp = await request.post("/api/files", {
+        data: {
+          name: "doc.pdf",
+          mime_type: "application/pdf",
+          size: 0,
+          s3_key: "uploads/abc/doc.pdf",
+        },
+      });
+      expect(resp.status()).toBe(400);
+    });
+
+    test("rejects size over 100MB with 400", async ({ request }) => {
+      const resp = await request.post("/api/files", {
+        data: {
+          name: "doc.pdf",
+          mime_type: "application/pdf",
+          size: 104857601,
+          s3_key: "uploads/abc/doc.pdf",
+        },
+      });
+      expect(resp.status()).toBe(400);
+    });
+
+    test("rejects empty name with 400", async ({ request }) => {
+      const resp = await request.post("/api/files", {
+        data: {
+          name: "",
+          mime_type: "application/pdf",
+          size: 100,
+          s3_key: "uploads/abc/doc.pdf",
+        },
+      });
+      expect(resp.status()).toBe(400);
+    });
+  });
 });

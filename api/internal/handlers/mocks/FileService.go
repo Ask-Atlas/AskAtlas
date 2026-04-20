@@ -39,22 +39,22 @@ func (_m *MockFileService) EXPECT() *MockFileService_Expecter {
 }
 
 // CreateFile provides a mock function for the type MockFileService
-func (_mock *MockFileService) CreateFile(ctx context.Context, params files.CreateFileParams) (files.CreateFileResult, error) {
+func (_mock *MockFileService) CreateFile(ctx context.Context, params files.CreateFileParams) (files.File, error) {
 	ret := _mock.Called(ctx, params)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateFile")
 	}
 
-	var r0 files.CreateFileResult
+	var r0 files.File
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, files.CreateFileParams) (files.CreateFileResult, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, files.CreateFileParams) (files.File, error)); ok {
 		return returnFunc(ctx, params)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, files.CreateFileParams) files.CreateFileResult); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, files.CreateFileParams) files.File); ok {
 		r0 = returnFunc(ctx, params)
 	} else {
-		r0 = ret.Get(0).(files.CreateFileResult)
+		r0 = ret.Get(0).(files.File)
 	}
 	if returnFunc, ok := ret.Get(1).(func(context.Context, files.CreateFileParams) error); ok {
 		r1 = returnFunc(ctx, params)
@@ -94,12 +94,12 @@ func (_c *MockFileService_CreateFile_Call) Run(run func(ctx context.Context, par
 	return _c
 }
 
-func (_c *MockFileService_CreateFile_Call) Return(createFileResult files.CreateFileResult, err error) *MockFileService_CreateFile_Call {
-	_c.Call.Return(createFileResult, err)
+func (_c *MockFileService_CreateFile_Call) Return(file files.File, err error) *MockFileService_CreateFile_Call {
+	_c.Call.Return(file, err)
 	return _c
 }
 
-func (_c *MockFileService_CreateFile_Call) RunAndReturn(run func(ctx context.Context, params files.CreateFileParams) (files.CreateFileResult, error)) *MockFileService_CreateFile_Call {
+func (_c *MockFileService_CreateFile_Call) RunAndReturn(run func(ctx context.Context, params files.CreateFileParams) (files.File, error)) *MockFileService_CreateFile_Call {
 	_c.Call.Return(run)
 	return _c
 }

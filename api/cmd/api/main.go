@@ -87,7 +87,7 @@ func main() {
 	jobHandler := handlers.NewJobHandler(s3Client, queries)
 
 	fileRepo := files.NewSQLCRepository(connPool, queries)
-	fileService := files.NewService(fileRepo, s3Client)
+	fileService := files.NewService(fileRepo)
 	fileHandler := handlers.NewFileHandler(fileService, qstashClient)
 	grantHandler := handlers.NewGrantHandler(fileService)
 

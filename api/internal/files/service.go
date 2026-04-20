@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"path/filepath"
 	"strings"
 	"time"
 	"unicode"
@@ -48,21 +47,22 @@ type Repository interface {
 	ListOwnedFilesMimeDesc(ctx context.Context, arg db.ListOwnedFilesMimeDescParams) ([]db.ListOwnedFilesMimeDescRow, error)
 }
 
-// S3Uploader is the interface the service uses to generate presigned upload URLs.
-type S3Uploader interface {
-	GeneratePresignedPutURL(ctx context.Context, key, contentType string, contentLength int64) (string, error)
-}
-
 // Service is the business-logic layer for the files feature.
+//
+// Note: as of ASK-105 the service no longer presigns S3 URLs. The
+// caller (Next.js server) generates the s3_key + presigns the
+// upload separately; the Go API only manages metadata records.
+// File deletions still go through QStash + the jobs handler,
+// which holds its own S3 client -- the files Service itself is
+// pure metadata.
 type Service struct {
 	repo       Repository
-	s3         S3Uploader
 	queryTable map[sortKey]queryFn
 }
 
 // NewService creates a new Service instance configured with the given repository.
-func NewService(repo Repository, s3 S3Uploader) *Service {
-	s := &Service{repo: repo, s3: s3}
+func NewService(repo Repository) *Service {
+	s := &Service{repo: repo}
 	s.queryTable = map[sortKey]queryFn{
 		{SortFieldUpdatedAt, SortDirDesc}: s.queryUpdatedDesc,
 		{SortFieldUpdatedAt, SortDirAsc}:  s.queryUpdatedAsc,
@@ -94,43 +94,33 @@ func (s *Service) GetFile(ctx context.Context, p GetFileParams) (File, error) {
 	return mapDBFile(row)
 }
 
-// CreateFile inserts a pending file record in the database, generates a presigned S3 PUT URL,
-// and returns both the file reference and the upload URL.
-func (s *Service) CreateFile(ctx context.Context, p CreateFileParams) (CreateFileResult, error) {
-	safeName := filepath.Base(p.Name)
-	if safeName == "." || safeName == "/" || safeName == "" || strings.ContainsRune(safeName, 0) {
-		return CreateFileResult{}, fmt.Errorf("CreateFile: %w", apperrors.ErrInvalidInput)
-	}
-
-	fileID := uuid.New()
-	s3Key := fmt.Sprintf("users/%s/files/%s/%s", p.UserID.String(), fileID.String(), safeName)
-
+// CreateFile inserts a `pending` file metadata record (ASK-105).
+// The caller (typically the Next.js server) provides the S3 key
+// it generated and presigned separately; this method NEVER touches
+// S3. The handler is responsible for validating the request body
+// (name, mime_type, size, s3_key) before calling -- this method
+// trusts the params struct.
+//
+// Server-generated UUID for the file ID; user_id always comes from
+// the JWT (handler-resolved), never from the request body.
+func (s *Service) CreateFile(ctx context.Context, p CreateFileParams) (File, error) {
 	row, err := s.repo.InsertFile(ctx, db.InsertFileParams{
-		ID:       utils.UUID(fileID),
+		ID:       utils.UUID(uuid.New()),
 		UserID:   utils.UUID(p.UserID),
-		S3Key:    s3Key,
+		S3Key:    p.S3Key,
 		Name:     p.Name,
 		MimeType: p.MimeType,
 		Size:     p.Size,
 	})
 	if err != nil {
-		return CreateFileResult{}, fmt.Errorf("CreateFile: insert: %w", err)
-	}
-
-	uploadURL, err := s.s3.GeneratePresignedPutURL(ctx, s3Key, p.MimeType, p.Size)
-	if err != nil {
-		return CreateFileResult{}, fmt.Errorf("CreateFile: presign: %w", err)
+		return File{}, fmt.Errorf("CreateFile: insert: %w", err)
 	}
 
 	file, err := mapDBFile(row)
 	if err != nil {
-		return CreateFileResult{}, fmt.Errorf("CreateFile: map: %w", err)
+		return File{}, fmt.Errorf("CreateFile: map: %w", err)
 	}
-
-	return CreateFileResult{
-		File:      file,
-		UploadURL: uploadURL,
-	}, nil
+	return file, nil
 }
 
 // ListFiles queries the repository for a paginated list of files matching the given parameters.

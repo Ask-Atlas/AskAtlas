@@ -20,7 +20,7 @@ import (
 
 func TestService_ListFiles_Scope(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo, nil)
+	svc := files.NewService(repo)
 
 	params := files.ListFilesParams{
 		Scope: files.ScopeCourse, // Unsupported
@@ -33,7 +33,7 @@ func TestService_ListFiles_Scope(t *testing.T) {
 
 func TestService_ListFiles_Pagination_HasNextPage(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo, nil)
+	svc := files.NewService(repo)
 
 	viewerID := uuid.New()
 	params := files.ListFilesParams{
@@ -68,7 +68,7 @@ func TestService_ListFiles_Pagination_HasNextPage(t *testing.T) {
 
 func TestService_ListFiles_Pagination_NoNextPage(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo, nil)
+	svc := files.NewService(repo)
 
 	viewerID := uuid.New()
 	params := files.ListFilesParams{
@@ -100,35 +100,39 @@ func TestService_ListFiles_Pagination_NoNextPage(t *testing.T) {
 	assert.Nil(t, nextCursor, "expected nextCursor to be nil")
 }
 
+// As of ASK-105 the service no longer presigns S3 URLs and no longer
+// validates / sanitizes the file name -- the caller (Next.js server)
+// generates the s3_key and the handler trims/length-checks the name.
+// The service only persists what it's given.
 func TestService_CreateFile_Success(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	s3Mock := mock_files.NewMockS3Uploader(t)
-	svc := files.NewService(repo, s3Mock)
+	svc := files.NewService(repo)
 
 	userID := uuid.New()
 	now := time.Now()
+	callerS3Key := "uploads/abc123/lecture-notes.pdf"
 
 	params := files.CreateFileParams{
 		UserID:   userID,
 		Name:     "lecture-notes.pdf",
 		MimeType: "application/pdf",
 		Size:     1048576,
+		S3Key:    callerS3Key,
 	}
 
-	// Capture the generated file ID and s3_key from the insert call.
 	var capturedID pgtype.UUID
-	var capturedS3Key string
 
 	repo.EXPECT().
 		InsertFile(mock.Anything, mock.MatchedBy(func(arg db.InsertFileParams) bool {
 			capturedID = arg.ID
-			capturedS3Key = arg.S3Key
 			return arg.ID.Valid &&
 				arg.UserID == utils.UUID(userID) &&
 				arg.Name == "lecture-notes.pdf" &&
 				arg.MimeType == "application/pdf" &&
 				arg.Size == int64(1048576) &&
-				arg.S3Key != ""
+				// The service must store the caller-supplied key as-is,
+				// NOT regenerate one server-side.
+				arg.S3Key == callerS3Key
 		})).
 		RunAndReturn(func(_ context.Context, arg db.InsertFileParams) (db.File, error) {
 			return db.File{
@@ -144,37 +148,28 @@ func TestService_CreateFile_Success(t *testing.T) {
 			}, nil
 		})
 
-	s3Mock.EXPECT().
-		GeneratePresignedPutURL(mock.Anything, mock.AnythingOfType("string"), "application/pdf", int64(1048576)).
-		Return("https://s3.example.com/presigned-url", nil)
-
-	result, err := svc.CreateFile(context.Background(), params)
+	file, err := svc.CreateFile(context.Background(), params)
 	require.NoError(t, err)
 
-	fileID, err := utils.PgxToGoogleUUID(capturedID)
+	wantID, err := utils.PgxToGoogleUUID(capturedID)
 	require.NoError(t, err)
-
-	expectedKey := fmt.Sprintf("users/%s/files/%s/lecture-notes.pdf", userID.String(), fileID.String())
-	assert.Equal(t, expectedKey, capturedS3Key, "S3 key stored in DB must include file ID and name")
-
-	assert.Equal(t, fileID, result.File.ID)
-	assert.Equal(t, "lecture-notes.pdf", result.File.Name)
-	assert.Equal(t, int64(1048576), result.File.Size)
-	assert.Equal(t, "application/pdf", result.File.MimeType)
-	assert.Equal(t, "pending", result.File.Status)
-	assert.Equal(t, "https://s3.example.com/presigned-url", result.UploadURL)
+	assert.Equal(t, wantID, file.ID)
+	assert.Equal(t, "lecture-notes.pdf", file.Name)
+	assert.Equal(t, int64(1048576), file.Size)
+	assert.Equal(t, "application/pdf", file.MimeType)
+	assert.Equal(t, "pending", file.Status)
 }
 
 func TestService_CreateFile_InsertError(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	s3Mock := mock_files.NewMockS3Uploader(t)
-	svc := files.NewService(repo, s3Mock)
+	svc := files.NewService(repo)
 
 	params := files.CreateFileParams{
 		UserID:   uuid.New(),
 		Name:     "file.pdf",
 		MimeType: "application/pdf",
 		Size:     100,
+		S3Key:    "uploads/abc/file.pdf",
 	}
 
 	repo.EXPECT().
@@ -186,95 +181,31 @@ func TestService_CreateFile_InsertError(t *testing.T) {
 	assert.Contains(t, err.Error(), "CreateFile: insert")
 }
 
-func TestService_CreateFile_PresignError(t *testing.T) {
+// Service stores the S3 key as-is. Verifies that even an unusual
+// caller-supplied key (e.g. one containing `..`) is persisted
+// unchanged -- the Go API trusts the caller (Next.js) to generate
+// safe keys, and the s3_key is opaque to the API surface (it is
+// never returned in any response).
+func TestService_CreateFile_StoresS3KeyVerbatim(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	s3Mock := mock_files.NewMockS3Uploader(t)
-	svc := files.NewService(repo, s3Mock)
+	svc := files.NewService(repo)
 
 	userID := uuid.New()
 	now := time.Now()
+	weirdKey := "uploads/../../weird/path with spaces.pdf"
 
 	params := files.CreateFileParams{
 		UserID:   userID,
-		Name:     "file.pdf",
+		Name:     "doc.pdf",
 		MimeType: "application/pdf",
 		Size:     100,
+		S3Key:    weirdKey,
 	}
 
-	repo.EXPECT().
-		InsertFile(mock.Anything, mock.Anything).
-		RunAndReturn(func(_ context.Context, arg db.InsertFileParams) (db.File, error) {
-			return db.File{
-				ID:        arg.ID,
-				UserID:    arg.UserID,
-				S3Key:     arg.S3Key,
-				Name:      arg.Name,
-				MimeType:  arg.MimeType,
-				Size:      arg.Size,
-				Status:    db.UploadStatusPending,
-				CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
-				UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
-			}, nil
-		})
-
-	s3Mock.EXPECT().
-		GeneratePresignedPutURL(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return("", fmt.Errorf("s3 error"))
-
-	_, err := svc.CreateFile(context.Background(), params)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "CreateFile: presign")
-}
-
-func TestService_CreateFile_PathTraversal_Rejected(t *testing.T) {
-	tests := []struct {
-		name     string
-		fileName string
-	}{
-		{"empty name", ""},
-		{"dot only", "."},
-		{"slash only", "/"},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			repo := mock_files.NewMockRepository(t)
-			s3Mock := mock_files.NewMockS3Uploader(t)
-			svc := files.NewService(repo, s3Mock)
-
-			params := files.CreateFileParams{
-				UserID:   uuid.New(),
-				Name:     tc.fileName,
-				MimeType: "application/pdf",
-				Size:     100,
-			}
-
-			_, err := svc.CreateFile(context.Background(), params)
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "invalid input")
-		})
-	}
-}
-
-func TestService_CreateFile_PathTraversal_Sanitized(t *testing.T) {
-	repo := mock_files.NewMockRepository(t)
-	s3Mock := mock_files.NewMockS3Uploader(t)
-	svc := files.NewService(repo, s3Mock)
-
-	userID := uuid.New()
-	now := time.Now()
-
-	params := files.CreateFileParams{
-		UserID:   userID,
-		Name:     "../../admin/secrets.pdf",
-		MimeType: "application/pdf",
-		Size:     100,
-	}
-
-	var capturedS3Key string
-
+	var captured string
 	repo.EXPECT().
 		InsertFile(mock.Anything, mock.MatchedBy(func(arg db.InsertFileParams) bool {
-			capturedS3Key = arg.S3Key
+			captured = arg.S3Key
 			return true
 		})).
 		RunAndReturn(func(_ context.Context, arg db.InsertFileParams) (db.File, error) {
@@ -291,19 +222,14 @@ func TestService_CreateFile_PathTraversal_Sanitized(t *testing.T) {
 			}, nil
 		})
 
-	s3Mock.EXPECT().
-		GeneratePresignedPutURL(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
-		Return("https://s3.example.com/presigned-url", nil)
-
 	_, err := svc.CreateFile(context.Background(), params)
 	require.NoError(t, err)
-	assert.Contains(t, capturedS3Key, "/secrets.pdf", "path traversal should be stripped to base name")
-	assert.NotContains(t, capturedS3Key, "..", "S3 key must not contain directory traversal")
+	assert.Equal(t, weirdKey, captured, "service must store the caller-supplied s3_key verbatim, with no sanitization")
 }
 
 func TestService_UpdateFile_Success(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo, nil)
+	svc := files.NewService(repo)
 
 	fid := uuid.New()
 	oid := uuid.New()
@@ -339,7 +265,7 @@ func TestService_UpdateFile_Success(t *testing.T) {
 
 func TestService_UpdateFile_NotFound(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo, nil)
+	svc := files.NewService(repo)
 
 	repo.EXPECT().
 		UpdateFile(mock.Anything, mock.Anything).
@@ -356,7 +282,7 @@ func TestService_UpdateFile_NotFound(t *testing.T) {
 
 func TestService_UpdateFile_EmptyNameAfterTrim(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo, nil)
+	svc := files.NewService(repo)
 
 	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
 		FileID:  uuid.New(),
@@ -373,7 +299,7 @@ func TestService_UpdateFile_EmptyNameAfterTrim(t *testing.T) {
 
 func TestService_UpdateFile_NameTooLong(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo, nil)
+	svc := files.NewService(repo)
 
 	longName := string(make([]byte, 256))
 	for i := range longName {
@@ -395,7 +321,7 @@ func TestService_UpdateFile_NameTooLong(t *testing.T) {
 
 func TestService_UpdateFile_DangerousChars(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo, nil)
+	svc := files.NewService(repo)
 
 	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
 		FileID:  uuid.New(),
@@ -413,7 +339,7 @@ func TestService_UpdateFile_DangerousChars(t *testing.T) {
 
 func TestService_UpdateFile_WhitespaceTrimmed(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo, nil)
+	svc := files.NewService(repo)
 
 	fid := uuid.New()
 	oid := uuid.New()
@@ -445,7 +371,7 @@ func TestService_UpdateFile_WhitespaceTrimmed(t *testing.T) {
 
 func TestService_GetFile(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo, nil)
+	svc := files.NewService(repo)
 
 	fid := uuid.New()
 	vid := uuid.New()
