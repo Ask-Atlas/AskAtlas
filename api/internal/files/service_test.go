@@ -2,6 +2,7 @@ package files_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -609,4 +610,92 @@ func TestService_GetFile(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, fid, f.ID)
 	assert.Equal(t, "test.txt", f.Name)
+}
+
+// ----------------------------------------------------------------------
+// POST /api/files/{file_id}/view (ASK-134).
+//
+// Coverage:
+//   AC1: existence check passes -> both writes fire, no error
+//   AC3+4: existence check returns ErrNotFound -> neither write runs
+//   InsertFileView fails -> 500-class error, UpsertFileLastViewed not called
+//   UpsertFileLastViewed fails -> 500-class error after view already logged
+// ----------------------------------------------------------------------
+
+func TestService_RecordFileView_Success(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+
+	viewerID := uuid.New()
+	fileID := uuid.New()
+
+	repo.EXPECT().
+		GetFileForUpdate(mock.Anything, utils.UUID(fileID)).
+		Return(db.GetFileForUpdateRow{
+			ID:     utils.UUID(fileID),
+			UserID: utils.UUID(uuid.New()), // arbitrary owner -- viewing is permission-less
+			Status: "complete",
+		}, nil)
+	repo.EXPECT().
+		InsertFileView(mock.Anything, mock.MatchedBy(func(arg db.InsertFileViewParams) bool {
+			return arg.FileID == utils.UUID(fileID) && arg.UserID == utils.UUID(viewerID)
+		})).
+		Return(nil)
+	repo.EXPECT().
+		UpsertFileLastViewed(mock.Anything, mock.MatchedBy(func(arg db.UpsertFileLastViewedParams) bool {
+			return arg.FileID == utils.UUID(fileID) && arg.UserID == utils.UUID(viewerID)
+		})).
+		Return(nil)
+
+	err := svc.RecordFileView(context.Background(), viewerID, fileID)
+	require.NoError(t, err)
+}
+
+func TestService_RecordFileView_FileNotFound(t *testing.T) {
+	// Existence probe returns ErrNotFound -- neither view write
+	// fires (mockery would fail the test on any unexpected call).
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+
+	repo.EXPECT().
+		GetFileForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetFileForUpdateRow{}, fmt.Errorf("GetFileForUpdate: %w", apperrors.ErrNotFound))
+
+	err := svc.RecordFileView(context.Background(), uuid.New(), uuid.New())
+	require.Error(t, err)
+	assert.ErrorIs(t, err, apperrors.ErrNotFound)
+}
+
+func TestService_RecordFileView_InsertViewFails(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+
+	repo.EXPECT().GetFileForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetFileForUpdateRow{Status: "complete"}, nil)
+	repo.EXPECT().InsertFileView(mock.Anything, mock.Anything).
+		Return(errors.New("connection lost"))
+	// UpsertFileLastViewed must NOT be called when the view insert fails.
+
+	err := svc.RecordFileView(context.Background(), uuid.New(), uuid.New())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "connection lost")
+}
+
+func TestService_RecordFileView_UpsertLastViewedFails(t *testing.T) {
+	// View insert succeeded but last-viewed upsert failed. The spec
+	// accepts partial failure; we still surface the error so the
+	// client can retry. The dangling file_views row is harmless
+	// (idempotent analytics).
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+
+	repo.EXPECT().GetFileForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetFileForUpdateRow{Status: "complete"}, nil)
+	repo.EXPECT().InsertFileView(mock.Anything, mock.Anything).Return(nil)
+	repo.EXPECT().UpsertFileLastViewed(mock.Anything, mock.Anything).
+		Return(errors.New("deadlock detected"))
+
+	err := svc.RecordFileView(context.Background(), uuid.New(), uuid.New())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "deadlock detected")
 }

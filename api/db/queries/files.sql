@@ -381,6 +381,29 @@ INSERT INTO files (id, user_id, s3_key, name, mime_type, size, status)
 VALUES ($1, $2, $3, $4, $5, $6, 'pending')
 RETURNING *;
 
+-- name: InsertFileView :exec
+-- Append-only analytics row for POST /api/files/{file_id}/view (ASK-134).
+-- Each call inserts a fresh row -- no dedup, no upsert. The viewed_at
+-- column defaults to now() so the wall-clock stamp lives at the DB
+-- layer, not the client. id defaults to gen_random_uuid().
+--
+-- Existence of the parent file is gated by the service via
+-- GetFileForUpdate before this call -- this query trusts inputs.
+INSERT INTO file_views (file_id, user_id)
+VALUES (sqlc.arg(file_id)::uuid, sqlc.arg(user_id)::uuid);
+
+-- name: UpsertFileLastViewed :exec
+-- Per-(user, file) most-recent-view timestamp for POST /api/files/{file_id}/view
+-- (ASK-134). Powers the recents sidebar (ASK-145). The PK is
+-- (user_id, file_id) so a repeat view by the same user is a write to
+-- the same row -- viewed_at gets bumped to now(). On the first view
+-- the INSERT path runs; on every subsequent view the ON CONFLICT
+-- branch fires.
+INSERT INTO file_last_viewed (user_id, file_id, viewed_at)
+VALUES (sqlc.arg(user_id)::uuid, sqlc.arg(file_id)::uuid, NOW())
+ON CONFLICT (user_id, file_id) DO UPDATE
+SET viewed_at = NOW();
+
 -- name: UpdateFileStatus :exec
 UPDATE files
 SET

@@ -224,6 +224,28 @@ func (q *Queries) InsertFile(ctx context.Context, arg InsertFileParams) (File, e
 	return i, err
 }
 
+const insertFileView = `-- name: InsertFileView :exec
+INSERT INTO file_views (file_id, user_id)
+VALUES ($1::uuid, $2::uuid)
+`
+
+type InsertFileViewParams struct {
+	FileID pgtype.UUID `json:"file_id"`
+	UserID pgtype.UUID `json:"user_id"`
+}
+
+// Append-only analytics row for POST /api/files/{file_id}/view (ASK-134).
+// Each call inserts a fresh row -- no dedup, no upsert. The viewed_at
+// column defaults to now() so the wall-clock stamp lives at the DB
+// layer, not the client. id defaults to gen_random_uuid().
+//
+// Existence of the parent file is gated by the service via
+// GetFileForUpdate before this call -- this query trusts inputs.
+func (q *Queries) InsertFileView(ctx context.Context, arg InsertFileViewParams) error {
+	_, err := q.db.Exec(ctx, insertFileView, arg.FileID, arg.UserID)
+	return err
+}
+
 const listOwnedFilesCreatedAsc = `-- name: ListOwnedFilesCreatedAsc :many
 SELECT
   f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id,
@@ -1862,4 +1884,27 @@ func (q *Queries) UpsertFileGrant(ctx context.Context, arg UpsertFileGrantParams
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const upsertFileLastViewed = `-- name: UpsertFileLastViewed :exec
+INSERT INTO file_last_viewed (user_id, file_id, viewed_at)
+VALUES ($1::uuid, $2::uuid, NOW())
+ON CONFLICT (user_id, file_id) DO UPDATE
+SET viewed_at = NOW()
+`
+
+type UpsertFileLastViewedParams struct {
+	UserID pgtype.UUID `json:"user_id"`
+	FileID pgtype.UUID `json:"file_id"`
+}
+
+// Per-(user, file) most-recent-view timestamp for POST /api/files/{file_id}/view
+// (ASK-134). Powers the recents sidebar (ASK-145). The PK is
+// (user_id, file_id) so a repeat view by the same user is a write to
+// the same row -- viewed_at gets bumped to now(). On the first view
+// the INSERT path runs; on every subsequent view the ON CONFLICT
+// branch fires.
+func (q *Queries) UpsertFileLastViewed(ctx context.Context, arg UpsertFileLastViewedParams) error {
+	_, err := q.db.Exec(ctx, upsertFileLastViewed, arg.UserID, arg.FileID)
+	return err
 }

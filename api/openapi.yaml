@@ -249,6 +249,43 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /files/{file_id}/view:
+    post:
+      operationId: RecordFileView
+      summary: Record a file view (ASK-134)
+      description: |
+        Records that the authenticated user opened/previewed this
+        file. Inserts an append-only row into `file_views` for
+        analytics, then upserts `file_last_viewed` so the recents
+        sidebar (GET /api/me/recents) reflects the new timestamp.
+
+        Fire-and-forget from the client. Permission-less: any
+        authenticated user can record a view of any non-deleted file
+        -- access control is enforced when the file's contents are
+        actually read, not on the view event itself.
+
+        Returns 204 No Content on success. Returns 404 when the file
+        is missing or in any deletion state, so dangling view rows
+        cannot accumulate.
+      parameters:
+        - name: file_id
+          in: path
+          description: The unique UUID of the file being viewed
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: View recorded
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /files/{file_id}/favorite:
     post:
       operationId: ToggleFileFavorite

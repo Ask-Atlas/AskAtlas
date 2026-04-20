@@ -29,6 +29,7 @@ type FileService interface {
 	ListFiles(ctx context.Context, params files.ListFilesParams) ([]files.File, *string, error)
 	DeleteFile(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher) error
 	UpdateFile(ctx context.Context, params files.UpdateFileParams) (files.File, error)
+	RecordFileView(ctx context.Context, viewerID, fileID uuid.UUID) error
 }
 
 // FileHandler manages incoming HTTP requests relating to File operations.
@@ -126,6 +127,32 @@ func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request, fileId 
 		sysErr := apperrors.ToHTTPError(err)
 		if sysErr.Code >= 500 {
 			slog.Error("DeleteFile failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// RecordFileView handles POST /api/files/{file_id}/view (ASK-134).
+// Logs an analytics row in file_views and bumps file_last_viewed for
+// the (viewer, file) pair so the recents sidebar reflects the new
+// timestamp. Service enforces existence (404 for missing or
+// soft-deleted files) and runs both writes sequentially without a
+// transaction (partial failure is acceptable per spec). Returns
+// 204 No Content on success.
+func (h *FileHandler) RecordFileView(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	if err := h.service.RecordFileView(r.Context(), viewerID, uuid.UUID(fileId)); err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("RecordFileView failed", "error", err)
 		}
 		apperrors.RespondWithError(w, sysErr)
 		return

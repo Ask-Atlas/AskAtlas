@@ -283,6 +283,20 @@ func (r *sqlcRepository) PatchFile(ctx context.Context, arg db.PatchFileParams) 
 	return row, nil
 }
 
+func (r *sqlcRepository) InsertFileView(ctx context.Context, arg db.InsertFileViewParams) error {
+	if err := r.queries.InsertFileView(ctx, arg); err != nil {
+		return fmt.Errorf("InsertFileView: %w", err)
+	}
+	return nil
+}
+
+func (r *sqlcRepository) UpsertFileLastViewed(ctx context.Context, arg db.UpsertFileLastViewedParams) error {
+	if err := r.queries.UpsertFileLastViewed(ctx, arg); err != nil {
+		return fmt.Errorf("UpsertFileLastViewed: %w", err)
+	}
+	return nil
+}
+
 func (r *sqlcRepository) MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error {
 	slog.Debug("marking file deleted", "file_id", fileID)
 	if err := r.queries.MarkFileDeleted(ctx, fileID); err != nil {

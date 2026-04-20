@@ -368,6 +368,14 @@ type Querier interface {
 	// never disagree.
 	IncrementSessionCorrectAnswers(ctx context.Context, id pgtype.UUID) error
 	InsertFile(ctx context.Context, arg InsertFileParams) (File, error)
+	// Append-only analytics row for POST /api/files/{file_id}/view (ASK-134).
+	// Each call inserts a fresh row -- no dedup, no upsert. The viewed_at
+	// column defaults to now() so the wall-clock stamp lives at the DB
+	// layer, not the client. id defaults to gen_random_uuid().
+	//
+	// Existence of the parent file is gated by the service via
+	// GetFileForUpdate before this call -- this query trusts inputs.
+	InsertFileView(ctx context.Context, arg InsertFileViewParams) error
 	// Creates the (file_id, study_guide_id) join row. Uses ON CONFLICT
 	// DO NOTHING + RETURNING so a duplicate attach surfaces as
 	// sql.ErrNoRows in Go, which the service maps to a 409 'File is
@@ -969,6 +977,13 @@ type Querier interface {
 	// and returns the row. Using DO UPDATE SET avoids a race window where
 	// concurrent inserts could cause both INSERT and fallback SELECT to miss.
 	UpsertFileGrant(ctx context.Context, arg UpsertFileGrantParams) (FileGrant, error)
+	// Per-(user, file) most-recent-view timestamp for POST /api/files/{file_id}/view
+	// (ASK-134). Powers the recents sidebar (ASK-145). The PK is
+	// (user_id, file_id) so a repeat view by the same user is a write to
+	// the same row -- viewed_at gets bumped to now(). On the first view
+	// the INSERT path runs; on every subsequent view the ON CONFLICT
+	// branch fires.
+	UpsertFileLastViewed(ctx context.Context, arg UpsertFileLastViewedParams) error
 	// Inserts a new resources row for the (creator_id, url) pair. The
 	// ON CONFLICT DO NOTHING preserves the existing row's title /
 	// description / type when the viewer has used this URL before -- a
