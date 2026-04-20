@@ -1,0 +1,26 @@
+meta {
+  name: List Courses
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/courses
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~school_id: 
+  ~department: 
+  ~q: 
+  sort_by: department
+  sort_dir: asc
+  page_limit: 25
+  ~cursor: 
+}
+
+docs {
+  # List and search courses
+
+}

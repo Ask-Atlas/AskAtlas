@@ -1,0 +1,31 @@
+meta {
+  name: Recommend Study Guide
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}/recommendations
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Recommend a study guide
+
+  Records that the authenticated user (an instructor or TA in the
+  guide's course) recommends the guide. Recommendations contribute
+  to the `is_recommended` badge and the `recommended_by` list on
+  the guide detail.
+  
+  Authorization: viewer must hold the `instructor` or `ta` role in
+  AT LEAST ONE section of the guide's course. Holding a
+  non-elevated role (`student`) in some sections does NOT block
+  the action -- the rule is "any elevated role somewhere in the
+  course suffices".
+  
+  Returns 409 on duplicate (same viewer recommended this guide
+  before) -- recommendations are not idempotent because the
+  creation timestamp matters and re-recommending would silently
+  bump it.
+}

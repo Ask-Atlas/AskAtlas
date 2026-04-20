@@ -1,0 +1,26 @@
+meta {
+  name: Get Study Guide
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Get a study guide detail
+
+  Returns the full study-guide detail including `content`, the
+  authenticated user's own vote state (`user_vote`), the list of
+  recommenders, inline quizzes (with `question_count`), resources,
+  and attached files. Soft-deleted guides return 404.
+  
+  This endpoint is a pure read -- no view-counter increment, no
+  last-viewed upsert, no mutation of any kind. View tracking lives
+  on its own dedicated POST (future ticket, mirroring
+  POST /api/files/{file_id}/view in ASK-134) so GET stays safe
+  and idempotent per HTTP semantics.
+}

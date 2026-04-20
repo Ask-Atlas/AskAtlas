@@ -1,0 +1,30 @@
+meta {
+  name: List Section Members
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/courses/{{courseId}}/sections/{{sectionId}}/members
+  body: none
+  auth: inherit
+}
+
+params:query {
+  role: student
+  limit: 25
+  ~cursor: 
+}
+
+docs {
+  # List the members of a course section
+
+  Returns the section roster with limited per-user info: user_id,
+  first_name, last_name, role, joined_at. Email and clerk_id are
+  intentionally NOT exposed -- this endpoint is reachable by any
+  authenticated user (course pages are public within the app), so
+  the payload is the privacy-floor for member identity.
+  
+  Sorted by `joined_at ASC` with a `(joined_at, user_id)` keyset
+  cursor as the tiebreaker for stable pagination across pages.
+}

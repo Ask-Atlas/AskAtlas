@@ -33,7 +33,7 @@ endef
 
 .PHONY: dev stage prod build install format format-check lint test tidy tidy-check \
 	sqlc/generate docker-build docker-run mockery seed seed-schools seed-courses \
-	seed-study-guides e2e generate-docs
+	seed-study-guides e2e generate-docs bruno
 
 dev:
 	infisical run --env=dev -- go run $(MAIN_PATH)
@@ -68,6 +68,16 @@ mockery:
 generate-api:
 	mkdir -p internal/api
 	go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.6.0 -config oapi-codegen.yaml openapi.yaml
+
+## make bruno
+##
+## Regenerates the Bruno collection under bruno/ from openapi.yaml. Wipes
+## every subfolder except bruno/environments/ (which is hand-maintained)
+## and re-emits one .bru per operation, grouped by the first non-variable
+## path segment. Run after any openapi.yaml change so the Bruno sidebar
+## stays in sync. Safe to run repeatedly -- output is deterministic.
+bruno:
+	go run ./scripts/brunogen
 
 generate-docs:
 	rm -rf ../docs/docs/backend
