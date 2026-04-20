@@ -31,7 +31,7 @@ const sidebar: SidebarsConfig = {
         {
           type: "doc",
           id: "api/update-file",
-          label: "Rename a file",
+          label: "Update file metadata and status (ASK-113)",
           className: "api-method patch",
         },
         {
