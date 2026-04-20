@@ -63,7 +63,7 @@ test.describe("Files API", () => {
     expect(response.status()).toBe(400);
     const body = await response.json();
     expect(body).toHaveProperty("code", 400);
-    expect(body).toHaveProperty("status", "Bad Request");
+    expect(body).toHaveProperty("status", "VALIDATION_ERROR");
     expect(body.details).toHaveProperty("scope");
     // kin-openapi enum violation message format. Assert every allowed
     // value appears in the error so the API stays honest about the full

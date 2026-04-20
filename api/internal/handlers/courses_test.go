@@ -436,7 +436,7 @@ func TestCoursesHandler_JoinSection_AlreadyMember(t *testing.T) {
 		JoinSection(mock.Anything, mock.Anything).
 		Return(courses.Membership{}, &apperrors.AppError{
 			Code:    http.StatusConflict,
-			Status:  "Conflict",
+			Status:  apperrors.StatusConflict,
 			Message: "Already a member of this section",
 		})
 

@@ -425,7 +425,7 @@ func (s *Service) JoinSection(ctx context.Context, p JoinSectionParams) (Members
 		if errors.Is(err, sql.ErrNoRows) {
 			return Membership{}, &apperrors.AppError{
 				Code:    http.StatusConflict,
-				Status:  "Conflict",
+				Status:  apperrors.StatusConflict,
 				Message: "Already a member of this section",
 			}
 		}

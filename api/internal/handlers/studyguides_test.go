@@ -1083,7 +1083,7 @@ func TestStudyGuidesHandler_Recommend_Forbidden_403(t *testing.T) {
 		RecommendStudyGuide(mock.Anything, mock.Anything).
 		Return(studyguides.Recommendation{}, &apperrors.AppError{
 			Code:    http.StatusForbidden,
-			Status:  "Forbidden",
+			Status:  apperrors.StatusForbidden,
 			Message: "Only instructors and TAs can recommend study guides",
 		})
 
@@ -1121,7 +1121,7 @@ func TestStudyGuidesHandler_Recommend_Conflict_409(t *testing.T) {
 		RecommendStudyGuide(mock.Anything, mock.Anything).
 		Return(studyguides.Recommendation{}, &apperrors.AppError{
 			Code:    http.StatusConflict,
-			Status:  "Conflict",
+			Status:  apperrors.StatusConflict,
 			Message: "You have already recommended this study guide",
 		})
 
@@ -1202,7 +1202,7 @@ func TestStudyGuidesHandler_RemoveRecommendation_Forbidden_403(t *testing.T) {
 		RemoveRecommendation(mock.Anything, mock.Anything).
 		Return(&apperrors.AppError{
 			Code:    http.StatusForbidden,
-			Status:  "Forbidden",
+			Status:  apperrors.StatusForbidden,
 			Message: "Only instructors and TAs can manage recommendations",
 		})
 
@@ -1565,7 +1565,7 @@ func TestStudyGuidesHandler_Attach_ServiceConflict_409(t *testing.T) {
 		AttachResource(mock.Anything, mock.Anything).
 		Return(studyguides.Resource{}, &apperrors.AppError{
 			Code:    http.StatusConflict,
-			Status:  "Conflict",
+			Status:  apperrors.StatusConflict,
 			Message: "This URL is already attached to this study guide",
 		})
 
@@ -1768,7 +1768,7 @@ func TestStudyGuidesHandler_AttachFile_Forbidden_403(t *testing.T) {
 	mockSvc.EXPECT().
 		AttachFile(mock.Anything, mock.Anything).
 		Return(studyguides.FileAttachment{}, &apperrors.AppError{
-			Code: http.StatusForbidden, Status: "Forbidden",
+			Code: http.StatusForbidden, Status: apperrors.StatusForbidden,
 			Message: "You can only attach files you own",
 		})
 
@@ -1786,7 +1786,7 @@ func TestStudyGuidesHandler_AttachFile_Conflict_409(t *testing.T) {
 	mockSvc.EXPECT().
 		AttachFile(mock.Anything, mock.Anything).
 		Return(studyguides.FileAttachment{}, &apperrors.AppError{
-			Code: http.StatusConflict, Status: "Conflict",
+			Code: http.StatusConflict, Status: apperrors.StatusConflict,
 			Message: "File is already attached to this study guide",
 		})
 

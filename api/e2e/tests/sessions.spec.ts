@@ -139,7 +139,7 @@ test.describe("Sessions API (ASK-149 list)", () => {
     expect(resp.status()).toBe(404);
     const body = await resp.json();
     expect(body).toHaveProperty("code", 404);
-    expect(body).toHaveProperty("status", "Not Found");
+    expect(body).toHaveProperty("status", "NOT_FOUND");
   });
 
   // ---------- Happy path (requires seed data) ----------

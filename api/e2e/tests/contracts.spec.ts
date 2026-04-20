@@ -79,7 +79,7 @@ test.describe("API Contracts & Error Handling", () => {
       const body = await response.json();
 
       expect(body).toHaveProperty("code", 404);
-      expect(body).toHaveProperty("status", "Not Found");
+      expect(body).toHaveProperty("status", "NOT_FOUND");
       expect(body).toHaveProperty("message");
       expect(typeof body.message).toBe("string");
     });
@@ -93,7 +93,7 @@ test.describe("API Contracts & Error Handling", () => {
       const body = await response.json();
 
       expect(body).toHaveProperty("code", 400);
-      expect(body).toHaveProperty("status", "Bad Request");
+      expect(body).toHaveProperty("status", "VALIDATION_ERROR");
       expect(body).toHaveProperty("message");
       expect(typeof body.message).toBe("string");
       expect(body).toHaveProperty("details");
@@ -146,7 +146,7 @@ test.describe("API Contracts & Error Handling", () => {
       const body = await response.json();
 
       expect(body).toHaveProperty("code", 400);
-      expect(body).toHaveProperty("status", "Bad Request");
+      expect(body).toHaveProperty("status", "VALIDATION_ERROR");
       expect(body).toHaveProperty("message");
       expect(typeof body.message).toBe("string");
     });
