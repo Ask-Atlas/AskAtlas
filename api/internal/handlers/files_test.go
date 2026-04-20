@@ -455,3 +455,86 @@ func TestFileHandler_UpdateFile_EmptyBody(t *testing.T) {
 	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
 	assert.Equal(t, "At least one field must be provided", resp.Message)
 }
+
+// ----------------------------------------------------------------------
+// POST /api/files/{file_id}/view (ASK-134) -- wire-level coverage.
+// Service-layer tests carry the behavioral matrix; handler tests
+// verify status code + body shape (204 success, 404 not-found,
+// 400 bad UUID, 500 service error).
+// ----------------------------------------------------------------------
+
+func TestFileHandler_RecordFileView_204(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFileService(t)
+	h := handlers.NewFileHandler(mockSvc, nil)
+
+	viewerID := uuid.New()
+	fileID := uuid.New()
+
+	mockSvc.EXPECT().
+		RecordFileView(mock.Anything, viewerID, fileID).
+		Return(nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/files/"+fileID.String()+"/view", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), viewerID))
+	w := httptest.NewRecorder()
+	r := fileTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNoContent, w.Code)
+	assert.Empty(t, w.Body.String(), "204 must have no body")
+}
+
+func TestFileHandler_RecordFileView_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFileService(t)
+	h := handlers.NewFileHandler(mockSvc, nil)
+
+	viewerID := uuid.New()
+	fileID := uuid.New()
+
+	mockSvc.EXPECT().
+		RecordFileView(mock.Anything, viewerID, fileID).
+		Return(apperrors.ErrNotFound)
+
+	req := httptest.NewRequest(http.MethodPost, "/files/"+fileID.String()+"/view", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), viewerID))
+	w := httptest.NewRecorder()
+	r := fileTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestFileHandler_RecordFileView_BadUUID_400(t *testing.T) {
+	// chi/oapi-codegen reject the invalid UUID before the service is
+	// reached -- mock has no expectation, so any call would fail.
+	mockSvc := mock_handlers.NewMockFileService(t)
+	h := handlers.NewFileHandler(mockSvc, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/files/not-a-uuid/view", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), uuid.New()))
+	w := httptest.NewRecorder()
+	r := fileTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestFileHandler_RecordFileView_ServiceError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFileService(t)
+	h := handlers.NewFileHandler(mockSvc, nil)
+
+	viewerID := uuid.New()
+	fileID := uuid.New()
+
+	mockSvc.EXPECT().
+		RecordFileView(mock.Anything, viewerID, fileID).
+		Return(errors.New("db connection lost"))
+
+	req := httptest.NewRequest(http.MethodPost, "/files/"+fileID.String()+"/view", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), viewerID))
+	w := httptest.NewRecorder()
+	r := fileTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}

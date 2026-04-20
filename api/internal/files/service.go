@@ -30,6 +30,8 @@ type Repository interface {
 	MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
 	GetFileForUpdate(ctx context.Context, fileID pgtype.UUID) (db.GetFileForUpdateRow, error)
 	PatchFile(ctx context.Context, arg db.PatchFileParams) (db.PatchFileRow, error)
+	InsertFileView(ctx context.Context, arg db.InsertFileViewParams) error
+	UpsertFileLastViewed(ctx context.Context, arg db.UpsertFileLastViewedParams) error
 
 	UpsertFileGrant(ctx context.Context, arg db.UpsertFileGrantParams) (db.FileGrant, error)
 	RevokeFileGrant(ctx context.Context, arg db.RevokeFileGrantParams) error
@@ -275,6 +277,42 @@ func invalidNameChars(name string) []string {
 }
 
 const maxFileNameLength = 255
+
+// RecordFileView logs a view event for POST /api/files/{file_id}/view
+// (ASK-134). Two writes per call:
+//   - file_views: append-only analytics row.
+//   - file_last_viewed: per-(viewer, file) most-recent-timestamp row,
+//     upserted so the recents sidebar always reads the latest view.
+//
+// Existence is gated by GetFileForUpdate so missing or soft-deleted
+// files map to apperrors.ErrNotFound -> 404 before either write fires;
+// otherwise dangling view rows could accumulate.
+//
+// Per the spec the two writes are NOT wrapped in a transaction --
+// partial failure (view logged but last_viewed stale) is acceptable
+// at MVP scale and an UpsertFileLastViewed retry on the next view
+// repairs the timestamp. If file_views fails the call returns 500
+// without touching last_viewed; if last_viewed fails the analytics
+// row already landed so the call still returns 500 but the user
+// retries naturally on their next file open.
+func (s *Service) RecordFileView(ctx context.Context, viewerID, fileID uuid.UUID) error {
+	if _, err := s.repo.GetFileForUpdate(ctx, utils.UUID(fileID)); err != nil {
+		return err // sql.ErrNoRows -> apperrors.ErrNotFound via ToHTTPError
+	}
+	if err := s.repo.InsertFileView(ctx, db.InsertFileViewParams{
+		FileID: utils.UUID(fileID),
+		UserID: utils.UUID(viewerID),
+	}); err != nil {
+		return fmt.Errorf("RecordFileView: insert view: %w", err)
+	}
+	if err := s.repo.UpsertFileLastViewed(ctx, db.UpsertFileLastViewedParams{
+		UserID: utils.UUID(viewerID),
+		FileID: utils.UUID(fileID),
+	}); err != nil {
+		return fmt.Errorf("RecordFileView: upsert last viewed: %w", err)
+	}
+	return nil
+}
 
 // DeleteFileParams holds the inputs required to initiate file deletion.
 type DeleteFileParams struct {

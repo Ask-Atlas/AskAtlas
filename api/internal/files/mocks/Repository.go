@@ -361,6 +361,63 @@ func (_c *MockRepository_InsertFile_Call) RunAndReturn(run func(ctx context.Cont
 	return _c
 }
 
+// InsertFileView provides a mock function for the type MockRepository
+func (_mock *MockRepository) InsertFileView(ctx context.Context, arg db.InsertFileViewParams) error {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InsertFileView")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.InsertFileViewParams) error); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_InsertFileView_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InsertFileView'
+type MockRepository_InsertFileView_Call struct {
+	*mock.Call
+}
+
+// InsertFileView is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.InsertFileViewParams
+func (_e *MockRepository_Expecter) InsertFileView(ctx interface{}, arg interface{}) *MockRepository_InsertFileView_Call {
+	return &MockRepository_InsertFileView_Call{Call: _e.mock.On("InsertFileView", ctx, arg)}
+}
+
+func (_c *MockRepository_InsertFileView_Call) Run(run func(ctx context.Context, arg db.InsertFileViewParams)) *MockRepository_InsertFileView_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.InsertFileViewParams
+		if args[1] != nil {
+			arg1 = args[1].(db.InsertFileViewParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_InsertFileView_Call) Return(err error) *MockRepository_InsertFileView_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_InsertFileView_Call) RunAndReturn(run func(ctx context.Context, arg db.InsertFileViewParams) error) *MockRepository_InsertFileView_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListOwnedFilesCreatedAsc provides a mock function for the type MockRepository
 func (_mock *MockRepository) ListOwnedFilesCreatedAsc(ctx context.Context, arg db.ListOwnedFilesCreatedAscParams) ([]db.ListOwnedFilesCreatedAscRow, error) {
 	ret := _mock.Called(ctx, arg)
@@ -1599,6 +1656,63 @@ func (_c *MockRepository_UpsertFileGrant_Call) Return(fileGrant db.FileGrant, er
 }
 
 func (_c *MockRepository_UpsertFileGrant_Call) RunAndReturn(run func(ctx context.Context, arg db.UpsertFileGrantParams) (db.FileGrant, error)) *MockRepository_UpsertFileGrant_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpsertFileLastViewed provides a mock function for the type MockRepository
+func (_mock *MockRepository) UpsertFileLastViewed(ctx context.Context, arg db.UpsertFileLastViewedParams) error {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertFileLastViewed")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.UpsertFileLastViewedParams) error); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_UpsertFileLastViewed_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpsertFileLastViewed'
+type MockRepository_UpsertFileLastViewed_Call struct {
+	*mock.Call
+}
+
+// UpsertFileLastViewed is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.UpsertFileLastViewedParams
+func (_e *MockRepository_Expecter) UpsertFileLastViewed(ctx interface{}, arg interface{}) *MockRepository_UpsertFileLastViewed_Call {
+	return &MockRepository_UpsertFileLastViewed_Call{Call: _e.mock.On("UpsertFileLastViewed", ctx, arg)}
+}
+
+func (_c *MockRepository_UpsertFileLastViewed_Call) Run(run func(ctx context.Context, arg db.UpsertFileLastViewedParams)) *MockRepository_UpsertFileLastViewed_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.UpsertFileLastViewedParams
+		if args[1] != nil {
+			arg1 = args[1].(db.UpsertFileLastViewedParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_UpsertFileLastViewed_Call) Return(err error) *MockRepository_UpsertFileLastViewed_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_UpsertFileLastViewed_Call) RunAndReturn(run func(ctx context.Context, arg db.UpsertFileLastViewedParams) error) *MockRepository_UpsertFileLastViewed_Call {
 	_c.Call.Return(run)
 	return _c
 }

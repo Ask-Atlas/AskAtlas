@@ -1,0 +1,82 @@
+---
+id: record-file-view
+title: "Record a file view (ASK-134)"
+description: "Records that the authenticated user opened/previewed this"
+sidebar_label: "Record a file view (ASK-134)"
+hide_title: true
+hide_table_of_contents: true
+api: eJztVktvG0cM/ivEXGoDq4dT96Kb08aFWyA1/EgPlhHTO5Q1ySxnw+HaVQX994Kzki1HRoEeCl980mM+Dr+PjyGXLrUkqCHxiXcTd0Z1En8cIn0K9OAq5ynXEloDPB5n0Dkq6JwAO50Ta6hRyUOXSSC1xORHrdB9oAfyoPOQpzwLkYZwwplEMyADti2xHySOC5D0AIE1wY3BPpthvoFZkikjY1xoqHNlDhm6tr+hR0bM+rn3cwM5FU5CNbHmKefg6RYF9n79cAEjbMOoodH6dB+EZpFqzcWG6QE0NJQVm3Y45SkfB6EBsh/MktyRwkxSU6B1DMQ6hFOSJuQcEg8i5TwB5MWUXwhIjWycknhAMK6QZgYGTjzwFMmQpmbKgwFgXVPOUCdWSRFCBuJZkpo8PJh+o2DgH3qMaQEUmjLW2mG0YBL6CjgppB5efNI9sULQTHFWBJ6RdsIZ3o0P4WOCn/vLzCZ3hcMQNpDD8eFz51MOGYp6voMkELgIKmKC3aCoVFlCPPJdNFQhIekhT7lGNnZY113TRVQaTtlVrkXBhpQku8nV0jE25CaupDl4V7lgFdiiznfK8mJO0HH41hFcXp78YvHdMIVb2ngnu0ToWxeEvJuodFS5XM+pQTdZOl205i+rBL5zlZslaVDdxHVd8G61ujbj3CbOlA3/bnxoH8+ZfCoqS7LJu1XlDsfjXdR79GBEKKur3DqNBsO2jVY6IfHoSzbscpdhuv1Cte4E4VyRPYoPf5MHEkkCG76QVbpaOyFoUOu5RWTL1RrtU4OBs2VC7FXQ0Autk6ct94GV7khMnKW5y7vBW1WuoZzxjl4886QYYn5JEnofjBLG02ccvrtjtdrO5FVP8ZHPk/frymnQaKZHbfvBZJpxycvBbl4uS/smsRC+Jea1EvNCW31MCrPU8VtWXikrP730jJ2wkjBGyCT3JH1c3jL0GhkqBHWebIdrUxkrZVJO3MimYB4t13N0NbrvF7s+Z/2o7SQaEtvgbMxlqjsJuihn7wmF5Kizy66ut4/PLY+9mm3Qo7a5auvWE9Z+3xaQq9Zfjjfz9bc/L5wJCDxLxXwjMH890ogZjk5PXOWMbV8YB8PxcGxxN6UNlqJabwtnmz2rzP6yc+wdnf8+OPjxcP/7Als+FerbYvu22P5/i+26H5T+0lEbMbDVbum55bpLr8qaa40+edp3S6NeV25u/Ty5csvlLWa6lLha2d/fOhJr0evK3aMEvLWmuVo6H7J9924yw5jpX4p+72z94uzDf9igX1Sz/hN5YcQxdvbLVe4rLbZ2+NX1qnJzQk9SqPanR3VNrW7Z7QwNe3Uen7fTP87tvfgHX5M3Ag==
+sidebar_class_name: "post api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Record a file view (ASK-134)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/files/{file_id}/view"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Records that the authenticated user opened/previewed this
+file. Inserts an append-only row into `file_views` for
+analytics, then upserts `file_last_viewed` so the recents
+sidebar (GET /api/me/recents) reflects the new timestamp.
+
+Fire-and-forget from the client. Permission-less: any
+authenticated user can record a view of any non-deleted file
+-- access control is enforced when the file's contents are
+actually read, not on the view event itself.
+
+Returns 204 No Content on success. Returns 404 when the file
+is missing or in any deletion state, so dangling view rows
+cannot accumulate.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./record-file-view.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./record-file-view.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./record-file-view.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      
