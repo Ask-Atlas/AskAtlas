@@ -541,7 +541,7 @@ func (s *Service) validateGranteeExists(ctx context.Context, granteeType string,
 		// AppError converter in the handler.
 		return &apperrors.AppError{
 			Code:    500,
-			Status:  "Internal Server Error",
+			Status:  apperrors.StatusInternalError,
 			Message: "Something went wrong",
 			Cause:   probeErr,
 		}

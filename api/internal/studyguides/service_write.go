@@ -315,7 +315,7 @@ func (s *Service) RecommendStudyGuide(ctx context.Context, p RecommendStudyGuide
 	if !gate.HasRole {
 		return Recommendation{}, &apperrors.AppError{
 			Code:    http.StatusForbidden,
-			Status:  "Forbidden",
+			Status:  apperrors.StatusForbidden,
 			Message: "Only instructors and TAs can recommend study guides",
 		}
 	}
@@ -328,7 +328,7 @@ func (s *Service) RecommendStudyGuide(ctx context.Context, p RecommendStudyGuide
 		if errors.Is(err, sql.ErrNoRows) {
 			return Recommendation{}, &apperrors.AppError{
 				Code:    http.StatusConflict,
-				Status:  "Conflict",
+				Status:  apperrors.StatusConflict,
 				Message: "You have already recommended this study guide",
 			}
 		}
@@ -372,7 +372,7 @@ func (s *Service) RemoveRecommendation(ctx context.Context, p RemoveRecommendati
 	if !gate.HasRole {
 		return &apperrors.AppError{
 			Code:    http.StatusForbidden,
-			Status:  "Forbidden",
+			Status:  apperrors.StatusForbidden,
 			Message: "Only instructors and TAs can manage recommendations",
 		}
 	}
@@ -651,7 +651,7 @@ func (s *Service) AttachResource(ctx context.Context, p AttachResourceParams) (R
 		if dup {
 			return &apperrors.AppError{
 				Code:    http.StatusConflict,
-				Status:  "Conflict",
+				Status:  apperrors.StatusConflict,
 				Message: "This URL is already attached to this study guide",
 			}
 		}
@@ -817,7 +817,7 @@ func (s *Service) AttachFile(ctx context.Context, p AttachFileParams) (FileAttac
 		if ownerID != p.AttacherID {
 			return &apperrors.AppError{
 				Code:    http.StatusForbidden,
-				Status:  "Forbidden",
+				Status:  apperrors.StatusForbidden,
 				Message: "You can only attach files you own",
 			}
 		}
@@ -840,7 +840,7 @@ func (s *Service) AttachFile(ctx context.Context, p AttachFileParams) (FileAttac
 			if errors.Is(err, sql.ErrNoRows) {
 				return &apperrors.AppError{
 					Code:    http.StatusConflict,
-					Status:  "Conflict",
+					Status:  apperrors.StatusConflict,
 					Message: "File is already attached to this study guide",
 				}
 			}
