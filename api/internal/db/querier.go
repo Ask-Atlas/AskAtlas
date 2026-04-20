@@ -615,6 +615,31 @@ type Querier interface {
 	// "Spring 2026" > "Fall 2025" is acceptable for MVP per the spec),
 	// then department + number for stable in-term ordering.
 	ListMyEnrollments(ctx context.Context, arg ListMyEnrollmentsParams) ([]ListMyEnrollmentsRow, error)
+	// created_at DESC variant (ASK-131). Same shape + filters as
+	// ListMyStudyGuidesUpdated; the cursor comparison uses created_at.
+	ListMyStudyGuidesNewest(ctx context.Context, arg ListMyStudyGuidesNewestParams) ([]ListMyStudyGuidesNewestRow, error)
+	// title ASC variant (ASK-131). Case-insensitive via LOWER(title).
+	// Cursor: (lower(title), id) keyset for stable pagination across
+	// duplicate titles.
+	ListMyStudyGuidesTitle(ctx context.Context, arg ListMyStudyGuidesTitleParams) ([]ListMyStudyGuidesTitleRow, error)
+	// Per-creator study-guide list for GET /api/me/study-guides (ASK-131).
+	// Differences vs ListStudyGuides*:
+	//   * Scoped by creator_id (the JWT viewer), not course_id.
+	//   * Optional course_id narg -- when present, filter to that course;
+	//     when null, return across all courses.
+	//   * NO `sg.deleted_at IS NULL` filter -- the spec explicitly
+	//     requires soft-deleted guides to surface so the owner can see
+	//     (and eventually restore) them. The response includes a
+	//     `deleted_at` column for the frontend to render a "Deleted"
+	//     badge. The creator's own deleted_at still filters (a soft-
+	//     deleted user's content stays hidden everywhere).
+	//   * Single direction per sort variant (updated DESC only -- the
+	//     spec doesn't expose a sort_dir here; the shape is simpler).
+	//
+	// Keyset cursor: (updated_at, id) DESC matches the ORDER BY so the
+	// "(updated_at, id) < cursor" clause advances past the last visible
+	// row. id is always the tiebreaker.
+	ListMyStudyGuidesUpdated(ctx context.Context, arg ListMyStudyGuidesUpdatedParams) ([]ListMyStudyGuidesUpdatedRow, error)
 	ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFilesCreatedAscParams) ([]ListOwnedFilesCreatedAscRow, error)
 	ListOwnedFilesCreatedDesc(ctx context.Context, arg ListOwnedFilesCreatedDescParams) ([]ListOwnedFilesCreatedDescRow, error)
 	ListOwnedFilesMimeAsc(ctx context.Context, arg ListOwnedFilesMimeAscParams) ([]ListOwnedFilesMimeAscRow, error)

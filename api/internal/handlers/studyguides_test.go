@@ -16,6 +16,7 @@ import (
 	mock_handlers "github.com/Ask-Atlas/AskAtlas/api/internal/handlers/mocks"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/studyguides"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
+	"github.com/Ask-Atlas/AskAtlas/api/pkg/authctx"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -1895,5 +1896,159 @@ func TestStudyGuidesHandler_DetachFile_InternalError_500(t *testing.T) {
 	w := httptest.NewRecorder()
 	r := studyGuidesTestRouter(t, h)
 	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// ----------------------------------------------------------------------
+// ListMyStudyGuides (ASK-131) -- wire-level coverage.
+//
+// Service tests carry the behavioral matrix; handler tests verify
+// the wire envelope including the nullable `deleted_at` field and
+// the course_id / sort_by / limit / cursor query-param plumbing.
+// ----------------------------------------------------------------------
+
+func TestStudyGuidesHandler_ListMyStudyGuides_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	// No authedRequestMethod -- raw request with no auth context.
+	req := httptest.NewRequest(http.MethodGet, "/me/study-guides", nil)
+	w := httptest.NewRecorder()
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestStudyGuidesHandler_ListMyStudyGuides_Empty(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		ListMyStudyGuides(mock.Anything, mock.Anything).
+		Return(studyguides.ListMyStudyGuidesResult{}, nil)
+
+	req := authedRequestMethod(t, http.MethodGet, "/me/study-guides", nil)
+	w := httptest.NewRecorder()
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp api.ListMyStudyGuidesResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.NotNil(t, resp.StudyGuides)
+	assert.Empty(t, resp.StudyGuides)
+	assert.False(t, resp.HasMore)
+	assert.Nil(t, resp.NextCursor)
+}
+
+func TestStudyGuidesHandler_ListMyStudyGuides_Success_IncludesDeletedAt(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	liveID := uuid.New()
+	deletedID := uuid.New()
+	courseID := uuid.New()
+	creatorID := uuid.New()
+	deleted := time.Date(2026, 3, 20, 15, 30, 0, 0, time.UTC)
+	now := time.Now().UTC().Round(time.Microsecond)
+
+	mockSvc.EXPECT().
+		ListMyStudyGuides(mock.Anything, mock.Anything).
+		Return(studyguides.ListMyStudyGuidesResult{
+			StudyGuides: []studyguides.MyStudyGuide{
+				{
+					ID: liveID, Title: "Live Guide",
+					Creator:  studyguides.Creator{ID: creatorID, FirstName: "Ada", LastName: "Lovelace"},
+					CourseID: courseID, Tags: []string{"midterm"},
+					CreatedAt: now, UpdatedAt: now, DeletedAt: nil,
+				},
+				{
+					ID: deletedID, Title: "Deprecated Notes",
+					Creator:  studyguides.Creator{ID: creatorID, FirstName: "Ada", LastName: "Lovelace"},
+					CourseID: courseID, Tags: []string{},
+					CreatedAt: now.Add(-48 * time.Hour), UpdatedAt: now.Add(-24 * time.Hour),
+					DeletedAt: &deleted,
+				},
+			},
+		}, nil)
+
+	req := authedRequestMethod(t, http.MethodGet, "/me/study-guides", nil)
+	w := httptest.NewRecorder()
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp api.ListMyStudyGuidesResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	require.Len(t, resp.StudyGuides, 2)
+
+	// Live guide: deleted_at is null on the wire.
+	assert.Equal(t, liveID, uuid.UUID(resp.StudyGuides[0].Id))
+	assert.Nil(t, resp.StudyGuides[0].DeletedAt)
+
+	// Deleted guide: deleted_at is a non-null timestamp.
+	assert.Equal(t, deletedID, uuid.UUID(resp.StudyGuides[1].Id))
+	require.NotNil(t, resp.StudyGuides[1].DeletedAt)
+	assert.True(t, resp.StudyGuides[1].DeletedAt.Equal(deleted))
+}
+
+func TestStudyGuidesHandler_ListMyStudyGuides_CourseIDAndSortParams(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	viewerID := uuid.New()
+	courseID := uuid.New()
+
+	mockSvc.EXPECT().
+		ListMyStudyGuides(mock.Anything, mock.MatchedBy(func(p studyguides.ListMyStudyGuidesParams) bool {
+			return p.ViewerID == viewerID &&
+				p.CourseID != nil && *p.CourseID == courseID &&
+				p.SortBy == studyguides.MySortFieldTitle &&
+				p.Limit == int32(10)
+		})).
+		Return(studyguides.ListMyStudyGuidesResult{}, nil)
+
+	url := fmt.Sprintf("/me/study-guides?course_id=%s&sort_by=title&limit=10", courseID)
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), viewerID))
+	w := httptest.NewRecorder()
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestStudyGuidesHandler_ListMyStudyGuides_InvalidCursor_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+	// Mock has no expectation -- the handler must reject before
+	// the service is reached.
+
+	req := authedRequestMethod(t, http.MethodGet, "/me/study-guides?cursor=not-valid-base64!!", nil)
+	w := httptest.NewRecorder()
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	var body api.AppError
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&body))
+	require.NotNil(t, body.Details)
+	assert.Equal(t, "invalid cursor value", (*body.Details)["cursor"])
+}
+
+func TestStudyGuidesHandler_ListMyStudyGuides_ServiceError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockStudyGuideService(t)
+	h := handlers.NewStudyGuideHandler(mockSvc)
+
+	mockSvc.EXPECT().
+		ListMyStudyGuides(mock.Anything, mock.Anything).
+		Return(studyguides.ListMyStudyGuidesResult{}, errors.New("db connection lost"))
+
+	req := authedRequestMethod(t, http.MethodGet, "/me/study-guides", nil)
+	w := httptest.NewRecorder()
+	r := studyGuidesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }

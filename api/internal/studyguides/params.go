@@ -94,6 +94,78 @@ type ListStudyGuidesResult struct {
 	NextCursor  *string
 }
 
+// MySortField is the sort enum for GET /api/me/study-guides (ASK-131).
+// Single direction per variant (the endpoint intentionally does not
+// expose a sort_dir query param).
+type MySortField string
+
+const (
+	// MySortFieldUpdated orders by updated_at DESC. Default.
+	MySortFieldUpdated MySortField = "updated"
+	// MySortFieldNewest orders by created_at DESC.
+	MySortFieldNewest MySortField = "newest"
+	// MySortFieldTitle orders by LOWER(title) ASC (case-insensitive).
+	MySortFieldTitle MySortField = "title"
+)
+
+// MyCursor is the keyset cursor for ListMyStudyGuides (ASK-131).
+// Only the field matching the active sort variant is populated; the
+// rest stay nil and are omitted from the JSON token. ID is always
+// the tiebreaker. Kept separate from studyguides.Cursor so the two
+// encodings can evolve independently -- the course-scoped list uses
+// score / views aggregates this one doesn't carry.
+type MyCursor struct {
+	ID         uuid.UUID  `json:"id"`
+	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
+	CreatedAt  *time.Time `json:"created_at,omitempty"`
+	TitleLower *string    `json:"title_lower,omitempty"`
+}
+
+// EncodeMyCursor serializes a MyCursor into a base64-encoded JSON token.
+func EncodeMyCursor(c MyCursor) (string, error) {
+	b, err := json.Marshal(c)
+	if err != nil {
+		return "", fmt.Errorf("EncodeMyCursor: marshal: %w", err)
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
+}
+
+// DecodeMyCursor parses a base64-encoded JSON token back into a
+// MyCursor. The handler maps a decode error to 400 "invalid cursor
+// value".
+func DecodeMyCursor(s string) (MyCursor, error) {
+	raw, err := base64.URLEncoding.DecodeString(s)
+	if err != nil {
+		return MyCursor{}, fmt.Errorf("DecodeMyCursor: base64: %w", err)
+	}
+	var c MyCursor
+	if err := json.Unmarshal(raw, &c); err != nil {
+		return MyCursor{}, fmt.Errorf("DecodeMyCursor: json: %w", err)
+	}
+	return c, nil
+}
+
+// ListMyStudyGuidesParams is the input to Service.ListMyStudyGuides
+// (ASK-131). ViewerID drives the creator-only scope (the endpoint
+// always filters to the JWT viewer's own guides). CourseID is
+// optional; when nil, returns guides across all courses.
+type ListMyStudyGuidesParams struct {
+	ViewerID uuid.UUID
+	CourseID *uuid.UUID
+	SortBy   MySortField
+	Limit    int32
+	Cursor   *MyCursor
+}
+
+// ListMyStudyGuidesResult is the output of Service.ListMyStudyGuides.
+// NextCursor is *string so the wire field renders as explicit JSON
+// null on the last page.
+type ListMyStudyGuidesResult struct {
+	StudyGuides []MyStudyGuide
+	HasMore     bool
+	NextCursor  *string
+}
+
 // GetStudyGuideParams is the input to Service.GetStudyGuide. ViewerID
 // is used to fetch the user's own vote on the guide (user_vote in the
 // response). A missing viewer vote ships as nil on StudyGuideDetail.

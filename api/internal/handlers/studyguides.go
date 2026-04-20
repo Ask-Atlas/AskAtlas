@@ -32,6 +32,7 @@ type StudyGuideService interface {
 	DetachResource(ctx context.Context, params studyguides.DetachResourceParams) error
 	AttachFile(ctx context.Context, params studyguides.AttachFileParams) (studyguides.FileAttachment, error)
 	DetachFile(ctx context.Context, params studyguides.DetachFileParams) error
+	ListMyStudyGuides(ctx context.Context, params studyguides.ListMyStudyGuidesParams) (studyguides.ListMyStudyGuidesResult, error)
 }
 
 // StudyGuideHandler manages incoming HTTP requests for the study-guide
@@ -505,6 +506,100 @@ func mapCreatorSummary(c studyguides.Creator) api.CreatorSummary {
 		Id:        openapi_types.UUID(c.ID),
 		FirstName: c.FirstName,
 		LastName:  c.LastName,
+	}
+}
+
+// ListMyStudyGuides handles GET /me/study-guides (ASK-131). The JWT
+// viewer's own guides are returned INCLUDING soft-deleted rows so
+// the owner can see (and eventually restore) their own deleted
+// content -- every row ships a nullable `deleted_at` field.
+//
+// Defensive re-decoding of the cursor + course_id happens here so
+// the handler can emit a typed 400 with the spec's "invalid cursor
+// value" / "must be a valid UUID" details. sort_by is a typed enum
+// from the openapi wrapper so the validation there is authoritative;
+// the service maps any unknown value to a 400 as defense in depth.
+func (h *StudyGuideHandler) ListMyStudyGuides(w http.ResponseWriter, r *http.Request, params api.ListMyStudyGuidesParams) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	svcParams := studyguides.ListMyStudyGuidesParams{
+		ViewerID: viewerID,
+	}
+	if params.CourseId != nil {
+		id := uuid.UUID(*params.CourseId)
+		svcParams.CourseID = &id
+	}
+	if params.SortBy != nil {
+		svcParams.SortBy = studyguides.MySortField(*params.SortBy)
+	}
+	if params.Limit != nil {
+		svcParams.Limit = int32(*params.Limit)
+	}
+	if params.Cursor != nil && *params.Cursor != "" {
+		decoded, err := studyguides.DecodeMyCursor(*params.Cursor)
+		if err != nil {
+			apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid query parameters", map[string]string{
+				"cursor": "invalid cursor value",
+			}))
+			return
+		}
+		svcParams.Cursor = &decoded
+	}
+
+	result, err := h.service.ListMyStudyGuides(r.Context(), svcParams)
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("ListMyStudyGuides failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, mapListMyStudyGuidesResponse(result))
+}
+
+// mapMyStudyGuideSummary projects a MyStudyGuide onto the wire
+// MyStudyGuideSummary shape. DeletedAt is *time.Time so the JSON
+// renders as `deleted_at: null` vs `deleted_at: "<timestamp>"`;
+// the schema marks the field required + nullable so it is always
+// present on the wire.
+func mapMyStudyGuideSummary(g studyguides.MyStudyGuide) api.MyStudyGuideSummary {
+	return api.MyStudyGuideSummary{
+		Id:            openapi_types.UUID(g.ID),
+		Title:         g.Title,
+		Description:   g.Description,
+		Tags:          utils.NonNilStrings(g.Tags),
+		Creator:       mapCreatorSummary(g.Creator),
+		CourseId:      openapi_types.UUID(g.CourseID),
+		VoteScore:     g.VoteScore,
+		ViewCount:     g.ViewCount,
+		IsRecommended: g.IsRecommended,
+		QuizCount:     g.QuizCount,
+		CreatedAt:     g.CreatedAt,
+		UpdatedAt:     g.UpdatedAt,
+		DeletedAt:     g.DeletedAt,
+	}
+}
+
+// mapListMyStudyGuidesResponse projects the domain result onto the
+// paginated wire envelope. study_guides is always non-nil so the
+// JSON output is `[]` rather than null when the viewer has no
+// guides. NextCursor is *string so the field renders as explicit
+// JSON null on the last page.
+func mapListMyStudyGuidesResponse(r studyguides.ListMyStudyGuidesResult) api.ListMyStudyGuidesResponse {
+	out := make([]api.MyStudyGuideSummary, 0, len(r.StudyGuides))
+	for _, g := range r.StudyGuides {
+		out = append(out, mapMyStudyGuideSummary(g))
+	}
+	return api.ListMyStudyGuidesResponse{
+		StudyGuides: out,
+		HasMore:     r.HasMore,
+		NextCursor:  r.NextCursor,
 	}
 }
 

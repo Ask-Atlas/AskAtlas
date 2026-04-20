@@ -796,6 +796,355 @@ func (q *Queries) ListGuideResources(ctx context.Context, studyGuideID pgtype.UU
 	return items, nil
 }
 
+const listMyStudyGuidesNewest = `-- name: ListMyStudyGuidesNewest :many
+WITH scored AS (
+  SELECT
+    sg.id, sg.title, sg.description, sg.tags, sg.course_id,
+    sg.view_count, sg.created_at, sg.updated_at, sg.deleted_at,
+    u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
+    COALESCE((
+      SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
+      FROM study_guide_votes
+      WHERE study_guide_id = sg.id
+    ), 0)::bigint AS vote_score,
+    EXISTS (
+      SELECT 1 FROM study_guide_recommendations
+      WHERE study_guide_id = sg.id
+    ) AS is_recommended,
+    (
+      SELECT COUNT(*) FROM quizzes
+      WHERE study_guide_id = sg.id AND deleted_at IS NULL
+    )::bigint AS quiz_count
+  FROM study_guides sg
+  JOIN users u ON u.id = sg.creator_id
+  WHERE sg.creator_id = $4::uuid
+    AND u.deleted_at IS NULL
+    AND ($5::uuid IS NULL OR sg.course_id = $5::uuid)
+)
+SELECT id, title, description, tags, course_id, view_count,
+       created_at, updated_at, deleted_at,
+       creator_id, creator_first_name, creator_last_name,
+       vote_score, is_recommended, quiz_count
+FROM scored
+WHERE (
+  $1::timestamptz IS NULL
+  OR (created_at, id) < (
+    $1::timestamptz,
+    $2::uuid
+  )
+)
+ORDER BY created_at DESC, id DESC
+LIMIT $3
+`
+
+type ListMyStudyGuidesNewestParams struct {
+	CursorCreatedAt pgtype.Timestamptz `json:"cursor_created_at"`
+	CursorID        pgtype.UUID        `json:"cursor_id"`
+	PageLimit       int32              `json:"page_limit"`
+	CreatorID       pgtype.UUID        `json:"creator_id"`
+	CourseID        pgtype.UUID        `json:"course_id"`
+}
+
+type ListMyStudyGuidesNewestRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	Title            string             `json:"title"`
+	Description      pgtype.Text        `json:"description"`
+	Tags             []string           `json:"tags"`
+	CourseID         pgtype.UUID        `json:"course_id"`
+	ViewCount        int32              `json:"view_count"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+	CreatorID        pgtype.UUID        `json:"creator_id"`
+	CreatorFirstName string             `json:"creator_first_name"`
+	CreatorLastName  string             `json:"creator_last_name"`
+	VoteScore        int64              `json:"vote_score"`
+	IsRecommended    bool               `json:"is_recommended"`
+	QuizCount        int64              `json:"quiz_count"`
+}
+
+// created_at DESC variant (ASK-131). Same shape + filters as
+// ListMyStudyGuidesUpdated; the cursor comparison uses created_at.
+func (q *Queries) ListMyStudyGuidesNewest(ctx context.Context, arg ListMyStudyGuidesNewestParams) ([]ListMyStudyGuidesNewestRow, error) {
+	rows, err := q.db.Query(ctx, listMyStudyGuidesNewest,
+		arg.CursorCreatedAt,
+		arg.CursorID,
+		arg.PageLimit,
+		arg.CreatorID,
+		arg.CourseID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMyStudyGuidesNewestRow
+	for rows.Next() {
+		var i ListMyStudyGuidesNewestRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.Tags,
+			&i.CourseID,
+			&i.ViewCount,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.CreatorID,
+			&i.CreatorFirstName,
+			&i.CreatorLastName,
+			&i.VoteScore,
+			&i.IsRecommended,
+			&i.QuizCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMyStudyGuidesTitle = `-- name: ListMyStudyGuidesTitle :many
+WITH scored AS (
+  SELECT
+    sg.id, sg.title, sg.description, sg.tags, sg.course_id,
+    sg.view_count, sg.created_at, sg.updated_at, sg.deleted_at,
+    u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
+    COALESCE((
+      SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
+      FROM study_guide_votes
+      WHERE study_guide_id = sg.id
+    ), 0)::bigint AS vote_score,
+    EXISTS (
+      SELECT 1 FROM study_guide_recommendations
+      WHERE study_guide_id = sg.id
+    ) AS is_recommended,
+    (
+      SELECT COUNT(*) FROM quizzes
+      WHERE study_guide_id = sg.id AND deleted_at IS NULL
+    )::bigint AS quiz_count
+  FROM study_guides sg
+  JOIN users u ON u.id = sg.creator_id
+  WHERE sg.creator_id = $4::uuid
+    AND u.deleted_at IS NULL
+    AND ($5::uuid IS NULL OR sg.course_id = $5::uuid)
+)
+SELECT id, title, description, tags, course_id, view_count,
+       created_at, updated_at, deleted_at,
+       creator_id, creator_first_name, creator_last_name,
+       vote_score, is_recommended, quiz_count
+FROM scored
+WHERE (
+  $1::text IS NULL
+  OR (LOWER(title), id) > (
+    $1::text,
+    $2::uuid
+  )
+)
+ORDER BY LOWER(title) ASC, id ASC
+LIMIT $3
+`
+
+type ListMyStudyGuidesTitleParams struct {
+	CursorTitleLower pgtype.Text `json:"cursor_title_lower"`
+	CursorID         pgtype.UUID `json:"cursor_id"`
+	PageLimit        int32       `json:"page_limit"`
+	CreatorID        pgtype.UUID `json:"creator_id"`
+	CourseID         pgtype.UUID `json:"course_id"`
+}
+
+type ListMyStudyGuidesTitleRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	Title            string             `json:"title"`
+	Description      pgtype.Text        `json:"description"`
+	Tags             []string           `json:"tags"`
+	CourseID         pgtype.UUID        `json:"course_id"`
+	ViewCount        int32              `json:"view_count"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+	CreatorID        pgtype.UUID        `json:"creator_id"`
+	CreatorFirstName string             `json:"creator_first_name"`
+	CreatorLastName  string             `json:"creator_last_name"`
+	VoteScore        int64              `json:"vote_score"`
+	IsRecommended    bool               `json:"is_recommended"`
+	QuizCount        int64              `json:"quiz_count"`
+}
+
+// title ASC variant (ASK-131). Case-insensitive via LOWER(title).
+// Cursor: (lower(title), id) keyset for stable pagination across
+// duplicate titles.
+func (q *Queries) ListMyStudyGuidesTitle(ctx context.Context, arg ListMyStudyGuidesTitleParams) ([]ListMyStudyGuidesTitleRow, error) {
+	rows, err := q.db.Query(ctx, listMyStudyGuidesTitle,
+		arg.CursorTitleLower,
+		arg.CursorID,
+		arg.PageLimit,
+		arg.CreatorID,
+		arg.CourseID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMyStudyGuidesTitleRow
+	for rows.Next() {
+		var i ListMyStudyGuidesTitleRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.Tags,
+			&i.CourseID,
+			&i.ViewCount,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.CreatorID,
+			&i.CreatorFirstName,
+			&i.CreatorLastName,
+			&i.VoteScore,
+			&i.IsRecommended,
+			&i.QuizCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listMyStudyGuidesUpdated = `-- name: ListMyStudyGuidesUpdated :many
+WITH scored AS (
+  SELECT
+    sg.id, sg.title, sg.description, sg.tags, sg.course_id,
+    sg.view_count, sg.created_at, sg.updated_at, sg.deleted_at,
+    u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
+    COALESCE((
+      SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
+      FROM study_guide_votes
+      WHERE study_guide_id = sg.id
+    ), 0)::bigint AS vote_score,
+    EXISTS (
+      SELECT 1 FROM study_guide_recommendations
+      WHERE study_guide_id = sg.id
+    ) AS is_recommended,
+    (
+      SELECT COUNT(*) FROM quizzes
+      WHERE study_guide_id = sg.id AND deleted_at IS NULL
+    )::bigint AS quiz_count
+  FROM study_guides sg
+  JOIN users u ON u.id = sg.creator_id
+  WHERE sg.creator_id = $4::uuid
+    AND u.deleted_at IS NULL
+    AND ($5::uuid IS NULL OR sg.course_id = $5::uuid)
+)
+SELECT id, title, description, tags, course_id, view_count,
+       created_at, updated_at, deleted_at,
+       creator_id, creator_first_name, creator_last_name,
+       vote_score, is_recommended, quiz_count
+FROM scored
+WHERE (
+  $1::timestamptz IS NULL
+  OR (updated_at, id) < (
+    $1::timestamptz,
+    $2::uuid
+  )
+)
+ORDER BY updated_at DESC, id DESC
+LIMIT $3
+`
+
+type ListMyStudyGuidesUpdatedParams struct {
+	CursorUpdatedAt pgtype.Timestamptz `json:"cursor_updated_at"`
+	CursorID        pgtype.UUID        `json:"cursor_id"`
+	PageLimit       int32              `json:"page_limit"`
+	CreatorID       pgtype.UUID        `json:"creator_id"`
+	CourseID        pgtype.UUID        `json:"course_id"`
+}
+
+type ListMyStudyGuidesUpdatedRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	Title            string             `json:"title"`
+	Description      pgtype.Text        `json:"description"`
+	Tags             []string           `json:"tags"`
+	CourseID         pgtype.UUID        `json:"course_id"`
+	ViewCount        int32              `json:"view_count"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+	CreatorID        pgtype.UUID        `json:"creator_id"`
+	CreatorFirstName string             `json:"creator_first_name"`
+	CreatorLastName  string             `json:"creator_last_name"`
+	VoteScore        int64              `json:"vote_score"`
+	IsRecommended    bool               `json:"is_recommended"`
+	QuizCount        int64              `json:"quiz_count"`
+}
+
+// Per-creator study-guide list for GET /api/me/study-guides (ASK-131).
+// Differences vs ListStudyGuides*:
+//   - Scoped by creator_id (the JWT viewer), not course_id.
+//   - Optional course_id narg -- when present, filter to that course;
+//     when null, return across all courses.
+//   - NO `sg.deleted_at IS NULL` filter -- the spec explicitly
+//     requires soft-deleted guides to surface so the owner can see
+//     (and eventually restore) them. The response includes a
+//     `deleted_at` column for the frontend to render a "Deleted"
+//     badge. The creator's own deleted_at still filters (a soft-
+//     deleted user's content stays hidden everywhere).
+//   - Single direction per sort variant (updated DESC only -- the
+//     spec doesn't expose a sort_dir here; the shape is simpler).
+//
+// Keyset cursor: (updated_at, id) DESC matches the ORDER BY so the
+// "(updated_at, id) < cursor" clause advances past the last visible
+// row. id is always the tiebreaker.
+func (q *Queries) ListMyStudyGuidesUpdated(ctx context.Context, arg ListMyStudyGuidesUpdatedParams) ([]ListMyStudyGuidesUpdatedRow, error) {
+	rows, err := q.db.Query(ctx, listMyStudyGuidesUpdated,
+		arg.CursorUpdatedAt,
+		arg.CursorID,
+		arg.PageLimit,
+		arg.CreatorID,
+		arg.CourseID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMyStudyGuidesUpdatedRow
+	for rows.Next() {
+		var i ListMyStudyGuidesUpdatedRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.Tags,
+			&i.CourseID,
+			&i.ViewCount,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.CreatorID,
+			&i.CreatorFirstName,
+			&i.CreatorLastName,
+			&i.VoteScore,
+			&i.IsRecommended,
+			&i.QuizCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listStudyGuidesNewestAsc = `-- name: ListStudyGuidesNewestAsc :many
 WITH scored AS (
   SELECT

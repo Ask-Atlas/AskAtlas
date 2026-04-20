@@ -294,6 +294,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/list-my-study-guides",
+          label: "List study guides created by the authenticated user (ASK-131)",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "api/list-favorites",
           label: "List the authenticated user's favorited items",
           className: "api-method get",
