@@ -1,0 +1,78 @@
+---
+id: toggle-file-favorite
+title: "Toggle the file favorite (ASK-130)"
+description: "Toggles whether the authenticated user has favorited this file."
+sidebar_label: "Toggle the file favorite (ASK-130)"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV0tvGzcQ/isETzGwkpw2aQGhLuCgDeAUcAI/kINlWOPlSMt4NVyTQzuKsP+9GO5qtXqkh6JADvVJD877+2Y4XGlXoQe2js6MHusrN5+X+N6W+B6enLeMOtMGQ+5tJUKdSFDPBXKBXnGBCiIXSGxzYDQqBvSqgKBmrQ2juLBBzWyJwwmdzRQ53hxmylJAz0GBmorM3fooTJV3zwrIKI8cPYUJTVed4lixj5htLN0Bj9Vv5x8//15Ph+pspqD0CGbZ8zUhgyUyhhT3jnW1ZXwGZdizTrEs6+lwQhNqK2RprmxQllgq4AjKcqkq9AsbgnU0KDGEsQJabldpQqlMOVDnIQmRo0ETomkKpq6kdlaqU6EP4mBC9849LMA/ZKmUQAryHEMY5I7Yu1JBLqGowSCl2dVTlTbwhJBM5Szxpj62ZPRBGfdMil1y3FToyeJzG2ZAQU9nugIPCxQFPb5ZaYIF6rFOyFmjM22FJhVwsc+dAlUk+xhRXV+f/aHcrInPlpjctnGOIs029PP4GK1Ho8cJbh3yAhegxyvNy0o8B/aW5jrTM+cXwHqsY7RG1/WtKIfKUcAg8j8dH8vHIT4rjyGWrDMtJURiEYSqKgUt62j0JYj0at+7u/+COe+lepHsSYafPl5eqRFUdpTKOlq1lapHHfCvTi//Grz++fgom9BGfIGjwNEsB/NojSimX3fp1yH9t7+IvvB5y0buog+i3nw5qPnr0XBC047qU+VxVmLObZukXITogYEx0cpHlBFAIjAhborYNDIaBdJaWdNCjZhltaa1I9zydgc8FYKvO5LtAgPDomo0O7mT5BTITAi/CjKW1YfLj+epKXdlG9evgmsY5hOqRog8obzA/EFNT05OkupUeWhHGVDzdySDM0topkct570MSrYNkTo3PR7cO1ci0D7nJWjbEF26n5eSK7nn/gRsorUz9SUGVhv6m6GuM92v1D/y3gDjQMqnMy2ZwX2J67bZiWq7xv0pkTB4hqByjzKphuq8q+92ZHW/OW96VdkJ+TbTbFlCWV8w7elF2526rsXYm0P9+Q5kPj9GDP9hd14ykAFv7Dc0Cr13Xq0nhQrsY87Ro1oA54XQvueqlTZuAZbCHjNyZ7DnXm6FOXoBUVonhn346kwvMASY48Ezgwy2DIdSAmNsc+N82ophx8YuTCnELp6N9x5Kp1X1p6TZ4fJ6H5drkvvMeSnhCzA/Cpg3+8Ccy3LlIr2g8oNQeXtojJ0RoycoVUD/hL6pywtCPwKhFCAXTh48lUvXStpWx/q7G5qYT7g1K2/0pUhDZbUsmQHz6C0v09k7BI/+NIrBm9v+8aVg2WTUF+ryK5gr3e63aaNIQjprv7xf3/IfPl+lu9fSzCX1dZLh4ZRLCOr005nOtETbkOP18Hh4LLWXbBeQiNVu7e32223h+yvpLtVWG8q+vAX/92/BlrqMX3lUlWBJaJbaY9U21U16GUpfjjdPxK6vbjNdSAuOb/RqdQ8Br31Z1/L3Y0QvHXWb6Sfwtlllb1ba2CDfjR43oHyfna8u2iFxpP7Vw/Ngbu2fQEtpMSij/NKZfsBl7xFc39aZLhAM+hR0c3qa51hxT29v4su46GaTvOJ0Xf8NutpGfw==
+sidebar_class_name: "post api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Toggle the file favorite (ASK-130)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/files/{file_id}/favorite"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Toggles whether the authenticated user has favorited this file.
+If not favorited, inserts a `file_favorites` row and returns
+`{favorited: true, favorited_at: <NOW>}`. If already favorited,
+deletes the row and returns `{favorited: false, favorited_at: null}`.
+
+Favoriting is intentionally permission-less: any authenticated
+user can favorite any non-deleted file. This is a personal
+bookmark, not an access-control action -- the favorites list
+endpoint already filters down to files the viewer can see.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./toggle-file-favorite.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./toggle-file-favorite.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./toggle-file-favorite.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      
