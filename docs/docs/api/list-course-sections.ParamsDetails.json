@@ -1,0 +1,1 @@
+{"parameters":[{"name":"course_id","in":"path","description":"The unique UUID of the parent course","required":true,"schema":{"type":"string","format":"uuid"}},{"name":"term","in":"query","description":"Exact-match filter on the section's term (e.g. \"Spring 2026\")","required":false,"schema":{"type":"string","maxLength":30}}]}

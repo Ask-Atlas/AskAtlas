@@ -137,6 +137,15 @@ type CheckMembershipParams struct {
 // MaxTermLength matches the openapi.yaml maxLength on the term filter.
 const MaxTermLength int = 30
 
+// ListCourseSectionsParams is the input to Service.ListCourseSections
+// (ASK-127). CourseID is the path parameter; Term is the optional
+// exact-match filter (nil means "no filter"; an empty/whitespace-only
+// pointer-string is also treated as no filter for client robustness).
+type ListCourseSectionsParams struct {
+	CourseID uuid.UUID
+	Term     *string
+}
+
 // ListSectionMembersParams is the input to Service.ListSectionMembers.
 // Cursor is its own dedicated type rather than reusing the courses
 // Cursor because the keyset shape is different (joined_at + user_id vs

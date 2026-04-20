@@ -39,6 +39,33 @@ type Section struct {
 	MemberCount    int64
 }
 
+// SectionListing is the per-row payload returned by
+// Service.ListCourseSections (ASK-127). Distinct from Section
+// (used by the inline sections array in CourseDetail) because:
+//   - Includes CourseID so the wire payload is self-describing
+//     (the inline payload omits it because the parent course
+//     already carries the id).
+//   - Includes CreatedAt for UI use (e.g. "section added on...").
+//
+// Mirrors api.SectionResponse on the wire.
+type SectionListing struct {
+	ID             uuid.UUID
+	CourseID       uuid.UUID
+	Term           string
+	SectionCode    *string
+	InstructorName *string
+	MemberCount    int64
+	CreatedAt      time.Time
+}
+
+// ListCourseSectionsResult bundles the page of sections for the
+// dedicated sections endpoint (ASK-127). A struct rather than a
+// bare slice so future fields (an echo of the term filter, an
+// aggregate count) can land backwards-compatibly.
+type ListCourseSectionsResult struct {
+	Sections []SectionListing
+}
+
 // CourseDetail is the get-by-id domain type: a Course plus the inline list
 // of all its sections (always non-nil; empty slice when the course has none).
 type CourseDetail struct {

@@ -1341,3 +1341,273 @@ func TestListSectionMembersSQL_ExcludesSoftDeletedUsers(t *testing.T) {
 	assert.Contains(t, block, "u.deleted_at IS NULL",
 		"ListSectionMembers must filter soft-deleted users (privacy convention)")
 }
+
+// ============================================================
+// ListCourseSections tests (ASK-127)
+// ============================================================
+
+// fixtureSectionsTime is a stable timestamp for ASK-127 fixtures so
+// assertions don't drift across runs.
+var fixtureSectionsTime = time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC)
+
+// sectionsRow is a shorthand builder for db.ListSectionsForCourseRow
+// fixtures. SectionCode and instructor are passed as plain pointers
+// (nil -> NULL on the wire) for readable test bodies.
+func sectionsRow(id, courseID uuid.UUID, term string, sectionCode, instructor *string, members int64) db.ListSectionsForCourseRow {
+	row := db.ListSectionsForCourseRow{
+		ID:          utils.UUID(id),
+		CourseID:    utils.UUID(courseID),
+		Term:        term,
+		CreatedAt:   pgtype.Timestamptz{Time: fixtureSectionsTime, Valid: true},
+		MemberCount: members,
+	}
+	if sectionCode != nil {
+		row.SectionCode = pgtype.Text{String: *sectionCode, Valid: true}
+	}
+	if instructor != nil {
+		row.InstructorName = pgtype.Text{String: *instructor, Valid: true}
+	}
+	return row
+}
+
+// TestListCourseSections_AC1_NoFilter_ReturnsAll: a valid course
+// with N sections returns all of them when no term filter is set.
+// Verifies the absence of StatusFilter (sqlc.narg unset) is
+// forwarded as a non-Valid pgtype.Text.
+func TestListCourseSections_AC1_NoFilter_ReturnsAll(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	courseID := uuid.New()
+
+	repo.EXPECT().CourseExists(mock.Anything, utils.UUID(courseID)).Return(true, nil)
+	id1, id2 := uuid.New(), uuid.New()
+	code1, code2 := "01", "02"
+	instructor := "Dr. Ananth Jillepalli"
+	repo.EXPECT().ListSectionsForCourse(mock.Anything,
+		mock.MatchedBy(func(arg db.ListSectionsForCourseParams) bool {
+			return arg.CourseID == utils.UUID(courseID) && !arg.Term.Valid
+		})).Return([]db.ListSectionsForCourseRow{
+		sectionsRow(id1, courseID, "Spring 2026", &code1, &instructor, 34),
+		sectionsRow(id2, courseID, "Spring 2026", &code2, nil, 12),
+	}, nil)
+
+	svc := courses.NewService(repo)
+	got, err := svc.ListCourseSections(context.Background(), courses.ListCourseSectionsParams{
+		CourseID: courseID,
+	})
+	require.NoError(t, err)
+	require.Len(t, got.Sections, 2)
+	assert.Equal(t, id1, got.Sections[0].ID)
+	assert.Equal(t, courseID, got.Sections[0].CourseID)
+	assert.Equal(t, "Spring 2026", got.Sections[0].Term)
+	require.NotNil(t, got.Sections[0].SectionCode)
+	assert.Equal(t, "01", *got.Sections[0].SectionCode)
+	require.NotNil(t, got.Sections[0].InstructorName)
+	assert.Equal(t, "Dr. Ananth Jillepalli", *got.Sections[0].InstructorName)
+	assert.Equal(t, int64(34), got.Sections[0].MemberCount)
+	assert.True(t, got.Sections[0].CreatedAt.Equal(fixtureSectionsTime))
+	// Second section: nullable instructor stays nil through the mapper.
+	assert.Nil(t, got.Sections[1].InstructorName)
+}
+
+// TestListCourseSections_AC2_TermFilter: an exact-match term
+// filter is forwarded to sqlc as a Valid pgtype.Text.
+func TestListCourseSections_AC2_TermFilter(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	courseID := uuid.New()
+
+	repo.EXPECT().CourseExists(mock.Anything, utils.UUID(courseID)).Return(true, nil)
+	repo.EXPECT().ListSectionsForCourse(mock.Anything,
+		mock.MatchedBy(func(arg db.ListSectionsForCourseParams) bool {
+			return arg.Term.Valid && arg.Term.String == "Spring 2026"
+		})).Return([]db.ListSectionsForCourseRow{}, nil)
+
+	term := "Spring 2026"
+	svc := courses.NewService(repo)
+	got, err := svc.ListCourseSections(context.Background(), courses.ListCourseSectionsParams{
+		CourseID: courseID, Term: &term,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, got.Sections, "empty slice must be non-nil")
+	assert.Empty(t, got.Sections)
+}
+
+// TestListCourseSections_AC3_TermFilter_NoMatch: a term that
+// matches no sections returns an empty slice (NOT 404). The
+// course-existence preflight passes; the query just returns 0 rows.
+func TestListCourseSections_AC3_TermFilter_NoMatch(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	courseID := uuid.New()
+
+	repo.EXPECT().CourseExists(mock.Anything, utils.UUID(courseID)).Return(true, nil)
+	repo.EXPECT().ListSectionsForCourse(mock.Anything, mock.Anything).
+		Return([]db.ListSectionsForCourseRow{}, nil)
+
+	term := "Summer 2099"
+	svc := courses.NewService(repo)
+	got, err := svc.ListCourseSections(context.Background(), courses.ListCourseSectionsParams{
+		CourseID: courseID, Term: &term,
+	})
+	require.NoError(t, err)
+	assert.Empty(t, got.Sections)
+}
+
+// TestListCourseSections_AC4_CourseNotFound_404: missing course ->
+// 404 with "Course not found" message.
+func TestListCourseSections_AC4_CourseNotFound_404(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	courseID := uuid.New()
+
+	repo.EXPECT().CourseExists(mock.Anything, utils.UUID(courseID)).Return(false, nil)
+	// ListSectionsForCourse must NOT be called.
+
+	svc := courses.NewService(repo)
+	_, err := svc.ListCourseSections(context.Background(), courses.ListCourseSectionsParams{
+		CourseID: courseID,
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusNotFound, sysErr.Code)
+	assert.Equal(t, "Course not found", sysErr.Message)
+}
+
+// TestListCourseSections_AC7_NullableFields: a section with NULL
+// section_code and NULL instructor_name surfaces as nil pointers
+// in the domain payload (which the wire mapper renders as JSON null).
+func TestListCourseSections_AC7_NullableFields(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	courseID := uuid.New()
+	sectionID := uuid.New()
+
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().ListSectionsForCourse(mock.Anything, mock.Anything).Return(
+		[]db.ListSectionsForCourseRow{
+			sectionsRow(sectionID, courseID, "Spring 2026", nil, nil, 0),
+		}, nil)
+
+	svc := courses.NewService(repo)
+	got, err := svc.ListCourseSections(context.Background(), courses.ListCourseSectionsParams{
+		CourseID: courseID,
+	})
+	require.NoError(t, err)
+	require.Len(t, got.Sections, 1)
+	assert.Nil(t, got.Sections[0].SectionCode)
+	assert.Nil(t, got.Sections[0].InstructorName)
+	assert.Equal(t, int64(0), got.Sections[0].MemberCount)
+}
+
+// TestListCourseSections_TermTooLong_400: a term longer than
+// MaxTermLength chars surfaces as a typed 400 with details.term.
+// The HTTP layer enforces the same bound via openapi maxLength: 30,
+// but this test guards the service-side defense-in-depth check.
+func TestListCourseSections_TermTooLong_400(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+
+	tooLong := strings.Repeat("a", courses.MaxTermLength+1)
+	svc := courses.NewService(repo)
+	_, err := svc.ListCourseSections(context.Background(), courses.ListCourseSectionsParams{
+		CourseID: uuid.New(), Term: &tooLong,
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusBadRequest, sysErr.Code)
+	require.NotNil(t, sysErr.Details)
+	assert.Contains(t, sysErr.Details["term"], "30")
+}
+
+// TestListCourseSections_MultiByteTerm_CountsRunesNotBytes pins
+// the rune-vs-byte fix from gemini PR #160 review. A 30-character
+// multi-byte CJK term is 90 bytes but 30 runes, so a byte-count
+// check would (incorrectly) reject it. This test would fail
+// under len(trimmed) but pass under utf8.RuneCountInString --
+// making the expected behavior an explicit contract.
+func TestListCourseSections_MultiByteTerm_CountsRunesNotBytes(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	courseID := uuid.New()
+
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().ListSectionsForCourse(mock.Anything, mock.Anything).
+		Return([]db.ListSectionsForCourseRow{}, nil)
+
+	// "春" is 3 bytes in UTF-8; 30 of them = 90 bytes / 30 runes.
+	multibyte := strings.Repeat("春", courses.MaxTermLength)
+	svc := courses.NewService(repo)
+	_, err := svc.ListCourseSections(context.Background(), courses.ListCourseSectionsParams{
+		CourseID: courseID, Term: &multibyte,
+	})
+	require.NoError(t, err, "30-rune multi-byte term must not be rejected as too long")
+}
+
+// TestListCourseSections_EmptyTerm_TreatedAsNoFilter: a pointer
+// to an empty/whitespace string collapses to "no filter" rather
+// than being passed to the query as an empty string (which would
+// match nothing per the exact-equality SQL).
+func TestListCourseSections_EmptyTerm_TreatedAsNoFilter(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	courseID := uuid.New()
+
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().ListSectionsForCourse(mock.Anything,
+		mock.MatchedBy(func(arg db.ListSectionsForCourseParams) bool {
+			// Empty string -> Valid=false (no filter), NOT Valid=true String="".
+			return !arg.Term.Valid
+		})).Return([]db.ListSectionsForCourseRow{}, nil)
+
+	empty := "   "
+	svc := courses.NewService(repo)
+	_, err := svc.ListCourseSections(context.Background(), courses.ListCourseSectionsParams{
+		CourseID: courseID, Term: &empty,
+	})
+	require.NoError(t, err)
+}
+
+// TestListCourseSections_CourseExistsError_500: a DB failure on
+// the existence probe surfaces as 500 (not 404 -- a transport
+// error must not be disguised as a missing resource).
+func TestListCourseSections_CourseExistsError_500(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).
+		Return(false, errors.New("connection refused"))
+
+	svc := courses.NewService(repo)
+	_, err := svc.ListCourseSections(context.Background(), courses.ListCourseSectionsParams{
+		CourseID: uuid.New(),
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}
+
+// TestListCourseSections_QueryError_500: a DB failure on the list
+// query surfaces as 500.
+func TestListCourseSections_QueryError_500(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().ListSectionsForCourse(mock.Anything, mock.Anything).
+		Return(nil, errors.New("query timeout"))
+
+	svc := courses.NewService(repo)
+	_, err := svc.ListCourseSections(context.Background(), courses.ListCourseSectionsParams{
+		CourseID: uuid.New(),
+	})
+	require.Error(t, err)
+	sysErr := apperrors.ToHTTPError(err)
+	assert.Equal(t, http.StatusInternalServerError, sysErr.Code)
+}
+
+// TestListCourseSections_EmptyResult_NonNilSlice: a course with 0
+// sections returns an empty slice (not nil) so the wire renders []
+// per spec.
+func TestListCourseSections_EmptyResult_NonNilSlice(t *testing.T) {
+	repo := mock_courses.NewMockRepository(t)
+	repo.EXPECT().CourseExists(mock.Anything, mock.Anything).Return(true, nil)
+	repo.EXPECT().ListSectionsForCourse(mock.Anything, mock.Anything).
+		Return([]db.ListSectionsForCourseRow{}, nil)
+
+	svc := courses.NewService(repo)
+	got, err := svc.ListCourseSections(context.Background(), courses.ListCourseSectionsParams{
+		CourseID: uuid.New(),
+	})
+	require.NoError(t, err)
+	require.NotNil(t, got.Sections, "empty slice must be non-nil so wire renders []")
+	assert.Empty(t, got.Sections)
+}

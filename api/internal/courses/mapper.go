@@ -160,6 +160,31 @@ func mapSection(r db.ListCourseSectionsRow) (Section, error) {
 	}, nil
 }
 
+// mapSectionListing projects a ListSectionsForCourse row into the
+// domain SectionListing type used by Service.ListCourseSections
+// (ASK-127). Distinct from mapSection because the row shape and
+// destination domain type both carry the extra CourseID + CreatedAt
+// fields.
+func mapSectionListing(r db.ListSectionsForCourseRow) (SectionListing, error) {
+	id, err := utils.PgxToGoogleUUID(r.ID)
+	if err != nil {
+		return SectionListing{}, fmt.Errorf("mapSectionListing: id: %w", err)
+	}
+	courseID, err := utils.PgxToGoogleUUID(r.CourseID)
+	if err != nil {
+		return SectionListing{}, fmt.Errorf("mapSectionListing: course id: %w", err)
+	}
+	return SectionListing{
+		ID:             id,
+		CourseID:       courseID,
+		Term:           r.Term,
+		SectionCode:    utils.TextPtr(r.SectionCode),
+		InstructorName: utils.TextPtr(r.InstructorName),
+		MemberCount:    r.MemberCount,
+		CreatedAt:      r.CreatedAt.Time,
+	}, nil
+}
+
 // Per-sort-variant adapter functions. Each projects the typed db row into
 // sharedCourseRow so the rest of the package can stay variant-agnostic.
 

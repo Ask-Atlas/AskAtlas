@@ -1182,3 +1182,225 @@ func TestCoursesHandler_ListSectionMembers_InternalError(t *testing.T) {
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
+
+// ============================================================
+// ListCourseSections tests (ASK-127)
+// ============================================================
+
+func TestCoursesHandler_ListCourseSections_Unauthorized(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	url := fmt.Sprintf("/courses/%s/sections", uuid.NewString())
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestCoursesHandler_ListCourseSections_InvalidUUID_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	req := authedRequestMethod(t, http.MethodGet, "/courses/not-a-uuid/sections", nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+// TestCoursesHandler_ListCourseSections_TermTooLong_400 verifies
+// that a term-length violation surfaces as 400 with details.term.
+// oapi-codegen does NOT enforce maxLength on query strings (verified
+// by tracing -- the wrapper passes the value through to the
+// handler), so the validation lives in the service. This test
+// pins the wire shape rather than the layer that enforces it.
+func TestCoursesHandler_ListCourseSections_TermTooLong_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().ListCourseSections(mock.Anything, mock.Anything).
+		Return(courses.ListCourseSectionsResult{}, apperrors.NewBadRequest(
+			"Invalid query parameters",
+			map[string]string{"term": "must be 30 characters or fewer"},
+		))
+
+	tooLong := strings.Repeat("a", 31)
+	url := fmt.Sprintf("/courses/%s/sections?term=%s", uuid.NewString(), tooLong)
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusBadRequest, w.Code)
+	var body api.AppError
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&body))
+	require.NotNil(t, body.Details)
+	assert.Contains(t, (*body.Details)["term"], "30")
+}
+
+func TestCoursesHandler_ListCourseSections_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().ListCourseSections(mock.Anything, mock.Anything).
+		Return(courses.ListCourseSectionsResult{}, apperrors.NewNotFound("Course not found"))
+
+	url := fmt.Sprintf("/courses/%s/sections", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusNotFound, w.Code)
+	var body api.AppError
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&body))
+	assert.Equal(t, "Course not found", body.Message)
+}
+
+func TestCoursesHandler_ListCourseSections_ServiceError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().ListCourseSections(mock.Anything, mock.Anything).
+		Return(courses.ListCourseSectionsResult{}, errors.New("connection refused"))
+
+	url := fmt.Sprintf("/courses/%s/sections", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
+// TestCoursesHandler_ListCourseSections_Success_200 covers the
+// happy path: service returns a populated result, handler renders
+// 200 with the SectionResponse wire shape. Verifies the term
+// query param is forwarded to the service in its decoded form.
+func TestCoursesHandler_ListCourseSections_Success_200(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	courseID := uuid.New()
+	sectionID := uuid.New()
+	now := time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC)
+	code := "01"
+	instructor := "Dr. Ananth Jillepalli"
+
+	mockSvc.EXPECT().ListCourseSections(mock.Anything,
+		mock.MatchedBy(func(p courses.ListCourseSectionsParams) bool {
+			return p.CourseID == courseID && p.Term != nil && *p.Term == "Spring 2026"
+		})).Return(courses.ListCourseSectionsResult{
+		Sections: []courses.SectionListing{
+			{
+				ID:             sectionID,
+				CourseID:       courseID,
+				Term:           "Spring 2026",
+				SectionCode:    &code,
+				InstructorName: &instructor,
+				MemberCount:    34,
+				CreatedAt:      now,
+			},
+		},
+	}, nil)
+
+	url := fmt.Sprintf("/courses/%s/sections?term=%s", courseID.String(), "Spring%202026")
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp api.ListCourseSectionsResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	require.Len(t, resp.Sections, 1)
+	assert.Equal(t, sectionID, uuid.UUID(resp.Sections[0].Id))
+	assert.Equal(t, courseID, uuid.UUID(resp.Sections[0].CourseId))
+	assert.Equal(t, "Spring 2026", resp.Sections[0].Term)
+	require.NotNil(t, resp.Sections[0].SectionCode)
+	assert.Equal(t, "01", *resp.Sections[0].SectionCode)
+	require.NotNil(t, resp.Sections[0].InstructorName)
+	assert.Equal(t, "Dr. Ananth Jillepalli", *resp.Sections[0].InstructorName)
+	assert.Equal(t, int64(34), resp.Sections[0].MemberCount)
+	// Required field per the openapi schema -- pin it in the
+	// success wire test so a regression that drops it from the
+	// mapper would be caught. coderabbit PR #160 feedback.
+	assert.True(t, resp.Sections[0].CreatedAt.Equal(now))
+}
+
+// TestCoursesHandler_ListCourseSections_EmptyRendersBracket
+// verifies the empty-result wire shape is `sections: []` (NOT
+// null). Decode into a generic map so we catch a missing-key bug
+// (the typed decode would happily accept a JSON null as a nil
+// slice).
+func TestCoursesHandler_ListCourseSections_EmptyRendersBracket(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().ListCourseSections(mock.Anything, mock.Anything).
+		Return(courses.ListCourseSectionsResult{Sections: []courses.SectionListing{}}, nil)
+
+	url := fmt.Sprintf("/courses/%s/sections", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var raw map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &raw))
+	sectionsAny, ok := raw["sections"].([]any)
+	require.True(t, ok, "sections must serialize as JSON array, not null")
+	assert.Empty(t, sectionsAny)
+}
+
+// TestCoursesHandler_ListCourseSections_NullableFields verifies a
+// section with NULL section_code + NULL instructor_name renders as
+// JSON null on the wire (not missing keys, not zero-value empty
+// strings).
+func TestCoursesHandler_ListCourseSections_NullableFields(t *testing.T) {
+	mockSvc := mock_handlers.NewMockCourseService(t)
+	h := handlers.NewCoursesHandler(mockSvc)
+
+	mockSvc.EXPECT().ListCourseSections(mock.Anything, mock.Anything).
+		Return(courses.ListCourseSectionsResult{
+			Sections: []courses.SectionListing{
+				{
+					ID:          uuid.New(),
+					CourseID:    uuid.New(),
+					Term:        "Spring 2026",
+					MemberCount: 0,
+					CreatedAt:   time.Date(2026, 1, 20, 0, 0, 0, 0, time.UTC),
+					// SectionCode + InstructorName left nil
+				},
+			},
+		}, nil)
+
+	url := fmt.Sprintf("/courses/%s/sections", uuid.NewString())
+	req := authedRequestMethod(t, http.MethodGet, url, nil)
+	w := httptest.NewRecorder()
+
+	r := coursesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var raw map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &raw))
+	sectionsAny, ok := raw["sections"].([]any)
+	require.True(t, ok)
+	require.Len(t, sectionsAny, 1)
+	first := sectionsAny[0].(map[string]any)
+	assert.Nil(t, first["section_code"], "null section_code must render as JSON null")
+	assert.Nil(t, first["instructor_name"], "null instructor_name must render as JSON null")
+}

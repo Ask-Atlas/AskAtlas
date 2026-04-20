@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
@@ -34,6 +35,12 @@ type Repository interface {
 
 	GetCourse(ctx context.Context, id pgtype.UUID) (db.GetCourseRow, error)
 	ListCourseSections(ctx context.Context, courseID pgtype.UUID) ([]db.ListCourseSectionsRow, error)
+	// ListSectionsForCourse powers the dedicated GET
+	// /courses/{course_id}/sections endpoint (ASK-127). Distinct
+	// from ListCourseSections (used inline by GetCourse) -- the
+	// dedicated endpoint includes course_id + created_at and
+	// supports an optional exact-match term filter.
+	ListSectionsForCourse(ctx context.Context, arg db.ListSectionsForCourseParams) ([]db.ListSectionsForCourseRow, error)
 
 	CourseExists(ctx context.Context, id pgtype.UUID) (bool, error)
 	SectionInCourseExists(ctx context.Context, arg db.SectionInCourseExistsParams) (bool, error)
@@ -674,4 +681,84 @@ func (s *Service) ListSectionMembers(ctx context.Context, p ListSectionMembersPa
 		HasMore:    hasMore,
 		NextCursor: nextCursor,
 	}, nil
+}
+
+// ListCourseSections returns all sections attached to a course
+// (ASK-127), with optional exact-match term filter and a live
+// member_count per section.
+//
+// Order of operations:
+//  1. Trim + length-validate the term filter. The HTTP layer
+//     already enforces openapi maxLength: 30, but we re-validate
+//     here so internal Go callers can't bypass it. Empty/
+//     whitespace-only term collapses to "no filter" -- this is
+//     defense-in-depth for internal Go callers; the kin-openapi
+//     wrapper rejects ?term= at the HTTP boundary with 400
+//     "empty value is not allowed" before any of this runs.
+//  2. CourseExists -- 404 dispatch on a missing parent. The
+//     spec wants this distinguished from the empty-result case
+//     so the frontend can show a "course doesn't exist" empty
+//     state vs the regular "no matching sections" empty state.
+//  3. ListSectionsForCourse -- the actual query. LEFT JOIN keeps
+//     zero-member sections in the page. Ordered server-side by
+//     term DESC, section_code ASC; the term ordering is
+//     LEXICOGRAPHIC on the term string, NOT chronological.
+//     "Spring 2026" sorts before "Fall 2026" because S<F is
+//     false but in DESC order the alphabetic decides; "Summer
+//     2025" sorts before "Spring 2025" alphabetically (Su>Sp).
+//     Acceptable per the spec; the inline ListCourseSections
+//     query (used by GetCourse) sorts by start_date DESC instead
+//     for the chronological case. coderabbit + copilot + gemini
+//     PR #160 feedback.
+//  4. Map rows to []SectionListing. Always emits a non-nil slice
+//     so the wire JSON is "sections": [] rather than null on
+//     courses with no sections.
+//
+// No pagination by design (spec): a course typically has fewer
+// than 10 sections, so a flat array is the right shape.
+func (s *Service) ListCourseSections(ctx context.Context, p ListCourseSectionsParams) (ListCourseSectionsResult, error) {
+	arg := db.ListSectionsForCourseParams{
+		CourseID: utils.UUID(p.CourseID),
+	}
+	if p.Term != nil {
+		trimmed := strings.TrimSpace(*p.Term)
+		if trimmed != "" {
+			// Count runes, not bytes -- a 30-character term made
+			// of multi-byte runes (e.g., 30x CJK chars = 90 bytes)
+			// must NOT be rejected as too long. The openapi
+			// maxLength validator at the wrapper layer also counts
+			// runes, so this stays consistent with the HTTP-side
+			// behavior. gemini + coderabbit PR #160 feedback.
+			if utf8.RuneCountInString(trimmed) > MaxTermLength {
+				return ListCourseSectionsResult{}, apperrors.NewBadRequest("Invalid query parameters", map[string]string{
+					"term": fmt.Sprintf("must be %d characters or fewer", MaxTermLength),
+				})
+			}
+			arg.Term = pgtype.Text{String: trimmed, Valid: true}
+		}
+	}
+
+	exists, err := s.repo.CourseExists(ctx, utils.UUID(p.CourseID))
+	if err != nil {
+		return ListCourseSectionsResult{}, fmt.Errorf("ListCourseSections: course probe: %w", err)
+	}
+	if !exists {
+		return ListCourseSectionsResult{}, apperrors.NewNotFound("Course not found")
+	}
+
+	rows, err := s.repo.ListSectionsForCourse(ctx, arg)
+	if err != nil {
+		return ListCourseSectionsResult{}, fmt.Errorf("ListCourseSections: query: %w", err)
+	}
+
+	out := make([]SectionListing, 0, len(rows))
+	for _, r := range rows {
+		mapped, err := mapSectionListing(r)
+		if err != nil {
+			return ListCourseSectionsResult{}, fmt.Errorf("ListCourseSections: map: %w", err)
+		}
+		out = append(out, mapped)
+	}
+
+	return ListCourseSectionsResult{Sections: out}, nil
 }

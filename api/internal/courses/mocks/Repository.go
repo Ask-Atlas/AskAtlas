@@ -1117,6 +1117,74 @@ func (_c *MockRepository_ListSectionMembers_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// ListSectionsForCourse provides a mock function for the type MockRepository
+func (_mock *MockRepository) ListSectionsForCourse(ctx context.Context, arg db.ListSectionsForCourseParams) ([]db.ListSectionsForCourseRow, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListSectionsForCourse")
+	}
+
+	var r0 []db.ListSectionsForCourseRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListSectionsForCourseParams) ([]db.ListSectionsForCourseRow, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListSectionsForCourseParams) []db.ListSectionsForCourseRow); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]db.ListSectionsForCourseRow)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListSectionsForCourseParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_ListSectionsForCourse_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListSectionsForCourse'
+type MockRepository_ListSectionsForCourse_Call struct {
+	*mock.Call
+}
+
+// ListSectionsForCourse is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.ListSectionsForCourseParams
+func (_e *MockRepository_Expecter) ListSectionsForCourse(ctx interface{}, arg interface{}) *MockRepository_ListSectionsForCourse_Call {
+	return &MockRepository_ListSectionsForCourse_Call{Call: _e.mock.On("ListSectionsForCourse", ctx, arg)}
+}
+
+func (_c *MockRepository_ListSectionsForCourse_Call) Run(run func(ctx context.Context, arg db.ListSectionsForCourseParams)) *MockRepository_ListSectionsForCourse_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ListSectionsForCourseParams
+		if args[1] != nil {
+			arg1 = args[1].(db.ListSectionsForCourseParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_ListSectionsForCourse_Call) Return(listSectionsForCourseRows []db.ListSectionsForCourseRow, err error) *MockRepository_ListSectionsForCourse_Call {
+	_c.Call.Return(listSectionsForCourseRows, err)
+	return _c
+}
+
+func (_c *MockRepository_ListSectionsForCourse_Call) RunAndReturn(run func(ctx context.Context, arg db.ListSectionsForCourseParams) ([]db.ListSectionsForCourseRow, error)) *MockRepository_ListSectionsForCourse_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SectionInCourseExists provides a mock function for the type MockRepository
 func (_mock *MockRepository) SectionInCourseExists(ctx context.Context, arg db.SectionInCourseExistsParams) (bool, error) {
 	ret := _mock.Called(ctx, arg)
