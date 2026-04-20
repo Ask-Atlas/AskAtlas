@@ -293,6 +293,72 @@ func (_c *MockCourseService_LeaveSection_Call) RunAndReturn(run func(ctx context
 	return _c
 }
 
+// ListCourseSections provides a mock function for the type MockCourseService
+func (_mock *MockCourseService) ListCourseSections(ctx context.Context, params courses.ListCourseSectionsParams) (courses.ListCourseSectionsResult, error) {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListCourseSections")
+	}
+
+	var r0 courses.ListCourseSectionsResult
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, courses.ListCourseSectionsParams) (courses.ListCourseSectionsResult, error)); ok {
+		return returnFunc(ctx, params)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, courses.ListCourseSectionsParams) courses.ListCourseSectionsResult); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Get(0).(courses.ListCourseSectionsResult)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, courses.ListCourseSectionsParams) error); ok {
+		r1 = returnFunc(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCourseService_ListCourseSections_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListCourseSections'
+type MockCourseService_ListCourseSections_Call struct {
+	*mock.Call
+}
+
+// ListCourseSections is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params courses.ListCourseSectionsParams
+func (_e *MockCourseService_Expecter) ListCourseSections(ctx interface{}, params interface{}) *MockCourseService_ListCourseSections_Call {
+	return &MockCourseService_ListCourseSections_Call{Call: _e.mock.On("ListCourseSections", ctx, params)}
+}
+
+func (_c *MockCourseService_ListCourseSections_Call) Run(run func(ctx context.Context, params courses.ListCourseSectionsParams)) *MockCourseService_ListCourseSections_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 courses.ListCourseSectionsParams
+		if args[1] != nil {
+			arg1 = args[1].(courses.ListCourseSectionsParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCourseService_ListCourseSections_Call) Return(listCourseSectionsResult courses.ListCourseSectionsResult, err error) *MockCourseService_ListCourseSections_Call {
+	_c.Call.Return(listCourseSectionsResult, err)
+	return _c
+}
+
+func (_c *MockCourseService_ListCourseSections_Call) RunAndReturn(run func(ctx context.Context, params courses.ListCourseSectionsParams) (courses.ListCourseSectionsResult, error)) *MockCourseService_ListCourseSections_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListCourses provides a mock function for the type MockCourseService
 func (_mock *MockCourseService) ListCourses(ctx context.Context, params courses.ListCoursesParams) (courses.ListCoursesResult, error) {
 	ret := _mock.Called(ctx, params)

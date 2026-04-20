@@ -558,6 +558,21 @@ type Querier interface {
 	// (multiple users can join in the same second on a busy section), so
 	// user_id is the tiebreaker that keeps the keyset a strict total order.
 	ListSectionMembers(ctx context.Context, arg ListSectionMembersParams) ([]ListSectionMembersRow, error)
+	// Dedicated sections endpoint for ASK-127 -- distinct from the
+	// inline ListCourseSections (used by GetCourse) because:
+	//   * Optional exact-match term filter via sqlc.narg.
+	//   * Returns course_id and created_at (the inline payload omits
+	//     them because the parent course already carries the id and
+	//     created_at is irrelevant to the inline render).
+	//   * Different ORDER BY: term DESC, section_code ASC -- ranks
+	//     the most-recent term first per the ASK-127 spec, with
+	//     section codes ascending within a term. The inline query
+	//     sorts by start_date DESC for the course detail UI.
+	//
+	// LEFT JOIN keeps zero-member sections in the result set; COUNT
+	// is wrapped in a GROUP BY cs.id so member_count is per-section,
+	// not a global aggregate.
+	ListSectionsForCourse(ctx context.Context, arg ListSectionsForCourseParams) ([]ListSectionsForCourseRow, error)
 	// All answers submitted in a session, ordered by answered_at ASC so
 	// the response renders them in the order the user produced them.
 	// Used by the resume path to populate the `answers` array in

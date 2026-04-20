@@ -34,6 +34,12 @@ type Repository interface {
 
 	GetCourse(ctx context.Context, id pgtype.UUID) (db.GetCourseRow, error)
 	ListCourseSections(ctx context.Context, courseID pgtype.UUID) ([]db.ListCourseSectionsRow, error)
+	// ListSectionsForCourse powers the dedicated GET
+	// /courses/{course_id}/sections endpoint (ASK-127). Distinct
+	// from ListCourseSections (used inline by GetCourse) -- the
+	// dedicated endpoint includes course_id + created_at and
+	// supports an optional exact-match term filter.
+	ListSectionsForCourse(ctx context.Context, arg db.ListSectionsForCourseParams) ([]db.ListSectionsForCourseRow, error)
 
 	CourseExists(ctx context.Context, id pgtype.UUID) (bool, error)
 	SectionInCourseExists(ctx context.Context, arg db.SectionInCourseExistsParams) (bool, error)
@@ -674,4 +680,70 @@ func (s *Service) ListSectionMembers(ctx context.Context, p ListSectionMembersPa
 		HasMore:    hasMore,
 		NextCursor: nextCursor,
 	}, nil
+}
+
+// ListCourseSections returns all sections attached to a course
+// (ASK-127), with optional exact-match term filter and a live
+// member_count per section.
+//
+// Order of operations:
+//  1. Trim + length-validate the term filter. The HTTP layer
+//     already enforces openapi maxLength: 30, but we re-validate
+//     here so internal Go callers can't bypass it. Empty/
+//     whitespace-only term collapses to "no filter" -- a client
+//     clearing its input shouldn't send an empty string, but if
+//     it does we treat it as if the param was absent.
+//  2. CourseExists -- 404 dispatch on a missing parent. The
+//     spec wants this distinguished from the empty-result case
+//     so the frontend can show a "course doesn't exist" empty
+//     state vs the regular "no matching sections" empty state.
+//  3. ListSectionsForCourse -- the actual query. LEFT JOIN keeps
+//     zero-member sections in the page. Ordered server-side by
+//     term DESC, section_code ASC so the response is rendered
+//     newest-first within term.
+//  4. Map rows to []SectionListing. Always emits a non-nil slice
+//     so the wire JSON is "sections": [] rather than null on
+//     courses with no sections.
+//
+// No pagination by design (spec): a course typically has fewer
+// than 10 sections, so a flat array is the right shape.
+func (s *Service) ListCourseSections(ctx context.Context, p ListCourseSectionsParams) (ListCourseSectionsResult, error) {
+	arg := db.ListSectionsForCourseParams{
+		CourseID: utils.UUID(p.CourseID),
+	}
+	if p.Term != nil {
+		trimmed := strings.TrimSpace(*p.Term)
+		if trimmed != "" {
+			if len(trimmed) > MaxTermLength {
+				return ListCourseSectionsResult{}, apperrors.NewBadRequest("Invalid query parameters", map[string]string{
+					"term": fmt.Sprintf("must be %d characters or fewer", MaxTermLength),
+				})
+			}
+			arg.Term = pgtype.Text{String: trimmed, Valid: true}
+		}
+	}
+
+	exists, err := s.repo.CourseExists(ctx, utils.UUID(p.CourseID))
+	if err != nil {
+		return ListCourseSectionsResult{}, fmt.Errorf("ListCourseSections: course probe: %w", err)
+	}
+	if !exists {
+		return ListCourseSectionsResult{}, apperrors.NewNotFound("Course not found")
+	}
+
+	rows, err := s.repo.ListSectionsForCourse(ctx, arg)
+	if err != nil {
+		return ListCourseSectionsResult{}, fmt.Errorf("ListCourseSections: query: %w", err)
+	}
+
+	out := make([]SectionListing, 0, len(rows))
+	for _, r := range rows {
+		mapped, err := mapSectionListing(r)
+		if err != nil {
+			return ListCourseSectionsResult{}, fmt.Errorf("ListCourseSections: map: %w", err)
+		}
+		out = append(out, mapped)
+	}
+
+	return ListCourseSectionsResult{Sections: out}, nil
 }

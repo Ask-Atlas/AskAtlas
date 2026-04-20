@@ -1147,6 +1147,76 @@ func (q *Queries) ListSectionMembers(ctx context.Context, arg ListSectionMembers
 	return items, nil
 }
 
+const listSectionsForCourse = `-- name: ListSectionsForCourse :many
+SELECT
+  cs.id, cs.course_id, cs.term, cs.section_code, cs.instructor_name,
+  cs.created_at,
+  COUNT(cm.user_id) AS member_count
+FROM course_sections cs
+LEFT JOIN course_members cm ON cm.section_id = cs.id
+WHERE cs.course_id = $1::uuid
+  AND ($2::text IS NULL OR cs.term = $2::text)
+GROUP BY cs.id
+ORDER BY cs.term DESC, cs.section_code ASC NULLS LAST, cs.id ASC
+`
+
+type ListSectionsForCourseParams struct {
+	CourseID pgtype.UUID `json:"course_id"`
+	Term     pgtype.Text `json:"term"`
+}
+
+type ListSectionsForCourseRow struct {
+	ID             pgtype.UUID        `json:"id"`
+	CourseID       pgtype.UUID        `json:"course_id"`
+	Term           string             `json:"term"`
+	SectionCode    pgtype.Text        `json:"section_code"`
+	InstructorName pgtype.Text        `json:"instructor_name"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	MemberCount    int64              `json:"member_count"`
+}
+
+// Dedicated sections endpoint for ASK-127 -- distinct from the
+// inline ListCourseSections (used by GetCourse) because:
+//   - Optional exact-match term filter via sqlc.narg.
+//   - Returns course_id and created_at (the inline payload omits
+//     them because the parent course already carries the id and
+//     created_at is irrelevant to the inline render).
+//   - Different ORDER BY: term DESC, section_code ASC -- ranks
+//     the most-recent term first per the ASK-127 spec, with
+//     section codes ascending within a term. The inline query
+//     sorts by start_date DESC for the course detail UI.
+//
+// LEFT JOIN keeps zero-member sections in the result set; COUNT
+// is wrapped in a GROUP BY cs.id so member_count is per-section,
+// not a global aggregate.
+func (q *Queries) ListSectionsForCourse(ctx context.Context, arg ListSectionsForCourseParams) ([]ListSectionsForCourseRow, error) {
+	rows, err := q.db.Query(ctx, listSectionsForCourse, arg.CourseID, arg.Term)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSectionsForCourseRow
+	for rows.Next() {
+		var i ListSectionsForCourseRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CourseID,
+			&i.Term,
+			&i.SectionCode,
+			&i.InstructorName,
+			&i.CreatedAt,
+			&i.MemberCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const sectionInCourseExists = `-- name: SectionInCourseExists :one
 SELECT EXISTS (
   SELECT 1 FROM course_sections

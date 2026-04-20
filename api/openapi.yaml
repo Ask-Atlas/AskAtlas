@@ -1802,6 +1802,66 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /courses/{course_id}/sections:
+    get:
+      operationId: ListCourseSections
+      summary: List sections for a course
+      description: |
+        Returns every section attached to the given course, with a live
+        `member_count` and an optional exact-match `term` filter. Used
+        by the course detail page when the caller needs the dedicated
+        sections payload (with `course_id` + `created_at`) rather than
+        the slimmer inline sections embedded in `GET /courses/{id}`.
+
+        Sorted by `term DESC, section_code ASC` (most-recent term first;
+        within a term, section codes ascend). No pagination -- a course
+        typically has fewer than 10 sections.
+
+        404 dispatch: a missing course (no row matches `course_id`) is
+        a single 404 with "Course not found"; an existing course with
+        zero matching sections (filtered out by `term` or just empty)
+        returns 200 with `sections: []`. The two are intentionally
+        distinguishable so the frontend can show a "no sections in this
+        term" empty state vs a generic not-found page.
+
+        Term filter:
+          * Exact match (no ILIKE, no trigram). Term values are
+            structured strings like "Spring 2026" so case-insensitive
+            matching would only mask typos, not real intent.
+          * Empty string is treated as "no filter" (defensive: a
+            client clearing the input shouldn't send an empty
+            string to the server, but if it does the server treats
+            it as if no filter was supplied).
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the parent course
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: term
+          in: query
+          description: Exact-match filter on the section's term (e.g. "Spring 2026")
+          required: false
+          schema:
+            type: string
+            maxLength: 30
+      responses:
+        '200':
+          description: All sections for the course (optionally filtered by term).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListCourseSectionsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /courses/{course_id}/sections/{section_id}/members:
     get:
       operationId: ListSectionMembers
@@ -2327,6 +2387,59 @@ components:
         - id
         - term
         - member_count
+    SectionResponse:
+      type: object
+      description: |
+        Returned by GET /courses/{course_id}/sections (ASK-127).
+        Superset of SectionSummary -- adds `course_id` and
+        `created_at` so the dedicated sections endpoint payload is
+        self-describing (the inline sections in CourseDetailResponse
+        omit them because the parent course already carries the id).
+      properties:
+        id:
+          type: string
+          format: uuid
+        course_id:
+          type: string
+          format: uuid
+        term:
+          type: string
+        section_code:
+          type: string
+          nullable: true
+        instructor_name:
+          type: string
+          nullable: true
+        member_count:
+          type: integer
+          format: int64
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - course_id
+        - term
+        - section_code
+        - instructor_name
+        - member_count
+        - created_at
+    ListCourseSectionsResponse:
+      type: object
+      description: |
+        Wrapper for GET /courses/{course_id}/sections. Single field
+        rather than a bare array so future fields (a filter echo,
+        cursor for pagination, aggregate counts) can be added
+        backwards-compatibly. Always emits `sections: []` (never
+        omitted or null) when the course has no matching sections.
+      properties:
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/SectionResponse'
+      required:
+        - sections
     CourseDetailResponse:
       type: object
       description: A course with its school summary and the full list of sections

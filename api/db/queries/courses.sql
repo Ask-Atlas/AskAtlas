@@ -233,6 +233,32 @@ WHERE cs.course_id = sqlc.arg(course_id)::uuid
 GROUP BY cs.id
 ORDER BY cs.start_date DESC NULLS LAST, cs.section_code ASC NULLS LAST, cs.id ASC;
 
+-- name: ListSectionsForCourse :many
+-- Dedicated sections endpoint for ASK-127 -- distinct from the
+-- inline ListCourseSections (used by GetCourse) because:
+--   * Optional exact-match term filter via sqlc.narg.
+--   * Returns course_id and created_at (the inline payload omits
+--     them because the parent course already carries the id and
+--     created_at is irrelevant to the inline render).
+--   * Different ORDER BY: term DESC, section_code ASC -- ranks
+--     the most-recent term first per the ASK-127 spec, with
+--     section codes ascending within a term. The inline query
+--     sorts by start_date DESC for the course detail UI.
+--
+-- LEFT JOIN keeps zero-member sections in the result set; COUNT
+-- is wrapped in a GROUP BY cs.id so member_count is per-section,
+-- not a global aggregate.
+SELECT
+  cs.id, cs.course_id, cs.term, cs.section_code, cs.instructor_name,
+  cs.created_at,
+  COUNT(cm.user_id) AS member_count
+FROM course_sections cs
+LEFT JOIN course_members cm ON cm.section_id = cs.id
+WHERE cs.course_id = sqlc.arg(course_id)::uuid
+  AND (sqlc.narg(term)::text IS NULL OR cs.term = sqlc.narg(term)::text)
+GROUP BY cs.id
+ORDER BY cs.term DESC, cs.section_code ASC NULLS LAST, cs.id ASC;
+
 -- name: CourseExists :one
 -- Single-row existence probe used by join/leave to disambiguate the
 -- "Course not found" 404 from the "Section not found" 404 the spec

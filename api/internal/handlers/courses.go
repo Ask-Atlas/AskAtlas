@@ -24,6 +24,7 @@ type CourseService interface {
 	ListMyEnrollments(ctx context.Context, params courses.ListMyEnrollmentsParams) ([]courses.Enrollment, error)
 	CheckMembership(ctx context.Context, params courses.CheckMembershipParams) (courses.MembershipCheck, error)
 	ListSectionMembers(ctx context.Context, params courses.ListSectionMembersParams) (courses.ListSectionMembersResult, error)
+	ListCourseSections(ctx context.Context, params courses.ListCourseSectionsParams) (courses.ListCourseSectionsResult, error)
 }
 
 // CoursesHandler manages incoming HTTP requests relating to course operations.
@@ -486,5 +487,66 @@ func mapCourseDetailResponse(d courses.CourseDetail) api.CourseDetailResponse {
 		Description: d.Description,
 		CreatedAt:   d.CreatedAt,
 		Sections:    sections,
+	}
+}
+
+// ListCourseSections handles GET /courses/{course_id}/sections
+// (ASK-127). Validates auth, decodes the optional term filter,
+// dispatches to the service. The 404 vs 200-empty distinction
+// (course missing vs course exists with no matching sections) is
+// driven entirely by the service's CourseExists preflight; the
+// handler is a thin auth + dispatch + render pass.
+//
+// Per spec, no GetCourse-style "Course not found" message
+// re-mapping is needed -- the service constructs the typed
+// 404 with the right message before reaching here.
+func (h *CoursesHandler) ListCourseSections(w http.ResponseWriter, r *http.Request, courseID openapi_types.UUID, params api.ListCourseSectionsParams) {
+	if _, appErr := viewerIDFromContext(r); appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	result, err := h.service.ListCourseSections(r.Context(), courses.ListCourseSectionsParams{
+		CourseID: uuid.UUID(courseID),
+		Term:     params.Term,
+	})
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("ListCourseSections failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, mapListCourseSectionsResponse(result))
+}
+
+// mapListCourseSectionsResponse projects ListCourseSectionsResult
+// onto the wire envelope. Always emits a non-nil Sections slice so
+// the JSON output is "sections": [] (not null) on courses with no
+// matching sections.
+func mapListCourseSectionsResponse(r courses.ListCourseSectionsResult) api.ListCourseSectionsResponse {
+	out := make([]api.SectionResponse, 0, len(r.Sections))
+	for _, s := range r.Sections {
+		out = append(out, mapSectionResponse(s))
+	}
+	return api.ListCourseSectionsResponse{Sections: out}
+}
+
+// mapSectionResponse projects a domain SectionListing onto the
+// wire SectionResponse. The two nullable wire fields (section_code,
+// instructor_name) are pointer-typed on the domain side, so a nil
+// pointer renders as JSON null per the openapi nullable: true
+// declaration.
+func mapSectionResponse(s courses.SectionListing) api.SectionResponse {
+	return api.SectionResponse{
+		Id:             openapi_types.UUID(s.ID),
+		CourseId:       openapi_types.UUID(s.CourseID),
+		Term:           s.Term,
+		SectionCode:    s.SectionCode,
+		InstructorName: s.InstructorName,
+		MemberCount:    s.MemberCount,
+		CreatedAt:      s.CreatedAt,
 	}
 }

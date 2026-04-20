@@ -69,6 +69,10 @@ func (r *sqlcRepository) ListCourseSections(ctx context.Context, courseID pgtype
 	return r.queries.ListCourseSections(ctx, courseID)
 }
 
+func (r *sqlcRepository) ListSectionsForCourse(ctx context.Context, arg db.ListSectionsForCourseParams) ([]db.ListSectionsForCourseRow, error) {
+	return r.queries.ListSectionsForCourse(ctx, arg)
+}
+
 func (r *sqlcRepository) CourseExists(ctx context.Context, id pgtype.UUID) (bool, error) {
 	return r.queries.CourseExists(ctx, id)
 }
