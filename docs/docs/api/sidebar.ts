@@ -19,7 +19,7 @@ const sidebar: SidebarsConfig = {
         {
           type: "doc",
           id: "api/create-file",
-          label: "Create a file reference and get a presigned upload URL",
+          label: "Create a file metadata record (ASK-105)",
           className: "api-method post",
         },
         {

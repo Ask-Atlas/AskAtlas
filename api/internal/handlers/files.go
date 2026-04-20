@@ -18,9 +18,13 @@ import (
 // maxFileSizeBytes is the upper bound on file size that a client may declare (100 MB).
 const maxFileSizeBytes int64 = 100 * 1024 * 1024
 
+// maxS3KeyLength caps the s3_key field on POST /files (ASK-105).
+// Matches the openapi.yaml maxLength on CreateFileRequest.s3_key.
+const maxS3KeyLength = 1024
+
 // FileService defines the application logic required by the FileHandler.
 type FileService interface {
-	CreateFile(ctx context.Context, params files.CreateFileParams) (files.CreateFileResult, error)
+	CreateFile(ctx context.Context, params files.CreateFileParams) (files.File, error)
 	GetFile(ctx context.Context, params files.GetFileParams) (files.File, error)
 	ListFiles(ctx context.Context, params files.ListFilesParams) ([]files.File, *string, error)
 	DeleteFile(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher) error
@@ -38,7 +42,12 @@ func NewFileHandler(service FileService, publisher files.QStashPublisher) *FileH
 	return &FileHandler{service: service, publisher: publisher}
 }
 
-// CreateFile handles requests to create a new file reference and get a presigned upload URL.
+// CreateFile handles POST /api/files (ASK-105). Creates a `pending`
+// file metadata record. The caller (typically the Next.js server)
+// generates the S3 key and provides it in the request body; this
+// handler trusts the key and stores it as-is. The Go API never
+// touches S3 for uploads -- the upload itself happens client-side
+// against an S3 presigned URL the Next.js server generates.
 func (h *FileHandler) CreateFile(w http.ResponseWriter, r *http.Request) {
 	viewerID, appErr := viewerIDFromContext(r)
 	if appErr != nil {
@@ -52,10 +61,15 @@ func (h *FileHandler) CreateFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Defense-in-depth validation. The openapi wrapper enforces the
+	// minLength/maxLength/enum/min/max bounds before this handler
+	// runs, but we re-validate here so internal Go callers that
+	// bypass the wrapper still get clear errors.
 	errDetails := make(map[string]string)
-	if strings.TrimSpace(body.Name) == "" {
+	trimmedName := strings.TrimSpace(body.Name)
+	if trimmedName == "" {
 		errDetails["name"] = "must not be empty"
-	} else if len(body.Name) > 255 {
+	} else if len(trimmedName) > 255 {
 		errDetails["name"] = "must not exceed 255 characters"
 	}
 	if body.Size < 1 || body.Size > maxFileSizeBytes {
@@ -64,6 +78,11 @@ func (h *FileHandler) CreateFile(w http.ResponseWriter, r *http.Request) {
 	if !body.MimeType.Valid() {
 		errDetails["mime_type"] = "unsupported mime type"
 	}
+	if body.S3Key == "" {
+		errDetails["s3_key"] = "must not be empty"
+	} else if len(body.S3Key) > maxS3KeyLength {
+		errDetails["s3_key"] = fmt.Sprintf("must not exceed %d characters", maxS3KeyLength)
+	}
 	if len(errDetails) > 0 {
 		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", errDetails))
 		return
@@ -71,12 +90,13 @@ func (h *FileHandler) CreateFile(w http.ResponseWriter, r *http.Request) {
 
 	params := files.CreateFileParams{
 		UserID:   viewerID,
-		Name:     body.Name,
+		Name:     trimmedName,
 		MimeType: string(body.MimeType),
 		Size:     body.Size,
+		S3Key:    body.S3Key,
 	}
 
-	result, err := h.service.CreateFile(r.Context(), params)
+	file, err := h.service.CreateFile(r.Context(), params)
 	if err != nil {
 		sysErr := apperrors.ToHTTPError(err)
 		if sysErr.Code >= 500 {
@@ -86,12 +106,7 @@ func (h *FileHandler) CreateFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := api.CreateFileResponse{
-		File:      toDTOFileResponse(result.File),
-		UploadUrl: result.UploadURL,
-	}
-
-	respondJSON(w, http.StatusCreated, resp)
+	respondJSON(w, http.StatusCreated, toDTOFileResponse(file))
 }
 
 // DeleteFile handles requests to delete a single file by its unique identifier.

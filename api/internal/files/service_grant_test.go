@@ -19,7 +19,7 @@ import (
 
 func TestService_CreateGrant_Success(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo, nil)
+	svc := files.NewService(repo)
 
 	fileID := uuid.New()
 	ownerID := uuid.New()
@@ -70,7 +70,7 @@ func TestService_CreateGrant_Success(t *testing.T) {
 
 func TestService_CreateGrant_FileNotOwned(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo, nil)
+	svc := files.NewService(repo)
 
 	repo.EXPECT().
 		GetFileByOwner(mock.Anything, mock.Anything).
@@ -88,7 +88,7 @@ func TestService_CreateGrant_FileNotOwned(t *testing.T) {
 
 func TestService_CreateGrant_UpsertError(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo, nil)
+	svc := files.NewService(repo)
 
 	fileID := uuid.New()
 	ownerID := uuid.New()
@@ -114,7 +114,7 @@ func TestService_CreateGrant_UpsertError(t *testing.T) {
 
 func TestService_RevokeGrant_Success(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo, nil)
+	svc := files.NewService(repo)
 
 	fileID := uuid.New()
 	ownerID := uuid.New()
@@ -147,7 +147,7 @@ func TestService_RevokeGrant_Success(t *testing.T) {
 
 func TestService_RevokeGrant_FileNotOwned(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo, nil)
+	svc := files.NewService(repo)
 
 	repo.EXPECT().
 		GetFileByOwner(mock.Anything, mock.Anything).
@@ -165,7 +165,7 @@ func TestService_RevokeGrant_FileNotOwned(t *testing.T) {
 
 func TestService_RevokeGrant_RepoError(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo, nil)
+	svc := files.NewService(repo)
 
 	fileID := uuid.New()
 	ownerID := uuid.New()
