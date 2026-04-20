@@ -67,13 +67,13 @@ const sidebar: SidebarsConfig = {
         {
           type: "doc",
           id: "api/create-grant",
-          label: "Grant a permission on a file",
+          label: "Grant a permission on a file (ASK-122)",
           className: "api-method post",
         },
         {
           type: "doc",
           id: "api/revoke-grant",
-          label: "Revoke a permission on a file",
+          label: "Revoke a permission on a file (ASK-125)",
           className: "api-method delete",
         },
         {
