@@ -4,12 +4,85 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+// ToggleFavoriteResult is the domain output of the per-entity
+// favorite-toggle endpoints (ASK-130 / ASK-156 / ASK-157).
+// `Favorited` is true when the toggle inserted a row, false when it
+// deleted one. `FavoritedAt` carries the row timestamp on insert and
+// is nil on delete (renders as JSON null on the wire).
+type ToggleFavoriteResult struct {
+	Favorited   bool
+	FavoritedAt *time.Time
+}
+
+// ToggleFileFavorite toggles the (viewer, file) row in
+// file_favorites (ASK-130). Returns apperrors.ErrNotFound when the
+// file is missing or in any deletion state -- favoriting is
+// permission-less but requires a live parent row.
+func (s *Service) ToggleFileFavorite(ctx context.Context, viewerID, fileID uuid.UUID) (ToggleFavoriteResult, error) {
+	if err := s.repo.CheckFileExists(ctx, utils.UUID(fileID)); err != nil {
+		return ToggleFavoriteResult{}, err
+	}
+	row, err := s.repo.ToggleFileFavorite(ctx, db.ToggleFileFavoriteParams{
+		UserID: utils.UUID(viewerID),
+		FileID: utils.UUID(fileID),
+	})
+	if err != nil {
+		return ToggleFavoriteResult{}, fmt.Errorf("ToggleFileFavorite: %w", err)
+	}
+	return ToggleFavoriteResult{
+		Favorited:   row.Favorited,
+		FavoritedAt: utils.TimestamptzPtr(row.FavoritedAt),
+	}, nil
+}
+
+// ToggleStudyGuideFavorite toggles the (viewer, study_guide) row in
+// study_guide_favorites (ASK-156). Same 404 rules as the file path:
+// missing or soft-deleted (deleted_at IS NOT NULL) maps to ErrNotFound.
+func (s *Service) ToggleStudyGuideFavorite(ctx context.Context, viewerID, studyGuideID uuid.UUID) (ToggleFavoriteResult, error) {
+	if err := s.repo.CheckStudyGuideExists(ctx, utils.UUID(studyGuideID)); err != nil {
+		return ToggleFavoriteResult{}, err
+	}
+	row, err := s.repo.ToggleStudyGuideFavorite(ctx, db.ToggleStudyGuideFavoriteParams{
+		UserID:       utils.UUID(viewerID),
+		StudyGuideID: utils.UUID(studyGuideID),
+	})
+	if err != nil {
+		return ToggleFavoriteResult{}, fmt.Errorf("ToggleStudyGuideFavorite: %w", err)
+	}
+	return ToggleFavoriteResult{
+		Favorited:   row.Favorited,
+		FavoritedAt: utils.TimestamptzPtr(row.FavoritedAt),
+	}, nil
+}
+
+// ToggleCourseFavorite toggles the (viewer, course) row in
+// course_favorites (ASK-157). Courses do not support soft-delete so
+// existence is the only 404 condition.
+func (s *Service) ToggleCourseFavorite(ctx context.Context, viewerID, courseID uuid.UUID) (ToggleFavoriteResult, error) {
+	if err := s.repo.CheckCourseExists(ctx, utils.UUID(courseID)); err != nil {
+		return ToggleFavoriteResult{}, err
+	}
+	row, err := s.repo.ToggleCourseFavorite(ctx, db.ToggleCourseFavoriteParams{
+		UserID:   utils.UUID(viewerID),
+		CourseID: utils.UUID(courseID),
+	})
+	if err != nil {
+		return ToggleFavoriteResult{}, fmt.Errorf("ToggleCourseFavorite: %w", err)
+	}
+	return ToggleFavoriteResult{
+		Favorited:   row.Favorited,
+		FavoritedAt: utils.TimestamptzPtr(row.FavoritedAt),
+	}, nil
+}
 
 // Service implements the GET /api/me/favorites business logic.
 type Service struct {

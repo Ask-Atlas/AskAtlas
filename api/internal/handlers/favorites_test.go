@@ -306,3 +306,214 @@ func TestFavoritesHandler_ListFavorites_ServiceFails_Returns500(t *testing.T) {
 
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
+
+// ----------------------------------------------------------------------
+// Toggle endpoints (ASK-130 / ASK-156 / ASK-157).
+//
+// Wire-level coverage. The service layer carries the bulk of the
+// behavioral testing (existence -> toggle) -- handler tests verify
+// that the right service method is called with the right viewer +
+// path UUID, and that the wire envelope serializes
+// favorited / favorited_at correctly (including explicit JSON null
+// on the unfavorite branch).
+// ----------------------------------------------------------------------
+
+func TestFavoritesHandler_ToggleFileFavorite_Favorite_200(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFavoritesService(t)
+	h := handlers.NewFavoritesHandler(mockSvc)
+	viewer := uuid.New()
+	fileID := uuid.New()
+	now := time.Now().UTC().Round(time.Microsecond)
+
+	mockSvc.EXPECT().
+		ToggleFileFavorite(mock.Anything, viewer, fileID).
+		Return(favorites.ToggleFavoriteResult{
+			Favorited:   true,
+			FavoritedAt: &now,
+		}, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/files/"+fileID.String()+"/favorite", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), viewer))
+	w := httptest.NewRecorder()
+	r := favoritesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var body api.ToggleFavoriteResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&body))
+	assert.True(t, body.Favorited)
+	require.NotNil(t, body.FavoritedAt)
+	assert.True(t, body.FavoritedAt.Equal(now))
+}
+
+func TestFavoritesHandler_ToggleFileFavorite_Unfavorite_200(t *testing.T) {
+	// Asserts the unfavorite path returns favorited=false +
+	// favorited_at as explicit JSON null (the schema marks the field
+	// required + nullable, so it must always be present).
+	mockSvc := mock_handlers.NewMockFavoritesService(t)
+	h := handlers.NewFavoritesHandler(mockSvc)
+	viewer := uuid.New()
+	fileID := uuid.New()
+
+	mockSvc.EXPECT().
+		ToggleFileFavorite(mock.Anything, viewer, fileID).
+		Return(favorites.ToggleFavoriteResult{Favorited: false}, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/files/"+fileID.String()+"/favorite", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), viewer))
+	w := httptest.NewRecorder()
+	r := favoritesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	// Raw-JSON inspection because *time.Time decodes a JSON null to
+	// a nil pointer -- looks identical to absent. We want to assert
+	// the field is explicitly null, not omitted.
+	raw := w.Body.String()
+	assert.Contains(t, raw, `"favorited":false`)
+	assert.Contains(t, raw, `"favorited_at":null`)
+}
+
+func TestFavoritesHandler_ToggleFileFavorite_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFavoritesService(t)
+	h := handlers.NewFavoritesHandler(mockSvc)
+	viewer := uuid.New()
+	fileID := uuid.New()
+
+	mockSvc.EXPECT().
+		ToggleFileFavorite(mock.Anything, viewer, fileID).
+		Return(favorites.ToggleFavoriteResult{}, apperrors.ErrNotFound)
+
+	req := httptest.NewRequest(http.MethodPost, "/files/"+fileID.String()+"/favorite", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), viewer))
+	w := httptest.NewRecorder()
+	r := favoritesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestFavoritesHandler_ToggleFileFavorite_BadUUID_400(t *testing.T) {
+	// chi/oapi-codegen reject the invalid UUID before the service is
+	// reached -- the mock has no expectation, so any call would
+	// fail the test.
+	mockSvc := mock_handlers.NewMockFavoritesService(t)
+	h := handlers.NewFavoritesHandler(mockSvc)
+
+	req := httptest.NewRequest(http.MethodPost, "/files/not-a-uuid/favorite", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), uuid.New()))
+	w := httptest.NewRecorder()
+	r := favoritesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestFavoritesHandler_ToggleStudyGuideFavorite_Favorite_200(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFavoritesService(t)
+	h := handlers.NewFavoritesHandler(mockSvc)
+	viewer := uuid.New()
+	guideID := uuid.New()
+	now := time.Now().UTC().Round(time.Microsecond)
+
+	mockSvc.EXPECT().
+		ToggleStudyGuideFavorite(mock.Anything, viewer, guideID).
+		Return(favorites.ToggleFavoriteResult{
+			Favorited:   true,
+			FavoritedAt: &now,
+		}, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/me/study-guides/"+guideID.String()+"/favorite", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), viewer))
+	w := httptest.NewRecorder()
+	r := favoritesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var body api.ToggleFavoriteResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&body))
+	assert.True(t, body.Favorited)
+}
+
+func TestFavoritesHandler_ToggleStudyGuideFavorite_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFavoritesService(t)
+	h := handlers.NewFavoritesHandler(mockSvc)
+	viewer := uuid.New()
+	guideID := uuid.New()
+
+	mockSvc.EXPECT().
+		ToggleStudyGuideFavorite(mock.Anything, viewer, guideID).
+		Return(favorites.ToggleFavoriteResult{}, apperrors.ErrNotFound)
+
+	req := httptest.NewRequest(http.MethodPost, "/me/study-guides/"+guideID.String()+"/favorite", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), viewer))
+	w := httptest.NewRecorder()
+	r := favoritesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestFavoritesHandler_ToggleCourseFavorite_Favorite_200(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFavoritesService(t)
+	h := handlers.NewFavoritesHandler(mockSvc)
+	viewer := uuid.New()
+	courseID := uuid.New()
+	now := time.Now().UTC().Round(time.Microsecond)
+
+	mockSvc.EXPECT().
+		ToggleCourseFavorite(mock.Anything, viewer, courseID).
+		Return(favorites.ToggleFavoriteResult{
+			Favorited:   true,
+			FavoritedAt: &now,
+		}, nil)
+
+	req := httptest.NewRequest(http.MethodPost, "/me/courses/"+courseID.String()+"/favorite", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), viewer))
+	w := httptest.NewRecorder()
+	r := favoritesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	var body api.ToggleFavoriteResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&body))
+	assert.True(t, body.Favorited)
+}
+
+func TestFavoritesHandler_ToggleCourseFavorite_NotFound_404(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFavoritesService(t)
+	h := handlers.NewFavoritesHandler(mockSvc)
+	viewer := uuid.New()
+	courseID := uuid.New()
+
+	mockSvc.EXPECT().
+		ToggleCourseFavorite(mock.Anything, viewer, courseID).
+		Return(favorites.ToggleFavoriteResult{}, apperrors.ErrNotFound)
+
+	req := httptest.NewRequest(http.MethodPost, "/me/courses/"+courseID.String()+"/favorite", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), viewer))
+	w := httptest.NewRecorder()
+	r := favoritesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestFavoritesHandler_ToggleCourseFavorite_ServiceFails_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFavoritesService(t)
+	h := handlers.NewFavoritesHandler(mockSvc)
+	viewer := uuid.New()
+	courseID := uuid.New()
+
+	mockSvc.EXPECT().
+		ToggleCourseFavorite(mock.Anything, viewer, courseID).
+		Return(favorites.ToggleFavoriteResult{}, errors.New("db connection lost"))
+
+	req := httptest.NewRequest(http.MethodPost, "/me/courses/"+courseID.String()+"/favorite", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), viewer))
+	w := httptest.NewRecorder()
+	r := favoritesTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}

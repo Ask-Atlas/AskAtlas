@@ -1,0 +1,72 @@
+---
+id: toggle-course-favorite
+title: "Toggle the course favorite (ASK-157)"
+description: "Toggles whether the authenticated user has favorited this"
+sidebar_label: "Toggle the course favorite (ASK-157)"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV1Fv20YM/isEnxpAsZOt3QADeUi3FUgHtEGTYA9xkDA62rpWulPveE1TQ/994ElWnNjogGFAMKBPtnTkkfy+jyfeCn3LgcR6d2Jwhud+uaz5N59C5Df0xQcrjAUajmWwrZqNRhHuKpaKA0jFQEkqdmJLEjaQIgeoKMJi2MOAVDbOXZl3nsAZNQyS94HIDalnBIp5r4WtefQEdqb11slk7k45NDZG691+zTHOwHlgF3xdN+wEyorLT5O5wwJbCtSwcIg4u1yho4Zxhn30a2uwQKuVtCTVdnkVQ3L2c2K4uDj5HfwiZ9U7g/gxtWlyiweMAn9ONrDBmYTEBcay4oZwtkK5bzV6lGDdEgtc+NCQ4AxTsga77kqdY+td5Kj2Px0c6M8u0CFwTLVggaV3wk7UkNq2VuCtd9OPUa1X29H97UcuZavYD3k/rfH0/dk5TKm1U8U/Tlf6c21NNx2peHF89uf+4c8He8XcPZg3PI2SzP3+MlmjjvnpOj/t8n/1i/qTM/Bojx7fOF2NLG17/ro3mbubUVQ3EHhRcym9bnpsrFtCFBKG/X1QKlSnTg3mblCcdZGDipIg+LsCFlTHwcwKGK5ZF73jR9GuSW7ADqH8HYhtOAo1be852h3loOTM3PFXZcYKvD17/w5cquuntn3oF9H3yg+ZVQMlubnLeoabo6Oj7HoDgYZ+I9e/Ts7wwjo2N3uD7oP2s9heSGOYDR3cel8zuW3Va9K2l7o2stxrrc7fPSS7Bsou4GOKAg/yNxPsCtxE6ru6NyS8r/BhgVoZ3da8bpsnWT3GOGO01oRycEcRysB66Ezg3Yjv48y6zea83EDlScpXBYoVTWXotvUJ+GHoTuw63ezlrv58TQY0Csf/sDvPhJyhYOw3NsAh+ADrkwKihFRKCgwNSVmp7DdCDdbGN2Rd3FJG6Q1vhLdOeMlBSdTWSXGbvq7AhmOkJe9cMyxk67irJDLGakpUnz7K4ckeT2nKKY75PETfYOm4bf/QMkdeDrd5uXD6afJBIfxBzHMR83KbmHdeYOGT+8HKM7HyatcxduKEg6MaIocvHHpcfjD0HAzlBKXyOpe3Pn9W8rw6w38alzRKpq+fflOo1YlaizprRi5TsHKf114zBQ7HSfe9vNpcPlNK+8I2jcYyK5EWhzE3DxbZCIvhz5v1x/7tX+f5E2zdwmf3da3x07HUFOH49AQL1Gx7jRxODiYHSoEW3VDW1zDAD0Pwxji+PSE+1dzqQbv/h5vLgK7wV5m2NVmnSGQGVwP9l5gHp0EAWOBs814zauCqwEpVM7vE1eqWIl+Euuv09efEQdm/KvALBdtPX5crNDbqf4OzPOd9B8cXHwZd78G/vC3tLHN4Se5eBUF10ics8BPfP7q9dVddgRWT4ZAT79ePy5Jb2fDcOqhU3mNL6eUDu+5vVP1NwA==
+sidebar_class_name: "post api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Toggle the course favorite (ASK-157)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/me/courses/{course_id}/favorite"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Toggles whether the authenticated user has favorited this
+course. Same toggle semantics as the file favorite endpoint.
+Permission-less: no enrollment check.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./toggle-course-favorite.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./toggle-course-favorite.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./toggle-course-favorite.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

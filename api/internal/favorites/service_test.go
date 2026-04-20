@@ -372,3 +372,189 @@ func TestListFavorites_OffsetBeyondAllResults_ReturnsEmpty(t *testing.T) {
 	assert.False(t, result.HasMore)
 	assert.Nil(t, result.NextCursor)
 }
+
+// ----------------------------------------------------------------------
+// Toggle endpoints (ASK-130 / ASK-156 / ASK-157).
+//
+// All three follow the same shape: existence probe -> toggle CTE.
+// The cases below exercise:
+//   * favorite path  -- row inserted, returns Favorited=true + timestamp
+//   * unfavorite path -- row deleted,  returns Favorited=false + nil
+//   * 404 from existence check propagates without touching the toggle
+//   * repo error from the toggle wraps as a 500-class error
+// ----------------------------------------------------------------------
+
+func TestService_ToggleFileFavorite_Favorite(t *testing.T) {
+	repo := mock_favorites.NewMockRepository(t)
+	svc := favorites.NewService(repo)
+
+	viewerID := uuid.New()
+	fileID := uuid.New()
+	now := time.Now().UTC()
+
+	repo.EXPECT().CheckFileExists(mock.Anything, utils.UUID(fileID)).Return(nil)
+	repo.EXPECT().
+		ToggleFileFavorite(mock.Anything, mock.MatchedBy(func(arg db.ToggleFileFavoriteParams) bool {
+			return arg.UserID == utils.UUID(viewerID) && arg.FileID == utils.UUID(fileID)
+		})).
+		Return(db.ToggleFileFavoriteRow{
+			Favorited:   true,
+			FavoritedAt: pgtype.Timestamptz{Time: now, Valid: true},
+		}, nil)
+
+	res, err := svc.ToggleFileFavorite(context.Background(), viewerID, fileID)
+	require.NoError(t, err)
+	assert.True(t, res.Favorited)
+	require.NotNil(t, res.FavoritedAt)
+	assert.True(t, res.FavoritedAt.Equal(now))
+}
+
+func TestService_ToggleFileFavorite_Unfavorite(t *testing.T) {
+	repo := mock_favorites.NewMockRepository(t)
+	svc := favorites.NewService(repo)
+
+	viewerID := uuid.New()
+	fileID := uuid.New()
+
+	repo.EXPECT().CheckFileExists(mock.Anything, utils.UUID(fileID)).Return(nil)
+	repo.EXPECT().
+		ToggleFileFavorite(mock.Anything, mock.Anything).
+		Return(db.ToggleFileFavoriteRow{
+			Favorited:   false,
+			FavoritedAt: pgtype.Timestamptz{}, // SELECT (created_at FROM inserted) is NULL on delete path
+		}, nil)
+
+	res, err := svc.ToggleFileFavorite(context.Background(), viewerID, fileID)
+	require.NoError(t, err)
+	assert.False(t, res.Favorited)
+	assert.Nil(t, res.FavoritedAt)
+}
+
+func TestService_ToggleFileFavorite_NotFound(t *testing.T) {
+	repo := mock_favorites.NewMockRepository(t)
+	svc := favorites.NewService(repo)
+
+	viewerID := uuid.New()
+	fileID := uuid.New()
+	repo.EXPECT().CheckFileExists(mock.Anything, utils.UUID(fileID)).
+		Return(apperrors.ErrNotFound)
+	// ToggleFileFavorite must NOT be called -- if it were, mockery
+	// would fail the test on the unexpected invocation.
+
+	_, err := svc.ToggleFileFavorite(context.Background(), viewerID, fileID)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, apperrors.ErrNotFound)
+}
+
+func TestService_ToggleFileFavorite_RepoError(t *testing.T) {
+	repo := mock_favorites.NewMockRepository(t)
+	svc := favorites.NewService(repo)
+
+	repo.EXPECT().CheckFileExists(mock.Anything, mock.Anything).Return(nil)
+	repo.EXPECT().ToggleFileFavorite(mock.Anything, mock.Anything).
+		Return(db.ToggleFileFavoriteRow{}, errors.New("connection lost"))
+
+	_, err := svc.ToggleFileFavorite(context.Background(), uuid.New(), uuid.New())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "connection lost")
+}
+
+func TestService_ToggleStudyGuideFavorite_Favorite(t *testing.T) {
+	repo := mock_favorites.NewMockRepository(t)
+	svc := favorites.NewService(repo)
+
+	viewerID := uuid.New()
+	guideID := uuid.New()
+	now := time.Now().UTC()
+
+	repo.EXPECT().CheckStudyGuideExists(mock.Anything, utils.UUID(guideID)).Return(nil)
+	repo.EXPECT().
+		ToggleStudyGuideFavorite(mock.Anything, mock.MatchedBy(func(arg db.ToggleStudyGuideFavoriteParams) bool {
+			return arg.UserID == utils.UUID(viewerID) && arg.StudyGuideID == utils.UUID(guideID)
+		})).
+		Return(db.ToggleStudyGuideFavoriteRow{
+			Favorited:   true,
+			FavoritedAt: pgtype.Timestamptz{Time: now, Valid: true},
+		}, nil)
+
+	res, err := svc.ToggleStudyGuideFavorite(context.Background(), viewerID, guideID)
+	require.NoError(t, err)
+	assert.True(t, res.Favorited)
+	require.NotNil(t, res.FavoritedAt)
+}
+
+func TestService_ToggleStudyGuideFavorite_Unfavorite(t *testing.T) {
+	repo := mock_favorites.NewMockRepository(t)
+	svc := favorites.NewService(repo)
+
+	repo.EXPECT().CheckStudyGuideExists(mock.Anything, mock.Anything).Return(nil)
+	repo.EXPECT().ToggleStudyGuideFavorite(mock.Anything, mock.Anything).
+		Return(db.ToggleStudyGuideFavoriteRow{Favorited: false}, nil)
+
+	res, err := svc.ToggleStudyGuideFavorite(context.Background(), uuid.New(), uuid.New())
+	require.NoError(t, err)
+	assert.False(t, res.Favorited)
+	assert.Nil(t, res.FavoritedAt)
+}
+
+func TestService_ToggleStudyGuideFavorite_NotFound(t *testing.T) {
+	repo := mock_favorites.NewMockRepository(t)
+	svc := favorites.NewService(repo)
+
+	repo.EXPECT().CheckStudyGuideExists(mock.Anything, mock.Anything).
+		Return(apperrors.ErrNotFound)
+
+	_, err := svc.ToggleStudyGuideFavorite(context.Background(), uuid.New(), uuid.New())
+	require.Error(t, err)
+	assert.ErrorIs(t, err, apperrors.ErrNotFound)
+}
+
+func TestService_ToggleCourseFavorite_Favorite(t *testing.T) {
+	repo := mock_favorites.NewMockRepository(t)
+	svc := favorites.NewService(repo)
+
+	viewerID := uuid.New()
+	courseID := uuid.New()
+	now := time.Now().UTC()
+
+	repo.EXPECT().CheckCourseExists(mock.Anything, utils.UUID(courseID)).Return(nil)
+	repo.EXPECT().
+		ToggleCourseFavorite(mock.Anything, mock.MatchedBy(func(arg db.ToggleCourseFavoriteParams) bool {
+			return arg.UserID == utils.UUID(viewerID) && arg.CourseID == utils.UUID(courseID)
+		})).
+		Return(db.ToggleCourseFavoriteRow{
+			Favorited:   true,
+			FavoritedAt: pgtype.Timestamptz{Time: now, Valid: true},
+		}, nil)
+
+	res, err := svc.ToggleCourseFavorite(context.Background(), viewerID, courseID)
+	require.NoError(t, err)
+	assert.True(t, res.Favorited)
+	require.NotNil(t, res.FavoritedAt)
+}
+
+func TestService_ToggleCourseFavorite_Unfavorite(t *testing.T) {
+	repo := mock_favorites.NewMockRepository(t)
+	svc := favorites.NewService(repo)
+
+	repo.EXPECT().CheckCourseExists(mock.Anything, mock.Anything).Return(nil)
+	repo.EXPECT().ToggleCourseFavorite(mock.Anything, mock.Anything).
+		Return(db.ToggleCourseFavoriteRow{Favorited: false}, nil)
+
+	res, err := svc.ToggleCourseFavorite(context.Background(), uuid.New(), uuid.New())
+	require.NoError(t, err)
+	assert.False(t, res.Favorited)
+	assert.Nil(t, res.FavoritedAt)
+}
+
+func TestService_ToggleCourseFavorite_NotFound(t *testing.T) {
+	repo := mock_favorites.NewMockRepository(t)
+	svc := favorites.NewService(repo)
+
+	repo.EXPECT().CheckCourseExists(mock.Anything, mock.Anything).
+		Return(apperrors.ErrNotFound)
+
+	_, err := svc.ToggleCourseFavorite(context.Background(), uuid.New(), uuid.New())
+	require.Error(t, err)
+	assert.ErrorIs(t, err, apperrors.ErrNotFound)
+}

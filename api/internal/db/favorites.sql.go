@@ -11,6 +11,59 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const checkCourseExists = `-- name: CheckCourseExists :one
+SELECT 1
+FROM courses
+WHERE id = $1::uuid
+`
+
+// Existence probe used by POST /api/me/courses/{course_id}/favorite
+// (ASK-157). Courses do not support soft-delete, so existence is the
+// only condition. Returns sql.ErrNoRows when missing.
+func (q *Queries) CheckCourseExists(ctx context.Context, courseID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, checkCourseExists, courseID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const checkFileExists = `-- name: CheckFileExists :one
+SELECT 1
+FROM files
+WHERE id = $1::uuid
+  AND deletion_status IS NULL
+`
+
+// Existence probe used by POST /api/files/{file_id}/favorite (ASK-130).
+// Returns sql.ErrNoRows when the file is missing or in any deletion
+// lifecycle state -- both map to 404 per the spec ("file not found
+// or soft-deleted"). The favorite toggle only requires the file to
+// exist; favoriting is intentionally permission-less per the spec
+// ("any authenticated user can favorite any non-deleted file").
+func (q *Queries) CheckFileExists(ctx context.Context, fileID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, checkFileExists, fileID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const checkStudyGuideExists = `-- name: CheckStudyGuideExists :one
+SELECT 1
+FROM study_guides
+WHERE id = $1::uuid
+  AND deleted_at IS NULL
+`
+
+// Existence probe used by POST /api/me/study-guides/{study_guide_id}/favorite
+// (ASK-156). Returns sql.ErrNoRows when missing or soft-deleted.
+// Same rationale as CheckFileExists -- favoriting is permission-less.
+func (q *Queries) CheckStudyGuideExists(ctx context.Context, studyGuideID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, checkStudyGuideExists, studyGuideID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const listCourseFavorites = `-- name: ListCourseFavorites :many
 SELECT
   cf.course_id  AS course_id,
@@ -204,4 +257,124 @@ func (q *Queries) ListStudyGuideFavorites(ctx context.Context, arg ListStudyGuid
 		return nil, err
 	}
 	return items, nil
+}
+
+const toggleCourseFavorite = `-- name: ToggleCourseFavorite :one
+WITH deleted AS (
+  DELETE FROM course_favorites
+  WHERE user_id = $1::uuid
+    AND course_id = $2::uuid
+  RETURNING 1
+), inserted AS (
+  INSERT INTO course_favorites (user_id, course_id)
+  SELECT $1::uuid, $2::uuid
+  WHERE NOT EXISTS (SELECT 1 FROM deleted)
+  RETURNING created_at
+)
+SELECT
+  EXISTS (SELECT 1 FROM inserted)::boolean AS favorited,
+  (SELECT created_at FROM inserted)        AS favorited_at
+`
+
+type ToggleCourseFavoriteParams struct {
+	UserID   pgtype.UUID `json:"user_id"`
+	CourseID pgtype.UUID `json:"course_id"`
+}
+
+type ToggleCourseFavoriteRow struct {
+	Favorited   bool               `json:"favorited"`
+	FavoritedAt pgtype.Timestamptz `json:"favorited_at"`
+}
+
+// Same shape as ToggleFileFavorite, against course_favorites
+// (ASK-157).
+func (q *Queries) ToggleCourseFavorite(ctx context.Context, arg ToggleCourseFavoriteParams) (ToggleCourseFavoriteRow, error) {
+	row := q.db.QueryRow(ctx, toggleCourseFavorite, arg.UserID, arg.CourseID)
+	var i ToggleCourseFavoriteRow
+	err := row.Scan(&i.Favorited, &i.FavoritedAt)
+	return i, err
+}
+
+const toggleFileFavorite = `-- name: ToggleFileFavorite :one
+WITH deleted AS (
+  DELETE FROM file_favorites
+  WHERE user_id = $1::uuid
+    AND file_id = $2::uuid
+  RETURNING 1
+), inserted AS (
+  INSERT INTO file_favorites (user_id, file_id)
+  SELECT $1::uuid, $2::uuid
+  WHERE NOT EXISTS (SELECT 1 FROM deleted)
+  RETURNING created_at
+)
+SELECT
+  EXISTS (SELECT 1 FROM inserted)::boolean AS favorited,
+  (SELECT created_at FROM inserted)        AS favorited_at
+`
+
+type ToggleFileFavoriteParams struct {
+	UserID pgtype.UUID `json:"user_id"`
+	FileID pgtype.UUID `json:"file_id"`
+}
+
+type ToggleFileFavoriteRow struct {
+	Favorited   bool               `json:"favorited"`
+	FavoritedAt pgtype.Timestamptz `json:"favorited_at"`
+}
+
+// Toggles file_favorites for (user, file) (ASK-130). The CTE deletes
+// any existing row first, then inserts only when the delete found
+// nothing -- one round trip, no read-modify-write race. The spec
+// treats concurrent toggles as deterministic per request: PostgreSQL
+// serializes them via row locks on file_favorites' PK.
+//
+// Returns:
+//   - favorited     = true  + favorited_at = NOW()  when the row was
+//     newly inserted (state flipped to favorited).
+//   - favorited     = false + favorited_at = NULL   when the row was
+//     deleted (state flipped to unfavorited).
+//
+// Existence of the parent file is gated by CheckFileExists upstream
+// so this query trusts its inputs; it never touches the files table.
+func (q *Queries) ToggleFileFavorite(ctx context.Context, arg ToggleFileFavoriteParams) (ToggleFileFavoriteRow, error) {
+	row := q.db.QueryRow(ctx, toggleFileFavorite, arg.UserID, arg.FileID)
+	var i ToggleFileFavoriteRow
+	err := row.Scan(&i.Favorited, &i.FavoritedAt)
+	return i, err
+}
+
+const toggleStudyGuideFavorite = `-- name: ToggleStudyGuideFavorite :one
+WITH deleted AS (
+  DELETE FROM study_guide_favorites
+  WHERE user_id = $1::uuid
+    AND study_guide_id = $2::uuid
+  RETURNING 1
+), inserted AS (
+  INSERT INTO study_guide_favorites (user_id, study_guide_id)
+  SELECT $1::uuid, $2::uuid
+  WHERE NOT EXISTS (SELECT 1 FROM deleted)
+  RETURNING created_at
+)
+SELECT
+  EXISTS (SELECT 1 FROM inserted)::boolean AS favorited,
+  (SELECT created_at FROM inserted)        AS favorited_at
+`
+
+type ToggleStudyGuideFavoriteParams struct {
+	UserID       pgtype.UUID `json:"user_id"`
+	StudyGuideID pgtype.UUID `json:"study_guide_id"`
+}
+
+type ToggleStudyGuideFavoriteRow struct {
+	Favorited   bool               `json:"favorited"`
+	FavoritedAt pgtype.Timestamptz `json:"favorited_at"`
+}
+
+// Same shape as ToggleFileFavorite, against study_guide_favorites
+// (ASK-156).
+func (q *Queries) ToggleStudyGuideFavorite(ctx context.Context, arg ToggleStudyGuideFavoriteParams) (ToggleStudyGuideFavoriteRow, error) {
+	row := q.db.QueryRow(ctx, toggleStudyGuideFavorite, arg.UserID, arg.StudyGuideID)
+	var i ToggleStudyGuideFavoriteRow
+	err := row.Scan(&i.Favorited, &i.FavoritedAt)
+	return i, err
 }

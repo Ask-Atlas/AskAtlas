@@ -42,6 +42,24 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/toggle-file-favorite",
+          label: "Toggle the file favorite (ASK-130)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "api/toggle-study-guide-favorite",
+          label: "Toggle the study guide favorite (ASK-156)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "api/toggle-course-favorite",
+          label: "Toggle the course favorite (ASK-157)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
           id: "api/create-grant",
           label: "Grant a permission on a file",
           className: "api-method post",

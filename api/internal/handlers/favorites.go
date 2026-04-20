@@ -8,6 +8,8 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/api"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/favorites"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
+	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // FavoritesService is the slice of the favorites service surface
@@ -16,6 +18,13 @@ import (
 // dragging in the full domain package.
 type FavoritesService interface {
 	ListFavorites(ctx context.Context, p favorites.ListFavoritesParams) (favorites.ListFavoritesResult, error)
+
+	// ToggleFileFavorite / ToggleStudyGuideFavorite / ToggleCourseFavorite
+	// power the per-entity favorite toggle endpoints (ASK-130 / ASK-156 / ASK-157).
+	// Each returns 404 when the parent entity is missing or soft-deleted.
+	ToggleFileFavorite(ctx context.Context, viewerID, fileID uuid.UUID) (favorites.ToggleFavoriteResult, error)
+	ToggleStudyGuideFavorite(ctx context.Context, viewerID, studyGuideID uuid.UUID) (favorites.ToggleFavoriteResult, error)
+	ToggleCourseFavorite(ctx context.Context, viewerID, courseID uuid.UUID) (favorites.ToggleFavoriteResult, error)
 }
 
 // FavoritesHandler serves GET /api/me/favorites (ASK-151).
@@ -62,6 +71,74 @@ func (h *FavoritesHandler) ListFavorites(w http.ResponseWriter, r *http.Request,
 	}
 
 	respondJSON(w, http.StatusOK, mapListFavoritesResponse(result))
+}
+
+// ToggleFileFavorite handles POST /api/files/{file_id}/favorite (ASK-130).
+// Service enforces existence (404) and applies the toggle in a single
+// CTE round trip; handler just maps domain -> wire envelope.
+func (h *FavoritesHandler) ToggleFileFavorite(w http.ResponseWriter, r *http.Request, fileID openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+	result, err := h.service.ToggleFileFavorite(r.Context(), viewerID, uuid.UUID(fileID))
+	if err != nil {
+		respondToggleErr(w, err, "ToggleFileFavorite")
+		return
+	}
+	respondJSON(w, http.StatusOK, mapToggleFavoriteResponse(result))
+}
+
+// ToggleStudyGuideFavorite handles POST /api/me/study-guides/{study_guide_id}/favorite (ASK-156).
+func (h *FavoritesHandler) ToggleStudyGuideFavorite(w http.ResponseWriter, r *http.Request, studyGuideID openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+	result, err := h.service.ToggleStudyGuideFavorite(r.Context(), viewerID, uuid.UUID(studyGuideID))
+	if err != nil {
+		respondToggleErr(w, err, "ToggleStudyGuideFavorite")
+		return
+	}
+	respondJSON(w, http.StatusOK, mapToggleFavoriteResponse(result))
+}
+
+// ToggleCourseFavorite handles POST /api/me/courses/{course_id}/favorite (ASK-157).
+func (h *FavoritesHandler) ToggleCourseFavorite(w http.ResponseWriter, r *http.Request, courseID openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+	result, err := h.service.ToggleCourseFavorite(r.Context(), viewerID, uuid.UUID(courseID))
+	if err != nil {
+		respondToggleErr(w, err, "ToggleCourseFavorite")
+		return
+	}
+	respondJSON(w, http.StatusOK, mapToggleFavoriteResponse(result))
+}
+
+// respondToggleErr collapses the boilerplate shared by all 3 toggle
+// handlers: log 5xx, then write the JSON error envelope.
+func respondToggleErr(w http.ResponseWriter, err error, op string) {
+	sysErr := apperrors.ToHTTPError(err)
+	if sysErr.Code >= 500 {
+		slog.Error(op+" failed", "error", err)
+	}
+	apperrors.RespondWithError(w, sysErr)
+}
+
+// mapToggleFavoriteResponse projects the domain ToggleFavoriteResult
+// onto the wire envelope. FavoritedAt is *time.Time so the JSON
+// renders as explicit null on unfavorite (matches the schema's
+// required + nullable contract -- field is always present).
+func mapToggleFavoriteResponse(result favorites.ToggleFavoriteResult) api.ToggleFavoriteResponse {
+	return api.ToggleFavoriteResponse{
+		Favorited:   result.Favorited,
+		FavoritedAt: result.FavoritedAt,
+	}
 }
 
 // mapListFavoritesResponse projects the domain result onto the
