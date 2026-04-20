@@ -11,6 +11,17 @@ import (
 )
 
 type Querier interface {
+	// Existence probe used by POST /api/me/courses/{course_id}/favorite
+	// (ASK-157). Courses do not support soft-delete, so existence is the
+	// only condition. Returns sql.ErrNoRows when missing.
+	CheckCourseExists(ctx context.Context, courseID pgtype.UUID) (int32, error)
+	// Existence probe used by POST /api/files/{file_id}/favorite (ASK-130).
+	// Returns sql.ErrNoRows when the file is missing or in any deletion
+	// lifecycle state -- both map to 404 per the spec ("file not found
+	// or soft-deleted"). The favorite toggle only requires the file to
+	// exist; favoriting is intentionally permission-less per the spec
+	// ("any authenticated user can favorite any non-deleted file").
+	CheckFileExists(ctx context.Context, fileID pgtype.UUID) (int32, error)
 	// Returns TRUE when the question_id is part of this session's
 	// frozen practice_session_questions snapshot. Used by ASK-137 to
 	// enforce the spec's "question must be in this session's
@@ -41,6 +52,10 @@ type Querier interface {
 	// the service maps to a single 404 response so the caller cannot
 	// distinguish them (info-leak prevention).
 	CheckQuizLiveForSession(ctx context.Context, quizID pgtype.UUID) (bool, error)
+	// Existence probe used by POST /api/me/study-guides/{study_guide_id}/favorite
+	// (ASK-156). Returns sql.ErrNoRows when missing or soft-deleted.
+	// Same rationale as CheckFileExists -- favoriting is permission-less.
+	CheckStudyGuideExists(ctx context.Context, studyGuideID pgtype.UUID) (int32, error)
 	// Recomputes the guide's vote_score from study_guide_votes. Returned
 	// as int64 to match the wire shape on CastVoteResponse. Run after
 	// the upsert in the same logical request so the response reflects the
@@ -866,6 +881,27 @@ type Querier interface {
 	// transaction wraps this + SoftDeleteQuizzesForGuide.
 	SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUID) error
 	SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
+	// Same shape as ToggleFileFavorite, against course_favorites
+	// (ASK-157).
+	ToggleCourseFavorite(ctx context.Context, arg ToggleCourseFavoriteParams) (ToggleCourseFavoriteRow, error)
+	// Toggles file_favorites for (user, file) (ASK-130). The CTE deletes
+	// any existing row first, then inserts only when the delete found
+	// nothing -- one round trip, no read-modify-write race. The spec
+	// treats concurrent toggles as deterministic per request: PostgreSQL
+	// serializes them via row locks on file_favorites' PK.
+	//
+	// Returns:
+	//   * favorited     = true  + favorited_at = NOW()  when the row was
+	//                     newly inserted (state flipped to favorited).
+	//   * favorited     = false + favorited_at = NULL   when the row was
+	//                     deleted (state flipped to unfavorited).
+	//
+	// Existence of the parent file is gated by CheckFileExists upstream
+	// so this query trusts its inputs; it never touches the files table.
+	ToggleFileFavorite(ctx context.Context, arg ToggleFileFavoriteParams) (ToggleFileFavoriteRow, error)
+	// Same shape as ToggleFileFavorite, against study_guide_favorites
+	// (ASK-156).
+	ToggleStudyGuideFavorite(ctx context.Context, arg ToggleStudyGuideFavoriteParams) (ToggleStudyGuideFavoriteRow, error)
 	// Bumps quizzes.updated_at = now() without touching any other
 	// column. Called by AddQuizQuestion (ASK-115) so the quiz row's
 	// modified-time reflects the structural change. Kept as a focused

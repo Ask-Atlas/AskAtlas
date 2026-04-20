@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
+	"github.com/jackc/pgx/v5/pgtype"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -36,6 +37,177 @@ type MockRepository_Expecter struct {
 
 func (_m *MockRepository) EXPECT() *MockRepository_Expecter {
 	return &MockRepository_Expecter{mock: &_m.Mock}
+}
+
+// CheckCourseExists provides a mock function for the type MockRepository
+func (_mock *MockRepository) CheckCourseExists(ctx context.Context, courseID pgtype.UUID) error {
+	ret := _mock.Called(ctx, courseID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckCourseExists")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) error); ok {
+		r0 = returnFunc(ctx, courseID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_CheckCourseExists_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckCourseExists'
+type MockRepository_CheckCourseExists_Call struct {
+	*mock.Call
+}
+
+// CheckCourseExists is a helper method to define mock.On call
+//   - ctx context.Context
+//   - courseID pgtype.UUID
+func (_e *MockRepository_Expecter) CheckCourseExists(ctx interface{}, courseID interface{}) *MockRepository_CheckCourseExists_Call {
+	return &MockRepository_CheckCourseExists_Call{Call: _e.mock.On("CheckCourseExists", ctx, courseID)}
+}
+
+func (_c *MockRepository_CheckCourseExists_Call) Run(run func(ctx context.Context, courseID pgtype.UUID)) *MockRepository_CheckCourseExists_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_CheckCourseExists_Call) Return(err error) *MockRepository_CheckCourseExists_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_CheckCourseExists_Call) RunAndReturn(run func(ctx context.Context, courseID pgtype.UUID) error) *MockRepository_CheckCourseExists_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CheckFileExists provides a mock function for the type MockRepository
+func (_mock *MockRepository) CheckFileExists(ctx context.Context, fileID pgtype.UUID) error {
+	ret := _mock.Called(ctx, fileID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckFileExists")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) error); ok {
+		r0 = returnFunc(ctx, fileID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_CheckFileExists_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckFileExists'
+type MockRepository_CheckFileExists_Call struct {
+	*mock.Call
+}
+
+// CheckFileExists is a helper method to define mock.On call
+//   - ctx context.Context
+//   - fileID pgtype.UUID
+func (_e *MockRepository_Expecter) CheckFileExists(ctx interface{}, fileID interface{}) *MockRepository_CheckFileExists_Call {
+	return &MockRepository_CheckFileExists_Call{Call: _e.mock.On("CheckFileExists", ctx, fileID)}
+}
+
+func (_c *MockRepository_CheckFileExists_Call) Run(run func(ctx context.Context, fileID pgtype.UUID)) *MockRepository_CheckFileExists_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_CheckFileExists_Call) Return(err error) *MockRepository_CheckFileExists_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_CheckFileExists_Call) RunAndReturn(run func(ctx context.Context, fileID pgtype.UUID) error) *MockRepository_CheckFileExists_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CheckStudyGuideExists provides a mock function for the type MockRepository
+func (_mock *MockRepository) CheckStudyGuideExists(ctx context.Context, studyGuideID pgtype.UUID) error {
+	ret := _mock.Called(ctx, studyGuideID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckStudyGuideExists")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) error); ok {
+		r0 = returnFunc(ctx, studyGuideID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_CheckStudyGuideExists_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CheckStudyGuideExists'
+type MockRepository_CheckStudyGuideExists_Call struct {
+	*mock.Call
+}
+
+// CheckStudyGuideExists is a helper method to define mock.On call
+//   - ctx context.Context
+//   - studyGuideID pgtype.UUID
+func (_e *MockRepository_Expecter) CheckStudyGuideExists(ctx interface{}, studyGuideID interface{}) *MockRepository_CheckStudyGuideExists_Call {
+	return &MockRepository_CheckStudyGuideExists_Call{Call: _e.mock.On("CheckStudyGuideExists", ctx, studyGuideID)}
+}
+
+func (_c *MockRepository_CheckStudyGuideExists_Call) Run(run func(ctx context.Context, studyGuideID pgtype.UUID)) *MockRepository_CheckStudyGuideExists_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_CheckStudyGuideExists_Call) Return(err error) *MockRepository_CheckStudyGuideExists_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_CheckStudyGuideExists_Call) RunAndReturn(run func(ctx context.Context, studyGuideID pgtype.UUID) error) *MockRepository_CheckStudyGuideExists_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // ListCourseFavorites provides a mock function for the type MockRepository
@@ -238,6 +410,204 @@ func (_c *MockRepository_ListStudyGuideFavorites_Call) Return(listStudyGuideFavo
 }
 
 func (_c *MockRepository_ListStudyGuideFavorites_Call) RunAndReturn(run func(ctx context.Context, arg db.ListStudyGuideFavoritesParams) ([]db.ListStudyGuideFavoritesRow, error)) *MockRepository_ListStudyGuideFavorites_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ToggleCourseFavorite provides a mock function for the type MockRepository
+func (_mock *MockRepository) ToggleCourseFavorite(ctx context.Context, arg db.ToggleCourseFavoriteParams) (db.ToggleCourseFavoriteRow, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ToggleCourseFavorite")
+	}
+
+	var r0 db.ToggleCourseFavoriteRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ToggleCourseFavoriteParams) (db.ToggleCourseFavoriteRow, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ToggleCourseFavoriteParams) db.ToggleCourseFavoriteRow); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(db.ToggleCourseFavoriteRow)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ToggleCourseFavoriteParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_ToggleCourseFavorite_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ToggleCourseFavorite'
+type MockRepository_ToggleCourseFavorite_Call struct {
+	*mock.Call
+}
+
+// ToggleCourseFavorite is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.ToggleCourseFavoriteParams
+func (_e *MockRepository_Expecter) ToggleCourseFavorite(ctx interface{}, arg interface{}) *MockRepository_ToggleCourseFavorite_Call {
+	return &MockRepository_ToggleCourseFavorite_Call{Call: _e.mock.On("ToggleCourseFavorite", ctx, arg)}
+}
+
+func (_c *MockRepository_ToggleCourseFavorite_Call) Run(run func(ctx context.Context, arg db.ToggleCourseFavoriteParams)) *MockRepository_ToggleCourseFavorite_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ToggleCourseFavoriteParams
+		if args[1] != nil {
+			arg1 = args[1].(db.ToggleCourseFavoriteParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_ToggleCourseFavorite_Call) Return(toggleCourseFavoriteRow db.ToggleCourseFavoriteRow, err error) *MockRepository_ToggleCourseFavorite_Call {
+	_c.Call.Return(toggleCourseFavoriteRow, err)
+	return _c
+}
+
+func (_c *MockRepository_ToggleCourseFavorite_Call) RunAndReturn(run func(ctx context.Context, arg db.ToggleCourseFavoriteParams) (db.ToggleCourseFavoriteRow, error)) *MockRepository_ToggleCourseFavorite_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ToggleFileFavorite provides a mock function for the type MockRepository
+func (_mock *MockRepository) ToggleFileFavorite(ctx context.Context, arg db.ToggleFileFavoriteParams) (db.ToggleFileFavoriteRow, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ToggleFileFavorite")
+	}
+
+	var r0 db.ToggleFileFavoriteRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ToggleFileFavoriteParams) (db.ToggleFileFavoriteRow, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ToggleFileFavoriteParams) db.ToggleFileFavoriteRow); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(db.ToggleFileFavoriteRow)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ToggleFileFavoriteParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_ToggleFileFavorite_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ToggleFileFavorite'
+type MockRepository_ToggleFileFavorite_Call struct {
+	*mock.Call
+}
+
+// ToggleFileFavorite is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.ToggleFileFavoriteParams
+func (_e *MockRepository_Expecter) ToggleFileFavorite(ctx interface{}, arg interface{}) *MockRepository_ToggleFileFavorite_Call {
+	return &MockRepository_ToggleFileFavorite_Call{Call: _e.mock.On("ToggleFileFavorite", ctx, arg)}
+}
+
+func (_c *MockRepository_ToggleFileFavorite_Call) Run(run func(ctx context.Context, arg db.ToggleFileFavoriteParams)) *MockRepository_ToggleFileFavorite_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ToggleFileFavoriteParams
+		if args[1] != nil {
+			arg1 = args[1].(db.ToggleFileFavoriteParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_ToggleFileFavorite_Call) Return(toggleFileFavoriteRow db.ToggleFileFavoriteRow, err error) *MockRepository_ToggleFileFavorite_Call {
+	_c.Call.Return(toggleFileFavoriteRow, err)
+	return _c
+}
+
+func (_c *MockRepository_ToggleFileFavorite_Call) RunAndReturn(run func(ctx context.Context, arg db.ToggleFileFavoriteParams) (db.ToggleFileFavoriteRow, error)) *MockRepository_ToggleFileFavorite_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ToggleStudyGuideFavorite provides a mock function for the type MockRepository
+func (_mock *MockRepository) ToggleStudyGuideFavorite(ctx context.Context, arg db.ToggleStudyGuideFavoriteParams) (db.ToggleStudyGuideFavoriteRow, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ToggleStudyGuideFavorite")
+	}
+
+	var r0 db.ToggleStudyGuideFavoriteRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ToggleStudyGuideFavoriteParams) (db.ToggleStudyGuideFavoriteRow, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ToggleStudyGuideFavoriteParams) db.ToggleStudyGuideFavoriteRow); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(db.ToggleStudyGuideFavoriteRow)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ToggleStudyGuideFavoriteParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_ToggleStudyGuideFavorite_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ToggleStudyGuideFavorite'
+type MockRepository_ToggleStudyGuideFavorite_Call struct {
+	*mock.Call
+}
+
+// ToggleStudyGuideFavorite is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.ToggleStudyGuideFavoriteParams
+func (_e *MockRepository_Expecter) ToggleStudyGuideFavorite(ctx interface{}, arg interface{}) *MockRepository_ToggleStudyGuideFavorite_Call {
+	return &MockRepository_ToggleStudyGuideFavorite_Call{Call: _e.mock.On("ToggleStudyGuideFavorite", ctx, arg)}
+}
+
+func (_c *MockRepository_ToggleStudyGuideFavorite_Call) Run(run func(ctx context.Context, arg db.ToggleStudyGuideFavoriteParams)) *MockRepository_ToggleStudyGuideFavorite_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.ToggleStudyGuideFavoriteParams
+		if args[1] != nil {
+			arg1 = args[1].(db.ToggleStudyGuideFavoriteParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_ToggleStudyGuideFavorite_Call) Return(toggleStudyGuideFavoriteRow db.ToggleStudyGuideFavoriteRow, err error) *MockRepository_ToggleStudyGuideFavorite_Call {
+	_c.Call.Return(toggleStudyGuideFavoriteRow, err)
+	return _c
+}
+
+func (_c *MockRepository_ToggleStudyGuideFavorite_Call) RunAndReturn(run func(ctx context.Context, arg db.ToggleStudyGuideFavoriteParams) (db.ToggleStudyGuideFavoriteRow, error)) *MockRepository_ToggleStudyGuideFavorite_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -249,6 +249,106 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /files/{file_id}/favorite:
+    post:
+      operationId: ToggleFileFavorite
+      summary: Toggle the file favorite (ASK-130)
+      description: |
+        Toggles whether the authenticated user has favorited this file.
+        If not favorited, inserts a `file_favorites` row and returns
+        `{favorited: true, favorited_at: <NOW>}`. If already favorited,
+        deletes the row and returns `{favorited: false, favorited_at: null}`.
+
+        Favoriting is intentionally permission-less: any authenticated
+        user can favorite any non-deleted file. This is a personal
+        bookmark, not an access-control action -- the favorites list
+        endpoint already filters down to files the viewer can see.
+      parameters:
+        - name: file_id
+          in: path
+          description: The unique UUID of the file to favorite/unfavorite
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Toggle result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToggleFavoriteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /me/study-guides/{study_guide_id}/favorite:
+    post:
+      operationId: ToggleStudyGuideFavorite
+      summary: Toggle the study guide favorite (ASK-156)
+      description: |
+        Toggles whether the authenticated user has favorited this
+        study guide. Same toggle semantics as the file favorite
+        endpoint -- inserts when missing, deletes when present.
+        Permission-less: no enrollment or ownership check.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide to favorite/unfavorite
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Toggle result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToggleFavoriteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /me/courses/{course_id}/favorite:
+    post:
+      operationId: ToggleCourseFavorite
+      summary: Toggle the course favorite (ASK-157)
+      description: |
+        Toggles whether the authenticated user has favorited this
+        course. Same toggle semantics as the file favorite endpoint.
+        Permission-less: no enrollment check.
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the course to favorite/unfavorite
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Toggle result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToggleFavoriteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /files/{file_id}/grants:
     post:
       operationId: CreateGrant
@@ -4168,6 +4268,29 @@ components:
         - favorites
         - has_more
         - next_cursor
+    ToggleFavoriteResponse:
+      type: object
+      description: |
+        Result of POST /api/files/{file_id}/favorite (ASK-130),
+        POST /api/me/study-guides/{study_guide_id}/favorite (ASK-156),
+        and POST /api/me/courses/{course_id}/favorite (ASK-157).
+        `favorited` reflects the resulting state -- true when the
+        toggle inserted a row, false when it deleted one.
+        `favorited_at` is the row timestamp when favorited=true and
+        explicit JSON null when favorited=false (so the frontend can
+        check `=== null` rather than `=== undefined`).
+      properties:
+        favorited:
+          type: boolean
+          description: True if the entity is now favorited, false if just unfavorited.
+        favorited_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp when the favorite row was created. Null when unfavorited.
+      required:
+        - favorited
+        - favorited_at
     RecentFileSummary:
       type: object
       description: |
