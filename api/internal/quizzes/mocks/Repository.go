@@ -106,6 +106,129 @@ func (_c *MockRepository_CountQuizQuestions_Call) RunAndReturn(run func(ctx cont
 	return _c
 }
 
+// DeleteQuizAnswerOptionsByQuestion provides a mock function for the type MockRepository
+func (_mock *MockRepository) DeleteQuizAnswerOptionsByQuestion(ctx context.Context, questionID pgtype.UUID) error {
+	ret := _mock.Called(ctx, questionID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteQuizAnswerOptionsByQuestion")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) error); ok {
+		r0 = returnFunc(ctx, questionID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_DeleteQuizAnswerOptionsByQuestion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteQuizAnswerOptionsByQuestion'
+type MockRepository_DeleteQuizAnswerOptionsByQuestion_Call struct {
+	*mock.Call
+}
+
+// DeleteQuizAnswerOptionsByQuestion is a helper method to define mock.On call
+//   - ctx context.Context
+//   - questionID pgtype.UUID
+func (_e *MockRepository_Expecter) DeleteQuizAnswerOptionsByQuestion(ctx interface{}, questionID interface{}) *MockRepository_DeleteQuizAnswerOptionsByQuestion_Call {
+	return &MockRepository_DeleteQuizAnswerOptionsByQuestion_Call{Call: _e.mock.On("DeleteQuizAnswerOptionsByQuestion", ctx, questionID)}
+}
+
+func (_c *MockRepository_DeleteQuizAnswerOptionsByQuestion_Call) Run(run func(ctx context.Context, questionID pgtype.UUID)) *MockRepository_DeleteQuizAnswerOptionsByQuestion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_DeleteQuizAnswerOptionsByQuestion_Call) Return(err error) *MockRepository_DeleteQuizAnswerOptionsByQuestion_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_DeleteQuizAnswerOptionsByQuestion_Call) RunAndReturn(run func(ctx context.Context, questionID pgtype.UUID) error) *MockRepository_DeleteQuizAnswerOptionsByQuestion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteQuizQuestion provides a mock function for the type MockRepository
+func (_mock *MockRepository) DeleteQuizQuestion(ctx context.Context, arg db.DeleteQuizQuestionParams) (int64, error) {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteQuizQuestion")
+	}
+
+	var r0 int64
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.DeleteQuizQuestionParams) (int64, error)); ok {
+		return returnFunc(ctx, arg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.DeleteQuizQuestionParams) int64); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.DeleteQuizQuestionParams) error); ok {
+		r1 = returnFunc(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_DeleteQuizQuestion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteQuizQuestion'
+type MockRepository_DeleteQuizQuestion_Call struct {
+	*mock.Call
+}
+
+// DeleteQuizQuestion is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.DeleteQuizQuestionParams
+func (_e *MockRepository_Expecter) DeleteQuizQuestion(ctx interface{}, arg interface{}) *MockRepository_DeleteQuizQuestion_Call {
+	return &MockRepository_DeleteQuizQuestion_Call{Call: _e.mock.On("DeleteQuizQuestion", ctx, arg)}
+}
+
+func (_c *MockRepository_DeleteQuizQuestion_Call) Run(run func(ctx context.Context, arg db.DeleteQuizQuestionParams)) *MockRepository_DeleteQuizQuestion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.DeleteQuizQuestionParams
+		if args[1] != nil {
+			arg1 = args[1].(db.DeleteQuizQuestionParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_DeleteQuizQuestion_Call) Return(n int64, err error) *MockRepository_DeleteQuizQuestion_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *MockRepository_DeleteQuizQuestion_Call) RunAndReturn(run func(ctx context.Context, arg db.DeleteQuizQuestionParams) (int64, error)) *MockRepository_DeleteQuizQuestion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetQuizByIDForUpdate provides a mock function for the type MockRepository
 func (_mock *MockRepository) GetQuizByIDForUpdate(ctx context.Context, id pgtype.UUID) (db.GetQuizByIDForUpdateRow, error) {
 	ret := _mock.Called(ctx, id)
@@ -366,6 +489,72 @@ func (_c *MockRepository_GetQuizQuestionByID_Call) Return(getQuizQuestionByIDRow
 }
 
 func (_c *MockRepository_GetQuizQuestionByID_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) (db.GetQuizQuestionByIDRow, error)) *MockRepository_GetQuizQuestionByID_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetQuizQuestionQuizID provides a mock function for the type MockRepository
+func (_mock *MockRepository) GetQuizQuestionQuizID(ctx context.Context, id pgtype.UUID) (db.GetQuizQuestionQuizIDRow, error) {
+	ret := _mock.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetQuizQuestionQuizID")
+	}
+
+	var r0 db.GetQuizQuestionQuizIDRow
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) (db.GetQuizQuestionQuizIDRow, error)); ok {
+		return returnFunc(ctx, id)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, pgtype.UUID) db.GetQuizQuestionQuizIDRow); ok {
+		r0 = returnFunc(ctx, id)
+	} else {
+		r0 = ret.Get(0).(db.GetQuizQuestionQuizIDRow)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, pgtype.UUID) error); ok {
+		r1 = returnFunc(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRepository_GetQuizQuestionQuizID_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetQuizQuestionQuizID'
+type MockRepository_GetQuizQuestionQuizID_Call struct {
+	*mock.Call
+}
+
+// GetQuizQuestionQuizID is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id pgtype.UUID
+func (_e *MockRepository_Expecter) GetQuizQuestionQuizID(ctx interface{}, id interface{}) *MockRepository_GetQuizQuestionQuizID_Call {
+	return &MockRepository_GetQuizQuestionQuizID_Call{Call: _e.mock.On("GetQuizQuestionQuizID", ctx, id)}
+}
+
+func (_c *MockRepository_GetQuizQuestionQuizID_Call) Run(run func(ctx context.Context, id pgtype.UUID)) *MockRepository_GetQuizQuestionQuizID_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 pgtype.UUID
+		if args[1] != nil {
+			arg1 = args[1].(pgtype.UUID)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_GetQuizQuestionQuizID_Call) Return(getQuizQuestionQuizIDRow db.GetQuizQuestionQuizIDRow, err error) *MockRepository_GetQuizQuestionQuizID_Call {
+	_c.Call.Return(getQuizQuestionQuizIDRow, err)
+	return _c
+}
+
+func (_c *MockRepository_GetQuizQuestionQuizID_Call) RunAndReturn(run func(ctx context.Context, id pgtype.UUID) (db.GetQuizQuestionQuizIDRow, error)) *MockRepository_GetQuizQuestionQuizID_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1121,6 +1310,63 @@ func (_c *MockRepository_UpdateQuiz_Call) Return(err error) *MockRepository_Upda
 }
 
 func (_c *MockRepository_UpdateQuiz_Call) RunAndReturn(run func(ctx context.Context, arg db.UpdateQuizParams) error) *MockRepository_UpdateQuiz_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpdateQuizQuestion provides a mock function for the type MockRepository
+func (_mock *MockRepository) UpdateQuizQuestion(ctx context.Context, arg db.UpdateQuizQuestionParams) error {
+	ret := _mock.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateQuizQuestion")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.UpdateQuizQuestionParams) error); ok {
+		r0 = returnFunc(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockRepository_UpdateQuizQuestion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateQuizQuestion'
+type MockRepository_UpdateQuizQuestion_Call struct {
+	*mock.Call
+}
+
+// UpdateQuizQuestion is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg db.UpdateQuizQuestionParams
+func (_e *MockRepository_Expecter) UpdateQuizQuestion(ctx interface{}, arg interface{}) *MockRepository_UpdateQuizQuestion_Call {
+	return &MockRepository_UpdateQuizQuestion_Call{Call: _e.mock.On("UpdateQuizQuestion", ctx, arg)}
+}
+
+func (_c *MockRepository_UpdateQuizQuestion_Call) Run(run func(ctx context.Context, arg db.UpdateQuizQuestionParams)) *MockRepository_UpdateQuizQuestion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 db.UpdateQuizQuestionParams
+		if args[1] != nil {
+			arg1 = args[1].(db.UpdateQuizQuestionParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRepository_UpdateQuizQuestion_Call) Return(err error) *MockRepository_UpdateQuizQuestion_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockRepository_UpdateQuizQuestion_Call) RunAndReturn(run func(ctx context.Context, arg db.UpdateQuizQuestionParams) error) *MockRepository_UpdateQuizQuestion_Call {
 	_c.Call.Return(run)
 	return _c
 }

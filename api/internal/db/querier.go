@@ -110,6 +110,24 @@ type Querier interface {
 	// detach. Returns rows-affected so the service can detect
 	// already-detached races (0 rows -> 404) vs success (1 row -> nil).
 	DeleteGuideResource(ctx context.Context, arg DeleteGuideResourceParams) (int64, error)
+	// Wipe all answer options for one question for ASK-108. Used inside
+	// the ReplaceQuestion transaction between the existence/ownership
+	// probe and the new InsertQuizAnswerOption rows -- the delete +
+	// insert pair is the PUT semantics for the question's option set.
+	DeleteQuizAnswerOptionsByQuestion(ctx context.Context, questionID pgtype.UUID) error
+	// Hard-delete a single question for DELETE /api/quizzes/{quiz_id}/questions/{question_id}
+	// (ASK-119). The composite WHERE clause guards against a question
+	// being deleted from the wrong quiz (defense in depth -- the
+	// service has already validated quiz_id ownership but the WHERE
+	// enforces it at the SQL boundary). Returns rows-affected so the
+	// service can surface a phantom 0-row case as 404.
+	//
+	// CASCADE: quiz_answer_options have ON DELETE CASCADE from
+	// quiz_questions so option rows are auto-removed.
+	// SET NULL: practice_session_questions.question_id +
+	// practice_answers.question_id have ON DELETE SET NULL so historical
+	// session data is preserved with a NULL question reference.
+	DeleteQuizQuestion(ctx context.Context, arg DeleteQuizQuestionParams) (int64, error)
 	// Hard-deletes a practice session by id (ASK-144). The CASCADE
 	// foreign keys on practice_session_questions and practice_answers
 	// ensure the snapshot rows and answer rows are removed in the
@@ -252,6 +270,17 @@ type Querier interface {
 	// the field selection of ListQuizQuestionsByQuiz so the same Go
 	// mapper (mapQuestion) can consume both row types.
 	GetQuizQuestionByID(ctx context.Context, id pgtype.UUID) (GetQuizQuestionByIDRow, error)
+	// Existence + ownership probe used by ASK-108 + ASK-119. Returns the
+	// question's parent quiz_id so the service can:
+	//   * 404 when the row is missing (sql.ErrNoRows).
+	//   * 404 when the question exists under a sibling quiz (the URL's
+	//     quiz_id != the returned quiz_id) -- prevents a leak between
+	//     siblings.
+	// Kept separate from GetQuizQuestionByID because that query is
+	// shape-shared with ListQuizQuestionsByQuizRow via a struct
+	// conversion in hydrateQuestion -- adding a column there would
+	// break that conversion.
+	GetQuizQuestionQuizID(ctx context.Context, id pgtype.UUID) (GetQuizQuestionQuizIDRow, error)
 	// Lookup pair for UpsertResource above. Returns the resources row
 	// the viewer owns for this URL; always succeeds because the upsert
 	// runs immediately before this in the same tx (either the INSERT
@@ -971,6 +1000,19 @@ type Querier interface {
 	// one-field rule is enforced in Go so this query is never
 	// reached for an empty PATCH.
 	UpdateQuiz(ctx context.Context, arg UpdateQuizParams) error
+	// Full replace of a single question row for PUT /api/quizzes/{quiz_id}/questions/{question_id}
+	// (ASK-108). The handler/service has already validated the type +
+	// per-type fields. ALL columns are written explicitly (PUT
+	// semantics): a freeform replacement passes a non-NULL trimmed
+	// string for reference_answer; an MCQ/TF replacement passes NULL
+	// so the column is cleared. Hint + feedback columns follow the same
+	// "narg means SQL NULL when absent" convention used by InsertQuizQuestion.
+	// updated_at is bumped to now() so the row reflects the structural change.
+	//
+	// Existence + ownership are gated by GetQuizForUpdateWithParentStatus
+	// (creator check) and GetQuizQuestionByID (quiz_id match) BEFORE
+	// this UPDATE runs, so it trusts inputs.
+	UpdateQuizQuestion(ctx context.Context, arg UpdateQuizQuestionParams) error
 	// Partial update for ASK-129. Each updatable column uses COALESCE(narg,
 	// current) so a nil arg from Go means "leave this column alone" and a
 	// non-nil arg means "replace with the supplied value". The service is

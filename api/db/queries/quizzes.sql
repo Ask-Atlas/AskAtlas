@@ -66,6 +66,71 @@ VALUES (
 )
 RETURNING id;
 
+-- name: GetQuizQuestionQuizID :one
+-- Existence + ownership probe used by ASK-108 + ASK-119. Returns the
+-- question's parent quiz_id so the service can:
+--   * 404 when the row is missing (sql.ErrNoRows).
+--   * 404 when the question exists under a sibling quiz (the URL's
+--     quiz_id != the returned quiz_id) -- prevents a leak between
+--     siblings.
+-- Kept separate from GetQuizQuestionByID because that query is
+-- shape-shared with ListQuizQuestionsByQuizRow via a struct
+-- conversion in hydrateQuestion -- adding a column there would
+-- break that conversion.
+SELECT id, quiz_id
+FROM quiz_questions
+WHERE id = sqlc.arg(id)::uuid;
+
+-- name: UpdateQuizQuestion :exec
+-- Full replace of a single question row for PUT /api/quizzes/{quiz_id}/questions/{question_id}
+-- (ASK-108). The handler/service has already validated the type +
+-- per-type fields. ALL columns are written explicitly (PUT
+-- semantics): a freeform replacement passes a non-NULL trimmed
+-- string for reference_answer; an MCQ/TF replacement passes NULL
+-- so the column is cleared. Hint + feedback columns follow the same
+-- "narg means SQL NULL when absent" convention used by InsertQuizQuestion.
+-- updated_at is bumped to now() so the row reflects the structural change.
+--
+-- Existence + ownership are gated by GetQuizForUpdateWithParentStatus
+-- (creator check) and GetQuizQuestionByID (quiz_id match) BEFORE
+-- this UPDATE runs, so it trusts inputs.
+UPDATE quiz_questions
+SET
+  type               = sqlc.arg(type)::question_type,
+  question_text      = sqlc.arg(question_text)::text,
+  hint               = sqlc.narg(hint)::text,
+  feedback_correct   = sqlc.narg(feedback_correct)::text,
+  feedback_incorrect = sqlc.narg(feedback_incorrect)::text,
+  reference_answer   = sqlc.narg(reference_answer)::text,
+  sort_order         = sqlc.arg(sort_order)::integer,
+  updated_at         = NOW()
+WHERE id = sqlc.arg(id)::uuid;
+
+-- name: DeleteQuizQuestion :execrows
+-- Hard-delete a single question for DELETE /api/quizzes/{quiz_id}/questions/{question_id}
+-- (ASK-119). The composite WHERE clause guards against a question
+-- being deleted from the wrong quiz (defense in depth -- the
+-- service has already validated quiz_id ownership but the WHERE
+-- enforces it at the SQL boundary). Returns rows-affected so the
+-- service can surface a phantom 0-row case as 404.
+--
+-- CASCADE: quiz_answer_options have ON DELETE CASCADE from
+-- quiz_questions so option rows are auto-removed.
+-- SET NULL: practice_session_questions.question_id +
+-- practice_answers.question_id have ON DELETE SET NULL so historical
+-- session data is preserved with a NULL question reference.
+DELETE FROM quiz_questions
+WHERE id      = sqlc.arg(id)::uuid
+  AND quiz_id = sqlc.arg(quiz_id)::uuid;
+
+-- name: DeleteQuizAnswerOptionsByQuestion :exec
+-- Wipe all answer options for one question for ASK-108. Used inside
+-- the ReplaceQuestion transaction between the existence/ownership
+-- probe and the new InsertQuizAnswerOption rows -- the delete +
+-- insert pair is the PUT semantics for the question's option set.
+DELETE FROM quiz_answer_options
+WHERE question_id = sqlc.arg(question_id)::uuid;
+
 -- name: InsertQuizAnswerOption :exec
 -- Insert one option row. The service has already validated that
 -- exactly one option per MCQ has is_correct=true; for true-false

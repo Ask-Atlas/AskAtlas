@@ -1263,6 +1263,123 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /quizzes/{quiz_id}/questions/{question_id}:
+    put:
+      operationId: ReplaceQuizQuestion
+      summary: Replace a question in a quiz (ASK-108)
+      description: |
+        Full replacement of one question in a quiz. PUT semantics --
+        every field on the request body is required; unprovided fields
+        are NOT preserved. The validation rules are identical to a
+        single question on POST /api/study-guides/{id}/quizzes (same
+        type enum, per-type correct_answer typing, MCQ option counts,
+        exactly-one-correct invariant).
+
+        The replacement runs in a single transaction:
+        delete-old-options -> update-question -> insert-new-options.
+        Type changes are allowed (MCQ -> TF -> freeform); the
+        per-type option set is rebuilt from scratch on every call.
+
+        Authorization: creator-only. The authenticated user must be
+        `quizzes.creator_id`; any other authenticated user gets 403.
+
+        404 covers BOTH the quiz being missing/soft-deleted, the
+        parent study guide being soft-deleted, the question being
+        absent, AND the question belonging to a different quiz.
+
+        Existing `practice_answers` rows are NOT affected -- the
+        question_id reference persists across the replace, so
+        historical session data stays intact.
+      parameters:
+        - name: quiz_id
+          in: path
+          description: The unique UUID of the quiz containing the question
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: question_id
+          in: path
+          description: The unique UUID of the question to replace
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuizQuestion'
+      responses:
+        '200':
+          description: The replaced question with its options and resolved correct answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizQuestionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: DeleteQuizQuestion
+      summary: Delete a question from a quiz (ASK-119)
+      description: |
+        Hard-delete one question from a quiz. The `quiz_answer_options`
+        for the question CASCADE-delete; references from
+        `practice_session_questions.question_id` and
+        `practice_answers.question_id` are SET NULL so historical
+        session data is preserved with a NULL question reference.
+
+        A quiz must always carry at least 1 question; an attempt to
+        delete the last remaining question returns 400 with
+        `"quiz must have at least 1 question"`. The count check runs
+        inside the same transaction as the delete so two concurrent
+        deletes on a 2-question quiz can't both succeed.
+
+        Authorization: creator-only. The authenticated user must be
+        `quizzes.creator_id`; any other authenticated user gets 403.
+
+        404 covers all of: quiz missing/soft-deleted, parent study
+        guide soft-deleted, question missing, question belonging to a
+        different quiz.
+
+        `quizzes.updated_at` is refreshed on every successful delete.
+      parameters:
+        - name: quiz_id
+          in: path
+          description: The unique UUID of the quiz containing the question
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: question_id
+          in: path
+          description: The unique UUID of the question to delete
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Question deleted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /quizzes/{quiz_id}/sessions:
     get:
       operationId: ListPracticeSessions

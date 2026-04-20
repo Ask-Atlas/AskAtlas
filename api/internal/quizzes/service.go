@@ -34,6 +34,23 @@ type Repository interface {
 	TouchQuizUpdatedAt(ctx context.Context, id pgtype.UUID) error
 	GetQuizQuestionByID(ctx context.Context, id pgtype.UUID) (db.GetQuizQuestionByIDRow, error)
 	ListQuizAnswerOptionsByQuestion(ctx context.Context, questionID pgtype.UUID) ([]db.QuizAnswerOption, error)
+	// GetQuizQuestionQuizID (ASK-108 + ASK-119) is the existence +
+	// ownership probe -- returns the question's parent quiz_id so
+	// the service can map a sibling-quiz mismatch to 404 alongside
+	// sql.ErrNoRows.
+	GetQuizQuestionQuizID(ctx context.Context, id pgtype.UUID) (db.GetQuizQuestionQuizIDRow, error)
+
+	// DeleteQuizQuestion (ASK-119) returns rows-affected so the
+	// service can map an unexpected 0 to ErrNotFound (defense in
+	// depth -- the existence probe gates this normally).
+	DeleteQuizQuestion(ctx context.Context, arg db.DeleteQuizQuestionParams) (int64, error)
+	// UpdateQuizQuestion (ASK-108) is the PUT body of a question
+	// row -- all columns written, updated_at refreshed.
+	UpdateQuizQuestion(ctx context.Context, arg db.UpdateQuizQuestionParams) error
+	// DeleteQuizAnswerOptionsByQuestion (ASK-108) wipes the option
+	// set so ReplaceQuestion can rebuild it from scratch under the
+	// same transaction.
+	DeleteQuizAnswerOptionsByQuestion(ctx context.Context, questionID pgtype.UUID) error
 
 	// InTx runs fn inside a single Postgres transaction. The
 	// Repository passed to fn is scoped to the tx via
@@ -554,6 +571,21 @@ func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID p
 		return pgtype.UUID{}, fmt.Errorf("insertQuestion: insert question[%d]: %w", idx, err)
 	}
 
+	if err := s.insertQuestionOptions(ctx, tx, questionID, idx, prefix, q); err != nil {
+		return pgtype.UUID{}, err
+	}
+	return questionID, nil
+}
+
+// insertQuestionOptions writes the answer-option rows for a freshly-
+// inserted (insertQuestion) or freshly-updated (ReplaceQuestion)
+// question. Pulled out of insertQuestion so ASK-108's PUT path can
+// delete-then-recreate the option set without duplicating the
+// per-type branching. `idx` + `prefix` shape error wraps the same
+// way the calling site does (CreateQuiz: questions[i] prefix;
+// AddQuestion / ReplaceQuestion: empty prefix). Caller has already
+// validated `q` so this trusts the input shape.
+func (s *Service) insertQuestionOptions(ctx context.Context, tx Repository, questionID pgtype.UUID, idx int, prefix string, q CreateQuizQuestionInput) error {
 	switch q.Type {
 	case QuestionTypeMultipleChoice:
 		for j, opt := range q.Options {
@@ -563,7 +595,7 @@ func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID p
 				IsCorrect:  opt.IsCorrect,
 				SortOrder:  int32(j),
 			}); err != nil {
-				return pgtype.UUID{}, fmt.Errorf("insertQuestion: insert option[%d][%d]: %w", idx, j, err)
+				return fmt.Errorf("insertQuestionOptions: insert option[%d][%d]: %w", idx, j, err)
 			}
 		}
 	case QuestionTypeTrueFalse:
@@ -574,14 +606,12 @@ func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID p
 		// persisting a wrong canonical answer.
 		correct, ok := q.CorrectAnswer.(bool)
 		if !ok {
-			return pgtype.UUID{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
+			return apperrors.NewBadRequest("Invalid request body", map[string]string{
 				fieldKey(prefix, "correct_answer"): "must be boolean for true-false questions",
 			})
 		}
 		// Order matters for the response: True first (sort_order 0),
-		// False second (sort_order 1). Matches the spec example. The
-		// labels live in params.go so the read side
-		// (resolveCorrectAnswer) can match against them by name.
+		// False second (sort_order 1). Matches the spec example.
 		opts := []struct {
 			text      string
 			isCorrect bool
@@ -596,15 +626,228 @@ func (s *Service) insertQuestion(ctx context.Context, tx Repository, quizPgxID p
 				IsCorrect:  opt.isCorrect,
 				SortOrder:  int32(j),
 			}); err != nil {
-				return pgtype.UUID{}, fmt.Errorf("insertQuestion: insert tf option[%d][%d]: %w", idx, j, err)
+				return fmt.Errorf("insertQuestionOptions: insert tf option[%d][%d]: %w", idx, j, err)
 			}
 		}
 	case QuestionTypeFreeform:
 		// No quiz_answer_options rows for freeform questions. The
 		// reference answer was written to
-		// quiz_questions.reference_answer above.
+		// quiz_questions.reference_answer by the caller.
 	}
-	return questionID, nil
+	return nil
+}
+
+// DeleteQuestion hard-deletes one question from a quiz (ASK-119,
+// creator-only). Wraps the locked SELECT + creator check + last-
+// question guard + DELETE + updated_at touch in a single transaction
+// so a concurrent delete on the same quiz cannot let two callers
+// both squeeze past the count check.
+//
+// Order of operations (inside the tx):
+//  1. GetQuizForUpdateWithParentStatus -- locks the quiz row.
+//  2. 404 if quiz missing OR quiz soft-deleted OR parent guide
+//     soft-deleted.
+//  3. 403 if creator_id != viewer_id.
+//  4. GetQuizQuestionByID -- 404 if missing OR if the question's
+//     quiz_id does not match the URL's quiz_id (so a question_id
+//     that exists under a sibling quiz is treated as not-found, not
+//     leaked via 200/204).
+//  5. CountQuizQuestions -- 400 with "quiz must have at least 1
+//     question" if deleting would leave the quiz empty. The count
+//     includes the question we're about to delete, so the guard is
+//     `count <= 1`.
+//  6. DeleteQuizQuestion -- the WHERE re-asserts (id, quiz_id) for
+//     defense in depth. A 0-rows-affected result here is a
+//     concurrent-delete race; map to 404 so the client can re-read.
+//  7. TouchQuizUpdatedAt -- bump quizzes.updated_at = now() so the
+//     parent quiz reflects the structural change.
+//
+// CASCADE on quiz_answer_options removes the option rows for free.
+// SET NULL on practice_session_questions / practice_answers
+// preserves historical session data with a NULL question reference.
+func (s *Service) DeleteQuestion(ctx context.Context, p DeleteQuestionParams) error {
+	quizPgxID := utils.UUID(p.QuizID)
+	questionPgxID := utils.UUID(p.QuestionID)
+
+	return s.repo.InTx(ctx, func(tx Repository) error {
+		row, err := tx.GetQuizForUpdateWithParentStatus(ctx, quizPgxID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return apperrors.NewNotFound("Question not found")
+			}
+			return fmt.Errorf("DeleteQuestion: lock: %w", err)
+		}
+		if row.DeletedAt.Valid || row.GuideDeletedAt.Valid {
+			return apperrors.NewNotFound("Question not found")
+		}
+		creatorID, err := utils.PgxToGoogleUUID(row.CreatorID)
+		if err != nil {
+			return fmt.Errorf("DeleteQuestion: creator id: %w", err)
+		}
+		if creatorID != p.ViewerID {
+			return apperrors.NewForbidden()
+		}
+
+		probe, err := tx.GetQuizQuestionQuizID(ctx, questionPgxID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return apperrors.NewNotFound("Question not found")
+			}
+			return fmt.Errorf("DeleteQuestion: probe question: %w", err)
+		}
+		// quiz_id mismatch -> 404 (don't leak existence of
+		// questions that belong to a sibling quiz).
+		if probe.QuizID != quizPgxID {
+			return apperrors.NewNotFound("Question not found")
+		}
+
+		count, err := tx.CountQuizQuestions(ctx, quizPgxID)
+		if err != nil {
+			return fmt.Errorf("DeleteQuestion: count: %w", err)
+		}
+		if count <= 1 {
+			return apperrors.NewBadRequest("Cannot delete the last question", map[string]string{
+				"question_id": "quiz must have at least 1 question",
+			})
+		}
+
+		rows, err := tx.DeleteQuizQuestion(ctx, db.DeleteQuizQuestionParams{
+			ID:     questionPgxID,
+			QuizID: quizPgxID,
+		})
+		if err != nil {
+			return fmt.Errorf("DeleteQuestion: delete: %w", err)
+		}
+		if rows == 0 {
+			// Concurrent delete won the race between our existence
+			// probe and the DELETE. Same 404 response as a missing
+			// question -- the desired state is reached either way.
+			return apperrors.NewNotFound("Question not found")
+		}
+
+		if err := tx.TouchQuizUpdatedAt(ctx, quizPgxID); err != nil {
+			return fmt.Errorf("DeleteQuestion: touch: %w", err)
+		}
+		return nil
+	})
+}
+
+// ReplaceQuestion replaces every column of one question row plus its
+// answer-option set (ASK-108, creator-only). PUT semantics: the
+// caller supplies a complete CreateQuizQuestionInput; the existing
+// row's hint / feedback / sort_order / type / etc. are NOT preserved
+// from the old row, only from the new payload.
+//
+// Order of operations:
+//  1. validateQuestion -- per-type rules identical to AddQuestion /
+//     CreateQuiz so a question accepted on create is also accepted
+//     on replace. Empty prefix because the question IS the body.
+//  2. InTx:
+//     a. GetQuizForUpdateWithParentStatus -- 404 / 403 same as
+//     DeleteQuestion.
+//     b. GetQuizQuestionByID + quiz_id mismatch -> 404.
+//     c. DeleteQuizAnswerOptionsByQuestion -- wipe the old option
+//     set; CASCADE on the FK is not enough because we want to
+//     rebuild rather than zero-out via DELETE+INSERT race.
+//     d. UpdateQuizQuestion -- write the new column values + bump
+//     updated_at. reference_answer is set for freeform, NULL
+//     for MCQ/TF (so a freeform -> MCQ replacement clears the
+//     column).
+//     e. insertQuestionOptions -- shared helper that branches per
+//     type (MCQ inserts user options, TF auto-expands True/False,
+//     freeform writes nothing).
+//     f. TouchQuizUpdatedAt -- bump the parent quiz's updated_at.
+//  3. After commit, hydrate JUST the replaced question (not the
+//     whole quiz) via GetQuizQuestionByID + ListQuizAnswerOptionsByQuestion
+//     so the response is the lightweight QuizQuestionResponse shape.
+//
+// Existing practice_answers rows are NOT affected because the
+// question_id reference is preserved -- the question row is updated
+// in place rather than dropped + re-created. Sessions that already
+// recorded an answer for this question keep their history.
+func (s *Service) ReplaceQuestion(ctx context.Context, p ReplaceQuestionParams) (Question, error) {
+	if err := validateQuestion("", p.Question); err != nil {
+		return Question{}, err
+	}
+
+	quizPgxID := utils.UUID(p.QuizID)
+	questionPgxID := utils.UUID(p.QuestionID)
+
+	dbType, ok := questionTypeToDB(p.Question.Type)
+	if !ok {
+		// Defense in depth -- validateQuestion would have rejected this.
+		return Question{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"type": "must be multiple-choice, true-false, or freeform",
+		})
+	}
+
+	updateArgs := db.UpdateQuizQuestionParams{
+		ID:                questionPgxID,
+		Type:              dbType,
+		QuestionText:      strings.TrimSpace(p.Question.Question),
+		Hint:              utils.Text(trimmedNonEmpty(p.Question.Hint)),
+		FeedbackCorrect:   utils.Text(trimmedNonEmpty(p.Question.FeedbackCorrect)),
+		FeedbackIncorrect: utils.Text(trimmedNonEmpty(p.Question.FeedbackIncorrect)),
+		SortOrder:         resolveSortOrder(p.Question.SortOrder, 0),
+	}
+	if p.Question.Type == QuestionTypeFreeform {
+		ans, ok := p.Question.CorrectAnswer.(string)
+		if !ok {
+			return Question{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
+				"correct_answer": "is required for freeform questions",
+			})
+		}
+		updateArgs.ReferenceAnswer = pgtype.Text{String: strings.TrimSpace(ans), Valid: true}
+	}
+
+	if err := s.repo.InTx(ctx, func(tx Repository) error {
+		row, err := tx.GetQuizForUpdateWithParentStatus(ctx, quizPgxID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return apperrors.NewNotFound("Question not found")
+			}
+			return fmt.Errorf("ReplaceQuestion: lock: %w", err)
+		}
+		if row.DeletedAt.Valid || row.GuideDeletedAt.Valid {
+			return apperrors.NewNotFound("Question not found")
+		}
+		creatorID, err := utils.PgxToGoogleUUID(row.CreatorID)
+		if err != nil {
+			return fmt.Errorf("ReplaceQuestion: creator id: %w", err)
+		}
+		if creatorID != p.ViewerID {
+			return apperrors.NewForbidden()
+		}
+
+		probe, err := tx.GetQuizQuestionQuizID(ctx, questionPgxID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return apperrors.NewNotFound("Question not found")
+			}
+			return fmt.Errorf("ReplaceQuestion: probe question: %w", err)
+		}
+		if probe.QuizID != quizPgxID {
+			return apperrors.NewNotFound("Question not found")
+		}
+
+		if err := tx.DeleteQuizAnswerOptionsByQuestion(ctx, questionPgxID); err != nil {
+			return fmt.Errorf("ReplaceQuestion: delete options: %w", err)
+		}
+		if err := tx.UpdateQuizQuestion(ctx, updateArgs); err != nil {
+			return fmt.Errorf("ReplaceQuestion: update: %w", err)
+		}
+		if err := s.insertQuestionOptions(ctx, tx, questionPgxID, 0, "", p.Question); err != nil {
+			return err
+		}
+		if err := tx.TouchQuizUpdatedAt(ctx, quizPgxID); err != nil {
+			return fmt.Errorf("ReplaceQuestion: touch: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return Question{}, err
+	}
+
+	return s.hydrateQuestion(ctx, questionPgxID)
 }
 
 // hydrate loads a quiz + its questions + their answer options and

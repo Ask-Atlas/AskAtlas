@@ -133,6 +133,31 @@ type AddQuestionParams struct {
 	Question CreateQuizQuestionInput
 }
 
+// DeleteQuestionParams is the input to Service.DeleteQuestion (ASK-119).
+// ViewerID drives the creator-only auth gate; the service returns
+// apperrors.NewForbidden if it doesn't match quizzes.creator_id.
+// QuestionID + QuizID together gate "question belongs to this quiz"
+// at the SQL boundary -- a question_id that exists but belongs to a
+// different quiz is treated as 404.
+type DeleteQuestionParams struct {
+	QuizID     uuid.UUID
+	QuestionID uuid.UUID
+	ViewerID   uuid.UUID
+}
+
+// ReplaceQuestionParams is the input to Service.ReplaceQuestion (ASK-108).
+// PUT semantics: Question carries the FULL replacement payload --
+// every field that was on the old row is overwritten (or cleared)
+// from these inputs. Validation runs the same rules as
+// AddQuestionParams + CreateQuizParams.Questions[i] so a question
+// accepted on create / add is also accepted on replace.
+type ReplaceQuestionParams struct {
+	QuizID     uuid.UUID
+	QuestionID uuid.UUID
+	ViewerID   uuid.UUID
+	Question   CreateQuizQuestionInput
+}
+
 // UpdateQuizParams is the input to Service.UpdateQuiz (ASK-153).
 // Tri-state semantics for description require an explicit
 // ClearDescription flag because Go cannot distinguish "field

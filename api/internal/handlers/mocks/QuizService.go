@@ -170,6 +170,63 @@ func (_c *MockQuizService_CreateQuiz_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
+// DeleteQuestion provides a mock function for the type MockQuizService
+func (_mock *MockQuizService) DeleteQuestion(ctx context.Context, params quizzes.DeleteQuestionParams) error {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteQuestion")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, quizzes.DeleteQuestionParams) error); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockQuizService_DeleteQuestion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteQuestion'
+type MockQuizService_DeleteQuestion_Call struct {
+	*mock.Call
+}
+
+// DeleteQuestion is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params quizzes.DeleteQuestionParams
+func (_e *MockQuizService_Expecter) DeleteQuestion(ctx interface{}, params interface{}) *MockQuizService_DeleteQuestion_Call {
+	return &MockQuizService_DeleteQuestion_Call{Call: _e.mock.On("DeleteQuestion", ctx, params)}
+}
+
+func (_c *MockQuizService_DeleteQuestion_Call) Run(run func(ctx context.Context, params quizzes.DeleteQuestionParams)) *MockQuizService_DeleteQuestion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 quizzes.DeleteQuestionParams
+		if args[1] != nil {
+			arg1 = args[1].(quizzes.DeleteQuestionParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockQuizService_DeleteQuestion_Call) Return(err error) *MockQuizService_DeleteQuestion_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockQuizService_DeleteQuestion_Call) RunAndReturn(run func(ctx context.Context, params quizzes.DeleteQuestionParams) error) *MockQuizService_DeleteQuestion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteQuiz provides a mock function for the type MockQuizService
 func (_mock *MockQuizService) DeleteQuiz(ctx context.Context, params quizzes.DeleteQuizParams) error {
 	ret := _mock.Called(ctx, params)
@@ -357,6 +414,72 @@ func (_c *MockQuizService_ListQuizzes_Call) Return(quizListItems []quizzes.QuizL
 }
 
 func (_c *MockQuizService_ListQuizzes_Call) RunAndReturn(run func(ctx context.Context, params quizzes.ListQuizzesParams) ([]quizzes.QuizListItem, error)) *MockQuizService_ListQuizzes_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReplaceQuestion provides a mock function for the type MockQuizService
+func (_mock *MockQuizService) ReplaceQuestion(ctx context.Context, params quizzes.ReplaceQuestionParams) (quizzes.Question, error) {
+	ret := _mock.Called(ctx, params)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReplaceQuestion")
+	}
+
+	var r0 quizzes.Question
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, quizzes.ReplaceQuestionParams) (quizzes.Question, error)); ok {
+		return returnFunc(ctx, params)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, quizzes.ReplaceQuestionParams) quizzes.Question); ok {
+		r0 = returnFunc(ctx, params)
+	} else {
+		r0 = ret.Get(0).(quizzes.Question)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, quizzes.ReplaceQuestionParams) error); ok {
+		r1 = returnFunc(ctx, params)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockQuizService_ReplaceQuestion_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReplaceQuestion'
+type MockQuizService_ReplaceQuestion_Call struct {
+	*mock.Call
+}
+
+// ReplaceQuestion is a helper method to define mock.On call
+//   - ctx context.Context
+//   - params quizzes.ReplaceQuestionParams
+func (_e *MockQuizService_Expecter) ReplaceQuestion(ctx interface{}, params interface{}) *MockQuizService_ReplaceQuestion_Call {
+	return &MockQuizService_ReplaceQuestion_Call{Call: _e.mock.On("ReplaceQuestion", ctx, params)}
+}
+
+func (_c *MockQuizService_ReplaceQuestion_Call) Run(run func(ctx context.Context, params quizzes.ReplaceQuestionParams)) *MockQuizService_ReplaceQuestion_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 quizzes.ReplaceQuestionParams
+		if args[1] != nil {
+			arg1 = args[1].(quizzes.ReplaceQuestionParams)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockQuizService_ReplaceQuestion_Call) Return(question quizzes.Question, err error) *MockQuizService_ReplaceQuestion_Call {
+	_c.Call.Return(question, err)
+	return _c
+}
+
+func (_c *MockQuizService_ReplaceQuestion_Call) RunAndReturn(run func(ctx context.Context, params quizzes.ReplaceQuestionParams) (quizzes.Question, error)) *MockQuizService_ReplaceQuestion_Call {
 	_c.Call.Return(run)
 	return _c
 }
