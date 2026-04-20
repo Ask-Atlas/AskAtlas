@@ -197,26 +197,28 @@ test.describe("ListCourseSections (ASK-127)", () => {
     }
   });
 
-  test("empty string term is treated as no filter", async ({ request }) => {
+  test("empty string term is rejected at the wrapper", async ({ request }) => {
     if (!courseId) {
       test.skip(true, "No seed course available on staging");
       return;
     }
 
-    const unfiltered = await request.get(
-      `/api/courses/${courseId}/sections`,
-    );
-    expect(unfiltered.ok()).toBeTruthy();
-    const baseline = await unfiltered.json();
-
-    const empty = await request.get(`/api/courses/${courseId}/sections`, {
+    // The kin-openapi wrapper enforces `allowEmptyValue: false`
+    // (the default for query params) and rejects `?term=` with
+    // 400 BEFORE the handler runs. The service-side
+    // empty-string-collapses-to-no-filter logic is defense-in-depth
+    // for internal Go callers that bypass the wrapper -- not
+    // reachable via the HTTP boundary.
+    //
+    // This test pins the wire behavior so a future "fix" that
+    // drops the empty-string guard from the wrapper would be
+    // caught here.
+    const resp = await request.get(`/api/courses/${courseId}/sections`, {
       params: { term: "" },
     });
-    expect(empty.ok()).toBeTruthy();
-    const filtered = await empty.json();
-
-    // Both should have the same row count -- empty term collapses
-    // to "no filter" per the service.
-    expect(filtered.sections.length).toBe(baseline.sections.length);
+    expect(resp.status()).toBe(400);
+    const body = await resp.json();
+    expect(body).toHaveProperty("details");
+    expect(body.details).toHaveProperty("term");
   });
 });

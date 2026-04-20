@@ -690,9 +690,10 @@ func (s *Service) ListSectionMembers(ctx context.Context, p ListSectionMembersPa
 //  1. Trim + length-validate the term filter. The HTTP layer
 //     already enforces openapi maxLength: 30, but we re-validate
 //     here so internal Go callers can't bypass it. Empty/
-//     whitespace-only term collapses to "no filter" -- a client
-//     clearing its input shouldn't send an empty string, but if
-//     it does we treat it as if the param was absent.
+//     whitespace-only term collapses to "no filter" -- this is
+//     defense-in-depth for internal Go callers; the kin-openapi
+//     wrapper rejects ?term= at the HTTP boundary with 400
+//     "empty value is not allowed" before any of this runs.
 //  2. CourseExists -- 404 dispatch on a missing parent. The
 //     spec wants this distinguished from the empty-result case
 //     so the frontend can show a "course doesn't exist" empty
