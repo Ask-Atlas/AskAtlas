@@ -252,6 +252,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/list-dashboard",
+          label: "Aggregated dashboard data for the authenticated user",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "api/list-favorites",
           label: "List the authenticated user's favorited items",
           className: "api-method get",

@@ -2010,6 +2010,42 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /me/dashboard:
+    get:
+      operationId: ListDashboard
+      summary: Aggregated dashboard data for the authenticated user
+      description: |
+        Returns the home-page dashboard payload in a single response:
+        enrolled courses for the current term, recently updated study
+        guides the viewer created, practice stats + recent sessions,
+        and file totals + recent files.
+
+        Each section is independent. A user with no enrollments,
+        no guides, no sessions, or no files gets zeros and empty
+        arrays in the relevant section -- the whole endpoint never
+        404s and never partially fails (a DB error in any one
+        section returns 500).
+
+        Soft-deleted entities (study guides with `deleted_at`,
+        files in any deletion lifecycle) are excluded everywhere
+        they appear -- counts, lists, and aggregate sums.
+
+        "Current term" resolution waterfall:
+          1. Active sections covering today (start_date <= today <= end_date).
+          2. Most recently ended term (end_date < today, ordered DESC).
+          3. Lexicographically latest term string (when no dates exist).
+        Returns null when the user has no enrollments at all.
+      responses:
+        '200':
+          description: Dashboard payload for the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /me/favorites:
     get:
       operationId: ListFavorites
@@ -3755,6 +3791,227 @@ components:
         - total_questions
         - correct_answers
         - answers
+    DashboardCourseSummary:
+      type: object
+      description: |
+        Compact course payload embedded in the dashboard's courses
+        section. Includes the viewer's role + the section term so
+        the home page can render "CPTS 322 (Spring 2026, student)"
+        without follow-up requests.
+      properties:
+        id:
+          type: string
+          format: uuid
+        department:
+          type: string
+        number:
+          type: string
+        title:
+          type: string
+        role:
+          type: string
+          enum:
+            - student
+            - ta
+            - instructor
+        section_term:
+          type: string
+      required:
+        - id
+        - department
+        - number
+        - title
+        - role
+        - section_term
+    DashboardCoursesSection:
+      type: object
+      description: |
+        Enrollment summary block. `current_term` is null when the
+        viewer has no enrollments. `enrolled_count` is the number
+        of courses the viewer is enrolled in for the resolved
+        current term (NOT the lifetime enrollment total). `courses`
+        is capped at 10.
+      properties:
+        enrolled_count:
+          type: integer
+          format: int32
+        current_term:
+          type: string
+          nullable: true
+        courses:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardCourseSummary'
+      required:
+        - enrolled_count
+        - current_term
+        - courses
+    DashboardStudyGuideSummary:
+      type: object
+      description: |
+        Compact study-guide payload embedded in the dashboard's
+        study_guides section. `course_department` + `course_number`
+        let the home page render a "CPTS 322 -- <title>" label.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        course_department:
+          type: string
+        course_number:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - course_department
+        - course_number
+        - updated_at
+    DashboardStudyGuidesSection:
+      type: object
+      description: |
+        Study-guide summary block. `created_count` excludes
+        soft-deleted guides. `recent` is the 5 most recently
+        updated guides the viewer created.
+      properties:
+        created_count:
+          type: integer
+          format: int32
+        recent:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardStudyGuideSummary'
+      required:
+        - created_count
+        - recent
+    DashboardSessionSummary:
+      type: object
+      description: |
+        Compact practice-session payload embedded in the dashboard's
+        practice.recent_sessions array. `score_percentage` is the
+        rounded per-session accuracy (0..100); `quiz_title` and
+        `study_guide_title` are de-normalized from the session's
+        quiz so the home page renders without follow-up GETs.
+      properties:
+        id:
+          type: string
+          format: uuid
+        quiz_title:
+          type: string
+        study_guide_title:
+          type: string
+        score_percentage:
+          type: integer
+          format: int32
+        completed_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - quiz_title
+        - study_guide_title
+        - score_percentage
+        - completed_at
+    DashboardPracticeSection:
+      type: object
+      description: |
+        Practice stats block. `sessions_completed` counts only
+        sessions where `completed_at IS NOT NULL`.
+        `total_questions_answered` is the sum of submitted answers
+        across all completed sessions (from practice_answers, not
+        the snapshot total on practice_sessions). `overall_accuracy`
+        is the rounded percentage of correct/total across completed
+        sessions; 0 when no sessions are completed (NULLIF prevents
+        division by zero). `recent_sessions` is the 5 most recently
+        completed sessions.
+      properties:
+        sessions_completed:
+          type: integer
+          format: int32
+        total_questions_answered:
+          type: integer
+          format: int32
+        overall_accuracy:
+          type: integer
+          format: int32
+        recent_sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardSessionSummary'
+      required:
+        - sessions_completed
+        - total_questions_answered
+        - overall_accuracy
+        - recent_sessions
+    DashboardFileSummary:
+      type: object
+      description: |
+        Compact file payload embedded in the dashboard's
+        files.recent array.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        mime_type:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - mime_type
+        - updated_at
+    DashboardFilesSection:
+      type: object
+      description: |
+        File totals block. `total_count` and `total_size` exclude
+        files in any deletion lifecycle and only count files with
+        upload_status='complete'. `total_size` is bytes (int64).
+        `recent` is the 5 most recently updated complete files.
+      properties:
+        total_count:
+          type: integer
+          format: int32
+        total_size:
+          type: integer
+          format: int64
+        recent:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardFileSummary'
+      required:
+        - total_count
+        - total_size
+        - recent
+    DashboardResponse:
+      type: object
+      description: |
+        Response envelope for GET /api/me/dashboard. All four
+        sections are always present (never null) so the frontend
+        can render the home page from a single response. Each
+        section's count fields are 0 and list fields are [] when
+        the viewer has no data in that area.
+      properties:
+        courses:
+          $ref: '#/components/schemas/DashboardCoursesSection'
+        study_guides:
+          $ref: '#/components/schemas/DashboardStudyGuidesSection'
+        practice:
+          $ref: '#/components/schemas/DashboardPracticeSection'
+        files:
+          $ref: '#/components/schemas/DashboardFilesSection'
+      required:
+        - courses
+        - study_guides
+        - practice
+        - files
     FavoriteFileSummary:
       type: object
       description: |

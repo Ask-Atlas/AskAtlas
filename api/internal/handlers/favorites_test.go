@@ -33,7 +33,7 @@ func favoritesTestRouter(t *testing.T, fh *handlers.FavoritesHandler) chi.Router
 	sgh := handlers.NewStudyGuideHandler(mock_handlers.NewMockStudyGuideService(t))
 	qh := handlers.NewQuizzesHandler(mock_handlers.NewMockQuizService(t))
 	ssh := handlers.NewSessionsHandler(mock_handlers.NewMockSessionService(t))
-	composite := handlers.NewCompositeHandler(fileH, gh, sh, ch, sgh, qh, ssh, nil, fh)
+	composite := handlers.NewCompositeHandler(fileH, gh, sh, ch, sgh, qh, ssh, nil, fh, nil)
 	r := chi.NewRouter()
 	api.HandlerWithOptions(composite, api.ChiServerOptions{BaseRouter: r})
 	return r
