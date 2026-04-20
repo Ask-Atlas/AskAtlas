@@ -2010,6 +2010,65 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /me/favorites:
+    get:
+      operationId: ListFavorites
+      summary: List the authenticated user's favorited items
+      description: |
+        Returns favorites across files, study guides, and courses for
+        the authenticated user, sorted by `favorited_at DESC`. Powers
+        the sidebar "Starred" section and the `/me/saved` page.
+        Supports filtering by entity type and offset-based pagination.
+
+        Soft-deleted entities (files in any deletion lifecycle,
+        soft-deleted study guides) are excluded. Courses have no
+        soft-delete and are always eligible.
+
+        The `cursor` is opaque -- callers must pass back the
+        `next_cursor` from the previous response verbatim. The wire
+        contract is opaque so a future migration to keyset
+        pagination is non-breaking. `next_cursor` is required and
+        nullable so it renders as explicit JSON null on the last page.
+      parameters:
+        - name: entity_type
+          in: query
+          description: Filter to a single entity type. Omit for all types.
+          required: false
+          schema:
+            type: string
+            enum:
+              - file
+              - study_guide
+              - course
+        - name: limit
+          in: query
+          description: Maximum number of favorites to return per page
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          description: Opaque pagination cursor from a previous response
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Page of favorites for the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListFavoritesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /me/recents:
     get:
       operationId: ListRecents
@@ -3696,6 +3755,123 @@ components:
         - total_questions
         - correct_answers
         - answers
+    FavoriteFileSummary:
+      type: object
+      description: |
+        Compact file payload embedded in a FavoriteItem when
+        `entity_type=file`. Same fields as RecentFileSummary -- a
+        separate schema so the favorites and recents endpoints can
+        evolve independently without one accidentally bloating the
+        other.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        mime_type:
+          type: string
+      required:
+        - id
+        - name
+        - mime_type
+    FavoriteStudyGuideSummary:
+      type: object
+      description: |
+        Compact study-guide payload embedded in a FavoriteItem when
+        `entity_type=study_guide`. Includes the parent course's
+        department + number so the sidebar can render a
+        "CPTS 322 -- <title>" label without a follow-up request.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        course_department:
+          type: string
+        course_number:
+          type: string
+      required:
+        - id
+        - title
+        - course_department
+        - course_number
+    FavoriteCourseSummary:
+      type: object
+      description: |
+        Compact course payload embedded in a FavoriteItem when
+        `entity_type=course`. Mirrors the (department, number, title)
+        triple used elsewhere in the API.
+      properties:
+        id:
+          type: string
+          format: uuid
+        department:
+          type: string
+        number:
+          type: string
+        title:
+          type: string
+      required:
+        - id
+        - department
+        - number
+        - title
+    FavoriteItem:
+      type: object
+      description: |
+        A single favorited item. Exactly one of `file`, `study_guide`,
+        or `course` is populated; the other two fields are absent
+        (not null) and `entity_type` declares which one. `entity_id`
+        mirrors the populated summary's `id` so callers can route
+        purely off the envelope without unpacking the per-type
+        payload.
+      properties:
+        entity_type:
+          type: string
+          enum:
+            - file
+            - study_guide
+            - course
+        entity_id:
+          type: string
+          format: uuid
+        favorited_at:
+          type: string
+          format: date-time
+        file:
+          $ref: '#/components/schemas/FavoriteFileSummary'
+        study_guide:
+          $ref: '#/components/schemas/FavoriteStudyGuideSummary'
+        course:
+          $ref: '#/components/schemas/FavoriteCourseSummary'
+      required:
+        - entity_type
+        - entity_id
+        - favorited_at
+    ListFavoritesResponse:
+      type: object
+      description: |
+        Response envelope for GET /api/me/favorites. `favorites` is
+        always an array (empty when the user has none).
+        `next_cursor` is required and nullable so it renders as
+        explicit JSON null on the last page (the frontend can
+        check `=== null` instead of `=== undefined`).
+      properties:
+        favorites:
+          type: array
+          items:
+            $ref: '#/components/schemas/FavoriteItem'
+        has_more:
+          type: boolean
+        next_cursor:
+          type: string
+          nullable: true
+      required:
+        - favorites
+        - has_more
+        - next_cursor
     RecentFileSummary:
       type: object
       description: |
