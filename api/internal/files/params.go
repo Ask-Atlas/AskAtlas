@@ -131,9 +131,20 @@ type CreateFileParams struct {
 	S3Key    string
 }
 
-// UpdateFileParams contains the required inputs for renaming a file.
+// UpdateFileParams contains the validated inputs for PATCH
+// /api/files/{file_id} (ASK-113). Both Name and Status are optional;
+// at least one must be non-nil. Name is the new display name (trimmed
+// + validated by the service). Status is the target upload status;
+// only "complete" or "failed" are accepted, and only from current
+// status "pending" (transition validation lives in the service).
+// FileID + OwnerID identify the row + the caller; ViewerID is the
+// caller used to populate favorited_at / last_viewed_at on the
+// returned row (typically equal to OwnerID, but kept separate so the
+// shape mirrors the rest of the file queries).
 type UpdateFileParams struct {
-	FileID  uuid.UUID
-	OwnerID uuid.UUID
-	Name    string
+	FileID   uuid.UUID
+	OwnerID  uuid.UUID
+	ViewerID uuid.UUID
+	Name     *string
+	Status   *string
 }

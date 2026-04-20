@@ -66,7 +66,7 @@ func TestEncodeDecodeCursor_RoundTrip(t *testing.T) {
 func TestDecodeCursor_RejectsMalformed(t *testing.T) {
 	cases := []string{
 		"!!!notbase64!!!",
-		"abc",                          // base64 of "i\xb7" -- not an integer
+		"abc",                           // base64 of "i\xb7" -- not an integer
 		favorites.EncodeCursor(0) + "x", // valid prefix + junk
 	}
 	for _, c := range cases {
@@ -142,9 +142,9 @@ func TestListFavorites_MergesAndSortsByFavoritedAtDesc(t *testing.T) {
 	svc := favorites.NewService(repo)
 
 	now := time.Now().UTC()
-	files := []db.ListFileFavoritesRow{fileRow(t, now.Add(-30*time.Minute))}    // oldest
+	files := []db.ListFileFavoritesRow{fileRow(t, now.Add(-30*time.Minute))}         // oldest
 	guides := []db.ListStudyGuideFavoritesRow{guideRow(t, now.Add(-10*time.Minute))} // newest
-	courses := []db.ListCourseFavoritesRow{courseRow(t, now.Add(-20*time.Minute))}  // middle
+	courses := []db.ListCourseFavoritesRow{courseRow(t, now.Add(-20*time.Minute))}   // middle
 	repo.EXPECT().ListFileFavorites(mock.Anything, mock.Anything).Return(files, nil)
 	repo.EXPECT().ListStudyGuideFavorites(mock.Anything, mock.Anything).Return(guides, nil)
 	repo.EXPECT().ListCourseFavorites(mock.Anything, mock.Anything).Return(courses, nil)

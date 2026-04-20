@@ -389,17 +389,51 @@ SET
 WHERE id = sqlc.arg(file_id)::uuid
   AND user_id = sqlc.arg(owner_id)::uuid;
 
--- name: UpdateFile :one
--- Renames a file. Only applies if owned by the caller and not in a deletion state.
--- Returns sql.ErrNoRows when file is not found, not owned, or in deletion.
-UPDATE files
-SET
-    name       = sqlc.arg(name),
+-- name: GetFileForUpdate :one
+-- Existence + state probe used by PATCH /api/files/{file_id} (ASK-113).
+-- Returns the row's user_id and current status so the service can:
+--   * 404 when the row is missing or in any deletion state.
+--   * 403 when the caller is not the owner (returned row's user_id mismatch).
+--   * Validate status transitions (only pending -> complete / failed allowed).
+-- Soft-deleted files are filtered out here so they always map to 404,
+-- regardless of caller -- matching the spec's "Resource not found" rule.
+SELECT id, user_id, status
+FROM files
+WHERE id = sqlc.arg(file_id)::uuid
+  AND deletion_status IS NULL;
+
+-- name: PatchFile :one
+-- Partial update for ASK-113. Each updatable column uses
+-- COALESCE(narg, current) so a nil arg means "leave alone" and a
+-- non-nil arg means "replace". The CTE returns the post-update row
+-- joined with file_favorites + file_last_viewed so the handler can
+-- emit a complete FileResponse without a follow-up SELECT.
+--
+-- The service is responsible for:
+--   * 404 / 403 gating (via GetFileForUpdate before this call).
+--   * The at-least-one-field rule (an empty body is a 400 before SQL).
+--   * Status transition validation (only pending -> complete / failed).
+-- Defense-in-depth: the WHERE clause re-asserts owner + non-deleted so
+-- a concurrent DELETE between GetFileForUpdate and this UPDATE yields
+-- sql.ErrNoRows -> 404 instead of a phantom write.
+WITH updated AS (
+  UPDATE files
+  SET
+    name       = COALESCE(sqlc.narg(name)::text,                  name),
+    status     = COALESCE(sqlc.narg(status)::upload_status,       status),
     updated_at = NOW()
-WHERE id      = sqlc.arg(file_id)::uuid
-  AND user_id = sqlc.arg(owner_id)::uuid
-  AND deletion_status IS NULL
-RETURNING id, user_id, name, size, mime_type, status, created_at, updated_at;
+  WHERE id = sqlc.arg(file_id)::uuid
+    AND user_id = sqlc.arg(owner_id)::uuid
+    AND deletion_status IS NULL
+  RETURNING id, user_id, name, size, mime_type, status, created_at, updated_at
+)
+SELECT
+  u.id, u.user_id, u.name, u.size, u.mime_type, u.status, u.created_at, u.updated_at,
+  fav.created_at AS favorited_at,
+  lv.viewed_at   AS last_viewed_at
+FROM updated u
+LEFT JOIN file_favorites  fav ON fav.user_id = sqlc.arg(viewer_id)::uuid AND fav.file_id = u.id
+LEFT JOIN file_last_viewed lv ON lv.user_id = sqlc.arg(viewer_id)::uuid AND lv.file_id = u.id;
 
 -- name: UpsertFileGrant :one
 -- Inserts a new file grant, returning the row. If the grant already exists

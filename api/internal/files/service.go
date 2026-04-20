@@ -28,7 +28,8 @@ type Repository interface {
 	SoftDeleteFile(ctx context.Context, arg db.SoftDeleteFileParams) (int64, error)
 	SetFileDeletionJobID(ctx context.Context, arg db.SetFileDeletionJobIDParams) error
 	MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
-	UpdateFile(ctx context.Context, arg db.UpdateFileParams) (db.UpdateFileRow, error)
+	GetFileForUpdate(ctx context.Context, fileID pgtype.UUID) (db.GetFileForUpdateRow, error)
+	PatchFile(ctx context.Context, arg db.PatchFileParams) (db.PatchFileRow, error)
 
 	UpsertFileGrant(ctx context.Context, arg db.UpsertFileGrantParams) (db.FileGrant, error)
 	RevokeFileGrant(ctx context.Context, arg db.RevokeFileGrantParams) error
@@ -153,43 +154,102 @@ func (s *Service) ListFiles(ctx context.Context, p ListFilesParams) ([]File, *st
 	return files, nextCursor, nil
 }
 
-// UpdateFile renames a file after validating the new name. The name is trimmed
-// of leading/trailing whitespace before validation. Returns apperrors.ErrNotFound
-// if the file does not belong to the caller or is in a deletion state.
+// UpdateFile applies a partial update (PATCH /api/files/{file_id},
+// ASK-113). Both Name and Status are optional but at least one must be
+// non-nil; the handler is expected to enforce the at-least-one rule but
+// this method re-checks defensively.
+//
+// Validation order (matters for the error the caller sees):
+//  1. At-least-one-field    -> 400 "At least one field must be provided"
+//  2. Per-field validation  -> 400 with a `details` map for both fields
+//  3. 404 / 403 (existence + ownership via GetFileForUpdate)
+//  4. Status transition     -> 400 INVALID_TRANSITION
+//  5. Apply PatchFile and return the joined post-update row
+//
+// Status transitions: the only allowed targets are `complete` and
+// `failed`, both reachable only from `pending`. Every other current
+// status is terminal -- this matches the spec and prevents resurrecting
+// a `failed` upload via PATCH (the user must POST a fresh file).
 func (s *Service) UpdateFile(ctx context.Context, p UpdateFileParams) (File, error) {
-	name := strings.TrimSpace(p.Name)
-	if err := validateFileName(name); err != nil {
-		return File{}, err
+	if p.Name == nil && p.Status == nil {
+		return File{}, apperrors.NewBadRequest("At least one field must be provided", nil)
 	}
 
-	row, err := s.repo.UpdateFile(ctx, db.UpdateFileParams{
-		FileID:  utils.UUID(p.FileID),
-		OwnerID: utils.UUID(p.OwnerID),
-		Name:    name,
+	// Per-field validation -- accumulate so the caller sees both
+	// problems at once (matches the spec's "details with both fields"
+	// edge case).
+	details := make(map[string]string)
+	var trimmedName *string
+	if p.Name != nil {
+		t := strings.TrimSpace(*p.Name)
+		if t == "" {
+			details["name"] = "name cannot be empty"
+		} else if utf8.RuneCountInString(t) > maxFileNameLength {
+			details["name"] = fmt.Sprintf("must be %d characters or fewer", maxFileNameLength)
+		} else if invalid := invalidNameChars(t); len(invalid) > 0 {
+			details["name"] = "contains invalid characters: " + strings.Join(invalid, ", ")
+		} else {
+			trimmedName = &t
+		}
+	}
+	if p.Status != nil {
+		switch *p.Status {
+		case "complete", "failed":
+			// valid target
+		default:
+			details["status"] = "must be 'complete' or 'failed'"
+		}
+	}
+	if len(details) > 0 {
+		return File{}, apperrors.NewBadRequest("Invalid request body", details)
+	}
+
+	// Existence + ownership probe. Soft-deleted rows are filtered out
+	// at the SQL level so they always map to 404 here, matching the
+	// spec's "Resource not found" rule for deleted files.
+	current, err := s.repo.GetFileForUpdate(ctx, utils.UUID(p.FileID))
+	if err != nil {
+		return File{}, err // sql.ErrNoRows -> apperrors.ErrNotFound via ToHTTPError
+	}
+	currentOwner, err := utils.PgxToGoogleUUID(current.UserID)
+	if err != nil {
+		return File{}, fmt.Errorf("UpdateFile: decode owner: %w", err)
+	}
+	if currentOwner != p.OwnerID {
+		return File{}, apperrors.NewForbidden()
+	}
+
+	// Status transition validation. We only enforce this when the
+	// caller asked to change status; pure renames pass through
+	// regardless of current status (a user can rename a `complete`
+	// file).
+	if p.Status != nil && string(current.Status) != "pending" {
+		return File{}, apperrors.NewBadRequest("Invalid status transition", map[string]string{
+			"status": fmt.Sprintf("cannot transition from '%s' to '%s'", current.Status, *p.Status),
+		})
+	}
+
+	row, err := s.repo.PatchFile(ctx, db.PatchFileParams{
+		FileID:   utils.UUID(p.FileID),
+		OwnerID:  utils.UUID(p.OwnerID),
+		ViewerID: utils.UUID(p.ViewerID),
+		Name:     utils.Text(trimmedName),
+		Status:   utils.NullUploadStatus(p.Status),
 	})
 	if err != nil {
+		// A concurrent DELETE between GetFileForUpdate and PatchFile
+		// drops us into sql.ErrNoRows here -- map to 404 to match the
+		// spec's "If DELETE wins, PATCH returns 404" rule.
 		return File{}, err
 	}
-	return mapUpdateFileRow(row)
+	return mapPatchFileRow(row)
 }
 
-const maxFileNameLength = 255
-
-// validateFileName checks that a (already-trimmed) file name is non-empty,
-// within length limits, and free of dangerous characters.
-func validateFileName(name string) *apperrors.AppError {
-	details := make(map[string]string)
-
-	if name == "" {
-		details["name"] = "must not be empty"
-		return apperrors.NewBadRequest("Invalid file name", details)
-	}
-
-	if utf8.RuneCountInString(name) > maxFileNameLength {
-		details["name"] = fmt.Sprintf("must not exceed %d characters", maxFileNameLength)
-		return apperrors.NewBadRequest("Invalid file name", details)
-	}
-
+// invalidNameChars returns a deduped list of disallowed characters
+// found in name (path separators, NULs, control chars). Lifted out of
+// validateFileName so PATCH can run the same check while building a
+// details map without throwing away the helper's other branches.
+func invalidNameChars(name string) []string {
 	var invalid []string
 	seen := make(map[string]bool)
 	for _, r := range name {
@@ -211,13 +271,10 @@ func validateFileName(name string) *apperrors.AppError {
 			invalid = append(invalid, ch)
 		}
 	}
-	if len(invalid) > 0 {
-		details["name"] = "contains invalid characters: " + strings.Join(invalid, ", ")
-		return apperrors.NewBadRequest("Invalid file name", details)
-	}
-
-	return nil
+	return invalid
 }
+
+const maxFileNameLength = 255
 
 // DeleteFileParams holds the inputs required to initiate file deletion.
 type DeleteFileParams struct {

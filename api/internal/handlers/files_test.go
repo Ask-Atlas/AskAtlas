@@ -249,7 +249,7 @@ func TestFileHandler_UpdateFile_Success(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	mockSvc.EXPECT().UpdateFile(mock.Anything, mock.MatchedBy(func(p files.UpdateFileParams) bool {
-		return p.FileID == fileID && p.OwnerID == userID && p.Name == "renamed.pdf"
+		return p.FileID == fileID && p.OwnerID == userID && p.Name != nil && *p.Name == "renamed.pdf"
 	})).Return(files.File{
 		ID:        fileID,
 		UserID:    userID,
@@ -347,4 +347,111 @@ func TestFileHandler_UpdateFile_ValidationError(t *testing.T) {
 	err := json.NewDecoder(w.Body).Decode(&resp)
 	require.NoError(t, err)
 	assert.Contains(t, resp.Details["name"], "/")
+}
+
+// TestFileHandler_UpdateFile_StatusForwarded verifies the wire path
+// for the new ASK-113 status field: a {"status": "complete"} body
+// reaches the service as Name=nil, Status=*"complete". This is the
+// piece the original rename-only handler couldn't carry.
+func TestFileHandler_UpdateFile_StatusForwarded(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFileService(t)
+	h := handlers.NewFileHandler(mockSvc, nil)
+
+	userID := uuid.New()
+	fileID := uuid.New()
+	now := time.Now()
+
+	body := `{"status": "complete"}`
+	req := httptest.NewRequest(http.MethodPatch, "/files/"+fileID.String(), bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	ctx := authctx.WithUserID(req.Context(), userID)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	mockSvc.EXPECT().UpdateFile(mock.Anything, mock.MatchedBy(func(p files.UpdateFileParams) bool {
+		return p.FileID == fileID && p.OwnerID == userID &&
+			p.Name == nil && p.Status != nil && *p.Status == "complete"
+	})).Return(files.File{
+		ID:        fileID,
+		UserID:    userID,
+		Name:      "lecture.pdf",
+		Size:      512,
+		MimeType:  "application/pdf",
+		Status:    "complete",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}, nil)
+
+	r := fileTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var resp api.FileResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, "complete", resp.Status)
+}
+
+// TestFileHandler_UpdateFile_InvalidStatusEnum verifies that a status
+// value outside the openapi enum still reaches the handler as a typed
+// string and is rejected at the service layer with a 400. The
+// openapi-codegen wrapper does NOT enum-validate request bodies (it
+// only generates the typed alias); the service is the contract gate.
+func TestFileHandler_UpdateFile_InvalidStatusEnum(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFileService(t)
+	h := handlers.NewFileHandler(mockSvc, nil)
+
+	userID := uuid.New()
+	fileID := uuid.New()
+
+	body := `{"status": "deleted"}`
+	req := httptest.NewRequest(http.MethodPatch, "/files/"+fileID.String(), bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	ctx := authctx.WithUserID(req.Context(), userID)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	mockSvc.EXPECT().UpdateFile(mock.Anything, mock.MatchedBy(func(p files.UpdateFileParams) bool {
+		return p.Status != nil && *p.Status == "deleted" && p.Name == nil
+	})).Return(files.File{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
+		"status": "must be 'complete' or 'failed'",
+	}))
+
+	r := fileTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var resp apperrors.AppError
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, "must be 'complete' or 'failed'", resp.Details["status"])
+}
+
+// TestFileHandler_UpdateFile_EmptyBody verifies an explicit empty
+// body bubbles to the service which returns 400. This exercises the
+// "at least one field" rule end-to-end through the handler.
+func TestFileHandler_UpdateFile_EmptyBody(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFileService(t)
+	h := handlers.NewFileHandler(mockSvc, nil)
+
+	userID := uuid.New()
+	fileID := uuid.New()
+
+	body := `{}`
+	req := httptest.NewRequest(http.MethodPatch, "/files/"+fileID.String(), bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	ctx := authctx.WithUserID(req.Context(), userID)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+
+	mockSvc.EXPECT().UpdateFile(mock.Anything, mock.MatchedBy(func(p files.UpdateFileParams) bool {
+		return p.Name == nil && p.Status == nil
+	})).Return(files.File{}, apperrors.NewBadRequest("At least one field must be provided", nil))
+
+	r := fileTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var resp apperrors.AppError
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, "At least one field must be provided", resp.Message)
 }

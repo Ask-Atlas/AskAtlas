@@ -67,6 +67,34 @@ func (q *Queries) GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) 
 	return i, err
 }
 
+const getFileForUpdate = `-- name: GetFileForUpdate :one
+SELECT id, user_id, status
+FROM files
+WHERE id = $1::uuid
+  AND deletion_status IS NULL
+`
+
+type GetFileForUpdateRow struct {
+	ID     pgtype.UUID  `json:"id"`
+	UserID pgtype.UUID  `json:"user_id"`
+	Status UploadStatus `json:"status"`
+}
+
+// Existence + state probe used by PATCH /api/files/{file_id} (ASK-113).
+// Returns the row's user_id and current status so the service can:
+//   - 404 when the row is missing or in any deletion state.
+//   - 403 when the caller is not the owner (returned row's user_id mismatch).
+//   - Validate status transitions (only pending -> complete / failed allowed).
+//
+// Soft-deleted files are filtered out here so they always map to 404,
+// regardless of caller -- matching the spec's "Resource not found" rule.
+func (q *Queries) GetFileForUpdate(ctx context.Context, fileID pgtype.UUID) (GetFileForUpdateRow, error) {
+	row := q.db.QueryRow(ctx, getFileForUpdate, fileID)
+	var i GetFileForUpdateRow
+	err := row.Scan(&i.ID, &i.UserID, &i.Status)
+	return i, err
+}
+
 const getFileIfViewable = `-- name: GetFileIfViewable :one
 SELECT f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id
 FROM files f
@@ -1616,6 +1644,86 @@ func (q *Queries) MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
 	return err
 }
 
+const patchFile = `-- name: PatchFile :one
+WITH updated AS (
+  UPDATE files
+  SET
+    name       = COALESCE($2::text,                  name),
+    status     = COALESCE($3::upload_status,       status),
+    updated_at = NOW()
+  WHERE id = $4::uuid
+    AND user_id = $5::uuid
+    AND deletion_status IS NULL
+  RETURNING id, user_id, name, size, mime_type, status, created_at, updated_at
+)
+SELECT
+  u.id, u.user_id, u.name, u.size, u.mime_type, u.status, u.created_at, u.updated_at,
+  fav.created_at AS favorited_at,
+  lv.viewed_at   AS last_viewed_at
+FROM updated u
+LEFT JOIN file_favorites  fav ON fav.user_id = $1::uuid AND fav.file_id = u.id
+LEFT JOIN file_last_viewed lv ON lv.user_id = $1::uuid AND lv.file_id = u.id
+`
+
+type PatchFileParams struct {
+	ViewerID pgtype.UUID      `json:"viewer_id"`
+	Name     pgtype.Text      `json:"name"`
+	Status   NullUploadStatus `json:"status"`
+	FileID   pgtype.UUID      `json:"file_id"`
+	OwnerID  pgtype.UUID      `json:"owner_id"`
+}
+
+type PatchFileRow struct {
+	ID           pgtype.UUID        `json:"id"`
+	UserID       pgtype.UUID        `json:"user_id"`
+	Name         string             `json:"name"`
+	Size         int64              `json:"size"`
+	MimeType     string             `json:"mime_type"`
+	Status       UploadStatus       `json:"status"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	FavoritedAt  pgtype.Timestamptz `json:"favorited_at"`
+	LastViewedAt pgtype.Timestamptz `json:"last_viewed_at"`
+}
+
+// Partial update for ASK-113. Each updatable column uses
+// COALESCE(narg, current) so a nil arg means "leave alone" and a
+// non-nil arg means "replace". The CTE returns the post-update row
+// joined with file_favorites + file_last_viewed so the handler can
+// emit a complete FileResponse without a follow-up SELECT.
+//
+// The service is responsible for:
+//   - 404 / 403 gating (via GetFileForUpdate before this call).
+//   - The at-least-one-field rule (an empty body is a 400 before SQL).
+//   - Status transition validation (only pending -> complete / failed).
+//
+// Defense-in-depth: the WHERE clause re-asserts owner + non-deleted so
+// a concurrent DELETE between GetFileForUpdate and this UPDATE yields
+// sql.ErrNoRows -> 404 instead of a phantom write.
+func (q *Queries) PatchFile(ctx context.Context, arg PatchFileParams) (PatchFileRow, error) {
+	row := q.db.QueryRow(ctx, patchFile,
+		arg.ViewerID,
+		arg.Name,
+		arg.Status,
+		arg.FileID,
+		arg.OwnerID,
+	)
+	var i PatchFileRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.Size,
+		&i.MimeType,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.FavoritedAt,
+		&i.LastViewedAt,
+	)
+	return i, err
+}
+
 const revokeFileGrant = `-- name: RevokeFileGrant :exec
 DELETE FROM file_grants
 WHERE file_id = $1
@@ -1687,52 +1795,6 @@ func (q *Queries) SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) 
 		return 0, err
 	}
 	return result.RowsAffected(), nil
-}
-
-const updateFile = `-- name: UpdateFile :one
-UPDATE files
-SET
-    name       = $1,
-    updated_at = NOW()
-WHERE id      = $2::uuid
-  AND user_id = $3::uuid
-  AND deletion_status IS NULL
-RETURNING id, user_id, name, size, mime_type, status, created_at, updated_at
-`
-
-type UpdateFileParams struct {
-	Name    string      `json:"name"`
-	FileID  pgtype.UUID `json:"file_id"`
-	OwnerID pgtype.UUID `json:"owner_id"`
-}
-
-type UpdateFileRow struct {
-	ID        pgtype.UUID        `json:"id"`
-	UserID    pgtype.UUID        `json:"user_id"`
-	Name      string             `json:"name"`
-	Size      int64              `json:"size"`
-	MimeType  string             `json:"mime_type"`
-	Status    UploadStatus       `json:"status"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
-}
-
-// Renames a file. Only applies if owned by the caller and not in a deletion state.
-// Returns sql.ErrNoRows when file is not found, not owned, or in deletion.
-func (q *Queries) UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateFileRow, error) {
-	row := q.db.QueryRow(ctx, updateFile, arg.Name, arg.FileID, arg.OwnerID)
-	var i UpdateFileRow
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.Name,
-		&i.Size,
-		&i.MimeType,
-		&i.Status,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
 }
 
 const updateFileStatus = `-- name: UpdateFileStatus :exec
