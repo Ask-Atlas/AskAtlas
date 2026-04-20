@@ -1,0 +1,27 @@
+meta {
+  name: Detach Resource
+  type: http
+  seq: 12
+}
+
+delete {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}/resources/{{resourceId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Detach a resource from a study guide
+
+  Removes the link between a resource and a guide. Does NOT
+  delete the resource itself -- a resource may be attached to
+  multiple guides + courses.
+  
+  Authorization: the guide's creator OR the user who attached
+  the resource (`attached_by` on the join row) can detach. The
+  resource's own creator (if different from both) cannot detach
+  when they didn't attach it here.
+  
+  404 covers both 'guide missing/deleted' and 'resource not
+  attached to this guide'.
+}

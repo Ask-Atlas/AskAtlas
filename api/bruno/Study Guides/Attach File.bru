@@ -1,0 +1,27 @@
+meta {
+  name: Attach File
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}/files/{{fileId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Attach a file to a study guide
+
+  Links an already-uploaded file to a study guide. The file must
+  be owned by the viewer (`files.user_id == JWT viewer`) and in
+  `status = 'complete'` with no deletion in progress.
+  
+  Authorization: only the file owner can attach. A user who does
+  not own the file gets 403 (regardless of whether they own the
+  guide -- the rule is "you can only put your own files on
+  guides", to prevent linking other users' private uploads).
+  
+  409 on duplicate -- the same `(file_id, study_guide_id)` pair
+  is already attached.
+}

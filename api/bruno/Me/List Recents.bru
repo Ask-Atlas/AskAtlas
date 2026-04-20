@@ -1,0 +1,26 @@
+meta {
+  name: List Recents
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/me/recents
+  body: none
+  auth: inherit
+}
+
+params:query {
+  limit: 10
+}
+
+docs {
+  # List the authenticated user's most recently viewed items
+
+  Returns the most recently viewed items across files, study guides,
+  and courses for the authenticated user, merged and sorted by
+  `viewed_at DESC` and truncated to `limit`. Powers the "Recents"
+  section of the sidebar. Soft-deleted entities (files in a
+  deletion lifecycle, soft-deleted study guides) are excluded.
+  Courses have no soft-delete and are always eligible.
+}

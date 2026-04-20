@@ -1,0 +1,33 @@
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+docs {
+  # AskAtlas API -- Bruno Collection
+
+  Every request in this collection inherits the collection-level
+  bearer auth. Set `authToken` in the active environment to a Clerk
+  JWT; point `baseUrl` at the target API. The collection ships with
+  `dev` and `staging` environments; add a `local` file if you run
+  `make dev` against `http://localhost:8080`.
+
+  ## Regenerating
+
+  `.bru` files are generated from `api/openapi.yaml` by
+  `scripts/brunogen/main.go`. Re-run via `make bruno` after any spec
+  change. Hand-edits to generated files will be clobbered; add
+  long-form notes to this `collection.bru` docs block or to the
+  environment files instead.
+
+  ## Path parameters
+
+  Operations with path params surface them as collection variables
+  in the active environment (e.g. `fileId`, `studyGuideId`). Bruno
+  substitutes `{{fileId}}` at send time. Defaults to the NIL UUID
+  so a first-time run hits a deterministic 404 instead of
+  accidentally mutating live data.
+}

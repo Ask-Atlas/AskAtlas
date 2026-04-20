@@ -1,0 +1,16 @@
+meta {
+  name: Delete File
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{baseUrl}}/api/files/{{fileId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Delete a file by ID
+
+}

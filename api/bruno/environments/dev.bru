@@ -1,0 +1,27 @@
+vars {
+  baseUrl: https://dev-api.askatlas.ai
+  ~authToken: REPLACE_ME_WITH_A_CLERK_DEV_JWT
+  fileId: 00000000-0000-0000-0000-000000000000
+  studyGuideId: 00000000-0000-0000-0000-000000000000
+  quizId: 00000000-0000-0000-0000-000000000000
+  questionId: 00000000-0000-0000-0000-000000000000
+  sessionId: 00000000-0000-0000-0000-000000000000
+  courseId: 00000000-0000-0000-0000-000000000000
+  schoolId: 00000000-0000-0000-0000-000000000000
+  resourceId: 00000000-0000-0000-0000-000000000000
+  sectionId: 00000000-0000-0000-0000-000000000000
+}
+
+vars:secret [
+  authToken
+]
+
+docs {
+  # Dev environment
+
+  Set `authToken` to a Clerk JWT valid against the dev tenant --
+  Bruno marks it secret so it won't leak into committed run reports.
+  Every path-param UUID defaults to NIL (00000000-...) so an
+  accidental send against a default variable hits 404, not a real
+  row.
+}

@@ -1,0 +1,22 @@
+meta {
+  name: List Schools
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/schools
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~q: 
+  page_limit: 25
+  ~cursor: 
+}
+
+docs {
+  # List and search schools
+
+}

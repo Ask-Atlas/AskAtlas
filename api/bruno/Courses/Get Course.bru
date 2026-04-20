@@ -1,0 +1,16 @@
+meta {
+  name: Get Course
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/courses/{{courseId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Get a course detail with embedded sections
+
+}

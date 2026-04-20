@@ -1,0 +1,65 @@
+meta {
+  name: Start Practice Session
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/quizzes/{{quizId}}/sessions
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Start a new practice session or resume an existing incomplete one
+
+  Returns the practice session for the authenticated user on the
+  target quiz. The status code distinguishes the two paths:
+  
+    * **201 Created** -- a new session was inserted. A snapshot
+      of the quiz's CURRENT questions is frozen into
+      `practice_session_questions` so subsequent edits to the
+      quiz (questions added or removed) do not affect this
+      session. `answers` is an empty array.
+    * **200 OK** -- an in-progress session already exists for
+      this user+quiz (`completed_at IS NULL`). The existing
+      row is returned along with all answers submitted so far.
+      No new snapshot is created.
+  
+  Stale-session cleanup: incomplete sessions whose `started_at`
+  is older than 7 days are hard-deleted before the resume check.
+  After cleanup, "no incomplete session" surfaces as 201
+  (fresh start) rather than 200 (resume) -- per spec AC6.
+  
+  Snapshot semantics: `total_questions` is the COUNT of
+  `quiz_questions` at session-start time. If a question is
+  deleted from the quiz LATER, the
+  `practice_session_questions.question_id` column is set to
+  NULL (ON DELETE SET NULL) but the row persists --
+  `total_questions` does not change. New questions added after
+  session start are NOT in the snapshot.
+  
+  Race protection: a partial unique index on
+  `practice_sessions(user_id, quiz_id) WHERE completed_at IS NULL`
+  guarantees at most one incomplete session per user+quiz at
+  the database level. Two simultaneous starts will both attempt
+  to insert; one wins, the other is detected via
+  `INSERT ... ON CONFLICT DO NOTHING RETURNING` and falls back
+  to the resume path (returning 200 with the winner's session).
+  
+  Authorization: any authenticated user can start a session on
+  any live quiz on a live study guide. There is no per-viewer
+  access control.
+  
+  Resumed-session question content: this endpoint returns
+  session state + answers only. The frontend fetches question
+  content separately via `GET /api/quizzes/{quiz_id}` (ASK-142).
+  
+  Response answer rows: `question_id`, `user_answer`, and
+  `is_correct` are all nullable on the wire. `question_id`
+  becomes NULL when the underlying question is hard-deleted
+  after the answer was submitted (ON DELETE SET NULL).
+  `user_answer` and `is_correct` are nullable to match the
+  schema, though in practice the submit-answer endpoint will
+  never write NULL values.
+}

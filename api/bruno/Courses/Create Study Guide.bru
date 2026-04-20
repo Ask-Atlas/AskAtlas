@@ -1,0 +1,42 @@
+meta {
+  name: Create Study Guide
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/courses/{{courseId}}/study-guides
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "content": "string",
+    "description": "string",
+    "tags": [
+      "string"
+    ],
+    "title": "string"
+  }
+}
+
+docs {
+  # Create a study guide for a course
+
+  Creates a new study guide. Any authenticated user can create a
+  guide for any course. The `creator_id` is taken from the JWT;
+  any value supplied in the request body is ignored.
+  
+  Tags are normalized server-side: each value is trimmed +
+  lowercased + deduplicated (case-insensitively). Empty tags
+  after trim are rejected with 400. Validation order on tags:
+  per-tag length cap first (50 chars), total count cap second
+  (20 tags), then normalize.
+  
+  Returns the full StudyGuideDetail shape on 201 -- empty
+  recommended_by/quizzes/resources/files arrays, vote_score=0,
+  view_count=0, user_vote=null, is_recommended=false. The
+  frontend can render the freshly-created guide without a
+  follow-up GET.
+}

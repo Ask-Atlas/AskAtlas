@@ -1,0 +1,33 @@
+meta {
+  name: List Files
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/me/files
+  body: none
+  auth: inherit
+}
+
+params:query {
+  scope: owned
+  status: complete
+  mime_type: image/jpeg
+  ~min_size: 
+  ~max_size: 
+  ~created_from: 
+  ~created_to: 
+  ~updated_from: 
+  ~updated_to: 
+  ~q: 
+  sort_by: updated_at
+  sort_dir: desc
+  page_limit: 25
+  ~cursor: 
+}
+
+docs {
+  # List files for the current user
+
+}

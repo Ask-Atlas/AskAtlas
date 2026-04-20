@@ -1,0 +1,46 @@
+meta {
+  name: Update Quiz
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/api/quizzes/{{quizId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "description": "string",
+    "title": "string"
+  }
+}
+
+docs {
+  # Update a quiz's metadata (title and/or description)
+
+  Partial-update of the quiz's `title` and/or `description`.
+  Question-level edits flow through the per-question endpoints --
+  this PATCH only touches the quiz row.
+  
+  Authorization: creator-only. The authenticated user MUST be
+  `quizzes.creator_id`; any other authenticated user gets 403.
+  
+  Field semantics:
+    * Both fields are optional. An empty body `{}` is rejected
+      with 400 -- at least one field must be provided.
+    * `title` MUST be non-empty when provided (after trim) and
+      <=500 chars.
+    * `description` accepts JSON `null` to explicitly CLEAR
+      the existing value, a non-empty string to set the value
+      (max 2,000 chars after trim), and a whitespace-only
+      string is downgraded to a clear (NULL) since the column
+      should not store meaningless blank values. To leave the
+      current description untouched, OMIT the field entirely
+      from the request body.
+  
+  404 covers BOTH the quiz being missing/soft-deleted AND the
+  parent study guide being soft-deleted (per spec AC6).
+  `updated_at` is refreshed on every successful PATCH.
+}

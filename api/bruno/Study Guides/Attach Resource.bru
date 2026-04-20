@@ -1,0 +1,41 @@
+meta {
+  name: Attach Resource
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}/resources
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "description": "string",
+    "title": "string",
+    "type": "link",
+    "url": "https://example.com"
+  }
+}
+
+docs {
+  # Attach an external resource to a study guide
+
+  Attaches a URL-based resource (link / video / article / pdf) to
+  a study guide. Resources are community-contributed -- any
+  authenticated user can attach.
+  
+  Resource reuse: a (creator_id, url) pair is unique in the
+  `resources` table. If the viewer has previously created a
+  resource row with the same URL (for any guide), the existing
+  row is reused via INSERT ... ON CONFLICT DO NOTHING + lookup;
+  the original title / description / type are preserved.
+  
+  Conflict detection: if ANY resource (regardless of creator)
+  with the same URL is already attached to this guide, returns
+  409 BEFORE the upsert -- avoids creating new resource rows
+  only to discard them on the join PK violation.
+  
+  Returns 201 with the (possibly-reused) resource row.
+}

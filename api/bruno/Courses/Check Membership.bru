@@ -1,0 +1,20 @@
+meta {
+  name: Check Membership
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/courses/{{courseId}}/sections/{{sectionId}}/members/me
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Check the authenticated user's membership in a section
+
+  Powers the per-section Join/Leave button on the course detail
+  page. Always returns 200 -- non-membership is `enrolled: false`
+  with null role/joined_at, NOT 404, so the frontend can
+  distinguish "not enrolled" from "section does not exist".
+}
