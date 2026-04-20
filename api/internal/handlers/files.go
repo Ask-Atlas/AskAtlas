@@ -134,7 +134,15 @@ func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request, fileId 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// UpdateFile handles requests to rename a file.
+// UpdateFile handles PATCH /api/files/{file_id} (ASK-113). Both
+// `name` and `status` are optional but at least one must be provided
+// -- the service enforces the at-least-one rule and the per-field
+// validation (length, allowed chars, status enum, transition).
+//
+// The handler trusts the openapi-codegen wrapper to reject completely
+// malformed JSON before this runs; an explicit decode error here just
+// means the wrapper passed through a payload we still couldn't parse,
+// so it surfaces as a generic 400.
 func (h *FileHandler) UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
 	viewerID, appErr := viewerIDFromContext(r)
 	if appErr != nil {
@@ -144,14 +152,24 @@ func (h *FileHandler) UpdateFile(w http.ResponseWriter, r *http.Request, fileId 
 
 	var body api.UpdateFileRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		apperrors.RespondWithError(w, apperrors.NewBadRequest("invalid request body", nil))
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", nil))
 		return
 	}
 
+	// Reshape the openapi typed enum into a plain *string so the
+	// service can validate it without reaching back into api.* types.
+	var statusPtr *string
+	if body.Status != nil {
+		s := string(*body.Status)
+		statusPtr = &s
+	}
+
 	params := files.UpdateFileParams{
-		FileID:  uuid.UUID(fileId),
-		OwnerID: viewerID,
-		Name:    body.Name,
+		FileID:   uuid.UUID(fileId),
+		OwnerID:  viewerID,
+		ViewerID: viewerID,
+		Name:     body.Name,
+		Status:   statusPtr,
 	}
 
 	file, err := h.service.UpdateFile(r.Context(), params)

@@ -175,6 +175,14 @@ type Querier interface {
 	// the cross-package read keeps the service layer aware of file
 	// ownership without reaching into the files package.
 	GetFileForAttach(ctx context.Context, id pgtype.UUID) (GetFileForAttachRow, error)
+	// Existence + state probe used by PATCH /api/files/{file_id} (ASK-113).
+	// Returns the row's user_id and current status so the service can:
+	//   * 404 when the row is missing or in any deletion state.
+	//   * 403 when the caller is not the owner (returned row's user_id mismatch).
+	//   * Validate status transitions (only pending -> complete / failed allowed).
+	// Soft-deleted files are filtered out here so they always map to 404,
+	// regardless of caller -- matching the spec's "Resource not found" rule.
+	GetFileForUpdate(ctx context.Context, fileID pgtype.UUID) (GetFileForUpdateRow, error)
 	GetFileIfViewable(ctx context.Context, arg GetFileIfViewableParams) (File, error)
 	// Lookup for DetachResource (ASK-116). Returns the attached_by user
 	// on the join row so the service can run the dual-authz check
@@ -771,6 +779,20 @@ type Querier interface {
 	// LockSessionForCompletion + the FOR UPDATE row lock. By the
 	// time this runs, the only legitimate outcome is "row updated".
 	MarkSessionCompleted(ctx context.Context, id pgtype.UUID) (pgtype.Timestamptz, error)
+	// Partial update for ASK-113. Each updatable column uses
+	// COALESCE(narg, current) so a nil arg means "leave alone" and a
+	// non-nil arg means "replace". The CTE returns the post-update row
+	// joined with file_favorites + file_last_viewed so the handler can
+	// emit a complete FileResponse without a follow-up SELECT.
+	//
+	// The service is responsible for:
+	//   * 404 / 403 gating (via GetFileForUpdate before this call).
+	//   * The at-least-one-field rule (an empty body is a 400 before SQL).
+	//   * Status transition validation (only pending -> complete / failed).
+	// Defense-in-depth: the WHERE clause re-asserts owner + non-deleted so
+	// a concurrent DELETE between GetFileForUpdate and this UPDATE yields
+	// sql.ErrNoRows -> 404 instead of a phantom write.
+	PatchFile(ctx context.Context, arg PatchFileParams) (PatchFileRow, error)
 	// Dashboard queries (ASK-155). Each section of GET /api/me/dashboard
 	// has 1-2 dedicated queries; the service orchestrates the ~10 queries
 	// in parallel-equivalent fan-out and assembles the response.
@@ -866,9 +888,6 @@ type Querier interface {
 	// on the guide -- this query enforces the no-duplicate-URLs-per-guide
 	// contract at the application layer.
 	URLAlreadyAttachedToGuide(ctx context.Context, arg URLAlreadyAttachedToGuideParams) (bool, error)
-	// Renames a file. Only applies if owned by the caller and not in a deletion state.
-	// Returns sql.ErrNoRows when file is not found, not owned, or in deletion.
-	UpdateFile(ctx context.Context, arg UpdateFileParams) (UpdateFileRow, error)
 	UpdateFileStatus(ctx context.Context, arg UpdateFileStatusParams) error
 	// Partial update for ASK-153. The title column uses the standard
 	// COALESCE(narg, current) pattern -- nil means "leave alone".

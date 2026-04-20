@@ -185,7 +185,19 @@ paths:
           $ref: '#/components/responses/InternalServerError'
     patch:
       operationId: UpdateFile
-      summary: Rename a file
+      summary: Update file metadata and status (ASK-113)
+      description: |
+        Updates file metadata (rename) and/or transitions the upload
+        status. Called by the Next.js server after the presigned-URL
+        upload completes (or fails) to move the record from `pending`
+        to `complete` or `failed`. Also supports standalone renaming
+        of any non-deleted file the caller owns.
+
+        Both fields are optional but at least one must be provided.
+
+        Status transitions are restricted: only `pending -> complete`
+        and `pending -> failed` are allowed. All other combinations
+        return 400 INVALID_TRANSITION.
       parameters:
         - name: file_id
           in: path
@@ -211,6 +223,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -2310,14 +2324,28 @@ components:
         - s3_key
     UpdateFileRequest:
       type: object
-      description: Request body for updating file metadata
+      description: |
+        Partial update for a file. Both fields are optional but at
+        least one must be provided -- an empty body returns 400.
+        Only the provided fields are updated; unprovided fields are
+        left unchanged. Status transitions are restricted to
+        `pending -> complete` and `pending -> failed` (see endpoint
+        description).
       properties:
         name:
           type: string
           minLength: 1
           maxLength: 255
-      required:
-        - name
+          description: New display name. Trimmed before validation.
+        status:
+          type: string
+          enum:
+            - complete
+            - failed
+          description: |
+            New upload status. Only `complete` or `failed` are valid
+            target states; the file must currently be `pending` for
+            the transition to succeed.
     ListFilesResponse:
       type: object
       description: A paginated collection of files

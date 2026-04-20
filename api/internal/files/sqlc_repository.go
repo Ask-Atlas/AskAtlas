@@ -256,14 +256,29 @@ func (r *sqlcRepository) SetFileDeletionJobID(ctx context.Context, arg db.SetFil
 	return nil
 }
 
-func (r *sqlcRepository) UpdateFile(ctx context.Context, arg db.UpdateFileParams) (db.UpdateFileRow, error) {
-	slog.Debug("updating file", "file_id", arg.FileID, "owner_id", arg.OwnerID)
-	row, err := r.queries.UpdateFile(ctx, arg)
+func (r *sqlcRepository) GetFileForUpdate(ctx context.Context, fileID pgtype.UUID) (db.GetFileForUpdateRow, error) {
+	slog.Debug("getting file for update", "file_id", fileID)
+	row, err := r.queries.GetFileForUpdate(ctx, fileID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return db.UpdateFileRow{}, fmt.Errorf("UpdateFile: %w", apperrors.ErrNotFound)
+			return db.GetFileForUpdateRow{}, fmt.Errorf("GetFileForUpdate: %w", apperrors.ErrNotFound)
 		}
-		return db.UpdateFileRow{}, fmt.Errorf("UpdateFile: %w", err)
+		return db.GetFileForUpdateRow{}, fmt.Errorf("GetFileForUpdate: %w", err)
+	}
+	return row, nil
+}
+
+func (r *sqlcRepository) PatchFile(ctx context.Context, arg db.PatchFileParams) (db.PatchFileRow, error) {
+	slog.Debug("patching file", "file_id", arg.FileID, "owner_id", arg.OwnerID)
+	row, err := r.queries.PatchFile(ctx, arg)
+	if err != nil {
+		// A concurrent DELETE between the GetFileForUpdate probe and
+		// this UPDATE drops the WHERE clause to zero rows, so the CTE
+		// scan returns sql.ErrNoRows -- map to 404 to match the spec.
+		if errors.Is(err, sql.ErrNoRows) {
+			return db.PatchFileRow{}, fmt.Errorf("PatchFile: %w", apperrors.ErrNotFound)
+		}
+		return db.PatchFileRow{}, fmt.Errorf("PatchFile: %w", err)
 	}
 	return row, nil
 }

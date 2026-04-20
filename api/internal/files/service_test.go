@@ -3,6 +3,7 @@ package files_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -227,96 +228,310 @@ func TestService_CreateFile_StoresS3KeyVerbatim(t *testing.T) {
 	assert.Equal(t, weirdKey, captured, "service must store the caller-supplied s3_key verbatim, with no sanitization")
 }
 
-func TestService_UpdateFile_Success(t *testing.T) {
+// ----------------------------------------------------------------------
+// PATCH /api/files/{file_id} -- ASK-113.
+//
+// Coverage matrix (mapped to the 10 acceptance criteria + edge cases
+// in the ticket):
+//
+//   AC1  pending -> complete                        StatusComplete_Success
+//   AC2  pending -> failed                          StatusFailed_Success
+//   AC3  complete -> failed                         InvalidTransition_*
+//   AC4  failed -> complete                         InvalidTransition_*
+//   AC5  rename only on a complete file             RenameOnly_OnCompleteFile
+//   AC6  rename + status atomically                 NameAndStatus_Atomic
+//   AC7  not the owner                              NotOwner
+//   AC8  non-existent file                          NotFound
+//   AC9  soft-deleted file                          NotFound (same path -- SQL filter)
+//   AC10 empty body                                 EmptyBody
+//
+// Edge cases:
+//   - status enum violation                         InvalidStatusValue
+//   - both name + status invalid                    BothFieldsInvalid_DetailsForBoth
+//   - name 255 chars (boundary in)                  Name255Chars_Accepted
+//   - name 256 chars (boundary out)                 NameTooLong
+//   - name "" / "   "                               EmptyName_AfterTrim
+//   - name with /, \, control chars                 DangerousChars
+//   - DB error mid-PATCH                            PatchFile_Error
+// ----------------------------------------------------------------------
+
+// patchFileTestSetup primes a successful GetFileForUpdate response so a
+// test can focus on whatever it's actually exercising. Returns the
+// fresh repo + service + file/owner ids so callers can compose
+// further EXPECT() lines.
+func patchFileTestSetup(t *testing.T, currentStatus db.UploadStatus) (*mock_files.MockRepository, *files.Service, uuid.UUID, uuid.UUID) {
+	t.Helper()
 	repo := mock_files.NewMockRepository(t)
 	svc := files.NewService(repo)
-
 	fid := uuid.New()
 	oid := uuid.New()
-	now := time.Now()
 
 	repo.EXPECT().
-		UpdateFile(mock.Anything, mock.MatchedBy(func(arg db.UpdateFileParams) bool {
-			return arg.FileID == utils.UUID(fid) &&
-				arg.OwnerID == utils.UUID(oid) &&
-				arg.Name == "renamed.pdf"
-		})).
-		Return(db.UpdateFileRow{
+		GetFileForUpdate(mock.Anything, utils.UUID(fid)).
+		Return(db.GetFileForUpdateRow{
+			ID:     utils.UUID(fid),
+			UserID: utils.UUID(oid),
+			Status: currentStatus,
+		}, nil)
+
+	return repo, svc, fid, oid
+}
+
+// expectPatchFile registers a PatchFile expectation that returns a
+// canned post-update row. Tests assert on the matched arg.
+func expectPatchFile(repo *mock_files.MockRepository, fid, oid uuid.UUID, match func(arg db.PatchFileParams) bool, returnedName string, returnedStatus db.UploadStatus) {
+	now := time.Now()
+	repo.EXPECT().
+		PatchFile(mock.Anything, mock.MatchedBy(match)).
+		Return(db.PatchFileRow{
 			ID:        utils.UUID(fid),
 			UserID:    utils.UUID(oid),
-			Name:      "renamed.pdf",
+			Name:      returnedName,
 			Size:      1024,
 			MimeType:  "application/pdf",
-			Status:    "complete",
+			Status:    returnedStatus,
 			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
 			UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
 		}, nil)
+}
+
+func strPtr(s string) *string { return &s }
+
+func TestService_UpdateFile_StatusComplete_Success(t *testing.T) {
+	repo, svc, fid, oid := patchFileTestSetup(t, "pending")
+	expectPatchFile(repo, fid, oid, func(arg db.PatchFileParams) bool {
+		return arg.FileID == utils.UUID(fid) &&
+			arg.OwnerID == utils.UUID(oid) &&
+			arg.ViewerID == utils.UUID(oid) &&
+			!arg.Name.Valid &&
+			arg.Status.Valid && arg.Status.UploadStatus == "complete"
+	}, "notes.pdf", "complete")
 
 	f, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
-		FileID:  fid,
-		OwnerID: oid,
-		Name:    "renamed.pdf",
+		FileID:   fid,
+		OwnerID:  oid,
+		ViewerID: oid,
+		Status:   strPtr("complete"),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, fid, f.ID)
+	assert.Equal(t, "complete", f.Status)
+}
+
+func TestService_UpdateFile_StatusFailed_Success(t *testing.T) {
+	repo, svc, fid, oid := patchFileTestSetup(t, "pending")
+	expectPatchFile(repo, fid, oid, func(arg db.PatchFileParams) bool {
+		return arg.Status.Valid && arg.Status.UploadStatus == "failed"
+	}, "notes.pdf", "failed")
+
+	f, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID:   fid,
+		OwnerID:  oid,
+		ViewerID: oid,
+		Status:   strPtr("failed"),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "failed", f.Status)
+}
+
+func TestService_UpdateFile_InvalidTransition_CompleteToFailed(t *testing.T) {
+	_, svc, fid, oid := patchFileTestSetup(t, "complete")
+
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID: fid, OwnerID: oid, ViewerID: oid,
+		Status: strPtr("failed"),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, 400, appErr.Code)
+	assert.Contains(t, appErr.Details["status"], "cannot transition from 'complete' to 'failed'")
+}
+
+func TestService_UpdateFile_InvalidTransition_FailedToComplete(t *testing.T) {
+	_, svc, fid, oid := patchFileTestSetup(t, "failed")
+
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID: fid, OwnerID: oid, ViewerID: oid,
+		Status: strPtr("complete"),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Contains(t, appErr.Details["status"], "cannot transition from 'failed' to 'complete'")
+}
+
+func TestService_UpdateFile_RenameOnly_OnCompleteFile(t *testing.T) {
+	// AC5: A file already in `complete` can still be renamed --
+	// status validation only fires when the caller asked to change it.
+	repo, svc, fid, oid := patchFileTestSetup(t, "complete")
+	expectPatchFile(repo, fid, oid, func(arg db.PatchFileParams) bool {
+		return arg.Name.Valid && arg.Name.String == "renamed.pdf" && !arg.Status.Valid
+	}, "renamed.pdf", "complete")
+
+	f, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID: fid, OwnerID: oid, ViewerID: oid,
+		Name: strPtr("renamed.pdf"),
+	})
+	require.NoError(t, err)
 	assert.Equal(t, "renamed.pdf", f.Name)
-	assert.Equal(t, int64(1024), f.Size)
+	assert.Equal(t, "complete", f.Status)
+}
+
+func TestService_UpdateFile_NameAndStatus_Atomic(t *testing.T) {
+	// AC6: pending file, both name + status are sent in the same call.
+	repo, svc, fid, oid := patchFileTestSetup(t, "pending")
+	expectPatchFile(repo, fid, oid, func(arg db.PatchFileParams) bool {
+		return arg.Name.Valid && arg.Name.String == "new-name.pdf" &&
+			arg.Status.Valid && arg.Status.UploadStatus == "complete"
+	}, "new-name.pdf", "complete")
+
+	f, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID: fid, OwnerID: oid, ViewerID: oid,
+		Name:   strPtr("new-name.pdf"),
+		Status: strPtr("complete"),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "new-name.pdf", f.Name)
+	assert.Equal(t, "complete", f.Status)
+}
+
+func TestService_UpdateFile_NotOwner(t *testing.T) {
+	// AC7: caller is not the file owner -> 403, no PatchFile call.
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+	fid := uuid.New()
+	owner := uuid.New()
+	caller := uuid.New() // different user
+
+	repo.EXPECT().
+		GetFileForUpdate(mock.Anything, utils.UUID(fid)).
+		Return(db.GetFileForUpdateRow{
+			ID:     utils.UUID(fid),
+			UserID: utils.UUID(owner),
+			Status: "pending",
+		}, nil)
+
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID: fid, OwnerID: caller, ViewerID: caller,
+		Name: strPtr("renamed.pdf"),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, 403, appErr.Code)
 }
 
 func TestService_UpdateFile_NotFound(t *testing.T) {
+	// AC8 + AC9: missing or soft-deleted -> 404. Both reach service
+	// as sql.ErrNoRows from the repo layer.
 	repo := mock_files.NewMockRepository(t)
 	svc := files.NewService(repo)
 
 	repo.EXPECT().
-		UpdateFile(mock.Anything, mock.Anything).
-		Return(db.UpdateFileRow{}, fmt.Errorf("UpdateFile: %w", apperrors.ErrNotFound))
+		GetFileForUpdate(mock.Anything, mock.Anything).
+		Return(db.GetFileForUpdateRow{}, fmt.Errorf("GetFileForUpdate: %w", apperrors.ErrNotFound))
 
 	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
-		FileID:  uuid.New(),
-		OwnerID: uuid.New(),
-		Name:    "valid-name.pdf",
+		FileID: uuid.New(), OwnerID: uuid.New(), ViewerID: uuid.New(),
+		Name: strPtr("renamed.pdf"),
 	})
 	require.Error(t, err)
 	assert.ErrorIs(t, err, apperrors.ErrNotFound)
 }
 
-func TestService_UpdateFile_EmptyNameAfterTrim(t *testing.T) {
+func TestService_UpdateFile_EmptyBody(t *testing.T) {
+	// AC10: both fields nil -> 400 before we touch the DB.
 	repo := mock_files.NewMockRepository(t)
 	svc := files.NewService(repo)
 
 	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
-		FileID:  uuid.New(),
-		OwnerID: uuid.New(),
-		Name:    "   ",
+		FileID: uuid.New(), OwnerID: uuid.New(), ViewerID: uuid.New(),
 	})
 	require.Error(t, err)
-
 	var appErr *apperrors.AppError
 	require.ErrorAs(t, err, &appErr)
 	assert.Equal(t, 400, appErr.Code)
-	assert.Contains(t, appErr.Details["name"], "must not be empty")
+	assert.Equal(t, "At least one field must be provided", appErr.Message)
+}
+
+func TestService_UpdateFile_InvalidStatusValue(t *testing.T) {
+	// "pending" is not a valid target (neither is "deleted" or any
+	// other arbitrary string). Service rejects before DB.
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID: uuid.New(), OwnerID: uuid.New(), ViewerID: uuid.New(),
+		Status: strPtr("pending"),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, "must be 'complete' or 'failed'", appErr.Details["status"])
+}
+
+func TestService_UpdateFile_BothFieldsInvalid_DetailsForBoth(t *testing.T) {
+	// Edge case: both name and status are invalid -> details map
+	// surfaces both.
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID: uuid.New(), OwnerID: uuid.New(), ViewerID: uuid.New(),
+		Name:   strPtr("   "), // empty after trim
+		Status: strPtr("bogus"),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, 400, appErr.Code)
+	assert.NotEmpty(t, appErr.Details["name"])
+	assert.NotEmpty(t, appErr.Details["status"])
+}
+
+func TestService_UpdateFile_Name255Chars_Accepted(t *testing.T) {
+	// Boundary: exactly 255 ASCII characters is accepted.
+	name := strings.Repeat("a", 255)
+	repo, svc, fid, oid := patchFileTestSetup(t, "complete")
+	expectPatchFile(repo, fid, oid, func(arg db.PatchFileParams) bool {
+		return arg.Name.Valid && arg.Name.String == name
+	}, name, "complete")
+
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID: fid, OwnerID: oid, ViewerID: oid,
+		Name: &name,
+	})
+	require.NoError(t, err)
 }
 
 func TestService_UpdateFile_NameTooLong(t *testing.T) {
+	// Boundary: 256 chars is over.
+	name := strings.Repeat("a", 256)
 	repo := mock_files.NewMockRepository(t)
 	svc := files.NewService(repo)
 
-	longName := string(make([]byte, 256))
-	for i := range longName {
-		longName = longName[:i] + "a" + longName[i+1:]
-	}
-
 	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
-		FileID:  uuid.New(),
-		OwnerID: uuid.New(),
-		Name:    longName,
+		FileID: uuid.New(), OwnerID: uuid.New(), ViewerID: uuid.New(),
+		Name: &name,
 	})
 	require.Error(t, err)
-
 	var appErr *apperrors.AppError
 	require.ErrorAs(t, err, &appErr)
-	assert.Equal(t, 400, appErr.Code)
 	assert.Contains(t, appErr.Details["name"], "255")
+}
+
+func TestService_UpdateFile_EmptyName_AfterTrim(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID: uuid.New(), OwnerID: uuid.New(), ViewerID: uuid.New(),
+		Name: strPtr("   "),
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, "name cannot be empty", appErr.Details["name"])
 }
 
 func TestService_UpdateFile_DangerousChars(t *testing.T) {
@@ -324,49 +539,45 @@ func TestService_UpdateFile_DangerousChars(t *testing.T) {
 	svc := files.NewService(repo)
 
 	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
-		FileID:  uuid.New(),
-		OwnerID: uuid.New(),
-		Name:    "my/file\\name.pdf",
+		FileID: uuid.New(), OwnerID: uuid.New(), ViewerID: uuid.New(),
+		Name: strPtr("my/file\\name.pdf"),
 	})
 	require.Error(t, err)
-
 	var appErr *apperrors.AppError
 	require.ErrorAs(t, err, &appErr)
-	assert.Equal(t, 400, appErr.Code)
 	assert.Contains(t, appErr.Details["name"], "/")
 	assert.Contains(t, appErr.Details["name"], "\\")
 }
 
 func TestService_UpdateFile_WhitespaceTrimmed(t *testing.T) {
-	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo)
+	// Service trims before sending to SQL -- the repo sees the trimmed
+	// form, not the padded original.
+	repo, svc, fid, oid := patchFileTestSetup(t, "complete")
+	expectPatchFile(repo, fid, oid, func(arg db.PatchFileParams) bool {
+		return arg.Name.Valid && arg.Name.String == "trimmed.pdf"
+	}, "trimmed.pdf", "complete")
 
-	fid := uuid.New()
-	oid := uuid.New()
-	now := time.Now()
-
-	repo.EXPECT().
-		UpdateFile(mock.Anything, mock.MatchedBy(func(arg db.UpdateFileParams) bool {
-			return arg.Name == "trimmed.pdf" // Verify whitespace was stripped
-		})).
-		Return(db.UpdateFileRow{
-			ID:        utils.UUID(fid),
-			UserID:    utils.UUID(oid),
-			Name:      "trimmed.pdf",
-			Size:      512,
-			MimeType:  "application/pdf",
-			Status:    "complete",
-			CreatedAt: pgtype.Timestamptz{Time: now, Valid: true},
-			UpdatedAt: pgtype.Timestamptz{Time: now, Valid: true},
-		}, nil)
-
-	f, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
-		FileID:  fid,
-		OwnerID: oid,
-		Name:    "  trimmed.pdf  ",
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID: fid, OwnerID: oid, ViewerID: oid,
+		Name: strPtr("  trimmed.pdf  "),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "trimmed.pdf", f.Name)
+}
+
+func TestService_UpdateFile_PatchFile_Error(t *testing.T) {
+	// DB error after probe succeeds -> error propagated unchanged.
+	// Models the "concurrent DELETE wins" race in the spec.
+	repo, svc, fid, oid := patchFileTestSetup(t, "pending")
+	repo.EXPECT().
+		PatchFile(mock.Anything, mock.Anything).
+		Return(db.PatchFileRow{}, fmt.Errorf("PatchFile: %w", apperrors.ErrNotFound))
+
+	_, err := svc.UpdateFile(context.Background(), files.UpdateFileParams{
+		FileID: fid, OwnerID: oid, ViewerID: oid,
+		Status: strPtr("complete"),
+	})
+	require.Error(t, err)
+	assert.ErrorIs(t, err, apperrors.ErrNotFound)
 }
 
 func TestService_GetFile(t *testing.T) {

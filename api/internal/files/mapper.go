@@ -142,26 +142,32 @@ func mapGrantRow(r db.FileGrant) (Grant, error) {
 	}, nil
 }
 
-// mapUpdateFileRow converts an UpdateFile RETURNING row into the domain File model.
-func mapUpdateFileRow(r db.UpdateFileRow) (File, error) {
+// mapPatchFileRow converts a PatchFile CTE RETURNING row into the
+// domain File model. Includes favorited_at + last_viewed_at because
+// PATCH /api/files/{file_id} (ASK-113) reuses the FileResponse shape
+// from GET, where those fields appear as nullable timestamps populated
+// from the (viewer, file) join.
+func mapPatchFileRow(r db.PatchFileRow) (File, error) {
 	id, err := utils.PgxToGoogleUUID(r.ID)
 	if err != nil {
-		return File{}, fmt.Errorf("mapUpdateFileRow: ID: %w", err)
+		return File{}, fmt.Errorf("mapPatchFileRow: ID: %w", err)
 	}
 	userID, err := utils.PgxToGoogleUUID(r.UserID)
 	if err != nil {
-		return File{}, fmt.Errorf("mapUpdateFileRow: UserID: %w", err)
+		return File{}, fmt.Errorf("mapPatchFileRow: UserID: %w", err)
 	}
 
 	return File{
-		ID:        id,
-		UserID:    userID,
-		Name:      r.Name,
-		Size:      r.Size,
-		MimeType:  string(r.MimeType),
-		Status:    string(r.Status),
-		CreatedAt: r.CreatedAt.Time,
-		UpdatedAt: r.UpdatedAt.Time,
+		ID:           id,
+		UserID:       userID,
+		Name:         r.Name,
+		Size:         r.Size,
+		MimeType:     string(r.MimeType),
+		Status:       string(r.Status),
+		CreatedAt:    r.CreatedAt.Time,
+		UpdatedAt:    r.UpdatedAt.Time,
+		FavoritedAt:  utils.TimestamptzPtr(r.FavoritedAt),
+		LastViewedAt: utils.TimestamptzPtr(r.LastViewedAt),
 	}, nil
 }
 
