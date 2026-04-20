@@ -2010,6 +2010,41 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /me/recents:
+    get:
+      operationId: ListRecents
+      summary: List the authenticated user's most recently viewed items
+      description: |
+        Returns the most recently viewed items across files, study guides,
+        and courses for the authenticated user, merged and sorted by
+        `viewed_at DESC` and truncated to `limit`. Powers the "Recents"
+        section of the sidebar. Soft-deleted entities (files in a
+        deletion lifecycle, soft-deleted study guides) are excluded.
+        Courses have no soft-delete and are always eligible.
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of recent items to return
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 30
+            default: 10
+      responses:
+        '200':
+          description: Merged recent items for the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListRecentsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /courses/{course_id}/sections/{section_id}/members/me:
     get:
       operationId: CheckMembership
@@ -3661,6 +3696,115 @@ components:
         - total_questions
         - correct_answers
         - answers
+    RecentFileSummary:
+      type: object
+      description: |
+        Compact file payload embedded in a RecentItem when
+        `entity_type=file`. Only the fields the sidebar needs to render
+        a row label and an icon — full file metadata lives at
+        GET /api/files/{file_id}.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        mime_type:
+          type: string
+      required:
+        - id
+        - name
+        - mime_type
+    RecentStudyGuideSummary:
+      type: object
+      description: |
+        Compact study-guide payload embedded in a RecentItem when
+        `entity_type=study_guide`. Includes the parent course's
+        department + number so the sidebar can render
+        "CPTS 322 -- Binary Trees Cheat Sheet" without a follow-up
+        request.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        course_department:
+          type: string
+        course_number:
+          type: string
+      required:
+        - id
+        - title
+        - course_department
+        - course_number
+    RecentCourseSummary:
+      type: object
+      description: |
+        Compact course payload embedded in a RecentItem when
+        `entity_type=course`. Mirrors the (department, number, title)
+        triple used elsewhere in the API.
+      properties:
+        id:
+          type: string
+          format: uuid
+        department:
+          type: string
+        number:
+          type: string
+        title:
+          type: string
+      required:
+        - id
+        - department
+        - number
+        - title
+    RecentItem:
+      type: object
+      description: |
+        A single recent item. Exactly one of `file`, `study_guide`, or
+        `course` is populated; the other two fields are absent (not
+        null) and `entity_type` declares which one. `entity_id` mirrors
+        the populated summary's `id` so callers can route purely off
+        the envelope without unpacking the per-type payload.
+      properties:
+        entity_type:
+          type: string
+          enum:
+            - file
+            - study_guide
+            - course
+        entity_id:
+          type: string
+          format: uuid
+        viewed_at:
+          type: string
+          format: date-time
+        file:
+          $ref: '#/components/schemas/RecentFileSummary'
+        study_guide:
+          $ref: '#/components/schemas/RecentStudyGuideSummary'
+        course:
+          $ref: '#/components/schemas/RecentCourseSummary'
+      required:
+        - entity_type
+        - entity_id
+        - viewed_at
+    ListRecentsResponse:
+      type: object
+      description: |
+        Response envelope for GET /api/me/recents. `recents` is always
+        an array (empty when the user has no view history). A struct
+        wrapper rather than a bare array so future additions (an
+        echoed `limit`, an aggregate `total_view_count`) can land
+        backwards-compatibly.
+      properties:
+        recents:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecentItem'
+      required:
+        - recents
     AppError:
       type: object
       description: Standardized error response structure matching application error domains
