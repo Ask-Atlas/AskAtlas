@@ -18,6 +18,7 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/config"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/courses"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/favorites"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/files"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/handlers"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/logging"
@@ -113,6 +114,10 @@ func main() {
 	recentsService := recents.NewService(recentsRepo)
 	recentsHandler := handlers.NewRecentsHandler(recentsService)
 
+	favoritesRepo := favorites.NewSQLCRepository(queries)
+	favoritesService := favorites.NewService(favoritesRepo)
+	favoritesHandler := handlers.NewFavoritesHandler(favoritesService)
+
 	clerkAuth := middleware.ClerkAuth(userService)
 
 	r.Use(chiMiddleware.Timeout(60 * time.Second))
@@ -142,7 +147,7 @@ func main() {
 		},
 	}
 
-	compositeHandler := handlers.NewCompositeHandler(fileHandler, grantHandler, schoolsHandler, coursesHandler, studyGuidesHandler, quizzesHandler, sessionsHandler, recentsHandler)
+	compositeHandler := handlers.NewCompositeHandler(fileHandler, grantHandler, schoolsHandler, coursesHandler, studyGuidesHandler, quizzesHandler, sessionsHandler, recentsHandler, favoritesHandler)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(clerkAuth)
