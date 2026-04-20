@@ -180,6 +180,18 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/replace-quiz-question",
+          label: "Replace a question in a quiz (ASK-108)",
+          className: "api-method put",
+        },
+        {
+          type: "doc",
+          id: "api/delete-quiz-question",
+          label: "Delete a question from a quiz (ASK-119)",
+          className: "api-method delete",
+        },
+        {
+          type: "doc",
           id: "api/list-practice-sessions",
           label: "List the authenticated user's practice sessions for a quiz",
           className: "api-method get",
