@@ -458,11 +458,13 @@ FROM updated u
 LEFT JOIN file_favorites  fav ON fav.user_id = sqlc.arg(viewer_id)::uuid AND fav.file_id = u.id
 LEFT JOIN file_last_viewed lv ON lv.user_id = sqlc.arg(viewer_id)::uuid AND lv.file_id = u.id;
 
--- name: UpsertFileGrant :one
--- Inserts a new file grant, returning the row. If the grant already exists
--- (same file_id, grantee_type, grantee_id, permission), updates granted_by
--- and returns the row. Using DO UPDATE SET avoids a race window where
--- concurrent inserts could cause both INSERT and fallback SELECT to miss.
+-- name: InsertFileGrant :one
+-- Inserts a new file_grants row for POST /api/files/{file_id}/grants
+-- (ASK-122). Plain INSERT -- no ON CONFLICT DO UPDATE because the
+-- spec requires returning 409 Conflict on a duplicate (not silently
+-- updating granted_by). A unique-key violation (sqlstate 23505)
+-- propagates up as a pgx PgError; the service translates it to
+-- apperrors.ErrConflict so the handler emits a 409.
 INSERT INTO file_grants (file_id, grantee_type, grantee_id, permission, granted_by)
 VALUES (
     sqlc.arg(file_id)::uuid,
@@ -471,18 +473,31 @@ VALUES (
     sqlc.arg(permission)::permission,
     sqlc.arg(granted_by)::uuid
 )
-ON CONFLICT (file_id, grantee_type, grantee_id, permission)
-DO UPDATE SET granted_by = EXCLUDED.granted_by
 RETURNING *;
 
--- name: RevokeFileGrant :exec
--- Deletes a file grant matching the exact composite key. No-op if the grant
--- does not exist (idempotent).
+-- name: RevokeFileGrant :execrows
+-- Deletes a file grant matching the exact composite key for DELETE
+-- /api/files/{file_id}/grants (ASK-125). Returns the rows-affected
+-- count so the service can distinguish "grant exists and was
+-- deleted" (1 row -> 204) from "no matching grant" (0 rows -> 404).
+-- The spec requires 404 when the grant is missing -- this replaces
+-- the previous idempotent no-op behavior.
 DELETE FROM file_grants
-WHERE file_id = sqlc.arg(file_id)
-  AND grantee_type = sqlc.arg(grantee_type)
-  AND grantee_id = sqlc.arg(grantee_id)
-  AND permission = sqlc.arg(permission);
+WHERE file_id = sqlc.arg(file_id)::uuid
+  AND grantee_type = sqlc.arg(grantee_type)::grantee_type
+  AND grantee_id = sqlc.arg(grantee_id)::uuid
+  AND permission = sqlc.arg(permission)::permission;
+
+-- name: CheckUserExists :one
+-- Grantee-existence probe for ASK-122 when grantee_type='user'.
+-- Returns sql.ErrNoRows when the referenced user does not exist;
+-- the service maps this to a 400 VALIDATION_ERROR ("no user with
+-- this ID") rather than 404. The public sentinel UUID
+-- 00000000-0000-0000-0000-000000000000 is handled in the service
+-- layer (skipped before this query ever runs).
+SELECT 1
+FROM users
+WHERE id = sqlc.arg(user_id)::uuid;
 
 -- name: GetFileIfViewable :one
 SELECT f.*

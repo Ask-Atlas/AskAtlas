@@ -2,6 +2,7 @@ package files
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -33,8 +35,11 @@ type Repository interface {
 	InsertFileView(ctx context.Context, arg db.InsertFileViewParams) error
 	UpsertFileLastViewed(ctx context.Context, arg db.UpsertFileLastViewedParams) error
 
-	UpsertFileGrant(ctx context.Context, arg db.UpsertFileGrantParams) (db.FileGrant, error)
-	RevokeFileGrant(ctx context.Context, arg db.RevokeFileGrantParams) error
+	InsertFileGrant(ctx context.Context, arg db.InsertFileGrantParams) (db.FileGrant, error)
+	RevokeFileGrant(ctx context.Context, arg db.RevokeFileGrantParams) (int64, error)
+	CheckUserExists(ctx context.Context, userID pgtype.UUID) error
+	CheckCourseExists(ctx context.Context, courseID pgtype.UUID) error
+	CheckStudyGuideExists(ctx context.Context, studyGuideID pgtype.UUID) error
 
 	ListOwnedFilesUpdatedDesc(ctx context.Context, arg db.ListOwnedFilesUpdatedDescParams) ([]db.ListOwnedFilesUpdatedDescRow, error)
 	ListOwnedFilesUpdatedAsc(ctx context.Context, arg db.ListOwnedFilesUpdatedAscParams) ([]db.ListOwnedFilesUpdatedAscRow, error)
@@ -377,18 +382,54 @@ func (s *Service) DeleteFile(ctx context.Context, p DeleteFileParams, publisher 
 	return nil
 }
 
-// CreateGrant creates a file permission grant. The caller must own the file.
-// If the grant already exists the existing row is returned (idempotent).
+// publicSentinelUUID represents "public access" when used as a
+// grantee_id with grantee_type=user. ASK-122 carves this UUID out of
+// the users-table existence check; every other grantee_id (including
+// for course / study_guide) is validated against the target table.
+var publicSentinelUUID = uuid.UUID{}
+
+// validGranteeTypes / validPermissions guard the service from junk
+// strings reaching the DB. The openapi wrapper enforces these at the
+// HTTP boundary; the service re-validates so internal Go callers
+// can't bypass it.
+var (
+	validGranteeTypes = map[string]struct{}{"user": {}, "course": {}, "study_guide": {}}
+	validPermissions  = map[string]struct{}{"view": {}, "share": {}, "delete": {}}
+)
+
+// CreateGrant creates a file_grants row for ASK-122. Validation order
+// matches the spec's error precedence:
+//  1. grantee_type / permission enum  -> 400 with details
+//  2. file existence (deleted -> 404) -> 404
+//  3. file ownership                  -> 403
+//  4. grantee existence (per type)    -> 400 with grantee_id detail
+//  5. INSERT; unique violation        -> 409
+//
+// The public sentinel UUID is exempt from step 4 only when
+// grantee_type=user; for course / study_guide the sentinel falls into
+// the normal not-found branch.
 func (s *Service) CreateGrant(ctx context.Context, p CreateGrantParams) (Grant, error) {
-	// Verify ownership.
-	if _, err := s.repo.GetFileByOwner(ctx, db.GetFileByOwnerParams{
-		FileID:  utils.UUID(p.FileID),
-		OwnerID: utils.UUID(p.OwnerID),
-	}); err != nil {
-		return Grant{}, err
+	if appErr := validateGranteeFields(p.GranteeType, p.Permission); appErr != nil {
+		return Grant{}, appErr
 	}
 
-	row, err := s.repo.UpsertFileGrant(ctx, db.UpsertFileGrantParams{
+	current, err := s.repo.GetFileForUpdate(ctx, utils.UUID(p.FileID))
+	if err != nil {
+		return Grant{}, err // sql.ErrNoRows -> ErrNotFound -> 404
+	}
+	currentOwner, err := utils.PgxToGoogleUUID(current.UserID)
+	if err != nil {
+		return Grant{}, fmt.Errorf("CreateGrant: decode owner: %w", err)
+	}
+	if currentOwner != p.OwnerID {
+		return Grant{}, apperrors.NewForbidden()
+	}
+
+	if appErr := s.validateGranteeExists(ctx, p.GranteeType, p.GranteeID); appErr != nil {
+		return Grant{}, appErr
+	}
+
+	row, err := s.repo.InsertFileGrant(ctx, db.InsertFileGrantParams{
 		FileID:      utils.UUID(p.FileID),
 		GranteeType: db.GranteeType(p.GranteeType),
 		GranteeID:   utils.UUID(p.GranteeID),
@@ -396,32 +437,115 @@ func (s *Service) CreateGrant(ctx context.Context, p CreateGrantParams) (Grant, 
 		GrantedBy:   utils.UUID(p.OwnerID),
 	})
 	if err != nil {
+		// PostgreSQL unique-violation -> 409 Conflict. The
+		// file_grants UNIQUE (file_id, grantee_type, grantee_id,
+		// permission) constraint maps the duplicate-grant case to
+		// sqlstate 23505.
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return Grant{}, apperrors.ErrConflict
+		}
 		return Grant{}, fmt.Errorf("CreateGrant: %w", err)
 	}
 
 	return mapGrantRow(row)
 }
 
-// RevokeGrant revokes a file permission grant. The caller must own the file.
-// If the grant does not exist the call is a no-op (idempotent).
+// RevokeGrant deletes a file_grants row for ASK-125. Same 404 / 403
+// gating as CreateGrant; the body fields are validated but no
+// grantee-existence check (the grant either exists in file_grants or
+// it doesn't). RevokeFileGrant returning 0 rows means the grant was
+// missing -- spec says 404 (not idempotent no-op).
 func (s *Service) RevokeGrant(ctx context.Context, p RevokeGrantParams) error {
-	// Verify ownership.
-	if _, err := s.repo.GetFileByOwner(ctx, db.GetFileByOwnerParams{
-		FileID:  utils.UUID(p.FileID),
-		OwnerID: utils.UUID(p.OwnerID),
-	}); err != nil {
-		return err
+	if appErr := validateGranteeFields(p.GranteeType, p.Permission); appErr != nil {
+		return appErr
 	}
 
-	if err := s.repo.RevokeFileGrant(ctx, db.RevokeFileGrantParams{
+	current, err := s.repo.GetFileForUpdate(ctx, utils.UUID(p.FileID))
+	if err != nil {
+		return err
+	}
+	currentOwner, err := utils.PgxToGoogleUUID(current.UserID)
+	if err != nil {
+		return fmt.Errorf("RevokeGrant: decode owner: %w", err)
+	}
+	if currentOwner != p.OwnerID {
+		return apperrors.NewForbidden()
+	}
+
+	rows, err := s.repo.RevokeFileGrant(ctx, db.RevokeFileGrantParams{
 		FileID:      utils.UUID(p.FileID),
 		GranteeType: db.GranteeType(p.GranteeType),
 		GranteeID:   utils.UUID(p.GranteeID),
 		Permission:  db.Permission(p.Permission),
-	}); err != nil {
+	})
+	if err != nil {
 		return fmt.Errorf("RevokeGrant: %w", err)
 	}
+	if rows == 0 {
+		return fmt.Errorf("RevokeGrant: %w", apperrors.ErrNotFound)
+	}
+	return nil
+}
 
+// validateGranteeFields rejects unknown grantee_type / permission
+// values up-front so the error response carries both detail keys
+// when both fields are bad (matches the spec's "details for both
+// fields" edge case).
+func validateGranteeFields(granteeType, permission string) *apperrors.AppError {
+	details := make(map[string]string)
+	if _, ok := validGranteeTypes[granteeType]; !ok {
+		details["grantee_type"] = "must be 'user', 'course', or 'study_guide'"
+	}
+	if _, ok := validPermissions[permission]; !ok {
+		details["permission"] = "must be 'view', 'share', or 'delete'"
+	}
+	if len(details) > 0 {
+		return apperrors.NewBadRequest("Invalid request body", details)
+	}
+	return nil
+}
+
+// validateGranteeExists looks the grantee_id up in the table that
+// matches grantee_type. For user grantees the public sentinel UUID
+// is exempt -- it represents "public access" and does not correspond
+// to a real users row. ErrNoRows from the probe maps to a 400
+// VALIDATION_ERROR per the spec, NOT a 404 (the missing entity is
+// the grantee, not the file).
+func (s *Service) validateGranteeExists(ctx context.Context, granteeType string, granteeID uuid.UUID) *apperrors.AppError {
+	pgID := utils.UUID(granteeID)
+	var probeErr error
+	switch granteeType {
+	case "user":
+		if granteeID == publicSentinelUUID {
+			return nil // sentinel exempt from users lookup
+		}
+		probeErr = s.repo.CheckUserExists(ctx, pgID)
+	case "course":
+		probeErr = s.repo.CheckCourseExists(ctx, pgID)
+	case "study_guide":
+		probeErr = s.repo.CheckStudyGuideExists(ctx, pgID)
+	default:
+		// Unreachable: validateGranteeFields already gated this.
+		return apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"grantee_type": "must be 'user', 'course', or 'study_guide'",
+		})
+	}
+	if probeErr != nil {
+		if errors.Is(probeErr, apperrors.ErrNotFound) {
+			return apperrors.NewBadRequest("Grantee not found", map[string]string{
+				"grantee_id": fmt.Sprintf("no %s with this ID", granteeType),
+			})
+		}
+		// Real DB error -- propagate as 500 via the wrapping
+		// AppError converter in the handler.
+		return &apperrors.AppError{
+			Code:    500,
+			Status:  "Internal Server Error",
+			Message: "Something went wrong",
+			Cause:   probeErr,
+		}
+	}
 	return nil
 }
 

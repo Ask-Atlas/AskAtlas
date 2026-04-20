@@ -279,3 +279,99 @@ func TestGrantHandler_RevokeGrant_FileNotFound(t *testing.T) {
 
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }
+
+// ----------------------------------------------------------------------
+// New status-code paths added by ASK-122 / ASK-125: distinct 403 for
+// not-owner, 409 for duplicate grant. Service-layer tests carry the
+// behavioral matrix; these verify the wire envelope.
+// ----------------------------------------------------------------------
+
+func TestGrantHandler_CreateGrant_Forbidden_403(t *testing.T) {
+	mockFileSvc := mock_handlers.NewMockFileService(t)
+	fh := handlers.NewFileHandler(mockFileSvc, nil)
+	mockGrantSvc := mock_handlers.NewMockGrantService(t)
+	gh := handlers.NewGrantHandler(mockGrantSvc)
+
+	userID := uuid.New()
+	fileID := uuid.New()
+	body := api.CreateGrantRequest{
+		GranteeType: api.CreateGrantRequestGranteeTypeUser,
+		GranteeId:   uuid.New(),
+		Permission:  api.CreateGrantRequestPermissionView,
+	}
+	bodyBytes, _ := json.Marshal(body)
+
+	mockGrantSvc.EXPECT().
+		CreateGrant(mock.Anything, mock.Anything).
+		Return(files.Grant{}, apperrors.NewForbidden())
+
+	req := httptest.NewRequest(http.MethodPost, "/files/"+fileID.String()+"/grants", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authctx.WithUserID(req.Context(), userID))
+	w := httptest.NewRecorder()
+
+	r := newTestRouter(t, fh, gh)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}
+
+func TestGrantHandler_CreateGrant_Conflict_409(t *testing.T) {
+	mockFileSvc := mock_handlers.NewMockFileService(t)
+	fh := handlers.NewFileHandler(mockFileSvc, nil)
+	mockGrantSvc := mock_handlers.NewMockGrantService(t)
+	gh := handlers.NewGrantHandler(mockGrantSvc)
+
+	userID := uuid.New()
+	fileID := uuid.New()
+	body := api.CreateGrantRequest{
+		GranteeType: api.CreateGrantRequestGranteeTypeUser,
+		GranteeId:   uuid.New(),
+		Permission:  api.CreateGrantRequestPermissionView,
+	}
+	bodyBytes, _ := json.Marshal(body)
+
+	mockGrantSvc.EXPECT().
+		CreateGrant(mock.Anything, mock.Anything).
+		Return(files.Grant{}, apperrors.ErrConflict)
+
+	req := httptest.NewRequest(http.MethodPost, "/files/"+fileID.String()+"/grants", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authctx.WithUserID(req.Context(), userID))
+	w := httptest.NewRecorder()
+
+	r := newTestRouter(t, fh, gh)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusConflict, w.Code)
+}
+
+func TestGrantHandler_RevokeGrant_Forbidden_403(t *testing.T) {
+	mockFileSvc := mock_handlers.NewMockFileService(t)
+	fh := handlers.NewFileHandler(mockFileSvc, nil)
+	mockGrantSvc := mock_handlers.NewMockGrantService(t)
+	gh := handlers.NewGrantHandler(mockGrantSvc)
+
+	userID := uuid.New()
+	fileID := uuid.New()
+	body := api.RevokeGrantRequest{
+		GranteeType: api.RevokeGrantRequestGranteeTypeUser,
+		GranteeId:   uuid.New(),
+		Permission:  api.RevokeGrantRequestPermissionView,
+	}
+	bodyBytes, _ := json.Marshal(body)
+
+	mockGrantSvc.EXPECT().
+		RevokeGrant(mock.Anything, mock.Anything).
+		Return(apperrors.NewForbidden())
+
+	req := httptest.NewRequest(http.MethodDelete, "/files/"+fileID.String()+"/grants", bytes.NewReader(bodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	req = req.WithContext(authctx.WithUserID(req.Context(), userID))
+	w := httptest.NewRecorder()
+
+	r := newTestRouter(t, fh, gh)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusForbidden, w.Code)
+}

@@ -210,21 +210,54 @@ func (r *sqlcRepository) ListOwnedFilesMimeDesc(ctx context.Context, arg db.List
 	return files, nil
 }
 
-func (r *sqlcRepository) UpsertFileGrant(ctx context.Context, arg db.UpsertFileGrantParams) (db.FileGrant, error) {
-	slog.Debug("upserting file grant", "file_id", arg.FileID, "grantee_type", arg.GranteeType, "grantee_id", arg.GranteeID, "permission", arg.Permission)
-	row, err := r.queries.UpsertFileGrant(ctx, arg)
+func (r *sqlcRepository) InsertFileGrant(ctx context.Context, arg db.InsertFileGrantParams) (db.FileGrant, error) {
+	slog.Debug("inserting file grant", "file_id", arg.FileID, "grantee_type", arg.GranteeType, "grantee_id", arg.GranteeID, "permission", arg.Permission)
+	// We deliberately do NOT translate the unique-violation here --
+	// the service layer inspects the pgconn.PgError to map sqlstate
+	// 23505 to apperrors.ErrConflict. Translating here would lose
+	// the typed error info.
+	row, err := r.queries.InsertFileGrant(ctx, arg)
 	if err != nil {
-		return db.FileGrant{}, fmt.Errorf("UpsertFileGrant: %w", err)
+		return db.FileGrant{}, fmt.Errorf("InsertFileGrant: %w", err)
 	}
 	return row, nil
 }
 
-func (r *sqlcRepository) RevokeFileGrant(ctx context.Context, arg db.RevokeFileGrantParams) error {
+func (r *sqlcRepository) RevokeFileGrant(ctx context.Context, arg db.RevokeFileGrantParams) (int64, error) {
 	slog.Debug("revoking file grant", "file_id", arg.FileID, "grantee_type", arg.GranteeType, "grantee_id", arg.GranteeID, "permission", arg.Permission)
-	if err := r.queries.RevokeFileGrant(ctx, arg); err != nil {
-		return fmt.Errorf("RevokeFileGrant: %w", err)
+	rows, err := r.queries.RevokeFileGrant(ctx, arg)
+	if err != nil {
+		return 0, fmt.Errorf("RevokeFileGrant: %w", err)
+	}
+	return rows, nil
+}
+
+// checkExistsResult collapses the (int32 scan, sql.ErrNoRows) pair
+// the three Check*Exists probes share into a single ErrNotFound /
+// wrapped error / nil result.
+func checkExistsResult(_ int32, err error, label string) error {
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("%s: %w", label, apperrors.ErrNotFound)
+		}
+		return fmt.Errorf("%s: %w", label, err)
 	}
 	return nil
+}
+
+func (r *sqlcRepository) CheckUserExists(ctx context.Context, userID pgtype.UUID) error {
+	val, err := r.queries.CheckUserExists(ctx, userID)
+	return checkExistsResult(val, err, "CheckUserExists")
+}
+
+func (r *sqlcRepository) CheckCourseExists(ctx context.Context, courseID pgtype.UUID) error {
+	val, err := r.queries.CheckCourseExists(ctx, courseID)
+	return checkExistsResult(val, err, "CheckCourseExists")
+}
+
+func (r *sqlcRepository) CheckStudyGuideExists(ctx context.Context, studyGuideID pgtype.UUID) error {
+	val, err := r.queries.CheckStudyGuideExists(ctx, studyGuideID)
+	return checkExistsResult(val, err, "CheckStudyGuideExists")
 }
 
 func (r *sqlcRepository) GetFileByOwner(ctx context.Context, arg db.GetFileByOwnerParams) (db.GetFileByOwnerRow, error) {

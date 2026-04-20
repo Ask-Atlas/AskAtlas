@@ -11,6 +11,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const checkUserExists = `-- name: CheckUserExists :one
+SELECT 1
+FROM users
+WHERE id = $1::uuid
+`
+
+// Grantee-existence probe for ASK-122 when grantee_type='user'.
+// Returns sql.ErrNoRows when the referenced user does not exist;
+// the service maps this to a 400 VALIDATION_ERROR ("no user with
+// this ID") rather than 404. The public sentinel UUID
+// 00000000-0000-0000-0000-000000000000 is handled in the service
+// layer (skipped before this query ever runs).
+func (q *Queries) CheckUserExists(ctx context.Context, userID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, checkUserExists, userID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const getFileByOwner = `-- name: GetFileByOwner :one
 SELECT id, user_id, s3_key, name, mime_type, size, checksum,
        status, deletion_status, deleted_at, s3_deleted_at, deletion_job_id,
@@ -220,6 +239,53 @@ func (q *Queries) InsertFile(ctx context.Context, arg InsertFileParams) (File, e
 		&i.DeletedAt,
 		&i.S3DeletedAt,
 		&i.DeletionJobID,
+	)
+	return i, err
+}
+
+const insertFileGrant = `-- name: InsertFileGrant :one
+INSERT INTO file_grants (file_id, grantee_type, grantee_id, permission, granted_by)
+VALUES (
+    $1::uuid,
+    $2::grantee_type,
+    $3::uuid,
+    $4::permission,
+    $5::uuid
+)
+RETURNING id, file_id, grantee_type, grantee_id, permission, granted_by, created_at
+`
+
+type InsertFileGrantParams struct {
+	FileID      pgtype.UUID `json:"file_id"`
+	GranteeType GranteeType `json:"grantee_type"`
+	GranteeID   pgtype.UUID `json:"grantee_id"`
+	Permission  Permission  `json:"permission"`
+	GrantedBy   pgtype.UUID `json:"granted_by"`
+}
+
+// Inserts a new file_grants row for POST /api/files/{file_id}/grants
+// (ASK-122). Plain INSERT -- no ON CONFLICT DO UPDATE because the
+// spec requires returning 409 Conflict on a duplicate (not silently
+// updating granted_by). A unique-key violation (sqlstate 23505)
+// propagates up as a pgx PgError; the service translates it to
+// apperrors.ErrConflict so the handler emits a 409.
+func (q *Queries) InsertFileGrant(ctx context.Context, arg InsertFileGrantParams) (FileGrant, error) {
+	row := q.db.QueryRow(ctx, insertFileGrant,
+		arg.FileID,
+		arg.GranteeType,
+		arg.GranteeID,
+		arg.Permission,
+		arg.GrantedBy,
+	)
+	var i FileGrant
+	err := row.Scan(
+		&i.ID,
+		&i.FileID,
+		&i.GranteeType,
+		&i.GranteeID,
+		&i.Permission,
+		&i.GrantedBy,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -1746,12 +1812,12 @@ func (q *Queries) PatchFile(ctx context.Context, arg PatchFileParams) (PatchFile
 	return i, err
 }
 
-const revokeFileGrant = `-- name: RevokeFileGrant :exec
+const revokeFileGrant = `-- name: RevokeFileGrant :execrows
 DELETE FROM file_grants
-WHERE file_id = $1
-  AND grantee_type = $2
-  AND grantee_id = $3
-  AND permission = $4
+WHERE file_id = $1::uuid
+  AND grantee_type = $2::grantee_type
+  AND grantee_id = $3::uuid
+  AND permission = $4::permission
 `
 
 type RevokeFileGrantParams struct {
@@ -1761,16 +1827,23 @@ type RevokeFileGrantParams struct {
 	Permission  Permission  `json:"permission"`
 }
 
-// Deletes a file grant matching the exact composite key. No-op if the grant
-// does not exist (idempotent).
-func (q *Queries) RevokeFileGrant(ctx context.Context, arg RevokeFileGrantParams) error {
-	_, err := q.db.Exec(ctx, revokeFileGrant,
+// Deletes a file grant matching the exact composite key for DELETE
+// /api/files/{file_id}/grants (ASK-125). Returns the rows-affected
+// count so the service can distinguish "grant exists and was
+// deleted" (1 row -> 204) from "no matching grant" (0 rows -> 404).
+// The spec requires 404 when the grant is missing -- this replaces
+// the previous idempotent no-op behavior.
+func (q *Queries) RevokeFileGrant(ctx context.Context, arg RevokeFileGrantParams) (int64, error) {
+	result, err := q.db.Exec(ctx, revokeFileGrant,
 		arg.FileID,
 		arg.GranteeType,
 		arg.GranteeID,
 		arg.Permission,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const setFileDeletionJobID = `-- name: SetFileDeletionJobID :exec
@@ -1837,53 +1910,6 @@ type UpdateFileStatusParams struct {
 func (q *Queries) UpdateFileStatus(ctx context.Context, arg UpdateFileStatusParams) error {
 	_, err := q.db.Exec(ctx, updateFileStatus, arg.Status, arg.FileID, arg.OwnerID)
 	return err
-}
-
-const upsertFileGrant = `-- name: UpsertFileGrant :one
-INSERT INTO file_grants (file_id, grantee_type, grantee_id, permission, granted_by)
-VALUES (
-    $1::uuid,
-    $2::grantee_type,
-    $3::uuid,
-    $4::permission,
-    $5::uuid
-)
-ON CONFLICT (file_id, grantee_type, grantee_id, permission)
-DO UPDATE SET granted_by = EXCLUDED.granted_by
-RETURNING id, file_id, grantee_type, grantee_id, permission, granted_by, created_at
-`
-
-type UpsertFileGrantParams struct {
-	FileID      pgtype.UUID `json:"file_id"`
-	GranteeType GranteeType `json:"grantee_type"`
-	GranteeID   pgtype.UUID `json:"grantee_id"`
-	Permission  Permission  `json:"permission"`
-	GrantedBy   pgtype.UUID `json:"granted_by"`
-}
-
-// Inserts a new file grant, returning the row. If the grant already exists
-// (same file_id, grantee_type, grantee_id, permission), updates granted_by
-// and returns the row. Using DO UPDATE SET avoids a race window where
-// concurrent inserts could cause both INSERT and fallback SELECT to miss.
-func (q *Queries) UpsertFileGrant(ctx context.Context, arg UpsertFileGrantParams) (FileGrant, error) {
-	row := q.db.QueryRow(ctx, upsertFileGrant,
-		arg.FileID,
-		arg.GranteeType,
-		arg.GranteeID,
-		arg.Permission,
-		arg.GrantedBy,
-	)
-	var i FileGrant
-	err := row.Scan(
-		&i.ID,
-		&i.FileID,
-		&i.GranteeType,
-		&i.GranteeID,
-		&i.Permission,
-		&i.GrantedBy,
-		&i.CreatedAt,
-	)
-	return i, err
 }
 
 const upsertFileLastViewed = `-- name: UpsertFileLastViewed :exec
