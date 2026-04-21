@@ -9,6 +9,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -153,10 +154,18 @@ func ensureCourseSections(ctx context.Context, tx pgx.Tx, courseIDs map[string]u
 	for slug, cid := range courseIDs {
 		var sid uuid.UUID
 		row := tx.QueryRow(ctx, upsertCourseSectionSQL, cid, startDate, endDate)
-		if err := row.Scan(&sid); err != nil {
+		err := row.Scan(&sid)
+		switch {
+		case err == nil:
+			// Fresh INSERT — sid populated.
+		case errors.Is(err, pgx.ErrNoRows):
+			// Row already existed (ON CONFLICT DO NOTHING returned no row);
+			// fall through to SELECT.
 			if err2 := tx.QueryRow(ctx, selectCourseSectionSQL, cid).Scan(&sid); err2 != nil {
-				return nil, fmt.Errorf("section %s: %w", slug, err2)
+				return nil, fmt.Errorf("section %s select-fallback: %w", slug, err2)
 			}
+		default:
+			return nil, fmt.Errorf("section %s insert: %w", slug, err)
 		}
 		out[cid] = sid
 	}
@@ -274,7 +283,7 @@ func seedVotes(
 			if assigned >= up {
 				dir = "down"
 			}
-			ts := backdatedTimestamp(rng, voteStart, winEnd)
+			ts := backdatedTimestamp(rng, voteStart, winEnd).Truncate(time.Microsecond)
 			batch.Queue(insertVoteSQL, syntheticIDs[idx], g.id, dir, ts)
 			assigned++
 		}
@@ -298,7 +307,7 @@ func seedRecommendations(
 		}
 		n := 1 + rng.Intn(3)
 		for _, idx := range pickN(rng, len(syntheticIDs), n) {
-			ts := backdatedTimestamp(rng, g.createdAt, winEnd)
+			ts := backdatedTimestamp(rng, g.createdAt, winEnd).Truncate(time.Microsecond)
 			batch.Queue(insertRecommendationSQL, g.id, syntheticIDs[idx], ts)
 		}
 	}
@@ -316,19 +325,31 @@ func seedFavoritesAndRecents(
 		return nil
 	}
 
+	// Sort map-derived course-UUID slice so the demo-course-favorites
+	// loop consumes RNG in a deterministic order across runs (Go map
+	// iteration is randomized; the downstream backdatedTimestamp calls
+	// advance RNG state differently if the iteration order drifts).
+	allCourses := make([]uuid.UUID, 0, len(courseIDs))
+	for _, cid := range courseIDs {
+		allCourses = append(allCourses, cid)
+	}
+	sort.Slice(allCourses, func(i, j int) bool {
+		return allCourses[i].String() < allCourses[j].String()
+	})
+
 	batch := &pgx.Batch{}
 
 	// Demo user — curated heavy population.
 	for _, idx := range pickN(rng, len(guides), 15) {
-		ts := backdatedTimestamp(rng, guides[idx].createdAt, winEnd)
+		ts := backdatedTimestamp(rng, guides[idx].createdAt, winEnd).Truncate(time.Microsecond)
 		batch.Queue(insertFavoriteSQL, demoID, guides[idx].id, ts)
 	}
 	for _, idx := range pickN(rng, len(guides), 30) {
-		ts := winEnd.Add(-time.Duration(rng.Intn(30*24)) * time.Hour)
+		ts := winEnd.Add(-time.Duration(rng.Intn(30*24)) * time.Hour).Truncate(time.Microsecond)
 		batch.Queue(insertLastViewedSQL, demoID, guides[idx].id, ts)
 	}
-	for _, cid := range courseIDs {
-		ts := backdatedTimestamp(rng, winStart, winEnd)
+	for _, cid := range allCourses {
+		ts := backdatedTimestamp(rng, winStart, winEnd).Truncate(time.Microsecond)
 		batch.Queue(insertCourseFavSQL, demoID, cid, ts)
 	}
 
@@ -339,11 +360,11 @@ func seedFavoritesAndRecents(
 		nFav := 3 + rng.Intn(6)   // 3–8
 		nView := 8 + rng.Intn(13) // 8–20
 		for _, idx := range pickN(rng, len(guides), nFav) {
-			ts := backdatedTimestamp(rng, guides[idx].createdAt, winEnd)
+			ts := backdatedTimestamp(rng, guides[idx].createdAt, winEnd).Truncate(time.Microsecond)
 			batch.Queue(insertFavoriteSQL, uid, guides[idx].id, ts)
 		}
 		for _, idx := range pickN(rng, len(guides), nView) {
-			ts := winEnd.Add(-time.Duration(rng.Intn(60*24)) * time.Hour)
+			ts := winEnd.Add(-time.Duration(rng.Intn(60*24)) * time.Hour).Truncate(time.Microsecond)
 			batch.Queue(insertLastViewedSQL, uid, guides[idx].id, ts)
 		}
 	}

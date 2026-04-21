@@ -7,6 +7,7 @@
 package main
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"time"
@@ -44,6 +45,14 @@ var defaultMonthWeights = [12]float64{
 func zipfDistribution(n int, s float64, total int, floor int) []int {
 	if n <= 0 {
 		return nil
+	}
+	// Guard the "head correction can push counts[0] negative" trap:
+	// if the caller reserves more for the floor than total, there's no
+	// valid Zipf allocation. Python twin raises ValueError here; Go
+	// panics since this is a pure-function programmer error (not a
+	// runtime condition that can be gracefully recovered from).
+	if total < floor*n {
+		panic(fmt.Sprintf("zipfDistribution: total (%d) < floor*n (%d); floor too high for budget", total, floor*n))
 	}
 
 	raw := make([]float64, n)
