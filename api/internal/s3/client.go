@@ -8,6 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/smithy-go/middleware"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // presignExpiry is the validity duration for presigned upload URLs.
@@ -32,6 +34,39 @@ func New(ctx context.Context, bucket string) (*Client, error) {
 	// wildcard TLS cert that does not cover virtual-hosted {bucket}.{endpoint}.
 	svc := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.UsePathStyle = true
+		// Strip SDK-added proxy-fragile headers RIGHT BEFORE the v4
+		// signer runs. The Garage bucket at daves-wave.dev fronts
+		// behind Cloudflare (responses carry `Server: cloudflare` +
+		// `Cf-Ray: …`). Cloudflare normalises / rewrites a small set
+		// of request headers on its way to the origin, so any header
+		// the SDK signs but Cloudflare mutates invalidates the sig at
+		// Garage. AWS CLI (botocore) dodges this by signing only
+		// `host; x-amz-content-sha256; x-amz-date`; the Go SDK signs
+		// everything it added, including `amz-sdk-invocation-id`,
+		// `amz-sdk-request`, and `accept-encoding` — exactly the
+		// headers Cloudflare rewrites. Deleting them before the signer
+		// step matches the CLI's canonical request and unblocks every
+		// direct S3 call (DeleteObject, GetObject, ListObjectsV2).
+		//
+		// These headers are still informative to the SDK's own retry
+		// pipeline, which emits them BEFORE this middleware runs and
+		// reads them back from its own in-process state — not from
+		// the wire response — so removal is safe for retry tracking.
+		o.APIOptions = append(o.APIOptions, func(stack *middleware.Stack) error {
+			return stack.Finalize.Insert(middleware.FinalizeMiddlewareFunc(
+				"GarageStripProxyFragileHeaders",
+				func(
+					ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler,
+				) (middleware.FinalizeOutput, middleware.Metadata, error) {
+					if req, ok := in.Request.(*smithyhttp.Request); ok {
+						req.Header.Del("Accept-Encoding")
+						req.Header.Del("Amz-Sdk-Invocation-Id")
+						req.Header.Del("Amz-Sdk-Request")
+					}
+					return next.HandleFinalize(ctx, in)
+				},
+			), "Signing", middleware.Before)
+		})
 	})
 	return &Client{
 		svc:       svc,
@@ -39,6 +74,12 @@ func New(ctx context.Context, bucket string) (*Client, error) {
 		bucket:    bucket,
 	}, nil
 }
+
+// Bucket returns the bucket name the client was constructed against.
+// Used by out-of-package callers that need to coordinate with the
+// client (e.g., the seed-demo cleanup, which deletes by s3_key +
+// bucket lookup).
+func (c *Client) Bucket() string { return c.bucket }
 
 // GeneratePresignedPutURL creates a presigned S3 PUT URL for uploading a file.
 func (c *Client) GeneratePresignedPutURL(ctx context.Context, key, contentType string, contentLength int64) (string, error) {

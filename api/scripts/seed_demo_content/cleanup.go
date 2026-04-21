@@ -46,9 +46,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	s3client "github.com/Ask-Atlas/AskAtlas/api/internal/s3"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -117,9 +115,10 @@ func collectSeedS3Keys(ctx context.Context, conn *pgx.Conn) ([]string, error) {
 	return keys, nil
 }
 
-// cleanupS3 issues one DeleteObject per provided key. Only uses the
-// DeleteObject API (never ListObjectsV2) so it runs under the same
-// minimal IAM scope as the production `api/internal/s3/client.go`.
+// cleanupS3 issues one DeleteObject per provided key. Reuses the
+// production S3 client from api/internal/s3/client.go so the
+// Garage-specific Accept-Encoding: identity middleware (required to
+// avoid proxy signature mismatch 403s) only has to live in one place.
 func cleanupS3(ctx context.Context, keys []string) error {
 	if len(keys) == 0 {
 		return nil
@@ -129,21 +128,14 @@ func cleanupS3(ctx context.Context, keys []string) error {
 		return fmt.Errorf("S3_BUCKET env var is required")
 	}
 
-	cfg, err := config.LoadDefaultConfig(ctx)
+	client, err := s3client.New(ctx, bucket)
 	if err != nil {
-		return fmt.Errorf("load aws config: %w", err)
+		return fmt.Errorf("init s3 client: %w", err)
 	}
-	svc := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.UsePathStyle = true // Garage fronts a wildcard cert; path-style keeps TLS happy.
-	})
 
 	var deleted, failed int
 	for _, key := range keys {
-		_, err := svc.DeleteObject(ctx, &s3.DeleteObjectInput{
-			Bucket: aws.String(bucket),
-			Key:    aws.String(key),
-		})
-		if err != nil {
+		if err := client.DeleteObject(ctx, key); err != nil {
 			log.Printf("WARN: s3 delete %s failed: %v", key, err)
 			failed++
 			continue
