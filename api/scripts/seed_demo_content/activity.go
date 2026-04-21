@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -66,6 +67,33 @@ const (
 		VALUES ($1, $2, $3)
 		ON CONFLICT (user_id, course_id) DO NOTHING
 	`
+
+	insertCourseLastViewedSQL = `
+		INSERT INTO course_last_viewed (user_id, course_id, viewed_at)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (user_id, course_id) DO UPDATE SET viewed_at = EXCLUDED.viewed_at
+	`
+
+	// practice_sessions — the seeder DELETEs seed_*-owned rows at the
+	// start of seedPracticeSessions, so INSERTs never collide. No
+	// idempotency needed at the INSERT site.
+	insertPracticeSessionSQL = `
+		INSERT INTO practice_sessions (user_id, quiz_id, started_at, completed_at, total_questions, correct_answers)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id
+	`
+
+	insertSessionQuestionSQL = `
+		INSERT INTO practice_session_questions (session_id, question_id, sort_order)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (session_id, question_id) WHERE question_id IS NOT NULL DO NOTHING
+	`
+
+	insertPracticeAnswerSQL = `
+		INSERT INTO practice_answers (session_id, question_id, user_answer, is_correct, verified, answered_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		ON CONFLICT (session_id, question_id) DO NOTHING
+	`
 )
 
 // guideRef bundles what activity.go needs to know about a seeded guide:
@@ -77,12 +105,40 @@ type guideRef struct {
 	createdAt time.Time
 }
 
+// optionRef is a single answer option with its correctness marker —
+// seedPracticeSessions uses this to pick a matching user_answer text
+// when simulating a correct-or-incorrect response.
+type optionRef struct {
+	id        uuid.UUID
+	text      string
+	isCorrect bool
+}
+
+// questionRef bundles what practice-session simulation needs per question:
+// the question's UUID (for practice_session_questions + practice_answers
+// FK), its type ("multiple_choice"/"true_false"/"freeform"), and its
+// options (empty for freeform).
+type questionRef struct {
+	id      uuid.UUID
+	qType   string
+	options []optionRef
+}
+
+// quizRef bundles the quiz + its ordered questions so seedPracticeSessions
+// can create full session histories without re-querying the DB.
+type quizRef struct {
+	id        uuid.UUID
+	createdAt time.Time
+	questions []questionRef
+}
+
 // activityInputs is what main.go hands to seedActivity after layer 1+2.
 type activityInputs struct {
 	demoUserID   uuid.UUID
 	syntheticIDs []uuid.UUID
 	courseIDs    map[string]uuid.UUID // slug → uuid (e.g. "wsu/cpts121")
 	guides       []guideRef
+	quizzes      []quizRef
 	rng          *rand.Rand
 	windowStart  time.Time
 	windowEnd    time.Time
@@ -122,6 +178,12 @@ func seedCourseMemberships(
 	if len(allSections) == 0 {
 		return nil
 	}
+	// Sort for deterministic pickN addressing — Go map iteration
+	// order is randomized, so the unsorted slice would point at
+	// different sections across runs, breaking idempotency.
+	sort.Slice(allSections, func(i, j int) bool {
+		return allSections[i].String() < allSections[j].String()
+	})
 
 	semStart := time.Date(2026, 1, 12, 0, 0, 0, 0, time.UTC)
 
@@ -288,7 +350,14 @@ func seedFavoritesAndRecents(
 	return execBatch(ctx, tx, batch, "favorites+recents")
 }
 
-// pickN returns n distinct random indices in [0, max). If n >= max, returns all.
+// pickN returns n distinct random indices in [0, max), in sorted order.
+// If n >= max, returns all max indices (0..max-1).
+//
+// Sorted output is critical for determinism: Go map iteration is
+// non-deterministic, so returning `for idx := range picked` would
+// scramble the order across runs even with the same seed. That
+// ordering feeds back into RNG consumption later (per-pick timestamps
+// etc.), so a reordered return value silently breaks idempotency.
 func pickN(rng *rand.Rand, max, n int) []int {
 	if n > max {
 		n = max
@@ -304,7 +373,242 @@ func pickN(rng *rand.Rand, max, n int) []int {
 	for idx := range picked {
 		out = append(out, idx)
 	}
+	sort.Ints(out)
 	return out
+}
+
+// seedCourseLastViewed populates course_last_viewed for demo + synth users.
+// Demo user: all 10 courses with recent timestamps. Synth users: a handful
+// of courses they've interacted with — recency-skewed (last 60 days).
+func seedCourseLastViewed(
+	ctx context.Context, tx pgx.Tx,
+	demoID uuid.UUID, syntheticIDs []uuid.UUID,
+	courseIDs map[string]uuid.UUID,
+	rng *rand.Rand, winEnd time.Time,
+) error {
+	if len(courseIDs) == 0 {
+		return nil
+	}
+	allCourses := make([]uuid.UUID, 0, len(courseIDs))
+	for _, cid := range courseIDs {
+		allCourses = append(allCourses, cid)
+	}
+	// Sort for deterministic pickN addressing (see comment in
+	// seedCourseMemberships for why).
+	sort.Slice(allCourses, func(i, j int) bool {
+		return allCourses[i].String() < allCourses[j].String()
+	})
+
+	batch := &pgx.Batch{}
+
+	// Demo user: all courses, last 14 days.
+	for _, cid := range allCourses {
+		ts := winEnd.Add(-time.Duration(rng.Intn(14*24)) * time.Hour)
+		batch.Queue(insertCourseLastViewedSQL, demoID, cid, ts)
+	}
+
+	// Synth users: 1–4 random courses each, last 60 days.
+	for _, uid := range syntheticIDs {
+		n := 1 + rng.Intn(4)
+		for _, idx := range pickN(rng, len(allCourses), n) {
+			ts := winEnd.Add(-time.Duration(rng.Intn(60*24)) * time.Hour)
+			batch.Queue(insertCourseLastViewedSQL, uid, allCourses[idx], ts)
+		}
+	}
+	return execBatch(ctx, tx, batch, "course_last_viewed")
+}
+
+// seedPracticeSessions creates realistic quiz-taking history:
+//   - Per quiz: long-tail session count (mean ~12, floor 3, cap 40).
+//     Scaled down from votes because each session creates ~6x the
+//     write volume (one row in sessions + N session_questions + N answers).
+//   - Per session: random synth user, started_at backdated, completed_at
+//     ~2–30 min later (15% remain NULL to simulate abandoned sessions).
+//   - Per answer: MCQ/TF correctness ~65% (first-attempt realism);
+//     user_answer = a picked option's text (correct or incorrect)
+//     for MCQ/TF, canned placeholder for freeform.
+//
+// Idempotency strategy: DELETE all rows first inside the transaction,
+// then re-INSERT from scratch. The RNG-derived timestamps drift across
+// runs because winEnd = time.Now(), so SELECT-based idempotency can't
+// match prior-run rows. Delete-then-insert gives stable row counts on
+// re-run + the schema's ON DELETE CASCADE handles practice_session_questions
+// + practice_answers automatically. Safe because the seed is the only
+// writer for these tables (real users can't create sessions for
+// seed_synth_NNNN users since those clerk_ids don't authenticate).
+//
+// Demo user gets curated extra sessions: 5 completed sessions across
+// 5 different quizzes so their "recent practice" widget is populated.
+func seedPracticeSessions(
+	ctx context.Context, tx pgx.Tx,
+	demoID uuid.UUID, syntheticIDs []uuid.UUID,
+	quizzes []quizRef,
+	rng *rand.Rand, winStart, winEnd time.Time,
+) error {
+	if len(quizzes) == 0 || len(syntheticIDs) == 0 {
+		return nil
+	}
+
+	// Clear prior-run sessions so re-seed is clean.
+	// Only deletes rows owned by seed_bot / seed_demo / seed_synth_* users;
+	// any real user's practice_sessions are left intact. (Though in
+	// practice no real user has ever had a session against these
+	// seed-authored quizzes — this is belt-and-suspenders.)
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM practice_sessions
+		WHERE user_id IN (
+		  SELECT id FROM users WHERE clerk_id LIKE 'seed_%'
+		)
+	`); err != nil {
+		return fmt.Errorf("clear prior sessions: %w", err)
+	}
+
+	// Sessions can't be trivially batched because we need each session's
+	// RETURNING id to create its session_questions + answers. Do them in
+	// a second-pass batched phase: first INSERT all sessions (one batch),
+	// then INSERT all session_questions + answers (another batch).
+	type plannedSession struct {
+		userID      uuid.UUID
+		quiz        quizRef
+		started     time.Time
+		completed   *time.Time
+		correctness []bool // per question (len == len(quiz.questions))
+	}
+
+	var plans []plannedSession
+
+	// Demo user: 5 curated sessions across 5 distinct quizzes, all completed.
+	nDemoQuizzes := 5
+	if len(quizzes) < nDemoQuizzes {
+		nDemoQuizzes = len(quizzes)
+	}
+	for _, qIdx := range pickN(rng, len(quizzes), nDemoQuizzes) {
+		q := quizzes[qIdx]
+		// Truncate to microseconds — Postgres TIMESTAMPTZ stores at µs
+		// precision, so nanosecond-precision time.Time round-trips as
+		// a different value, breaking SELECT-based idempotency.
+		started := winEnd.Add(-time.Duration(rng.Intn(14*24)) * time.Hour).Truncate(time.Microsecond)
+		completed := started.Add(time.Duration(2+rng.Intn(28)) * time.Minute)
+		correctness := make([]bool, len(q.questions))
+		for i := range q.questions {
+			correctness[i] = rng.Float64() < 0.70 // demo user slightly above average
+		}
+		plans = append(plans, plannedSession{demoID, q, started, &completed, correctness})
+	}
+
+	// Synth users: per-quiz long-tail count.
+	for _, q := range quizzes {
+		sessionCount := longTailCount(rng, 12, 3, 40)
+		if sessionCount > len(syntheticIDs) {
+			sessionCount = len(syntheticIDs)
+		}
+		for _, uIdx := range pickN(rng, len(syntheticIDs), sessionCount) {
+			started := backdatedTimestamp(rng, maxTime(q.createdAt, winStart), winEnd).Truncate(time.Microsecond)
+			var completedPtr *time.Time
+			if rng.Float64() >= 0.15 { // 85% complete, 15% abandon
+				c := started.Add(time.Duration(2+rng.Intn(28)) * time.Minute)
+				completedPtr = &c
+			}
+			correctness := make([]bool, len(q.questions))
+			for i := range q.questions {
+				correctness[i] = rng.Float64() < 0.65
+			}
+			plans = append(plans, plannedSession{syntheticIDs[uIdx], q, started, completedPtr, correctness})
+		}
+	}
+
+	// Phase 1: INSERT all sessions via pgx.Batch. The prior DELETE above
+	// guarantees no collisions, so the batch can run cleanly without the
+	// complexity of SELECT-first or ON CONFLICT handling.
+	sessionBatch := &pgx.Batch{}
+	for _, p := range plans {
+		totalQ := len(p.quiz.questions)
+		correct := 0
+		if p.completed != nil {
+			for _, c := range p.correctness {
+				if c {
+					correct++
+				}
+			}
+		}
+		var completedArg any
+		if p.completed != nil {
+			completedArg = *p.completed
+		}
+		sessionBatch.Queue(insertPracticeSessionSQL,
+			p.userID, p.quiz.id, p.started, completedArg, totalQ, correct)
+	}
+	sbr := tx.SendBatch(ctx, sessionBatch)
+	sessionIDs := make([]uuid.UUID, len(plans))
+	for i := range plans {
+		var id uuid.UUID
+		if err := sbr.QueryRow().Scan(&id); err != nil {
+			_ = sbr.Close()
+			return fmt.Errorf("practice_session[%d] insert: %w", i, err)
+		}
+		sessionIDs[i] = id
+	}
+	if err := sbr.Close(); err != nil {
+		return fmt.Errorf("session batch close: %w", err)
+	}
+
+	// Phase 2: INSERT session_questions + answers for each session.
+	answerBatch := &pgx.Batch{}
+	for i, p := range plans {
+		sid := sessionIDs[i]
+		for qIdx, q := range p.quiz.questions {
+			answerBatch.Queue(insertSessionQuestionSQL, sid, q.id, qIdx)
+
+			// Skip answer insert for abandoned sessions (completed==nil)
+			// beyond a plausible partial — just first 40% of questions.
+			if p.completed == nil && qIdx > len(p.quiz.questions)*4/10 {
+				continue
+			}
+			answeredAt := p.started.Add(time.Duration(qIdx*30) * time.Second)
+			isCorrect := p.correctness[qIdx]
+			userAnswer, verified := buildAnswerText(q, isCorrect, rng)
+			var correctArg any
+			if q.qType != "freeform" {
+				correctArg = isCorrect
+			}
+			answerBatch.Queue(insertPracticeAnswerSQL,
+				sid, q.id, userAnswer, correctArg, verified, answeredAt)
+		}
+	}
+	return execBatch(ctx, tx, answerBatch, "session_questions+answers")
+}
+
+// buildAnswerText picks a user_answer string + verified flag for a single
+// practice-answer row. For MCQ/TF, returns a correct-or-incorrect option
+// text. For freeform, returns a canned placeholder and verified=false.
+func buildAnswerText(q questionRef, wantCorrect bool, rng *rand.Rand) (userAnswer string, verified bool) {
+	if q.qType == "freeform" {
+		return "Synthetic demo answer — not evaluated.", false
+	}
+	// MCQ/TF: pick an option matching `wantCorrect`.
+	candidates := make([]optionRef, 0, len(q.options))
+	for _, o := range q.options {
+		if o.isCorrect == wantCorrect {
+			candidates = append(candidates, o)
+		}
+	}
+	if len(candidates) == 0 && len(q.options) > 0 {
+		// Fallback if the question has no option matching the desired
+		// correctness (shouldn't happen for well-formed MCQ/TF but guard
+		// anyway) — pick any option.
+		candidates = q.options
+	}
+	if len(candidates) == 0 {
+		return "", true
+	}
+	return candidates[rng.Intn(len(candidates))].text, true
+}
+
+func maxTime(a, b time.Time) time.Time {
+	if a.After(b) {
+		return a
+	}
+	return b
 }
 
 // seedActivity is the top-level entry point called by main.go after
@@ -328,6 +632,12 @@ func seedActivity(ctx context.Context, tx pgx.Tx, in activityInputs) error {
 	}
 	if err := seedFavoritesAndRecents(ctx, tx, in.demoUserID, in.syntheticIDs, in.guides, in.courseIDs, in.rng, in.windowStart, in.windowEnd); err != nil {
 		return fmt.Errorf("favorites/recents: %w", err)
+	}
+	if err := seedCourseLastViewed(ctx, tx, in.demoUserID, in.syntheticIDs, in.courseIDs, in.rng, in.windowEnd); err != nil {
+		return fmt.Errorf("course_last_viewed: %w", err)
+	}
+	if err := seedPracticeSessions(ctx, tx, in.demoUserID, in.syntheticIDs, in.quizzes, in.rng, in.windowStart, in.windowEnd); err != nil {
+		return fmt.Errorf("practice_sessions: %w", err)
 	}
 	return nil
 }

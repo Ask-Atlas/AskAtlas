@@ -198,6 +198,7 @@ func main() {
 	log.Printf("layer1: %d guides inserted (placeholders unresolved)", len(guideIDs))
 
 	quizIDs := make(map[string]uuid.UUID, len(quizzes))
+	quizRefs := make([]quizRef, 0, len(quizzes))
 	for _, q := range quizzes {
 		guideID, ok := guideIDs[q.StudyGuideSlug]
 		if !ok {
@@ -209,18 +210,24 @@ func main() {
 			log.Fatalf("quiz %s: %v", q.Slug, err)
 		}
 		quizIDs[q.Slug] = qid
+		qRef := quizRef{id: qid, createdAt: createdAt, questions: make([]questionRef, 0, len(q.Questions))}
 
 		for sortIdx, qq := range q.Questions {
 			questionID, err := insertOrFetchQuestion(ctx, tx, qid, qq, sortIdx)
 			if err != nil {
 				log.Fatalf("question %s.%s: %v", q.Slug, qq.Slug, err)
 			}
+			qqRef := questionRef{id: questionID, qType: qq.Type, options: make([]optionRef, 0, len(qq.Options))}
 			for optIdx, opt := range qq.Options {
-				if _, err := insertOrFetchOption(ctx, tx, questionID, opt, optIdx); err != nil {
+				oid, err := insertOrFetchOption(ctx, tx, questionID, opt, optIdx)
+				if err != nil {
 					log.Fatalf("option %s.%s[%d]: %v", q.Slug, qq.Slug, optIdx, err)
 				}
+				qqRef.options = append(qqRef.options, optionRef{id: oid, text: opt.Text, isCorrect: opt.Correct})
 			}
+			qRef.questions = append(qRef.questions, qqRef)
 		}
+		quizRefs = append(quizRefs, qRef)
 	}
 	log.Printf("layer1: %d quizzes inserted (with questions + options)", len(quizIDs))
 
@@ -246,6 +253,7 @@ func main() {
 		syntheticIDs: syntheticIDs,
 		courseIDs:    courseIDsBySlug,
 		guides:       guideRefs,
+		quizzes:      quizRefs,
 		rng:          rng,
 		windowStart:  winStart,
 		windowEnd:    winEnd,
