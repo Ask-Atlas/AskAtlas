@@ -1,0 +1,57 @@
+# Phase 1a smoke fixture — minimum viable corpus exercising 4 sources + 4 MIME types.
+# Full ~105-entry bulk corpus ships in Phase 1b.
+#
+# Every entry must satisfy `python -m seed_demo validate`.
+# Optional HTTP liveness via `--check-urls`.
+
+- slug: smoke-wikimedia-png-transparency-demo
+  source_url: https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png
+  mime_type: image/png
+  filename: png-transparency-demo.png
+  license:
+    id: PUBLIC-DOMAIN
+    attribution: "Wikimedia Commons — PNG transparency demonstration (public domain)"
+  attached_to:
+    courses:
+      - stanford/cs106a
+    study_guides: []
+  owner_role: bot
+
+- slug: smoke-gutenberg-pride-and-prejudice-epub
+  source_url: https://www.gutenberg.org/ebooks/1342.epub.noimages
+  mime_type: application/epub+zip
+  filename: pride-and-prejudice.epub
+  license:
+    id: PUBLIC-DOMAIN
+    attribution: "Jane Austen, Pride and Prejudice — Project Gutenberg #1342"
+  attached_to:
+    courses:
+      - stanford/hist1b
+    study_guides: []
+  owner_role: bot
+
+- slug: smoke-unsplash-tech-desk-jpeg
+  source_url: https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&q=80
+  mime_type: image/jpeg
+  filename: unsplash-tech-desk.jpg
+  license:
+    id: UNSPLASH
+    attribution: "Photo by Nicolas Hoizey on Unsplash"
+  attached_to:
+    courses:
+      - wsu/cpts121
+    study_guides: []
+  owner_role: bot
+
+- slug: smoke-arxiv-attention-is-all-you-need-pdf
+  source_url: https://arxiv.org/pdf/1706.03762
+  mime_type: application/pdf
+  filename: attention-is-all-you-need.pdf
+  license:
+    id: CC-BY-4.0
+    attribution: "Vaswani et al., \"Attention Is All You Need\" (2017), arXiv:1706.03762"
+  attached_to:
+    courses:
+      - stanford/cs161
+    study_guides: []
+  owner_role: bot

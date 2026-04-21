@@ -1,0 +1,61 @@
+{
+  "generated_at": "2026-04-21T01:58:36Z",
+  "sources": [
+    {
+      "default_license": "PUBLIC-DOMAIN",
+      "domain": "www.gutenberg.org",
+      "files": [
+        {
+          "attribution": "Jane Austen, Pride and Prejudice — Project Gutenberg #1342",
+          "filename": "pride-and-prejudice.epub",
+          "license": "PUBLIC-DOMAIN",
+          "slug": "smoke-gutenberg-pride-and-prejudice-epub",
+          "source_url": "https://www.gutenberg.org/ebooks/1342.epub.noimages"
+        }
+      ],
+      "name": "Project Gutenberg"
+    },
+    {
+      "default_license": "UNSPLASH",
+      "domain": "images.unsplash.com",
+      "files": [
+        {
+          "attribution": "Photo by Nicolas Hoizey on Unsplash",
+          "filename": "unsplash-tech-desk.jpg",
+          "license": "UNSPLASH",
+          "slug": "smoke-unsplash-tech-desk-jpeg",
+          "source_url": "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&q=80"
+        }
+      ],
+      "name": "Unsplash"
+    },
+    {
+      "default_license": "(per-file)",
+      "domain": "upload.wikimedia.org",
+      "files": [
+        {
+          "attribution": "Wikimedia Commons — PNG transparency demonstration (public domain)",
+          "filename": "png-transparency-demo.png",
+          "license": "PUBLIC-DOMAIN",
+          "slug": "smoke-wikimedia-png-transparency-demo",
+          "source_url": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+        }
+      ],
+      "name": "Wikimedia Commons"
+    },
+    {
+      "default_license": "(per-paper)",
+      "domain": "arxiv.org",
+      "files": [
+        {
+          "attribution": "Vaswani et al., \"Attention Is All You Need\" (2017), arXiv:1706.03762",
+          "filename": "attention-is-all-you-need.pdf",
+          "license": "CC-BY-4.0",
+          "slug": "smoke-arxiv-attention-is-all-you-need-pdf",
+          "source_url": "https://arxiv.org/pdf/1706.03762"
+        }
+      ],
+      "name": "arXiv"
+    }
+  ]
+}
