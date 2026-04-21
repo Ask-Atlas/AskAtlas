@@ -48,10 +48,13 @@ func New(ctx context.Context, bucket string) (*Client, error) {
 		// step matches the CLI's canonical request and unblocks every
 		// direct S3 call (DeleteObject, GetObject, ListObjectsV2).
 		//
-		// These headers are still informative to the SDK's own retry
-		// pipeline, which emits them BEFORE this middleware runs and
-		// reads them back from its own in-process state — not from
-		// the wire response — so removal is safe for retry tracking.
+		// Safety for retry tracking: the SDK carries invocation / retry
+		// metadata in `context.Context` (not in wire-response headers),
+		// so stripping the headers from the outbound request has no
+		// effect on retry classification. Each attempt's finalize
+		// chain runs in order {RetryMetricsHeader (re-sets
+		// Amz-Sdk-Request) → this strip → Signing}, so every attempt's
+		// signed canonical-request is clean.
 		o.APIOptions = append(o.APIOptions, func(stack *middleware.Stack) error {
 			return stack.Finalize.Insert(middleware.FinalizeMiddlewareFunc(
 				"GarageStripProxyFragileHeaders",

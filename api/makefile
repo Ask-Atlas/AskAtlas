@@ -176,7 +176,7 @@ seed-study-guides:
 seed-demo-content:
 	$(call prod-confirm)
 	infisical run --env=$(ENV) -- go run ./scripts/seed_demo_content/ \
-		--action=$(or $(ACTION),seed) \
+		--action=$(ACTION) \
 		--synth-users=$(or $(SYNTH_USERS),1000) \
 		--seed=$(or $(SEED),42)
 

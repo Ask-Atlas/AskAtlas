@@ -90,10 +90,21 @@ func cleanup(ctx context.Context, conn *pgx.Conn) error {
 // collectSeedS3Keys returns every s3_key from the `files` table owned
 // by a seed_* clerk_id user. Run BEFORE the DB deletion so the mapping
 // is still intact.
+//
+// Two independent guards on the key list:
+//   1. `user_id IN (seed users)` — trusted ownership
+//   2. `s3_key LIKE 'seed-demo/%'` — belt-and-suspenders; the
+//      CreateFile endpoint accepts caller-supplied s3_key values
+//      (the Next.js server generates them), so a theoretical path
+//      exists for an attacker to seat a 'seed-demo/...' key on their
+//      own non-seed file. The prefix check + ownership gate make
+//      that an empty intersection. Underscores in LIKE are escaped
+//      so `seed_%` / `seed-demo_%` match only their literal form.
 func collectSeedS3Keys(ctx context.Context, conn *pgx.Conn) ([]string, error) {
 	const sql = `
 		SELECT s3_key FROM files
-		WHERE user_id IN (SELECT id FROM users WHERE clerk_id LIKE 'seed_%')
+		WHERE user_id IN (SELECT id FROM users WHERE clerk_id LIKE 'seed\_%' ESCAPE '\')
+		  AND s3_key LIKE 'seed-demo/%'
 	`
 	rows, err := conn.Query(ctx, sql)
 	if err != nil {
@@ -154,7 +165,22 @@ func cleanupS3(ctx context.Context, keys []string) error {
 // FK-safe order. Most per-user join tables (votes, favorites, memberships,
 // practice sessions) are ON DELETE CASCADE from `users`, so deleting
 // the users at the end cleans those up. But files/guides/quizzes/resources
-// are ON DELETE RESTRICT from users — must go explicitly first.
+// AND file_grants.granted_by are ON DELETE RESTRICT from users — must
+// go explicitly first.
+//
+// Underscores in every `LIKE 'seed_%'` predicate are escaped as literal
+// characters (`'seed\_%' ESCAPE '\'`) so the match is anchored on the
+// exact `seed_<rest>` convention — the bare `_` wildcard would also
+// match e.g. `seedAbot`, which is safe in practice but not what the
+// seeder creates.
+//
+// Course_sections rows that the seeder UPSERTs (term=2026-spring,
+// section_code=01) are NOT deleted — they're infrastructure-tier
+// artefacts anchored to `courses` (Phase 0 catalog), not to seeded
+// users. Re-running seed reuses the existing sections via
+// ON CONFLICT DO NOTHING. This is intentional; the claim "full
+// reverse" in the file header is therefore scoped to content +
+// ownership rows, not infrastructure rows.
 func cleanupDB(ctx context.Context, tx pgx.Tx) error {
 	// Step 1: Delete study_guides owned by seed_* users.
 	// Cascades: quizzes → quiz_questions → quiz_answer_options,
@@ -163,50 +189,68 @@ func cleanupDB(ctx context.Context, tx pgx.Tx) error {
 	//          study_guide_files, study_guide_resources.
 	sgDeleted, err := execCount(ctx, tx, `
 		DELETE FROM study_guides
-		WHERE creator_id IN (SELECT id FROM users WHERE clerk_id LIKE 'seed_%')
+		WHERE creator_id IN (SELECT id FROM users WHERE clerk_id LIKE 'seed\_%' ESCAPE '\')
 	`)
 	if err != nil {
 		return fmt.Errorf("delete study_guides: %w", err)
 	}
 	log.Printf("cleanup db: %d study_guides deleted (with cascades)", sgDeleted)
 
-	// Step 2: Delete files owned by seed_* users.
-	// Cascades: course_files, any remaining study_guide_files.
+	// Step 2: Delete file_grants where a seed_* user is the granter.
+	// file_grants.granted_by REFERENCES users ON DELETE RESTRICT, so
+	// the Step 5 user DELETE would fail if any such rows exist. Today
+	// the seeder doesn't create grants, but this preserves the clean
+	// sweep against future additions.
+	// Grants that TARGET seed files (grantee_type='user' + grantee_id=seed)
+	// cascade via file_grants.file_id ON DELETE CASCADE when Step 3
+	// deletes the file — no separate handling needed for that side.
+	fgDeleted, err := execCount(ctx, tx, `
+		DELETE FROM file_grants
+		WHERE granted_by IN (SELECT id FROM users WHERE clerk_id LIKE 'seed\_%' ESCAPE '\')
+	`)
+	if err != nil {
+		return fmt.Errorf("delete file_grants: %w", err)
+	}
+	log.Printf("cleanup db: %d file_grants deleted (granted_by seed_* user)", fgDeleted)
+
+	// Step 3: Delete files owned by seed_* users.
+	// Cascades: file_grants (via file_id), course_files, any remaining
+	// study_guide_files.
 	filesDeleted, err := execCount(ctx, tx, `
 		DELETE FROM files
-		WHERE user_id IN (SELECT id FROM users WHERE clerk_id LIKE 'seed_%')
+		WHERE user_id IN (SELECT id FROM users WHERE clerk_id LIKE 'seed\_%' ESCAPE '\')
 	`)
 	if err != nil {
 		return fmt.Errorf("delete files: %w", err)
 	}
 	log.Printf("cleanup db: %d files deleted (with cascades)", filesDeleted)
 
-	// Step 3: Delete resources owned by seed_* users.
+	// Step 4: Delete resources owned by seed_* users.
 	// Cascades: course_resources, any remaining study_guide_resources.
 	resDeleted, err := execCount(ctx, tx, `
 		DELETE FROM resources
-		WHERE creator_id IN (SELECT id FROM users WHERE clerk_id LIKE 'seed_%')
+		WHERE creator_id IN (SELECT id FROM users WHERE clerk_id LIKE 'seed\_%' ESCAPE '\')
 	`)
 	if err != nil {
 		return fmt.Errorf("delete resources: %w", err)
 	}
 	log.Printf("cleanup db: %d resources deleted (with cascades)", resDeleted)
 
-	// Step 4: Delete practice_sessions owned by seed_* users. Cascades to
+	// Step 5: Delete practice_sessions owned by seed_* users. Cascades to
 	// practice_session_questions + practice_answers.
 	psDeleted, err := execCount(ctx, tx, `
 		DELETE FROM practice_sessions
-		WHERE user_id IN (SELECT id FROM users WHERE clerk_id LIKE 'seed_%')
+		WHERE user_id IN (SELECT id FROM users WHERE clerk_id LIKE 'seed\_%' ESCAPE '\')
 	`)
 	if err != nil {
 		return fmt.Errorf("delete practice_sessions: %w", err)
 	}
 	log.Printf("cleanup db: %d practice_sessions deleted (with cascades)", psDeleted)
 
-	// Step 5: Delete users. Cascades to course_members, course_favorites,
+	// Step 6: Delete users. Cascades to course_members, course_favorites,
 	// course_last_viewed, and any per-user rows not already gone.
 	usersDeleted, err := execCount(ctx, tx, `
-		DELETE FROM users WHERE clerk_id LIKE 'seed_%'
+		DELETE FROM users WHERE clerk_id LIKE 'seed\_%' ESCAPE '\'
 	`)
 	if err != nil {
 		return fmt.Errorf("delete users: %w", err)
