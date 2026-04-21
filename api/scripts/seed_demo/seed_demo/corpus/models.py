@@ -1,7 +1,7 @@
 """Frozen dataclass shapes for fixture entries.
 
-Matches PRP §5.3 verbatim. Frozen so they can be safely keyed in dicts/sets
-and to honor the immutability rule from ~/.claude/rules/common/coding-style.md.
+Frozen so they can be safely keyed in dicts/sets and to prevent accidental
+mutation once a fixture has been loaded.
 """
 
 from __future__ import annotations

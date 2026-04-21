@@ -4,10 +4,8 @@ Python tooling for the AskAtlas demo data seed.
 
 Phase 1a (this directory in its current state) ships the **fixture validator
 and attribution generator only**. No DB writes, no Garage uploads — those are
-Phase 3 / Phase 4 of the demo seed roadmap.
-
-See `.claude/PRPs/plans/phase1-corpus-curation.md` (local artifact, not
-committed) for the full plan.
+the next phases of the demo seed roadmap (see `api/scripts/seed_demo_content/`
+for the Go loader that consumes these fixtures).
 
 ## Setup
 

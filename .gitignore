@@ -10,3 +10,6 @@ docs/.docusaurus
 
 .claude
 /thoughts
+/planning
+# Stray `go build` output directory when run without `-o` from api/
+/api/api
