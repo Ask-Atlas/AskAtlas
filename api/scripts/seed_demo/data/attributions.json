@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-21T02:55:50Z",
+  "generated_at": "2026-04-21T03:07:33Z",
   "sources": [
     {
       "default_license": "PUBLIC-DOMAIN",
@@ -62,6 +62,13 @@
           "source_url": "https://files-local.askatlas-demo.example/classes-oop-template.docx"
         },
         {
+          "attribution": "AskAtlas Demo Seed — Debugging Techniques for CS 106A (2026)",
+          "filename": "debugging-techniques.pdf",
+          "license": "MIT",
+          "slug": "stanford-cs106a-debugging-techniques",
+          "source_url": "https://files-local.askatlas-demo.example/debugging-techniques.pdf"
+        },
+        {
           "attribution": "AskAtlas Demo Seed — Dict Patterns Primer: Counter, Grouping, and Memoization (2026)",
           "filename": "dict-patterns-primer.epub",
           "license": "MIT",
@@ -95,6 +102,13 @@
           "license": "MIT",
           "slug": "stanford-cs106a-recursion-primer",
           "source_url": "https://files-local.askatlas-demo.example/recursion-primer.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Asymptotic Analysis: Worked Examples (2026)",
+          "filename": "asymptotic-analysis-worked-examples.pdf",
+          "license": "MIT",
+          "slug": "stanford-cs161-asymptotic-analysis-worked-examples",
+          "source_url": "https://files-local.askatlas-demo.example/asymptotic-analysis-worked-examples.pdf"
         },
         {
           "attribution": "AskAtlas Demo Seed — Big-O Cheatsheet: Asymptotic Notation and Common Complexities (2026)",
@@ -237,6 +251,13 @@
           "source_url": "https://files-local.askatlas-demo.example/research-methods-worksheet.docx"
         },
         {
+          "attribution": "AskAtlas Demo Seed — Social Influence and Conformity: A Lecture Deck (2026)",
+          "filename": "social-influence-slides.pptx",
+          "license": "MIT",
+          "slug": "stanford-psych1-social-influence-slides",
+          "source_url": "https://files-local.askatlas-demo.example/social-influence-slides.pptx"
+        },
+        {
           "attribution": "AskAtlas Demo Seed — Arrays and C-Strings (CPTS 121) (2026)",
           "filename": "arrays-and-strings.pdf",
           "license": "MIT",
@@ -356,6 +377,13 @@
           "source_url": "https://files-local.askatlas-demo.example/primary-source-worksheet.docx"
         },
         {
+          "attribution": "AskAtlas Demo Seed — The Revolutions of 1848 and the Rise of Nationalism (2026)",
+          "filename": "revolutions-1848-slides.pptx",
+          "license": "MIT",
+          "slug": "wsu-hist105-revolutions-1848-slides",
+          "source_url": "https://files-local.askatlas-demo.example/revolutions-1848-slides.pptx"
+        },
+        {
           "attribution": "AskAtlas Demo Seed — Derivative Rules: Power, Product, Quotient, Chain, and Implicit (2026)",
           "filename": "derivative-rules.pdf",
           "license": "MIT",
@@ -426,11 +454,25 @@
           "source_url": "https://files-local.askatlas-demo.example/memory-systems-cheatsheet.pdf"
         },
         {
+          "attribution": "AskAtlas Demo Seed — Research Ethics in Behavioral Science — Primer (2026)",
+          "filename": "research-ethics-primer.epub",
+          "license": "MIT",
+          "slug": "wsu-psych105-research-ethics-primer",
+          "source_url": "https://files-local.askatlas-demo.example/research-ethics-primer.epub"
+        },
+        {
           "attribution": "AskAtlas Demo Seed — Social Psychology Key Terms Glossary (2026)",
           "filename": "social-psych-key-terms.txt",
           "license": "MIT",
           "slug": "wsu-psych105-social-psych-key-terms",
           "source_url": "https://files-local.askatlas-demo.example/social-psych-key-terms.txt"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Statistics in Psychology: A Primer (2026)",
+          "filename": "stats-in-psych-primer.pdf",
+          "license": "MIT",
+          "slug": "wsu-psych105-stats-primer",
+          "source_url": "https://files-local.askatlas-demo.example/stats-in-psych-primer.pdf"
         }
       ],
       "name": "Repo-local"
@@ -490,6 +532,90 @@
         },
         {
           "attribution": "Photo on Unsplash",
+          "filename": "unsplash-png-abstract-tech-11.png",
+          "license": "UNSPLASH",
+          "slug": "unsplash-png-abstract-tech-11",
+          "source_url": "https://images.unsplash.com/photo-1515879218367-8466d910aaa4?fm=png&w=1200"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-png-brain-6.png",
+          "license": "UNSPLASH",
+          "slug": "unsplash-png-brain-6",
+          "source_url": "https://images.unsplash.com/photo-1532012197267-da84d127e765?fm=png&w=1200"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-png-circuit-9.png",
+          "license": "UNSPLASH",
+          "slug": "unsplash-png-circuit-9",
+          "source_url": "https://images.unsplash.com/photo-1560785496-3c9d27877182?fm=png&w=1200"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-png-code-1.png",
+          "license": "UNSPLASH",
+          "slug": "unsplash-png-code-abstract-1",
+          "source_url": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?fm=png&w=1200"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-png-library-3.png",
+          "license": "UNSPLASH",
+          "slug": "unsplash-png-library-3",
+          "source_url": "https://images.unsplash.com/photo-1532153975070-2e9ab71f1b14?fm=png&w=1200"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-png-materials-4.png",
+          "license": "UNSPLASH",
+          "slug": "unsplash-png-materials-4",
+          "source_url": "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?fm=png&w=1200"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-png-matrix-7.png",
+          "license": "UNSPLASH",
+          "slug": "unsplash-png-matrix-7",
+          "source_url": "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?fm=png&w=1200"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-png-neural-5.png",
+          "license": "UNSPLASH",
+          "slug": "unsplash-png-neural-5",
+          "source_url": "https://images.unsplash.com/photo-1488751045188-3c55bbf9a3fa?fm=png&w=1200"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-png-notebook-12.png",
+          "license": "UNSPLASH",
+          "slug": "unsplash-png-notebook-12",
+          "source_url": "https://images.unsplash.com/photo-1455390582262-044cdead277a?fm=png&w=1200"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-png-psych-8.png",
+          "license": "UNSPLASH",
+          "slug": "unsplash-png-psych-8",
+          "source_url": "https://images.unsplash.com/photo-1576091160550-2173dba999ef?fm=png&w=1200"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-png-study-desk-2.png",
+          "license": "UNSPLASH",
+          "slug": "unsplash-png-study-desk-2",
+          "source_url": "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?fm=png&w=1200"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-png-tech-desk-10.png",
+          "license": "UNSPLASH",
+          "slug": "unsplash-png-tech-desk-10",
+          "source_url": "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?fm=png&w=1200"
+        },
+        {
+          "attribution": "Photo on Unsplash",
           "filename": "unsplash-psych-8.jpg",
           "license": "UNSPLASH",
           "slug": "unsplash-psychology-mind-8",
@@ -508,6 +634,34 @@
           "license": "UNSPLASH",
           "slug": "unsplash-study-materials-4",
           "source_url": "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=1200&q=80"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-webp-circuit-4.webp",
+          "license": "UNSPLASH",
+          "slug": "unsplash-webp-circuit-4",
+          "source_url": "https://images.unsplash.com/photo-1560785496-3c9d27877182?fm=webp&w=1200"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-webp-code-1.webp",
+          "license": "UNSPLASH",
+          "slug": "unsplash-webp-code-1",
+          "source_url": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?fm=webp&w=1200"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-webp-library-2.webp",
+          "license": "UNSPLASH",
+          "slug": "unsplash-webp-library-2",
+          "source_url": "https://images.unsplash.com/photo-1532153975070-2e9ab71f1b14?fm=webp&w=1200"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-webp-neural-3.webp",
+          "license": "UNSPLASH",
+          "slug": "unsplash-webp-neural-3",
+          "source_url": "https://images.unsplash.com/photo-1488751045188-3c55bbf9a3fa?fm=webp&w=1200"
         }
       ],
       "name": "Unsplash"
