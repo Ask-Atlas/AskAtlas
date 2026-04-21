@@ -82,3 +82,29 @@ async def test_liveness_flags_404():
 
     assert not results["gone"].ok
     assert results["gone"].status == 404
+
+
+@pytest.mark.asyncio
+async def test_liveness_skips_pseudo_host_without_http_call():
+    """Files under the files-local pseudo-host must resolve OK without any
+    network traffic (they live on disk alongside fixtures)."""
+    files = [
+        _file(
+            "local",
+            "https://files-local.askatlas-demo.example/pointers-cheatsheet.pdf",
+        )
+    ]
+
+    call_count = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal call_count
+        call_count += 1
+        return httpx.Response(500)  # would fail if we ever hit it
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(transport=transport, follow_redirects=True) as client:
+        results = await check_urls_async(files, client=client, parallel=1)
+
+    assert results["local"].ok, results["local"]
+    assert call_count == 0, "pseudo-host entry should NOT make an HTTP request"

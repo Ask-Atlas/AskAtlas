@@ -1,0 +1,80 @@
+SOCIAL PSYCHOLOGY - KEY TERMS GLOSSARY
+WSU PSYCH 105
+
+Social psychology studies how individuals think, feel, and behave in the presence, real or imagined, of others (Gordon Allport, 1954). This glossary covers the core terms you will see on the unit exam.
+
+1.  ATTITUDES AND PERSUASION
+
+Attitude - an evaluative response toward a person, object, or idea, composed of affective, behavioral, and cognitive components (the ABC model).
+
+Cognitive dissonance - the mental discomfort produced by holding two conflicting beliefs or by behaving in ways that contradict one’s attitudes. Festinger and Carlsmith (1959) showed participants paid $1 to lie about a boring task later rated it as more enjoyable than those paid $20.
+
+Elaboration Likelihood Model (ELM) - Petty and Cacioppo’s dual-route persuasion theory. The central route processes arguments carefully; the peripheral route relies on surface cues such as attractiveness or source credibility.
+
+Foot-in-the-door - compliance technique in which a small request precedes a larger one.
+
+Door-in-the-face - a large unreasonable request followed by a moderate one to increase compliance.
+
+2.  SOCIAL INFLUENCE
+
+Conformity - adjusting behavior or attitudes to match a group standard. Solomon Asch’s (1951) line-judgment study found ~37 percent average conformity to unanimous but wrong majorities.
+
+Normative influence - conforming to gain approval or avoid rejection.
+
+Informational influence - conforming because others are believed to possess accurate information.
+
+Obedience - compliance with direct commands from an authority figure. Stanley Milgram’s (1963) shock experiments showed 65 percent of participants delivered the maximum 450-volt shock when instructed by an experimenter.
+
+Groupthink - Irving Janis’s term for faulty decision making in cohesive groups that prioritize consensus over critical evaluation. Symptoms include illusion of invulnerability, self-censorship, and pressure on dissenters.
+
+Group polarization - group discussion strengthens the average pre-existing attitude of members.
+
+Social facilitation - the presence of others improves performance on easy or well-learned tasks and impairs performance on difficult ones (Zajonc, 1965).
+
+Social loafing - individuals exert less effort when working in a group than when working alone (Latane, Williams, and Harkins, 1979).
+
+Deindividuation - loss of self-awareness and individual accountability in groups, often increasing antinormative behavior.
+
+3.  ATTRIBUTION AND PERCEPTION
+
+Attribution theory - how people explain the causes of behavior, either dispositionally (internal traits) or situationally (external circumstances).
+
+Fundamental attribution error - the tendency to overweight dispositional and underweight situational factors when explaining others’ behavior.
+
+Actor-observer bias - we attribute our own behavior to the situation but others’ behavior to their disposition.
+
+Self-serving bias - attributing successes to internal causes and failures to external ones.
+
+Just-world hypothesis - the belief that people get what they deserve, which can promote victim blaming.
+
+Stereotype - a generalized belief about a social group.
+
+Prejudice - a negative attitude toward a group.
+
+Discrimination - unjustified negative behavior directed at a group.
+
+4.  GROUP AND INTERGROUP DYNAMICS
+
+In-group bias - favoring one’s own group. Tajfel’s minimal group paradigm showed this emerges from arbitrary categorization alone.
+
+Out-group homogeneity - perceiving out-group members as more alike than in-group members.
+
+Realistic conflict theory - intergroup hostility arises from competition over scarce resources (Sherif’s Robbers Cave study, 1954).
+
+Contact hypothesis - prolonged contact between groups under conditions of equal status, cooperation, and institutional support reduces prejudice (Allport, 1954).
+
+Bystander effect - the presence of others inhibits intervention in an emergency. Latane and Darley’s (1970) five-step decision model explains this through diffusion of responsibility and pluralistic ignorance.
+
+5.  PROSOCIAL BEHAVIOR AND AGGRESSION
+
+Altruism - helping another at a cost to oneself, with no expectation of reward.
+
+Reciprocity norm - the expectation that we should help those who have helped us.
+
+Bystander intervention - the process by which a person decides to help, requiring: notice the event, interpret it as an emergency, assume responsibility, know how to help, and decide to act.
+
+Frustration-aggression hypothesis - aggression is often a response to blocked goals (Dollard et al., 1939).
+
+Weapons effect - the mere presence of weapons increases aggressive responses (Berkowitz and LePage, 1967).
+
+STUDY TIP: For the exam, pair each term with its seminal study and one real-world application. Social psychology is about situations more than people; when in doubt, favor the situational explanation.

@@ -37,6 +37,7 @@ LICENSES: frozenset[str] = frozenset(
     {
         "CC0-1.0",
         "CC-BY-4.0",
+        "CC-BY-SA-3.0",  # WikiBooks Calculus, Wikimedia Commons pre-2013 uploads
         "CC-BY-SA-4.0",
         "CC-BY-NC-4.0",
         "CC-BY-NC-SA-4.0",

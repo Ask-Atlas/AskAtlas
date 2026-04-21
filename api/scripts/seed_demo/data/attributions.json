@@ -1,10 +1,45 @@
 {
-  "generated_at": "2026-04-21T01:58:36Z",
+  "generated_at": "2026-04-21T02:55:50Z",
   "sources": [
     {
       "default_license": "PUBLIC-DOMAIN",
       "domain": "www.gutenberg.org",
       "files": [
+        {
+          "attribution": "John Lord, Beacon Lights of History Vol 6: Renaissance and Reformation — Project Gutenberg #10532",
+          "filename": "beacon-lights-renaissance-reformation.epub",
+          "license": "PUBLIC-DOMAIN",
+          "slug": "gutenberg-beacon-lights-renaissance-reformation-epub",
+          "source_url": "https://www.gutenberg.org/ebooks/10532.epub.noimages"
+        },
+        {
+          "attribution": "Jacob Burckhardt, The Civilisation of the Renaissance in Italy — Project Gutenberg #2074",
+          "filename": "burckhardt-renaissance-italy.epub",
+          "license": "PUBLIC-DOMAIN",
+          "slug": "gutenberg-burckhardt-renaissance-epub",
+          "source_url": "https://www.gutenberg.org/ebooks/2074.epub.noimages"
+        },
+        {
+          "attribution": "Mark Twain, Adventures of Huckleberry Finn — Project Gutenberg #76",
+          "filename": "huckleberry-finn.txt",
+          "license": "PUBLIC-DOMAIN",
+          "slug": "gutenberg-huckleberry-finn-txt",
+          "source_url": "https://www.gutenberg.org/cache/epub/76/pg76.txt"
+        },
+        {
+          "attribution": "Walter Pater, The Renaissance: Studies in Art and Poetry — Project Gutenberg #4060",
+          "filename": "pater-the-renaissance.epub",
+          "license": "PUBLIC-DOMAIN",
+          "slug": "gutenberg-pater-renaissance-epub",
+          "source_url": "https://www.gutenberg.org/ebooks/4060.epub.noimages"
+        },
+        {
+          "attribution": "Jane Austen, Pride and Prejudice — Project Gutenberg #1342 (text)",
+          "filename": "pride-and-prejudice.txt",
+          "license": "PUBLIC-DOMAIN",
+          "slug": "gutenberg-pride-and-prejudice-txt",
+          "source_url": "https://www.gutenberg.org/cache/epub/1342/pg1342.txt"
+        },
         {
           "attribution": "Jane Austen, Pride and Prejudice — Project Gutenberg #1342",
           "filename": "pride-and-prejudice.epub",
@@ -16,6 +51,391 @@
       "name": "Project Gutenberg"
     },
     {
+      "default_license": "MIT",
+      "domain": "files-local.askatlas-demo.example",
+      "files": [
+        {
+          "attribution": "AskAtlas Demo Seed — Classes and OOP Template (2026)",
+          "filename": "classes-oop-template.docx",
+          "license": "MIT",
+          "slug": "stanford-cs106a-classes-oop-template",
+          "source_url": "https://files-local.askatlas-demo.example/classes-oop-template.docx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Dict Patterns Primer: Counter, Grouping, and Memoization (2026)",
+          "filename": "dict-patterns-primer.epub",
+          "license": "MIT",
+          "slug": "stanford-cs106a-dict-patterns-primer",
+          "source_url": "https://files-local.askatlas-demo.example/dict-patterns-primer.epub"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — List, Dict, and Set Comprehensions Cheatsheet (2026)",
+          "filename": "list-comprehensions-cheatsheet.pdf",
+          "license": "MIT",
+          "slug": "stanford-cs106a-list-comprehensions-cheatsheet",
+          "source_url": "https://files-local.askatlas-demo.example/list-comprehensions-cheatsheet.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Midterm 1 Review Slides (2026)",
+          "filename": "midterm1-review-slides.pptx",
+          "license": "MIT",
+          "slug": "stanford-cs106a-midterm1-review-slides",
+          "source_url": "https://files-local.askatlas-demo.example/midterm1-review-slides.pptx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Problem Set Environment Setup (2026)",
+          "filename": "pset-setup-readme.txt",
+          "license": "MIT",
+          "slug": "stanford-cs106a-pset-setup-readme",
+          "source_url": "https://files-local.askatlas-demo.example/pset-setup-readme.txt"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Recursion Primer: Base Cases and Recursive Cases (2026)",
+          "filename": "recursion-primer.pdf",
+          "license": "MIT",
+          "slug": "stanford-cs106a-recursion-primer",
+          "source_url": "https://files-local.askatlas-demo.example/recursion-primer.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Big-O Cheatsheet: Asymptotic Notation and Common Complexities (2026)",
+          "filename": "big-o-cheatsheet.pdf",
+          "license": "MIT",
+          "slug": "stanford-cs161-big-o-cheatsheet",
+          "source_url": "https://files-local.askatlas-demo.example/big-o-cheatsheet.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Divide and Conquer: Merge Sort, Quicksort, and Karatsuba (2026)",
+          "filename": "divide-and-conquer-slides.pptx",
+          "license": "MIT",
+          "slug": "stanford-cs161-divide-and-conquer-slides",
+          "source_url": "https://files-local.askatlas-demo.example/divide-and-conquer-slides.pptx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Dynamic Programming Patterns: Memoization, Tabulation, and Classic Problems (2026)",
+          "filename": "dp-patterns.pdf",
+          "license": "MIT",
+          "slug": "stanford-cs161-dp-patterns",
+          "source_url": "https://files-local.askatlas-demo.example/dp-patterns.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Graph Algorithms Worksheet: BFS, DFS, and Dijkstra (2026)",
+          "filename": "graph-algorithms-worksheet.docx",
+          "license": "MIT",
+          "slug": "stanford-cs161-graph-algorithms-worksheet",
+          "source_url": "https://files-local.askatlas-demo.example/graph-algorithms-worksheet.docx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Master Theorem Quick Reference (2026)",
+          "filename": "master-theorem-quickref.txt",
+          "license": "MIT",
+          "slug": "stanford-cs161-master-theorem-quickref",
+          "source_url": "https://files-local.askatlas-demo.example/master-theorem-quickref.txt"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — 20th-Century Movements: Modernism, Postmodernism, Colonial Critique (2026)",
+          "filename": "20c-movements-slides.pptx",
+          "license": "MIT",
+          "slug": "stanford-hist1b-20c-movements-slides",
+          "source_url": "https://files-local.askatlas-demo.example/20c-movements-slides.pptx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Close Reading Worksheet: Primary Texts (2026)",
+          "filename": "close-reading-worksheet.docx",
+          "license": "MIT",
+          "slug": "stanford-hist1b-close-reading-worksheet",
+          "source_url": "https://files-local.askatlas-demo.example/close-reading-worksheet.docx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Enlightenment Thought: Locke, Rousseau, Kant (2026)",
+          "filename": "enlightenment-thought.pdf",
+          "license": "MIT",
+          "slug": "stanford-hist1b-enlightenment-thought",
+          "source_url": "https://files-local.askatlas-demo.example/enlightenment-thought.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Key Dates Timeline: Renaissance to the Present (2026)",
+          "filename": "key-dates-timeline.txt",
+          "license": "MIT",
+          "slug": "stanford-hist1b-key-dates-timeline",
+          "source_url": "https://files-local.askatlas-demo.example/key-dates-timeline.txt"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Renaissance Humanism: A Primer (2026)",
+          "filename": "renaissance-humanism-primer.pdf",
+          "license": "MIT",
+          "slug": "stanford-hist1b-renaissance-humanism-primer",
+          "source_url": "https://files-local.askatlas-demo.example/renaissance-humanism-primer.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Eigenvalues, Eigenvectors, and Diagonalization (2026)",
+          "filename": "eigenvalues-slides.pptx",
+          "license": "MIT",
+          "slug": "stanford-math51-eigenvalues-slides",
+          "source_url": "https://files-local.askatlas-demo.example/eigenvalues-slides.pptx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Gradient and the Multivariable Chain Rule (2026)",
+          "filename": "gradient-chain-rule.pdf",
+          "license": "MIT",
+          "slug": "stanford-math51-gradient-chain-rule",
+          "source_url": "https://files-local.askatlas-demo.example/gradient-chain-rule.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Lagrange Multipliers Worksheet (2026)",
+          "filename": "lagrange-multipliers-worksheet.docx",
+          "license": "MIT",
+          "slug": "stanford-math51-lagrange-multipliers-worksheet",
+          "source_url": "https://files-local.askatlas-demo.example/lagrange-multipliers-worksheet.docx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Matrix Operations Cheatsheet (2026)",
+          "filename": "matrix-operations-cheatsheet.pdf",
+          "license": "MIT",
+          "slug": "stanford-math51-matrix-operations-cheatsheet",
+          "source_url": "https://files-local.askatlas-demo.example/matrix-operations-cheatsheet.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — MATH 51 Notation Glossary (2026)",
+          "filename": "notation-glossary.txt",
+          "license": "MIT",
+          "slug": "stanford-math51-notation-glossary",
+          "source_url": "https://files-local.askatlas-demo.example/notation-glossary.txt"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Abnormal Psychology: Diagnostic Criteria Glossary (2026)",
+          "filename": "diagnostic-glossary.txt",
+          "license": "MIT",
+          "slug": "stanford-psych1-diagnostic-glossary",
+          "source_url": "https://files-local.askatlas-demo.example/diagnostic-glossary.txt"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Emotion and Motivation: Theories from James-Lange to Maslow (2026)",
+          "filename": "emotion-motivation-slides.pptx",
+          "license": "MIT",
+          "slug": "stanford-psych1-emotion-motivation-slides",
+          "source_url": "https://files-local.askatlas-demo.example/emotion-motivation-slides.pptx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Neuroscience Primer: From Neuron to Signal (2026)",
+          "filename": "neuroscience-primer.pdf",
+          "license": "MIT",
+          "slug": "stanford-psych1-neuroscience-primer",
+          "source_url": "https://files-local.askatlas-demo.example/neuroscience-primer.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Perception and Illusions: How the Brain Builds Reality (2026)",
+          "filename": "perception-illusions.pdf",
+          "license": "MIT",
+          "slug": "stanford-psych1-perception-illusions",
+          "source_url": "https://files-local.askatlas-demo.example/perception-illusions.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Research Methods Worksheet: Variables, Designs, and Causal Claims (2026)",
+          "filename": "research-methods-worksheet.docx",
+          "license": "MIT",
+          "slug": "stanford-psych1-research-methods-worksheet",
+          "source_url": "https://files-local.askatlas-demo.example/research-methods-worksheet.docx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Arrays and C-Strings (CPTS 121) (2026)",
+          "filename": "arrays-and-strings.pdf",
+          "license": "MIT",
+          "slug": "wsu-cpts121-arrays-and-strings",
+          "source_url": "https://files-local.askatlas-demo.example/arrays-and-strings.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Final Exam Review Slides (CPTS 121) (2026)",
+          "filename": "final-review-slides.pptx",
+          "license": "MIT",
+          "slug": "wsu-cpts121-final-review-slides",
+          "source_url": "https://files-local.askatlas-demo.example/final-review-slides.pptx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — K&R Exercise Commentary: The getline Problem (CPTS 121) (2026)",
+          "filename": "kr-excerpt-commentary.epub",
+          "license": "MIT",
+          "slug": "wsu-cpts121-kr-excerpt-commentary",
+          "source_url": "https://files-local.askatlas-demo.example/kr-excerpt-commentary.epub"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Lab Setup README (CPTS 121) (2026)",
+          "filename": "lab-readme.txt",
+          "license": "MIT",
+          "slug": "wsu-cpts121-lab-readme",
+          "source_url": "https://files-local.askatlas-demo.example/lab-readme.txt"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Midterm Prep Template (CPTS 121) (2026)",
+          "filename": "midterm-prep-template.docx",
+          "license": "MIT",
+          "slug": "wsu-cpts121-midterm-prep-template",
+          "source_url": "https://files-local.askatlas-demo.example/midterm-prep-template.docx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Pointers Cheatsheet (CPTS 121) (2026)",
+          "filename": "pointers-cheatsheet.pdf",
+          "license": "MIT",
+          "slug": "wsu-cpts121-pointers-cheatsheet",
+          "source_url": "https://files-local.askatlas-demo.example/pointers-cheatsheet.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Cache Hierarchy Study Notes (2026)",
+          "filename": "cache-hierarchy-notes.pdf",
+          "license": "MIT",
+          "slug": "wsu-cpts260-cache-hierarchy-notes",
+          "source_url": "https://files-local.askatlas-demo.example/cache-hierarchy-notes.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — MIPS Instruction Encoding (2026)",
+          "filename": "instruction-encoding-slides.pptx",
+          "license": "MIT",
+          "slug": "wsu-cpts260-instruction-encoding-slides",
+          "source_url": "https://files-local.askatlas-demo.example/instruction-encoding-slides.pptx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — SPIM / MARS Lab Setup Guide (2026)",
+          "filename": "lab-setup-spim.txt",
+          "license": "MIT",
+          "slug": "wsu-cpts260-lab-setup-spim",
+          "source_url": "https://files-local.askatlas-demo.example/lab-setup-spim.txt"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Memory Hierarchy: A Primer (2026)",
+          "filename": "memory-hierarchy-excerpt.epub",
+          "license": "MIT",
+          "slug": "wsu-cpts260-memory-hierarchy-excerpt",
+          "source_url": "https://files-local.askatlas-demo.example/memory-hierarchy-excerpt.epub"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — MIPS Assembly Cheat Sheet (2026)",
+          "filename": "mips-cheatsheet.pdf",
+          "license": "MIT",
+          "slug": "wsu-cpts260-mips-cheatsheet",
+          "source_url": "https://files-local.askatlas-demo.example/mips-cheatsheet.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Pipelining Hazards Worksheet (2026)",
+          "filename": "pipelining-hazards-worksheet.docx",
+          "license": "MIT",
+          "slug": "wsu-cpts260-pipelining-hazards-worksheet",
+          "source_url": "https://files-local.askatlas-demo.example/pipelining-hazards-worksheet.docx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Colonialism and Decolonization: A Slide Deck (2026)",
+          "filename": "colonialism-decolonization-slides.pptx",
+          "license": "MIT",
+          "slug": "wsu-hist105-colonialism-decolonization-slides",
+          "source_url": "https://files-local.askatlas-demo.example/colonialism-decolonization-slides.pptx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Environmental History Primer: Columbian Exchange to Climate Crisis (2026)",
+          "filename": "env-history-primer.pdf",
+          "license": "MIT",
+          "slug": "wsu-hist105-env-history-primer",
+          "source_url": "https://files-local.askatlas-demo.example/env-history-primer.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Globalization Timeline: From Silk Road to WTO (2026)",
+          "filename": "globalization-timeline.pdf",
+          "license": "MIT",
+          "slug": "wsu-hist105-globalization-timeline",
+          "source_url": "https://files-local.askatlas-demo.example/globalization-timeline.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Periodization Guide for HIST 105 (2026)",
+          "filename": "periodization-guide.txt",
+          "license": "MIT",
+          "slug": "wsu-hist105-periodization-guide",
+          "source_url": "https://files-local.askatlas-demo.example/periodization-guide.txt"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Primary Source Analysis Worksheet (2026)",
+          "filename": "primary-source-worksheet.docx",
+          "license": "MIT",
+          "slug": "wsu-hist105-primary-source-worksheet",
+          "source_url": "https://files-local.askatlas-demo.example/primary-source-worksheet.docx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Derivative Rules: Power, Product, Quotient, Chain, and Implicit (2026)",
+          "filename": "derivative-rules.pdf",
+          "license": "MIT",
+          "slug": "wsu-math171-derivative-rules",
+          "source_url": "https://files-local.askatlas-demo.example/derivative-rules.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Fundamental Theorem of Calculus: Both Parts, Plain Summary (2026)",
+          "filename": "ftc-summary.txt",
+          "license": "MIT",
+          "slug": "wsu-math171-ftc-summary",
+          "source_url": "https://files-local.askatlas-demo.example/ftc-summary.txt"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Integration Techniques: A Primer on u-Substitution, Integration by Parts, and Partial Fractions (2026)",
+          "filename": "integration-techniques-primer.epub",
+          "license": "MIT",
+          "slug": "wsu-math171-integration-techniques-primer",
+          "source_url": "https://files-local.askatlas-demo.example/integration-techniques-primer.epub"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Limits Cheatsheet: Epsilon-Delta, Limit Laws, and L'Hopital's Rule (2026)",
+          "filename": "limits-cheatsheet.pdf",
+          "license": "MIT",
+          "slug": "wsu-math171-limits-cheatsheet",
+          "source_url": "https://files-local.askatlas-demo.example/limits-cheatsheet.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Optimization: Max/Min Problems Step by Step (2026)",
+          "filename": "optimization-slides.pptx",
+          "license": "MIT",
+          "slug": "wsu-math171-optimization-slides",
+          "source_url": "https://files-local.askatlas-demo.example/optimization-slides.pptx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Related Rates Worksheet (2026)",
+          "filename": "related-rates-worksheet.docx",
+          "license": "MIT",
+          "slug": "wsu-math171-related-rates-worksheet",
+          "source_url": "https://files-local.askatlas-demo.example/related-rates-worksheet.docx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Cognitive Biases Worksheet (2026)",
+          "filename": "cognitive-biases-worksheet.docx",
+          "license": "MIT",
+          "slug": "wsu-psych105-cognitive-biases-worksheet",
+          "source_url": "https://files-local.askatlas-demo.example/cognitive-biases-worksheet.docx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Classical and Operant Conditioning Primer (2026)",
+          "filename": "conditioning-primer.pdf",
+          "license": "MIT",
+          "slug": "wsu-psych105-conditioning-primer",
+          "source_url": "https://files-local.askatlas-demo.example/conditioning-primer.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Developmental Psychology Stages — Slide Deck (2026)",
+          "filename": "dev-psych-stages-slides.pptx",
+          "license": "MIT",
+          "slug": "wsu-psych105-dev-psych-stages-slides",
+          "source_url": "https://files-local.askatlas-demo.example/dev-psych-stages-slides.pptx"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Memory Systems Cheatsheet (2026)",
+          "filename": "memory-systems-cheatsheet.pdf",
+          "license": "MIT",
+          "slug": "wsu-psych105-memory-systems-cheatsheet",
+          "source_url": "https://files-local.askatlas-demo.example/memory-systems-cheatsheet.pdf"
+        },
+        {
+          "attribution": "AskAtlas Demo Seed — Social Psychology Key Terms Glossary (2026)",
+          "filename": "social-psych-key-terms.txt",
+          "license": "MIT",
+          "slug": "wsu-psych105-social-psych-key-terms",
+          "source_url": "https://files-local.askatlas-demo.example/social-psych-key-terms.txt"
+        }
+      ],
+      "name": "Repo-local"
+    },
+    {
       "default_license": "UNSPLASH",
       "domain": "images.unsplash.com",
       "files": [
@@ -25,6 +445,69 @@
           "license": "UNSPLASH",
           "slug": "smoke-unsplash-tech-desk-jpeg",
           "source_url": "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&q=80"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-code-1.jpg",
+          "license": "UNSPLASH",
+          "slug": "unsplash-abstract-computer-code-1",
+          "source_url": "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=1200&q=80"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-brain-6.jpg",
+          "license": "UNSPLASH",
+          "slug": "unsplash-brain-scan-6",
+          "source_url": "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=1200&q=80"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-circuit-9.jpg",
+          "license": "UNSPLASH",
+          "slug": "unsplash-circuit-board-9",
+          "source_url": "https://images.unsplash.com/photo-1560785496-3c9d27877182?w=1200&q=80"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-library-3.jpg",
+          "license": "UNSPLASH",
+          "slug": "unsplash-library-3",
+          "source_url": "https://images.unsplash.com/photo-1532153975070-2e9ab71f1b14?w=1200&q=80"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-matrix-7.jpg",
+          "license": "UNSPLASH",
+          "slug": "unsplash-matrix-pattern-7",
+          "source_url": "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?w=1200&q=80"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-neural-abstract-5.jpg",
+          "license": "UNSPLASH",
+          "slug": "unsplash-neural-abstract-5",
+          "source_url": "https://images.unsplash.com/photo-1488751045188-3c55bbf9a3fa?w=1200&q=80"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-psych-8.jpg",
+          "license": "UNSPLASH",
+          "slug": "unsplash-psychology-mind-8",
+          "source_url": "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1200&q=80"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-study-desk-2.jpg",
+          "license": "UNSPLASH",
+          "slug": "unsplash-study-desk-2",
+          "source_url": "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=1200&q=80"
+        },
+        {
+          "attribution": "Photo on Unsplash",
+          "filename": "unsplash-study-materials-4.jpg",
+          "license": "UNSPLASH",
+          "slug": "unsplash-study-materials-4",
+          "source_url": "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=1200&q=80"
         }
       ],
       "name": "Unsplash"
@@ -34,28 +517,63 @@
       "domain": "upload.wikimedia.org",
       "files": [
         {
+          "attribution": "English Wikibook on Calculus community — Calculus (PDF by Dirk Hünniger, 2011)",
+          "filename": "wikibooks-calculus.pdf",
+          "license": "CC-BY-SA-3.0",
+          "slug": "smoke-wikibooks-calculus-pdf",
+          "source_url": "https://upload.wikimedia.org/wikipedia/commons/a/a3/Calculus.pdf"
+        },
+        {
           "attribution": "Wikimedia Commons — PNG transparency demonstration (public domain)",
           "filename": "png-transparency-demo.png",
           "license": "PUBLIC-DOMAIN",
           "slug": "smoke-wikimedia-png-transparency-demo",
           "source_url": "https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png"
+        },
+        {
+          "attribution": "Wikibooks contributors — Basic Book Design",
+          "filename": "basic-book-design.pdf",
+          "license": "CC-BY-SA-4.0",
+          "slug": "wikimedia-basic-book-design-pdf",
+          "source_url": "https://upload.wikimedia.org/wikipedia/commons/0/0c/Basic_Book_Design.pdf"
+        },
+        {
+          "attribution": "Jacob Burckhardt, The Civilisation of the Renaissance in Italy (1860)",
+          "filename": "burckhardt-civilisation-renaissance-italy.pdf",
+          "license": "PUBLIC-DOMAIN",
+          "slug": "wikimedia-burckhardt-renaissance-italy-pdf",
+          "source_url": "https://upload.wikimedia.org/wikipedia/commons/f/f6/The_civilisation_of_the_period_of_the_renaissance_in_Italy_(IA_civilisationofpe01burc).pdf"
+        },
+        {
+          "attribution": "Jens Gustedt, Modern C (INRIA, 2019)",
+          "filename": "modern-c-gustedt.pdf",
+          "license": "CC-BY-SA-4.0",
+          "slug": "wikimedia-modern-c-gustedt-pdf",
+          "source_url": "https://upload.wikimedia.org/wikipedia/commons/0/0a/Modern_C.pdf"
+        },
+        {
+          "attribution": "Thomas McCrie, History of the Reformation in Italy in the 16th Century (1827)",
+          "filename": "reformation-italy-16th-century.pdf",
+          "license": "PUBLIC-DOMAIN",
+          "slug": "wikimedia-reformation-italy-pdf",
+          "source_url": "https://upload.wikimedia.org/wikipedia/commons/a/a3/History_of_the_progress_and_suppression_of_the_reformation_in_Italy_in_the_16th_century_(microform)_-_including_a_sketch_of_the_history_of_the_Reformation_in_the_Grisons_(IA_historyofprogres01mcri).pdf"
+        },
+        {
+          "attribution": "John Addington Symonds, Renaissance in Italy: The Age of the Despots (1875)",
+          "filename": "symonds-renaissance-age-despots.pdf",
+          "license": "PUBLIC-DOMAIN",
+          "slug": "wikimedia-renaissance-age-of-despots-pdf",
+          "source_url": "https://upload.wikimedia.org/wikipedia/commons/3/3c/Renaissance_in_Italy-_the_age_of_the_despots_(IA_renaissanceinita00symoiala).pdf"
+        },
+        {
+          "attribution": "Matthew Digby Wyatt, The Renaissance Court in the Crystal Palace (1854)",
+          "filename": "renaissance-court-crystal-palace.pdf",
+          "license": "PUBLIC-DOMAIN",
+          "slug": "wikimedia-renaissance-court-crystal-palace-pdf",
+          "source_url": "https://upload.wikimedia.org/wikipedia/commons/9/97/The_Renaissance_court_in_the_Crystal_Palace_(IA_renaissancecourt00wyat).pdf"
         }
       ],
       "name": "Wikimedia Commons"
-    },
-    {
-      "default_license": "(per-paper)",
-      "domain": "arxiv.org",
-      "files": [
-        {
-          "attribution": "Vaswani et al., \"Attention Is All You Need\" (2017), arXiv:1706.03762",
-          "filename": "attention-is-all-you-need.pdf",
-          "license": "CC-BY-4.0",
-          "slug": "smoke-arxiv-attention-is-all-you-need-pdf",
-          "source_url": "https://arxiv.org/pdf/1706.03762"
-        }
-      ],
-      "name": "arXiv"
     }
   ]
 }

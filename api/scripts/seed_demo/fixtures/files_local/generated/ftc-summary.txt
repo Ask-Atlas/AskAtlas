@@ -1,0 +1,41 @@
+THE FUNDAMENTAL THEOREM OF CALCULUS
+
+The Fundamental Theorem of Calculus, usually called the FTC, is the bridge between the two main operations of calculus: differentiation and integration. It comes in two parts. Together, they say that differentiation and definite integration are inverse operations, in a very precise sense. This is why the notation for antiderivatives and definite integrals shares the integral sign.
+
+PART 1: DIFFERENTIATING AN INTEGRAL
+
+Let f be a continuous function on an interval containing the point a. Define a new function F by
+
+    F(x) = integral from a to x of f(t) dt.
+
+Then F is differentiable, and F’(x) = f(x). In other words, differentiating the accumulated area under f with respect to the upper limit gives you back the original function f evaluated at that upper limit.
+
+A typical MATH 171 application looks like this. If g(x) is the integral from 0 to x of sin(t squared) dt, then even though we cannot write a closed-form antiderivative for sin(t squared), we still know that g’(x) = sin(x squared) exactly. Combined with the chain rule, if the upper limit is a function u(x), then d/dx of the integral from a to u(x) of f(t) dt is f(u(x)) times u’(x).
+
+PART 2: EVALUATING A DEFINITE INTEGRAL
+
+Let f be continuous on the closed interval from a to b, and let F be any antiderivative of f, meaning F’(x) = f(x). Then
+
+    integral from a to b of f(x) dx = F(b) - F(a).
+
+This is the rule that turns the problem of evaluating a definite integral into the much easier problem of finding an antiderivative and subtracting two numbers.
+
+WHY BOTH PARTS MATTER
+
+Part 1 tells us that every continuous function has an antiderivative, namely the accumulation function F(x) defined by integrating from a fixed lower limit to x. This is a theoretical guarantee.
+
+Part 2 tells us how to actually compute a definite integral once we can find an antiderivative. This is the practical tool.
+
+Together, they convert an area problem into a pair of antiderivative evaluations. Without the FTC, every definite integral would require a limit of Riemann sums.
+
+QUICK WORKED EXAMPLES
+
+Example A. Evaluate the integral from 0 to 2 of x squared dx. An antiderivative of x squared is x cubed over 3. By Part 2, the value is 8/3 minus 0 which equals 8/3.
+
+Example B. If h(x) is the integral from 1 to x cubed of e to the t dt, find h’(x). By Part 1 plus the chain rule, h’(x) = e to the x cubed, times 3 x squared.
+
+COMMON PITFALLS
+
+Remember that the FTC requires f to be continuous on the interval of integration. If f has a vertical asymptote inside the interval, you must split the integral and use improper integrals.
+
+Do not forget the negative sign when the lower limit is the variable instead of the upper limit. Swapping limits flips the sign.

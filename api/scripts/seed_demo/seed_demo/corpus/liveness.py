@@ -23,6 +23,11 @@ DEFAULT_PARALLEL = 8
 # default `python-httpx/x.y` User-Agent. Provide an identifiable, polite UA.
 DEFAULT_USER_AGENT = "AskAtlas-seed-demo/0.1 (validator; https://github.com/Ask-Atlas/AskAtlas)"
 
+# Pseudo-hosts that resolve to repo-local files. Liveness returns OK without
+# a network call because the files live on disk alongside the fixtures.
+# Matches `seed_demo.catalogs.APPROVED_DOMAINS` entry of the same name.
+LOCAL_FILE_HOSTS: frozenset[str] = frozenset({"files-local.askatlas-demo.example"})
+
 
 # Accepted Content-Type aliases per declared mime_type. Declared value ALWAYS
 # accepted; this table only adds extras.
@@ -57,11 +62,26 @@ def _content_type_matches(declared: str, got: str) -> bool:
     return any(got_n == alias.lower() for alias in CONTENT_TYPE_ALIASES.get(declared, ()))
 
 
+def _is_local_file_host(url: str) -> bool:
+    from urllib.parse import urlparse
+
+    return (urlparse(url).hostname or "").lower() in LOCAL_FILE_HOSTS
+
+
 async def _check_one(
     client: httpx.AsyncClient,
     f: FileEntry,
     timeout_s: float,
 ) -> LivenessResult:
+    # Pseudo-hosts for repo-local files — don't hit the network.
+    if _is_local_file_host(f.source_url):
+        return LivenessResult(
+            slug=f.slug,
+            ok=True,
+            status=0,
+            content_type=f.mime_type,
+            error=None,
+        )
     """Check one URL via HEAD with GET fallback.
 
     Intentionally retries with streaming GET in two cases:

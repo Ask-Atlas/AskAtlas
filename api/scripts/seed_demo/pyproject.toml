@@ -29,6 +29,11 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "PT", "SIM", "RUF"]
 
+[tool.ruff.lint.per-file-ignores]
+# assemble_yaml.py is a data-declaration file: long attribution strings and
+# URLs are unavoidable and wrapping them would hurt readability.
+"fixtures/files_local/assemble_yaml.py" = ["E501"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
