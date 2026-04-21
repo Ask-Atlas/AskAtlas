@@ -33,7 +33,7 @@ endef
 
 .PHONY: dev stage prod build install format format-check lint test tidy tidy-check \
 	sqlc/generate docker-build docker-run mockery seed seed-schools seed-courses \
-	seed-study-guides e2e generate-docs bruno
+	seed-study-guides seed-demo-content e2e generate-docs bruno
 
 dev:
 	infisical run --env=dev -- go run $(MAIN_PATH)
@@ -146,6 +146,30 @@ seed-courses:
 seed-study-guides:
 	$(call prod-confirm)
 	infisical run --env=$(ENV) -- go run $(SEED_STUDY_GUIDES_PATH) -guides=$(STUDY_GUIDES_CSV)
+
+## make seed-demo-content [ENV=dev|staging|prod] [SYNTH_USERS=1000] [SEED=42]
+##
+## Phase 3 demo-data loader. Reads the Phase 1+2 validated YAML/MD
+## fixtures at scripts/seed_demo/fixtures/ and writes them into the
+## target database in three layers:
+##   1. Identity: bot + demo + N synthetic users (direct INSERT with
+##      fake clerk_ids seed_bot, seed_demo, seed_synth_NNNN).
+##   2. Fixtures: 100 files, 5 resources, 82 guides, 43 quizzes
+##      (with their 258 questions + 716 options), plus join tables.
+##      Guide body placeholders ({{FILE:slug}} etc.) are rewritten
+##      in-place once all UUIDs are known.
+##   3. Activity: course_sections + memberships (2k+), Zipf view
+##      counts, long-tail votes, recommendations, favorites, last-
+##      viewed entries. Demo user gets curated heavy population.
+## All three layers + pass-2 rewrite run in a single transaction;
+## INSERTs are ON CONFLICT DO NOTHING / SELECT-fallback so re-runs
+## are idempotent. Runs in ~3 minutes against Neon dev. ENV=prod
+## requires interactive [y] confirmation.
+seed-demo-content:
+	$(call prod-confirm)
+	infisical run --env=$(ENV) -- go run ./scripts/seed_demo_content/ \
+		--synth-users=$(or $(SYNTH_USERS),1000) \
+		--seed=$(or $(SEED),42)
 
 ## make e2e E2E_TOKEN=<token> [ENV=dev|staging]
 e2e:
