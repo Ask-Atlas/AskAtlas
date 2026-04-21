@@ -92,14 +92,14 @@ func cleanup(ctx context.Context, conn *pgx.Conn) error {
 // is still intact.
 //
 // Two independent guards on the key list:
-//   1. `user_id IN (seed users)` — trusted ownership
-//   2. `s3_key LIKE 'seed-demo/%'` — belt-and-suspenders; the
-//      CreateFile endpoint accepts caller-supplied s3_key values
-//      (the Next.js server generates them), so a theoretical path
-//      exists for an attacker to seat a 'seed-demo/...' key on their
-//      own non-seed file. The prefix check + ownership gate make
-//      that an empty intersection. Underscores in LIKE are escaped
-//      so `seed_%` / `seed-demo_%` match only their literal form.
+//  1. `user_id IN (seed users)` — trusted ownership
+//  2. `s3_key LIKE 'seed-demo/%'` — belt-and-suspenders; the
+//     CreateFile endpoint accepts caller-supplied s3_key values
+//     (the Next.js server generates them), so a theoretical path
+//     exists for an attacker to seat a 'seed-demo/...' key on their
+//     own non-seed file. The prefix check + ownership gate make
+//     that an empty intersection. Underscores in LIKE are escaped
+//     so `seed_%` / `seed-demo_%` match only their literal form.
 func collectSeedS3Keys(ctx context.Context, conn *pgx.Conn) ([]string, error) {
 	const sql = `
 		SELECT s3_key FROM files
