@@ -92,11 +92,15 @@ seed_demo/
     └── validator.py         # semantic validator + ValidationReport
 
 fixtures/
-├── files.yaml               # ~105 entries (Phase 1b); 4 smoke entries today
-├── resources.yaml           # ~60 entries (Phase 1b); 5 smoke entries today
-└── files_local/             # repo-local files (Phase 1b)
+├── files.yaml               # 100 entries (Phase 1c)
+├── resources.yaml           # 5 smoke entries
+├── files_local/             # repo-local self-generated artifacts (Phase 1b)
+├── guides/                  # study-guide markdown by course (Phase 2+)
+│   └── <course-slug>/<slug>.md
+└── quizzes/                 # quiz YAML by course (Phase 2+)
+    └── <course-slug>/<slug>.yaml
 
-tests/                       # pytest, 21 tests covering validator + attributions + liveness
+tests/                       # pytest, 130+ tests across all loaders + validator
 ```
 
 ## Fixture format
@@ -122,6 +126,73 @@ Quick reference for `files.yaml` entries:
   owner_role: bot                      # demo | bot | synthetic
   # owner_seed_index: 42               # required when owner_role=synthetic, range [0, 999]
 ```
+
+## Guide + quiz fixtures (Phase 2+)
+
+Study-guide markdown lives under `fixtures/guides/<course-slug>/<slug>.md`.
+Each guide has YAML frontmatter on top:
+
+```markdown
+---
+slug: cpts121-pointers-cheatsheet
+course:
+  ipeds_id: "236939"
+  department: "CPTS"
+  number: "121"
+title: "Pointers, Arrays, and Memory in C — CPTS 121 Cheatsheet"
+description: "Common pointer patterns from CPTS 121 lectures + lab notes."
+tags: ["c", "pointers", "memory", "midterm"]
+author_role: bot                   # demo | bot | synthetic
+quiz_slug: cpts121-pointers-quiz   # optional — links to a quiz fixture
+attached_files: [wsu-cpts121-pointers-cheatsheet]   # by file slug
+attached_resources: []
+---
+
+# Body markdown
+
+Use placeholders to reference other entities; the seeder rewrites them at
+insert time:
+
+- `{{FILE:slug}}`   → resolves to `/api/files/<id>/download`
+- `{{GUIDE:slug}}`  → resolves to `/study-guides/<id>`
+- `{{QUIZ:slug}}`   → resolves to `/practice/<id>`
+- `{{COURSE:wsu/cpts121}}` → resolves to `/courses/<id>`
+
+Slugs MUST be lowercase, hyphenated, with `[a-z0-9_/-]+` characters.
+Uppercase or other characters surface as "malformed placeholder" errors.
+```
+
+Quiz YAML lives under `fixtures/quizzes/<course-slug>/<slug>.yaml`:
+
+```yaml
+slug: cpts121-pointers-quiz
+study_guide_slug: cpts121-pointers-cheatsheet
+title: "CPTS 121 — Pointers Quiz"
+description: "5 questions covering pointer basics."
+questions:
+  - slug: q1
+    type: multiple_choice    # multiple_choice | true_false | freeform
+    text: "What does `int *p = NULL;` do?"
+    hint: "Optional"
+    feedback_correct: "Optional"
+    feedback_incorrect: "Optional"
+    options:                 # required for MCQ + TF
+      - { text: "A", correct: true }
+      - { text: "B", correct: false }
+  - slug: q2
+    type: freeform
+    text: "Explain pointers."
+    reference_answer: "Required for freeform questions."
+```
+
+Per-question invariants enforced at load time:
+- **MCQ**: ≥2 options, ≥1 with `correct: true`
+- **TF**: exactly 2 options, exactly 1 `correct: true`
+- **freeform**: requires non-blank `reference_answer`; any `options` ignored
+
+Both directories are auto-discovered by `python -m seed_demo validate`
+when present. They are independent of `files.yaml` — Phase 1 fixtures
+keep working unchanged whether or not Phase 2 fixtures exist.
 
 ## Catalog maintenance
 

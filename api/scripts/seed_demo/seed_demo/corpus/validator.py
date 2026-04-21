@@ -11,18 +11,23 @@ by `loaders.py` and raise `SchemaError`.
 
 from __future__ import annotations
 
+import re
 from collections import Counter
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
 from .. import catalogs
+from .guides import GuideEntry
 from .models import FileEntry, ResourceEntry
+from .quizzes import QuizEntry
 
 
 @dataclass
 class ValidationReport:
     file_count: int = 0
     resource_count: int = 0
+    guide_count: int = 0
+    quiz_count: int = 0
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
 
@@ -31,9 +36,26 @@ class ValidationReport:
         return not self.errors
 
 
+# Recognised placeholder kinds used inside guide markdown bodies. Each
+# resolves to a different URL at seed time; here we only check that the
+# slug component points at something real in the appropriate catalog.
+#
+# Slug charclass is `[a-z0-9_/-]+` — lowercase only, hyphens, underscores,
+# and `/` (for COURSE slugs like `wsu/cpts121`). Quantifier is `+` so an
+# empty slug `{{FILE:}}` falls through to `_ANY_PLACEHOLDER_RE` and gets
+# the uniform "malformed placeholder" error. Authors writing uppercase
+# slugs (e.g. `{{FILE:WSU-CPTS121}}`) will see "malformed placeholder"
+# rather than "unknown slug" — slugs MUST be lowercase-hyphenated.
+_PLACEHOLDER_RE = re.compile(r"\{\{(FILE|GUIDE|QUIZ|COURSE):([a-z0-9_/-]+)\}\}")
+# Catches `{{INVALID:foo}}`, `{{FILE:}}`, `{{:slug}}`, `{{ FILE:slug }}`, etc.
+_ANY_PLACEHOLDER_RE = re.compile(r"\{\{[^{}]*\}\}")
+
+
 def validate_corpus(
     files: list[FileEntry],
     resources: list[ResourceEntry],
+    guides: list[GuideEntry] | None = None,
+    quizzes: list[QuizEntry] | None = None,
     *,
     course_slugs: dict[str, tuple[str, str, str]] | None = None,
     enforce_coverage_gate: bool = True,
@@ -46,14 +68,20 @@ def validate_corpus(
     """
     if course_slugs is None:
         course_slugs = catalogs.COURSE_SLUGS
+    guides = list(guides or ())
+    quizzes = list(quizzes or ())
 
     report = ValidationReport(
         file_count=len(files),
         resource_count=len(resources),
+        guide_count=len(guides),
+        quiz_count=len(quizzes),
     )
 
     _check_unique_slugs(files, "files", report)
     _check_unique_slugs(resources, "resources", report)
+    _check_unique_slugs(guides, "guides", report)
+    _check_unique_slugs(quizzes, "quizzes", report)
 
     for f in files:
         _validate_file(f, course_slugs, report)
@@ -61,25 +89,151 @@ def validate_corpus(
     for r in resources:
         _validate_resource(r, course_slugs, report)
 
+    file_slugs = frozenset(f.slug for f in files)
+    resource_slugs = frozenset(r.slug for r in resources)
+    guide_slugs = frozenset(g.slug for g in guides)
+    quiz_slugs = frozenset(q.slug for q in quizzes)
+
+    for g in guides:
+        _validate_guide(
+            g, file_slugs, resource_slugs, guide_slugs, quiz_slugs, course_slugs, report
+        )
+
+    for q in quizzes:
+        _validate_quiz(q, guide_slugs, report)
+
     if enforce_coverage_gate and files:
         _check_mime_coverage(files, report)
 
     return report
 
 
-def _check_unique_slugs(
-    entries: list[FileEntry] | list[ResourceEntry], scope: str, report: ValidationReport
-) -> None:
+def _check_unique_slugs(entries, scope: str, report: ValidationReport) -> None:
     """Enforce slug uniqueness *within* a single collection.
 
-    Slugs are scoped per collection (files vs resources) — they map to
-    different DB tables with separate UUIDv5 namespaces, so a `files`
-    entry and a `resources` entry sharing a slug is permitted.
+    Slugs are scoped per collection (files vs resources vs guides vs quizzes) —
+    they map to different DB tables with separate UUIDv5 namespaces, so two
+    entries from different collections sharing a slug is permitted.
     """
     counts = Counter(e.slug for e in entries)
     for slug, n in counts.items():
         if n > 1:
             report.errors.append(f"{scope}: duplicate slug '{slug}' appears {n} times")
+
+
+def _course_ref_in_catalog(course, course_slugs: dict[str, tuple[str, str, str]]) -> str | None:
+    """Return the matching slug (e.g. `wsu/cpts121`) or None if no entry matches."""
+    target = (course.ipeds_id, course.department, course.number)
+    for slug, val in course_slugs.items():
+        if val == target:
+            return slug
+    return None
+
+
+def _validate_guide(
+    g: GuideEntry,
+    file_slugs: frozenset[str],
+    resource_slugs: frozenset[str],
+    guide_slugs: frozenset[str],
+    quiz_slugs: frozenset[str],
+    course_slugs: dict[str, tuple[str, str, str]],
+    report: ValidationReport,
+) -> None:
+    ctx = f"guide[{g.slug}]"
+
+    # 1. Course must resolve to a known catalog entry.
+    if _course_ref_in_catalog(g.course, course_slugs) is None:
+        report.errors.append(
+            f"{ctx}: course (ipeds_id={g.course.ipeds_id}, "
+            f"dept={g.course.department}, number={g.course.number}) "
+            f"is not in COURSE_SLUGS"
+        )
+
+    # 2. Author role / seed-index invariants (mirrors files but with the
+    # `author_*` field labels so error messages match the schema).
+    _validate_owner(
+        ctx,
+        g.author_role,
+        g.author_seed_index,
+        report,
+        role_field="author_role",
+        seed_field="author_seed_index",
+    )
+
+    # 3. attached_files must reference real file slugs.
+    for slug in g.attached_files:
+        if slug not in file_slugs:
+            report.errors.append(f"{ctx}: attached_files references unknown file slug '{slug}'")
+
+    # 4. attached_resources must reference real resource slugs.
+    for slug in g.attached_resources:
+        if slug not in resource_slugs:
+            report.errors.append(
+                f"{ctx}: attached_resources references unknown resource slug '{slug}'"
+            )
+
+    # 5. quiz_slug (frontmatter optional) must resolve when present.
+    if g.quiz_slug is not None and g.quiz_slug not in quiz_slugs:
+        report.errors.append(f"{ctx}: quiz_slug '{g.quiz_slug}' is not a known quiz slug")
+
+    # 6. Walk every placeholder in the body. Recognised placeholders must
+    # resolve; unrecognised `{{...}}` patterns surface as malformed.
+    _validate_guide_placeholders(g, file_slugs, guide_slugs, quiz_slugs, course_slugs, report)
+
+
+def _validate_guide_placeholders(
+    g: GuideEntry,
+    file_slugs: frozenset[str],
+    guide_slugs: frozenset[str],
+    quiz_slugs: frozenset[str],
+    course_slugs: dict[str, tuple[str, str, str]],
+    report: ValidationReport,
+) -> None:
+    ctx = f"guide[{g.slug}]"
+    body = g.body_markdown
+
+    # Per-kind catalog lookup.
+    catalog_for: dict[str, frozenset[str] | dict] = {
+        "FILE": file_slugs,
+        "GUIDE": guide_slugs,
+        "QUIZ": quiz_slugs,
+        "COURSE": course_slugs,  # dict — `slug in course_slugs` is the membership test
+    }
+
+    seen_spans: set[tuple[int, int]] = set()
+    for m in _PLACEHOLDER_RE.finditer(body):
+        seen_spans.add(m.span())
+        kind, slug = m.group(1), m.group(2)
+        # `_PLACEHOLDER_RE` requires non-empty slug (`+` quantifier), so
+        # `slug` here is always truthy. The empty-slug case falls through
+        # to the `_ANY_PLACEHOLDER_RE` second pass below as a "malformed"
+        # placeholder.
+        catalog = catalog_for[kind]
+        if slug not in catalog:
+            report.errors.append(f"{ctx}: {kind} placeholder targets unknown slug '{slug}'")
+
+    # Anything that LOOKS like a placeholder but the strict regex didn't catch
+    # is a malformed placeholder — surface it so the operator notices typos.
+    for m in _ANY_PLACEHOLDER_RE.finditer(body):
+        if m.span() in seen_spans:
+            continue
+        report.errors.append(
+            f"{ctx}: malformed placeholder '{m.group(0)}' "
+            f"(must match {{{{KIND:slug}}}}, KIND ∈ FILE|GUIDE|QUIZ|COURSE)"
+        )
+
+
+def _validate_quiz(
+    q: QuizEntry,
+    guide_slugs: frozenset[str],
+    report: ValidationReport,
+) -> None:
+    ctx = f"quiz[{q.slug}]"
+
+    if q.study_guide_slug not in guide_slugs:
+        report.errors.append(
+            f"{ctx}: study_guide_slug '{q.study_guide_slug}' is not a known guide slug"
+        )
 
 
 def _validate_file(
@@ -124,26 +278,38 @@ def _validate_resource(
 
 
 def _validate_owner(
-    ctx: str, owner_role: str, owner_seed_index: int | None, report: ValidationReport
+    ctx: str,
+    owner_role: str,
+    owner_seed_index: int | None,
+    report: ValidationReport,
+    *,
+    role_field: str = "owner_role",
+    seed_field: str = "owner_seed_index",
 ) -> None:
+    """Shared role/seed-index check for FileEntry, ResourceEntry, GuideEntry.
+
+    Field labels are parameterized so error messages match the caller's
+    schema (`owner_role`/`owner_seed_index` for files+resources;
+    `author_role`/`author_seed_index` for guides).
+    """
     if owner_role not in catalogs.OWNER_ROLES:
-        report.errors.append(f"{ctx}: unknown owner_role '{owner_role}'")
+        report.errors.append(f"{ctx}: unknown {role_field} '{owner_role}'")
         return
 
     if owner_role == "synthetic":
         if owner_seed_index is None:
-            report.errors.append(f"{ctx}: owner_role='synthetic' requires owner_seed_index")
+            report.errors.append(f"{ctx}: {role_field}='synthetic' requires {seed_field}")
         elif not (
             catalogs.OWNER_SEED_INDEX_MIN <= owner_seed_index <= catalogs.OWNER_SEED_INDEX_MAX
         ):
             report.errors.append(
-                f"{ctx}: owner_seed_index={owner_seed_index} out of range "
+                f"{ctx}: {seed_field}={owner_seed_index} out of range "
                 f"[{catalogs.OWNER_SEED_INDEX_MIN}, {catalogs.OWNER_SEED_INDEX_MAX}]"
             )
 
     elif owner_seed_index is not None:
-        # demo / bot must NOT have an owner_seed_index — easy footgun otherwise.
-        report.errors.append(f"{ctx}: owner_seed_index only valid when owner_role='synthetic'")
+        # demo / bot must NOT have a seed_index — easy footgun otherwise.
+        report.errors.append(f"{ctx}: {seed_field} only valid when {role_field}='synthetic'")
 
 
 _ALLOWED_SCHEMES: frozenset[str] = frozenset({"http", "https"})
