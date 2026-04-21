@@ -1,0 +1,73 @@
+slug: math51-lagrange-multipliers-quiz
+study_guide_slug: math51-lagrange-multipliers
+title: "MATH 51 — Lagrange Multipliers Quiz"
+description: "6 questions on the Lagrange-multiplier method for constrained optimization."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "At an extremum of $f$ subject to the constraint $g = c$, which equation must hold (under standard smoothness and $\\nabla g \\neq \\mathbf{0}$)?"
+    hint: "Tangency of level sets means parallel gradients."
+    feedback_correct: "Right — that is the Lagrange condition."
+    feedback_incorrect: "At an extremum of $f$ on $g = c$, the gradient $\\nabla f$ must be a scalar multiple of $\\nabla g$."
+    options:
+      - { text: "$\\nabla f = \\lambda \\nabla g$ for some scalar $\\lambda$", correct: true }
+      - { text: "$\\nabla f = \\nabla g$", correct: false }
+      - { text: "$\\nabla f \\cdot \\nabla g = 0$", correct: false }
+      - { text: "$\\nabla f = 0$ and $\\nabla g = 0$ simultaneously", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "How many equations does the Lagrange system have for one constraint $g = c$ on a function of $n$ variables?"
+    hint: "Count: one equation per coordinate of $\\nabla f = \\lambda \\nabla g$, plus the constraint."
+    feedback_correct: "Right — $n$ from the gradient equation plus $1$ for the constraint, in $n + 1$ unknowns ($x_1, \\ldots, x_n, \\lambda$)."
+    feedback_incorrect: "There are $n$ scalar equations from $\\nabla f = \\lambda \\nabla g$ plus one constraint, for a total of $n + 1$."
+    options:
+      - { text: "$n - 1$", correct: false }
+      - { text: "$n$", correct: false }
+      - { text: "$n + 1$", correct: true }
+      - { text: "$2 n$", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "Maximize $f(x, y) = x + y$ subject to $x^2 + y^2 = 2$. What is the maximum value?"
+    hint: "By symmetry, the maximum occurs where $x = y$."
+    feedback_correct: "Yes — at $(1, 1)$, $f = 2$."
+    feedback_incorrect: "Setting $\\nabla f = \\lambda \\nabla g$ gives $1 = 2 \\lambda x$ and $1 = 2 \\lambda y$, so $x = y$. The constraint forces $x = y = 1$, giving $f = 2$."
+    options:
+      - { text: "$\\sqrt{2}$", correct: false }
+      - { text: "$2$", correct: true }
+      - { text: "$2 \\sqrt{2}$", correct: false }
+      - { text: "$1$", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "For two constraints $g_1 = c_1$ and $g_2 = c_2$ in $\\mathbb{R}^3$, the Lagrange condition becomes:"
+    hint: "There are now two multipliers."
+    feedback_correct: "Yes — $\\nabla f$ has to lie in the span of $\\nabla g_1$ and $\\nabla g_2$."
+    feedback_incorrect: "With two constraints, the gradient of $f$ must be a linear combination of the two constraint gradients."
+    options:
+      - { text: "$\\nabla f = \\lambda_1 \\nabla g_1 + \\lambda_2 \\nabla g_2$", correct: true }
+      - { text: "$\\nabla f = \\lambda \\nabla g_1 \\nabla g_2$", correct: false }
+      - { text: "$\\nabla f \\cdot \\nabla g_1 = \\nabla f \\cdot \\nabla g_2 = 0$", correct: false }
+      - { text: "$\\nabla f = \\lambda_1 \\nabla g_1$ only", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "If the constraint set is compact and $f$ is continuous, then $f$ attains both a maximum and a minimum on the constraint set."
+    feedback_correct: "Right — this is the extreme value theorem applied to the constraint surface. It is what guarantees that the Lagrange candidates contain the actual extrema."
+    feedback_incorrect: "By the extreme value theorem, a continuous function on a compact set attains both its max and its min."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "Set up (don't solve) the Lagrange system to minimize $f(x, y, z) = x^2 + y^2 + z^2$ subject to $x + 2 y + 3 z = 6$. List all the equations."
+    reference_answer: |
+      With $g(x, y, z) = x + 2y + 3z$, we have $\nabla f = (2x, 2y, 2z)$
+      and $\nabla g = (1, 2, 3)$. The Lagrange system $\nabla f = \lambda \nabla g$
+      together with the constraint gives:
+
+      $$ 2x = \lambda, \quad 2y = 2\lambda, \quad 2z = 3\lambda, \quad x + 2y + 3z = 6. $$
+
+      That is four equations in four unknowns $(x, y, z, \lambda)$.

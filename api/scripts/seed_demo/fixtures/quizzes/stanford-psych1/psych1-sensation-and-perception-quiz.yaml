@@ -1,0 +1,73 @@
+slug: psych1-sensation-and-perception-quiz
+study_guide_slug: psych1-sensation-and-perception
+title: "PSYCH 1 — Sensation and Perception Quiz"
+description: "6 questions on psychophysics, vision, hearing, and perceptual organisation."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Weber's law states that the just-noticeable difference between two stimuli is..."
+    hint: "Constant *what* of the baseline stimulus?"
+    feedback_correct: "Correct — JND scales as a constant proportion (not a constant absolute amount) of the baseline."
+    feedback_incorrect: "Weber's law is about a constant *proportion*, not a constant absolute amount."
+    options:
+      - { text: "A constant absolute amount, regardless of baseline magnitude", correct: false }
+      - { text: "A constant proportion of the baseline magnitude", correct: true }
+      - { text: "Inversely proportional to the baseline magnitude", correct: false }
+      - { text: "Determined entirely by the observer's response bias", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "Cones are concentrated in which part of the retina, and what do they support?"
+    feedback_correct: "Right — the fovea is cone-rich and supports high-acuity colour vision in bright light."
+    feedback_incorrect: "Cones cluster in the fovea (the high-acuity centre), where they support colour vision in good light."
+    options:
+      - { text: "The periphery; rods support black-and-white peripheral vision", correct: false }
+      - { text: "The fovea; cones support colour vision and high acuity in bright light", correct: true }
+      - { text: "The optic disc; cones support sensitivity in dim light", correct: false }
+      - { text: "Throughout the retina uniformly; they support motion detection only", correct: false }
+
+  - slug: q3
+    type: true_false
+    text: "Damage to the ventral visual stream is more likely to cause object-recognition deficits (such as prosopagnosia) than damage to the dorsal stream."
+    feedback_correct: "Correct — the ventral 'what' stream supports object and face recognition."
+    feedback_incorrect: "The ventral stream is the 'what' pathway; ventral damage causes recognition deficits like prosopagnosia."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "The Necker cube is a 'bistable' figure. Why?"
+    feedback_correct: "Right — two distinct 3-D interpretations are equally consistent with the same 2-D input."
+    feedback_incorrect: "Bistability comes from two equally plausible 3-D interpretations of one 2-D image."
+    options:
+      - { text: "It oscillates because the eyes shift fixation point every few seconds", correct: false }
+      - { text: "Two equally plausible 3-D interpretations fit the same 2-D input", correct: true }
+      - { text: "Cone fatigue produces an alternating colour afterimage", correct: false }
+      - { text: "It exploits an absolute-threshold ambiguity in the visual system", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "Olfactory information reaches the cortex without first synapsing in the thalamus."
+    feedback_correct: "True — smell is the unusual sense that bypasses the thalamic relay."
+    feedback_incorrect: "Olfaction is the exception: it does *not* synapse in the thalamus before reaching cortex."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "Explain the difference between sensitivity (d′) and response bias in signal detection theory, using a concrete example."
+    reference_answer: |
+      Sensitivity (d′) measures how well an observer's perceptual system can
+      actually distinguish signal from noise — it depends on the difference
+      between the underlying signal and noise distributions. Response bias is
+      independent: it reflects how willing the observer is to say "yes, I
+      detected it" given any internal evidence. Two observers can have
+      identical d′ but very different hit and false-alarm rates if their
+      criteria for responding differ. For example, a radiologist and a
+      junior trainee may have identical sensitivity to a faint tumour shadow
+      on a scan, but if the radiologist is more cautious about false
+      positives (a stricter criterion), they will report fewer tumours
+      overall — both fewer hits and fewer false alarms — even though their
+      underlying perceptual ability is the same.

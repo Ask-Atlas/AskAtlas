@@ -1,0 +1,58 @@
+slug: cpts260-instruction-encoding-quiz
+study_guide_slug: cpts260-instruction-encoding
+title: "CPTS 260 — Instruction Encoding Quiz"
+description: "5 questions on R/I/J formats, field layouts, and hand encoding."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "How many bits does a MIPS instruction occupy?"
+    feedback_correct: "Right — every MIPS instruction is exactly 32 bits, which is what makes the fetch stage trivial."
+    feedback_incorrect: "MIPS is fixed-width 32-bit. Variable-width encodings (like x86) trade decode complexity for code density."
+    options:
+      - { text: "16", correct: false }
+      - { text: "24", correct: false }
+      - { text: "32", correct: true }
+      - { text: "64", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "In an R-type instruction, which field selects the specific operation (e.g. `add` vs `sub`)?"
+    feedback_correct: "Yes — for R-types `op = 000000` and the actual operation is selected by the 6-bit `funct` field."
+    feedback_incorrect: "For R-types the opcode field is always 0; the `funct` field at the bottom of the word picks the actual operation."
+    options:
+      - { text: "op", correct: false }
+      - { text: "funct", correct: true }
+      - { text: "shamt", correct: false }
+      - { text: "rd", correct: false }
+
+  - slug: q3
+    type: true_false
+    text: "The branch immediate field in an I-type instruction is interpreted as a byte offset from PC + 4."
+    feedback_correct: "False — it is a *word* offset. The hardware shifts it left by 2 before adding to PC + 4."
+    feedback_incorrect: "It is a word offset (multiplied by 4 in hardware), not a byte offset."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q4
+    type: multiple_choice
+    text: "Which two formats does MIPS use besides R-format?"
+    feedback_correct: "Right — I (immediate, used by ALU-imm + loads + stores + branches) and J (jump)."
+    feedback_incorrect: "MIPS has exactly three formats: R, I, and J. There is no 'B' or 'M' format in classic MIPS."
+    options:
+      - { text: "I and J", correct: true }
+      - { text: "B and M", correct: false }
+      - { text: "L and S", correct: false }
+      - { text: "U and S", correct: false }
+
+  - slug: q5
+    type: freeform
+    text: "In the assembly `add $t0, $t1, $t2`, which register goes into the `rd` field of the R-type encoding, and why is the order in machine code different from the assembly?"
+    reference_answer: |
+      `$t0` goes into `rd` because it is the destination register. The
+      assembly source order is `rd, rs, rt` (destination first, for human
+      readability), but the machine encoding orders the fields `rs, rt,
+      rd` because that order matches the data path: `rs` and `rt` need to
+      be read from the register file at decode time, while `rd` is only
+      needed at writeback. Mixing up the two orders is the most common
+      hand-encoding mistake.

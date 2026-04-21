@@ -1,0 +1,82 @@
+slug: cpts121-arrays-and-strings-quiz
+study_guide_slug: cpts121-arrays-and-strings
+title: "CPTS 121 — Arrays & Strings Quiz"
+description: "7 questions on array decay, indexing, and NUL-termination bugs."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Inside `void f(int arr[])`, what does `sizeof(arr)` return?"
+    hint: "What does the parameter `int arr[]` actually decay to?"
+    feedback_correct: "Correct — `arr` is really `int *` here, so `sizeof` gives the pointer size."
+    feedback_incorrect: "Arrays decay to pointers at the function boundary; the original length is lost."
+    options:
+      - { text: "The number of elements in the original array", correct: false }
+      - { text: "The total byte size of the original array", correct: false }
+      - { text: "`sizeof(int *)` on this platform (typically 4 or 8 bytes)", correct: true }
+      - { text: "A compile error — `sizeof` doesn't work on parameters", correct: false }
+
+  - slug: q2
+    type: true_false
+    text: "C strings are NUL-terminated `char` arrays."
+    feedback_correct: "Yes — every standard string function reads until it finds a `'\\0'` byte."
+    feedback_incorrect: "They are. Without the terminating NUL, `<string.h>` functions read past the end."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "Which buffer size is required to safely store the literal `\"hello\"` as a C string?"
+    hint: "Don't forget the terminator."
+    feedback_correct: "Right — 5 visible characters plus a `'\\0'` terminator is 6 bytes."
+    feedback_incorrect: "C strings end with a `'\\0'` terminator, which counts toward the buffer size."
+    options:
+      - { text: "5 bytes", correct: false }
+      - { text: "6 bytes", correct: true }
+      - { text: "4 bytes plus a length prefix", correct: false }
+      - { text: "Variable — depends on the compiler", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "Why is `if (s1 == s2)` (with `s1` and `s2` of type `char *`) almost always wrong for comparing strings?"
+    hint: "What does `==` actually compare here?"
+    feedback_correct: "Correct — `==` on `char *` compares pointers, not the bytes they point at."
+    feedback_incorrect: "`==` on pointers compares addresses. Use `strcmp(s1, s2) == 0` for content equality."
+    options:
+      - { text: "It compares pointer addresses, not the underlying characters", correct: true }
+      - { text: "It triggers a compile error in C99", correct: false }
+      - { text: "It only compares the first character", correct: false }
+      - { text: "It compares lengths instead of content", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "It is safe to write `char *s = \"hello\"; s[0] = 'H';` in standard C."
+    feedback_correct: "Right — string literals live in read-only memory; modifying them is undefined behavior."
+    feedback_incorrect: "It is not safe. Use `char s[] = \"hello\";` if you need to modify the buffer."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q6
+    type: multiple_choice
+    text: "Which call is the recommended safe replacement for `strcpy(dest, src)` on a fixed-size buffer?"
+    hint: "Which standard function takes a destination size?"
+    feedback_correct: "Yes — `snprintf` always NUL-terminates and respects the size argument."
+    feedback_incorrect: "`snprintf(dest, sizeof(dest), \"%s\", src)` is the canonical safe form."
+    options:
+      - { text: "`sprintf(dest, src)`", correct: false }
+      - { text: "`gets(dest)`", correct: false }
+      - { text: "`snprintf(dest, sizeof(dest), \"%s\", src)`", correct: true }
+      - { text: "`memcpy(dest, src, strlen(src))`", correct: false }
+
+  - slug: q7
+    type: freeform
+    text: "Briefly explain why `strcpy(dest, src)` can overflow `dest`, and name a safer alternative."
+    reference_answer: |
+      `strcpy` walks `src` byte by byte, copying into `dest` until it
+      reaches the NUL terminator. It has no knowledge of how many
+      bytes `dest` actually has. If `src` (including its `'\0'`) is
+      longer than `dest`'s buffer, it writes past the end — the
+      classic buffer overflow. The safer alternative is
+      `snprintf(dest, sizeof(dest), "%s", src)`, which always
+      respects the destination size and NUL-terminates the result.

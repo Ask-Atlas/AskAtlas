@@ -1,0 +1,68 @@
+slug: math51-matrix-operations-quiz
+study_guide_slug: math51-matrix-operations
+title: "MATH 51 — Matrix Operations Quiz"
+description: "6 questions on matrix multiplication, inverse, and determinant."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "What is the dimension of the product $A \\cdot B$ when $A$ is $3 \\times 2$ and $B$ is $2 \\times 4$?"
+    hint: "Inner dimensions must agree; the outer dimensions give the shape of the result."
+    feedback_correct: "Right — $(3 \\times 2)(2 \\times 4) = (3 \\times 4)$. Inner dimensions cancel, outer dimensions stay."
+    feedback_incorrect: "Inner dimensions must match (they do: $2 = 2$), and the result inherits the outer dimensions."
+    options:
+      - { text: "$3 \\times 4$", correct: true }
+      - { text: "$2 \\times 2$", correct: false }
+      - { text: "$3 \\times 2$", correct: false }
+      - { text: "Undefined — shapes don't match", correct: false }
+
+  - slug: q2
+    type: true_false
+    text: "Matrix multiplication is commutative: $AB = BA$ for all square matrices $A, B$ of the same size."
+    feedback_correct: "Correct — matrix multiplication is associative and distributive but NOT commutative in general."
+    feedback_incorrect: "Try $A = \\begin{pmatrix}0&1\\\\0&0\\end{pmatrix}$ and $B = \\begin{pmatrix}1&0\\\\0&0\\end{pmatrix}$ — you'll get different products."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q3
+    type: multiple_choice
+    text: "If $A = \\begin{pmatrix} 2 & 1 \\\\ 5 & 3 \\end{pmatrix}$, what is $\\det A$?"
+    hint: "For a $2\\times 2$ matrix, $\\det \\begin{pmatrix}a&b\\\\c&d\\end{pmatrix} = ad - bc$."
+    feedback_correct: "Yes — $2 \\cdot 3 - 1 \\cdot 5 = 1$."
+    feedback_incorrect: "Use the formula $ad - bc$ with $a=2, b=1, c=5, d=3$."
+    options:
+      - { text: "$11$", correct: false }
+      - { text: "$1$", correct: true }
+      - { text: "$-1$", correct: false }
+      - { text: "$0$", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "Which formula correctly inverts a product of two invertible matrices?"
+    hint: "Think 'socks and shoes' — order matters when you undo a sequence."
+    feedback_correct: "Right — $(AB)^{-1} = B^{-1} A^{-1}$. The order swaps."
+    feedback_incorrect: "Multiplication doesn't commute, so the order has to swap when you take the inverse."
+    options:
+      - { text: "$(AB)^{-1} = A^{-1} B^{-1}$", correct: false }
+      - { text: "$(AB)^{-1} = B^{-1} A^{-1}$", correct: true }
+      - { text: "$(AB)^{-1} = (A^{-1})(B^{-1})^T$", correct: false }
+      - { text: "$(AB)^{-1} = (BA)^{-1}$", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "A square matrix with $\\det A = 0$ is invertible."
+    feedback_correct: "Correct — singular ($\\det = 0$) means non-invertible. The inverse only exists when $\\det A \\neq 0$."
+    feedback_incorrect: "$\\det A = 0$ is exactly the condition for $A$ to be singular (non-invertible)."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q6
+    type: freeform
+    text: "State the condition on a square matrix $A$ for it to be invertible, expressed in terms of the determinant."
+    reference_answer: |
+      A square matrix $A$ is invertible if and only if its determinant is
+      nonzero ($\det A \neq 0$). Equivalently, $A$ is invertible iff it is
+      non-singular — its columns are linearly independent, it has full
+      rank, and the linear system $A x = b$ has a unique solution for
+      every $b$.

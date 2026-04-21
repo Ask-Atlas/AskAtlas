@@ -1,0 +1,82 @@
+slug: cpts260-cache-design-quiz
+study_guide_slug: cpts260-cache-design
+title: "CPTS 260 — Cache Design Quiz"
+description: "7 questions on associativity, tag/index/offset decomposition, replacement, and the 3C miss model."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "A cache has 64-byte lines. How many bits of the address form the *block offset*?"
+    hint: "Offset width = log₂(line size in bytes)."
+    feedback_correct: "Right — log₂(64) = 6, so the bottom 6 bits select a byte within the 64-byte line."
+    feedback_incorrect: "Offset width is log₂(line size). 64 bytes → 6 bits."
+    options:
+      - { text: "4", correct: false }
+      - { text: "5", correct: false }
+      - { text: "6", correct: true }
+      - { text: "8", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "A 32 KB direct-mapped cache uses 64-byte lines on a 32-bit address. How many bits are in the *index*?"
+    hint: "Number of sets = (cache size) / (line size × associativity)."
+    feedback_correct: "Right — 32 768 / 64 = 512 sets, log₂(512) = 9 index bits."
+    feedback_incorrect: "Cache has 512 lines (32 KB / 64 B). Direct-mapped means 1 line per set, so 512 sets → 9 index bits."
+    options:
+      - { text: "6", correct: false }
+      - { text: "9", correct: true }
+      - { text: "10", correct: false }
+      - { text: "12", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "Which of the 3 Cs of cache misses is reduced by **increasing associativity** (without changing total capacity)?"
+    feedback_correct: "Yes — conflict misses arise when multiple hot lines map to the same set; more ways per set absorbs more of them."
+    feedback_incorrect: "Compulsory misses are first-touch (unavoidable). Capacity misses depend on total size. Conflict misses depend on associativity."
+    options:
+      - { text: "Compulsory", correct: false }
+      - { text: "Capacity", correct: false }
+      - { text: "Conflict", correct: true }
+      - { text: "Coherence", correct: false }
+
+  - slug: q4
+    type: true_false
+    text: "A fully-associative cache experiences zero conflict misses by definition."
+    feedback_correct: "Yes — there is only one giant set, so any incoming line can replace any existing line. Conflicts cannot occur."
+    feedback_incorrect: "True — fully-associative caches eliminate conflict misses (every line can go anywhere). They still suffer compulsory and capacity misses."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q5
+    type: multiple_choice
+    text: "Given `HitTime = 2 cycles`, `MissRate = 5%`, and `MissPenalty = 100 cycles`, what is the AMAT?"
+    hint: "AMAT = HitTime + MissRate × MissPenalty."
+    feedback_correct: "Right — 2 + 0.05 × 100 = 7 cycles."
+    feedback_incorrect: "Plug into AMAT = HitTime + MissRate × MissPenalty: 2 + 0.05 × 100 = 7."
+    options:
+      - { text: "5 cycles", correct: false }
+      - { text: "7 cycles", correct: true }
+      - { text: "12 cycles", correct: false }
+      - { text: "100 cycles", correct: false }
+
+  - slug: q6
+    type: true_false
+    text: "Write-back caches send every store directly to the next level of the hierarchy."
+    feedback_correct: "False — that describes write-through. Write-back marks the line dirty and only flushes on eviction."
+    feedback_incorrect: "Write-*through* sends every store to the next level. Write-*back* defers the store until the line is evicted."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q7
+    type: freeform
+    text: "Why do real CPUs typically use 4-way or 8-way set associativity for L1 cache instead of fully associative or direct-mapped?"
+    reference_answer: |
+      It is a sweet-spot trade-off. Direct-mapped is the cheapest in
+      hardware (one tag comparator, fastest hit time) but suffers many
+      conflict misses on real workloads. Fully-associative would minimise
+      conflict misses but requires N parallel comparators and a slow MUX
+      across all lines, which dominates cycle time. 4-way or 8-way
+      associativity captures most of the conflict-miss reduction
+      (diminishing returns past 8-way) while keeping the critical-path
+      hardware fast and small.

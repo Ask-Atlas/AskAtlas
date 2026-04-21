@@ -1,0 +1,72 @@
+slug: psych1-neuroscience-primer-quiz
+study_guide_slug: psych1-neuroscience-primer
+title: "PSYCH 1 — Neuroscience Primer Quiz"
+description: "6 questions on neurons, neurotransmitters, and major brain regions."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Which neurotransmitter is most directly implicated in Parkinson's disease?"
+    hint: "Think about the dopaminergic neurons of the substantia nigra."
+    feedback_correct: "Right — Parkinson's involves loss of dopamine neurons in the substantia nigra."
+    feedback_incorrect: "Parkinson's is the textbook example of dopamine loss."
+    options:
+      - { text: "Dopamine", correct: true }
+      - { text: "Serotonin", correct: false }
+      - { text: "Acetylcholine", correct: false }
+      - { text: "GABA", correct: false }
+
+  - slug: q2
+    type: true_false
+    text: "The hippocampus is critical for forming new long-term declarative memories."
+    feedback_correct: "Yes — the famous H.M. case is the cleanest demonstration of this."
+    feedback_incorrect: "Bilateral hippocampal damage (as in H.M.) abolishes new declarative memory formation while leaving procedural learning intact."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "An action potential is described as 'all-or-none.' What does this mean?"
+    hint: "Stronger inputs change *which property* of the spike?"
+    feedback_correct: "Correct — once threshold is crossed, the spike has the same amplitude every time; intensity is encoded by firing rate."
+    feedback_incorrect: "All-or-none refers to spike amplitude, not whether the neuron is alive or whether the input crosses threshold."
+    options:
+      - { text: "Stronger inputs produce larger spikes", correct: false }
+      - { text: "Spike amplitude is fixed; only firing rate varies with input strength", correct: true }
+      - { text: "The spike either reaches the soma or it doesn't", correct: false }
+      - { text: "Either every neuron in the network fires or none do", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "Which lobe of the cerebral cortex contains the primary visual cortex (V1)?"
+    feedback_correct: "Right — V1 sits at the back of the brain in the occipital lobe."
+    feedback_incorrect: "V1 is in the occipital lobe, at the very back of the cortex."
+    options:
+      - { text: "Frontal lobe", correct: false }
+      - { text: "Parietal lobe", correct: false }
+      - { text: "Temporal lobe", correct: false }
+      - { text: "Occipital lobe", correct: true }
+
+  - slug: q5
+    type: true_false
+    text: "Myelin slows conduction along an axon by adding insulating mass to the membrane."
+    feedback_correct: "Correct — myelin *speeds* conduction by enabling saltatory propagation between nodes of Ranvier."
+    feedback_incorrect: "Myelin actually speeds conduction — that's the whole point of saltatory propagation. The 'slowing' framing is backwards."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q6
+    type: freeform
+    text: "In one paragraph, describe how an action potential propagates down an axon, including the role of voltage-gated channels."
+    reference_answer: |
+      An action potential begins when the cell's membrane potential reaches
+      threshold (roughly -55 mV), opening voltage-gated sodium channels. Na+
+      rushes in, depolarising the membrane to roughly +30 mV. Sodium channels
+      then inactivate while voltage-gated potassium channels open, allowing K+
+      to flow out and repolarise the membrane. The wave propagates because
+      depolarisation in one segment triggers the next segment's voltage-gated
+      sodium channels to open. In myelinated axons, this happens at the nodes
+      of Ranvier (saltatory conduction), which is much faster than continuous
+      propagation along an unmyelinated axon. A brief refractory period after
+      each spike prevents the action potential from travelling backwards.

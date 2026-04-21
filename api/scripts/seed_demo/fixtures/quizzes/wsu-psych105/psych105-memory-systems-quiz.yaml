@@ -1,0 +1,73 @@
+slug: psych105-memory-systems-quiz
+study_guide_slug: psych105-memory-systems
+title: "PSYCH 105 — Memory Systems Quiz"
+description: "6 questions on the multi-store model, encoding, and retrieval."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Miller's '7 ± 2' figure refers to the capacity of which memory store?"
+    hint: "It's the bottleneck between sensory and long-term."
+    feedback_correct: "Right — short-term memory holds about 7 ± 2 chunks."
+    feedback_incorrect: "Sensory memory has very high capacity but very short duration; long-term is effectively unlimited."
+    options:
+      - { text: "Sensory memory", correct: false }
+      - { text: "Short-term memory", correct: true }
+      - { text: "Long-term memory", correct: false }
+      - { text: "Iconic memory", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "A patient with severe hippocampal damage can no longer form new explicit memories but CAN learn a new motor skill (mirror tracing) over days. This dissociation supports the distinction between:"
+    feedback_correct: "Explicit (declarative) memory depends on the hippocampus; implicit (procedural) memory does not."
+    feedback_incorrect: "The contrast here is between explicit and implicit memory; the patient's procedural learning is preserved."
+    options:
+      - { text: "Episodic and semantic memory", correct: false }
+      - { text: "Explicit (declarative) and implicit (procedural) memory", correct: true }
+      - { text: "Iconic and echoic memory", correct: false }
+      - { text: "Working memory and short-term memory", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "After watching a film of a car accident, participants asked 'how fast were the cars going when they SMASHED?' later report higher speeds and more (false) broken glass than those asked 'when they HIT?' This is an example of:"
+    feedback_correct: "The misinformation effect — leading questions reshape later memory."
+    feedback_incorrect: "This is Loftus's misinformation effect; the wording at retrieval altered the reconstructed memory."
+    options:
+      - { text: "Proactive interference", correct: false }
+      - { text: "The misinformation effect", correct: true }
+      - { text: "Encoding specificity", correct: false }
+      - { text: "Tip-of-the-tongue phenomenon", correct: false }
+
+  - slug: q4
+    type: true_false
+    text: "Distributed practice (spacing) typically produces stronger long-term retention than massed practice (cramming) of the same total study time."
+    feedback_correct: "True — the spacing effect is one of the most robust findings in memory research."
+    feedback_incorrect: "Spacing reliably beats cramming; the result is one of the most replicated in cognitive psychology."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "Procedural memory (e.g., riding a bike) is a subtype of explicit, declarative memory."
+    feedback_correct: "False — procedural memory is implicit (non-declarative)."
+    feedback_incorrect: "Procedural memory is implicit; declarative memory is for facts (semantic) and events (episodic)."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q6
+    type: freeform
+    text: "Distinguish between proactive and retroactive interference, with one short example of each."
+    reference_answer: |
+      Proactive interference occurs when older learning interferes with
+      recall of newer learning. Example: last semester's locker
+      combination keeps intruding when you try to recall this
+      semester's combination.
+
+      Retroactive interference occurs when newer learning interferes
+      with recall of older learning. Example: after learning the new
+      combination, you can no longer recall the old one.
+
+      Both are interference (not decay or retrieval failure per se), but
+      they differ in the temporal direction of the interference: proactive
+      = old onto new; retroactive = new onto old.

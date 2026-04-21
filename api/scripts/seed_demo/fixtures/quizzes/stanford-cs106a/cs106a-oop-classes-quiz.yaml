@@ -1,0 +1,67 @@
+slug: cs106a-oop-classes-quiz
+study_guide_slug: cs106a-oop-classes
+title: "CS 106A — Classes & OOP Quiz"
+description: "6 questions on `__init__`, `self`, dunder methods, and instance vs class attributes."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "What method is automatically called when you write `Point(3, 4)`?"
+    feedback_correct: "Correct — `__init__` is the constructor."
+    feedback_incorrect: "Calling `Cls(...)` invokes `__init__(self, ...)` to set up the new instance."
+    options:
+      - { text: "__new__", correct: false }
+      - { text: "__init__", correct: true }
+      - { text: "__call__", correct: false }
+      - { text: "__create__", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "Inside a class, `self` refers to:"
+    feedback_correct: "Correct — `self` is the instance the method is being called on."
+    feedback_incorrect: "`self` is the *instance*, not the class. The class itself is what you'd usually capture as `cls`."
+    options:
+      - { text: "The class itself", correct: false }
+      - { text: "The instance the method is being called on", correct: true }
+      - { text: "The parent class", correct: false }
+      - { text: "A reserved Python keyword", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "What's the difference between an instance attribute and a class attribute?"
+    feedback_correct: "Right — instance attrs live on each object; class attrs are shared by every instance."
+    feedback_incorrect: "Class attrs are shared across all instances; instance attrs (set via `self.x = ...`) are per-object."
+    options:
+      - { text: "Instance attrs are public, class attrs are private", correct: false }
+      - { text: "Class attrs are shared by all instances; instance attrs live on each object", correct: true }
+      - { text: "There's no difference; they're aliases", correct: false }
+      - { text: "Class attrs are mutable, instance attrs are not", correct: false }
+
+  - slug: q4
+    type: true_false
+    text: "Defining `__eq__` is required for `==` between two custom-class instances to compare by value rather than identity."
+    feedback_correct: "True — without `__eq__`, `==` falls back to `is` (identity)."
+    feedback_incorrect: "It IS True. Default `__eq__` returns `self is other`, which is almost never what you want for value classes."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "`super().__init__(...)` is used in a subclass `__init__` to call the parent class's `__init__`."
+    feedback_correct: "True — `super()` returns a proxy that delegates to the parent."
+    feedback_incorrect: "It IS True. Use `super().__init__(...)` to ensure the parent sets up its own state."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q6
+    type: multiple_choice
+    text: "What goes wrong with a class `Bag` that defines `items = []` at class scope and an `add` method that does `self.items.append(x)`?"
+    hint: "Where does `items` actually live?"
+    feedback_correct: "Correct — `items` is a class attribute, shared across all Bag instances."
+    feedback_incorrect: "`items = []` at class scope is a CLASS attribute. Every `Bag()` shares the same list. Move it inside `__init__` as `self.items = []`."
+    options:
+      - { text: "`append` doesn't work on lists", correct: false }
+      - { text: "`items` is a shared class attribute, so all bags share the same list", correct: true }
+      - { text: "You can't have empty lists in class definitions", correct: false }
+      - { text: "It works correctly — no problem", correct: false }

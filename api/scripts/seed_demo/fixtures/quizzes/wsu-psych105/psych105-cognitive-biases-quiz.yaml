@@ -1,0 +1,75 @@
+slug: psych105-cognitive-biases-quiz
+study_guide_slug: psych105-cognitive-biases
+title: "PSYCH 105 — Cognitive Biases and Heuristics Quiz"
+description: "6 questions on heuristics, framing, and the conjunction fallacy."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Linda is 31, single, outspoken, and was a philosophy major involved in social-justice causes. Most participants rate it MORE likely that Linda is 'a bank teller AND active in the feminist movement' than 'a bank teller'. This violates:"
+    hint: "What probability rule does the conjunction violate?"
+    feedback_correct: "Right — P(A ∧ B) ≤ P(A); rating the conjunction as more likely is the conjunction fallacy, driven by representativeness."
+    feedback_incorrect: "The error is the conjunction fallacy: an intersection cannot be more probable than either set alone. Representativeness drives the bias."
+    options:
+      - { text: "Bayes's theorem about base rates", correct: false }
+      - { text: "The conjunction rule (P(A ∧ B) ≤ P(A))", correct: true }
+      - { text: "The law of large numbers", correct: false }
+      - { text: "Prospect theory", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "After seeing news coverage of a shark attack, vacationers overestimate their personal risk of shark attack. This is best explained by the:"
+    feedback_correct: "Availability heuristic — vivid, recent examples come to mind easily and inflate estimates."
+    feedback_incorrect: "Availability is the heuristic where ease-of-recall substitutes for true frequency."
+    options:
+      - { text: "Anchoring heuristic", correct: false }
+      - { text: "Availability heuristic", correct: true }
+      - { text: "Representativeness heuristic", correct: false }
+      - { text: "Confirmation bias", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "A surgeon describes a procedure as having a '90% survival rate' and finds patients more willing to consent than when she describes it as having a '10% mortality rate'. The two descriptions are logically equivalent. This demonstrates:"
+    feedback_correct: "The framing effect — equivalent options elicit different choices based on wording."
+    feedback_incorrect: "Framing effects show that gain-vs-loss wording shifts choice even when the outcomes are mathematically identical."
+    options:
+      - { text: "Sunk cost fallacy", correct: false }
+      - { text: "Framing effect", correct: true }
+      - { text: "Hindsight bias", correct: false }
+      - { text: "Anchoring", correct: false }
+
+  - slug: q4
+    type: true_false
+    text: "Simply learning about cognitive biases reliably immunizes a person against committing them."
+    feedback_correct: "False — research shows knowledge of biases provides little protection; bias-resistant decision procedures help more than awareness alone."
+    feedback_incorrect: "Awareness alone is not enough; people commit anchoring and other biases right after learning about them."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q5
+    type: true_false
+    text: "Loss aversion (Kahneman & Tversky) holds that losses typically feel about twice as psychologically powerful as equivalent gains."
+    feedback_correct: "True — the classical loss-aversion coefficient is roughly 2 in many experiments."
+    feedback_incorrect: "Loss aversion is the asymmetry where losses outweigh equivalent gains — typically about 2:1."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "Briefly distinguish System 1 and System 2 thinking (Kahneman) and give one everyday example of each."
+    reference_answer: |
+      System 1 is fast, automatic, intuitive, and effortless. It runs
+      continuously and excels at pattern matching. Example: instantly
+      recognizing a friend's face in a crowd, or knowing 2 + 2 = 4
+      without computation.
+
+      System 2 is slow, deliberate, analytic, and effortful. It is
+      engaged only when needed and can override System 1 outputs.
+      Example: computing 17 × 24 in your head, or carefully checking
+      a contract for inconsistencies.
+
+      Most everyday cognition runs on System 1. System 2 monitors and
+      can intervene, but it is metabolically expensive and easily
+      displaced by competing demands. Many cognitive biases are System 1
+      outputs that System 2 failed to catch.

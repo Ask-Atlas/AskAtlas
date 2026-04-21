@@ -1,0 +1,72 @@
+slug: psych105-research-methods-and-ethics-quiz
+study_guide_slug: psych105-research-methods-and-ethics
+title: "PSYCH 105 — Research Methods and Ethics Quiz"
+description: "6 questions on study designs, validity, and the IRB framework."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "A researcher reports that hours of sleep and GPA are positively correlated, r = 0.42, in a sample of 300 college students. Which conclusion is best supported?"
+    hint: "Watch the design, not the size of r."
+    feedback_correct: "Right — correlation alone can't establish causation; a third variable could drive both."
+    feedback_incorrect: "Correlation is not causation. The design is correlational, so causal claims aren't supported."
+    options:
+      - { text: "Sleeping more causes GPA to rise.", correct: false }
+      - { text: "Higher GPA causes students to sleep more.", correct: false }
+      - { text: "Sleep and GPA tend to vary together, but causation isn't established by this design.", correct: true }
+      - { text: "Because r > 0.4, the relationship is causal.", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "Which of the following is necessary to claim that an independent variable CAUSED a change in a dependent variable?"
+    hint: "Think about what only experiments offer."
+    feedback_correct: "Random assignment to conditions is the ingredient that supports causal inference."
+    feedback_incorrect: "Without random assignment, individual differences could explain the result."
+    options:
+      - { text: "A large convenience sample", correct: false }
+      - { text: "A statistically significant correlation", correct: false }
+      - { text: "Random assignment of participants to conditions", correct: true }
+      - { text: "An IRB-approved protocol", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "Which Belmont Report principle most directly underlies the requirement of informed consent?"
+    feedback_correct: "Respect for persons grounds informed consent and the right to withdraw."
+    feedback_incorrect: "Re-read the Belmont principles — informed consent maps to respect for persons."
+    options:
+      - { text: "Beneficence", correct: false }
+      - { text: "Justice", correct: false }
+      - { text: "Respect for persons", correct: true }
+      - { text: "Veracity", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "A study finds a strong effect in a sample of 60 WSU psychology undergraduates. Which validity concern is MOST salient when generalizing to the broader US adult population?"
+    feedback_correct: "External validity / generalizability is the issue when extrapolating from a WEIRD sample."
+    feedback_incorrect: "Internal validity asks whether the IV caused the DV; the question is about generalization."
+    options:
+      - { text: "Internal validity", correct: false }
+      - { text: "External validity", correct: true }
+      - { text: "Construct validity", correct: false }
+      - { text: "Statistical conclusion validity", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "Assuming the null hypothesis is true, a p-value less than .05 means the probability of observing data at least this extreme is less than 5%."
+    feedback_correct: "True — that is the precise definition of p under the null."
+    feedback_incorrect: "p is defined assuming the null hypothesis is true; this statement is the standard definition."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "Briefly explain the difference between internal validity and external validity, and give one threat to each."
+    reference_answer: |
+      Internal validity is the extent to which the study supports a causal
+      claim that the IV produced the change in the DV within the sample
+      tested. Threats include confounds, demand characteristics, and
+      experimenter effects. External validity is the extent to which
+      results generalize to other people, settings, or times. Threats
+      include WEIRD samples, artificial lab conditions, and limited
+      stimulus sampling. A famous study (e.g., Milgram) can be high on
+      one and contested on the other.

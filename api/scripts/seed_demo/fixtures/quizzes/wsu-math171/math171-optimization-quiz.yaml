@@ -1,0 +1,69 @@
+slug: math171-optimization-quiz
+study_guide_slug: math171-optimization
+title: "MATH 171 — Optimization Quiz"
+description: "6 questions on critical points, the closed-interval method, and word problems."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Which of the following is a critical point of $f(x) = x^3 - 3x + 1$?"
+    hint: "Solve $f'(x) = 0$."
+    feedback_correct: "Right — $f'(x) = 3x^2 - 3$, so critical points are $x = \\pm 1$."
+    feedback_incorrect: "$f'(x) = 3x^2 - 3 = 3(x-1)(x+1)$. Set this to zero."
+    options:
+      - { text: "$x = 0$", correct: false }
+      - { text: "$x = 1$", correct: true }
+      - { text: "$x = 3$", correct: false }
+      - { text: "$x = -3$", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "A farmer has 400 ft of fencing for a rectangular pen. What dimensions maximise the enclosed area?"
+    hint: "Constraint: $2x + 2y = 400$. Objective: $A = xy$."
+    feedback_correct: "Yes — for a fixed perimeter, the square maximises area."
+    feedback_incorrect: "Eliminate one variable using $y = 200 - x$, then maximise $A(x) = x(200 - x)$."
+    options:
+      - { text: "$50 \\times 150$", correct: false }
+      - { text: "$100 \\times 100$", correct: true }
+      - { text: "$80 \\times 120$", correct: false }
+      - { text: "$200 \\times 0$", correct: false }
+
+  - slug: q3
+    type: true_false
+    text: "If $f$ is continuous on a closed interval $[a, b]$, then $f$ attains both an absolute max and an absolute min on $[a, b]$."
+    feedback_correct: "Correct — this is the Extreme Value Theorem."
+    feedback_incorrect: "It is true: this is the Extreme Value Theorem, the foundation of the closed-interval method."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q4
+    type: true_false
+    text: "If $f'(c) = 0$ and $f''(c) = 0$, then by the second-derivative test $f$ has a local max at $c$."
+    feedback_correct: "Correct — the test is inconclusive when $f''(c) = 0$. Fall back to the first-derivative test."
+    feedback_incorrect: "When $f''(c) = 0$, the second-derivative test is inconclusive. You cannot conclude max, min, or neither from it alone."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q5
+    type: multiple_choice
+    text: "Find the absolute max of $f(x) = x^3 - 3x + 1$ on $[0, 2]$."
+    hint: "Use the closed-interval method: critical points + endpoints."
+    feedback_correct: "Right — $f(0) = 1$, $f(1) = -1$, $f(2) = 3$. Absolute max is $3$."
+    feedback_incorrect: "Evaluate $f$ at the endpoints and the critical point $x = 1$. The largest value wins."
+    options:
+      - { text: "$1$", correct: false }
+      - { text: "$-1$", correct: false }
+      - { text: "$3$", correct: true }
+      - { text: "$0$", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "What dimensions of a closed cylindrical can of fixed volume $V_0$ minimise the surface area? Show the setup."
+    reference_answer: |
+      Constraint: $\pi r^2 h = V_0$, so $h = V_0 / (\pi r^2)$.
+      Surface area: $S(r) = 2\pi r^2 + 2\pi r h = 2\pi r^2 + 2 V_0 / r$.
+      Differentiate: $S'(r) = 4\pi r - 2 V_0 / r^2$.
+      Set $S'(r) = 0$: $4\pi r = 2 V_0 / r^2 \Rightarrow r^3 = V_0 / (2\pi)$.
+      Then $h = V_0 / (\pi r^2) = 2 r$ — height equals the diameter.
+      So $r = (V_0 / (2\pi))^{1/3}$ and $h = 2r$.

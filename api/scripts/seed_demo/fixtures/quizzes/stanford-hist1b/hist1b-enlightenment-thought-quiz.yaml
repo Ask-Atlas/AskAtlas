@@ -1,0 +1,67 @@
+slug: hist1b-enlightenment-thought-quiz
+study_guide_slug: hist1b-enlightenment-thought
+title: "HIST 1B — Enlightenment Thought Quiz"
+description: "Six questions on the figures, texts, and concepts of the long eighteenth century."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Which work, published in 1689, advanced a theory of natural rights and government by consent that became foundational for later Enlightenment political thought?"
+    options:
+      - { text: "John Locke, *Two Treatises of Government*", correct: true }
+      - { text: "Voltaire, *Candide*", correct: false }
+      - { text: "Rousseau, *The Social Contract*", correct: false }
+      - { text: "Hobbes, *Leviathan*", correct: false }
+    feedback_correct: "Locke's *Two Treatises* (1689) and *Essay Concerning Human Understanding* (1689) appear together at the threshold of the Enlightenment."
+
+  - slug: q2
+    type: multiple_choice
+    text: "Who edited the *Encyclopédie*, published in France between 1751 and 1772?"
+    options:
+      - { text: "Diderot and d'Alembert", correct: true }
+      - { text: "Voltaire and Rousseau", correct: false }
+      - { text: "Montesquieu and Hume", correct: false }
+      - { text: "Buffon and Condorcet", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "Which Kant essay famously defines Enlightenment as 'the human being's emergence from his self-incurred minority' and supplies the motto *Sapere aude!*?"
+    options:
+      - { text: "'Was ist Aufklärung?' (1784)", correct: true }
+      - { text: "*Critique of Pure Reason* (1781)", correct: false }
+      - { text: "*Groundwork of the Metaphysics of Morals* (1785)", correct: false }
+      - { text: "*Perpetual Peace* (1795)", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "Adam Smith's *Wealth of Nations* (1776) is most associated with which national variant of the Enlightenment?"
+    options:
+      - { text: "Scottish Enlightenment", correct: true }
+      - { text: "French *philosophes*", correct: false }
+      - { text: "German Aufklärung", correct: false }
+      - { text: "Neapolitan Enlightenment", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "Most Enlightenment thinkers were committed atheists who sought to abolish religion outright."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+    feedback_incorrect: "Most Enlighteners held some version of deism, latitudinarianism, or rational Christianity; doctrinaire atheists like Holbach were a minority."
+
+  - slug: q6
+    type: freeform
+    text: "Briefly explain what Habermas meant by the 'public sphere' and why historians treat it as central to Enlightenment political culture."
+    reference_answer: |
+      Jürgen Habermas, in *Structural Transformation of the Public
+      Sphere* (1962), described an eighteenth-century 'bourgeois
+      public sphere' — coffeehouses, salons, periodicals, reading
+      societies — in which private individuals could meet as equals
+      to discuss matters of common concern using reason rather than
+      rank or revelation. Historians treat it as central because it
+      supplied the social infrastructure within which Enlightenment
+      ideas circulated and within which 'public opinion' became a
+      politically consequential category. Later scholarship has
+      qualified Habermas's account by recovering the participation
+      of women, plebeian readers, and colonial subjects, but the
+      basic claim — that the eighteenth century built a new arena
+      for political argument — remains widely accepted.

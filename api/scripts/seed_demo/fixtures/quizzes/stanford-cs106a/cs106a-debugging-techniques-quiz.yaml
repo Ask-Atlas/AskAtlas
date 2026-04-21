@@ -1,0 +1,69 @@
+slug: cs106a-debugging-techniques-quiz
+study_guide_slug: cs106a-debugging-techniques
+title: "CS 106A — Debugging Quiz"
+description: "6 questions on tracebacks, common error types, and the pdb interactive debugger."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "What direction should you read a Python traceback?"
+    hint: "Where does the actual error message live?"
+    feedback_correct: "Correct — the error type and bottom-most frame is where the bug is, top frames show how you got there."
+    feedback_incorrect: "Bottom-up. The bottom line is the actual error; the rest is the call chain that led to it."
+    options:
+      - { text: "Top-down — the topmost line is the error", correct: false }
+      - { text: "Bottom-up — the bottom line is the error", correct: true }
+      - { text: "Doesn't matter; only the file paths matter", correct: false }
+      - { text: "Right-to-left", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "Which error type does `int('five')` raise?"
+    feedback_correct: "Correct — `ValueError` for right type, wrong content."
+    feedback_incorrect: "It's a `ValueError` (right type — str — but content can't be parsed as an int)."
+    options:
+      - { text: "TypeError", correct: false }
+      - { text: "ValueError", correct: true }
+      - { text: "SyntaxError", correct: false }
+      - { text: "ParseError", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "Which Python builtin drops you into the pdb interactive debugger?"
+    feedback_correct: "Right — `breakpoint()` enters pdb at the call site."
+    feedback_incorrect: "Use `breakpoint()` (Python 3.7+). It enters pdb when execution reaches the call."
+    options:
+      - { text: "`debug()`", correct: false }
+      - { text: "`breakpoint()`", correct: true }
+      - { text: "`pdb()`", correct: false }
+      - { text: "`step()`", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "Which pdb command moves to the next line WITHOUT stepping into a function call?"
+    feedback_correct: "Correct — `n` (next) steps OVER calls; `s` (step) steps IN."
+    feedback_incorrect: "`n` steps over (next line at this level). `s` steps into. `c` continues to the next breakpoint."
+    options:
+      - { text: "`s`", correct: false }
+      - { text: "`n`", correct: true }
+      - { text: "`c`", correct: false }
+      - { text: "`q`", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "Calling `dir(x)` returns a list of all attributes (methods + fields) accessible on `x`."
+    feedback_correct: "True — `dir(x)` is the introspection workhorse."
+    feedback_incorrect: "It IS True. `dir(x)` is how you ask 'what can I do with this object?'"
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "Describe the 'minimal reproducible example' debugging technique in 2–3 sentences."
+    reference_answer: |
+      Strip the failing program down to the smallest piece of code that
+      still triggers the bug. Hard-code the input that causes the failure
+      and remove every line not strictly necessary for the failure to
+      reproduce. The act of stripping often surfaces the bug, and what
+      remains is a tight artifact you can post in office hours or paste
+      into a search query.

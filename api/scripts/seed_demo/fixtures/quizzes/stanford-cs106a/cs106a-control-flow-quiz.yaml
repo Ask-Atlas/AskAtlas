@@ -1,0 +1,71 @@
+slug: cs106a-control-flow-quiz
+study_guide_slug: cs106a-control-flow
+title: "CS 106A — Control Flow Quiz"
+description: "6 questions on if/elif/else, while, for, and the range / break / continue mechanics."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "How many values does `range(2, 8, 2)` produce?"
+    hint: "range is half-open: stop is exclusive."
+    feedback_correct: "Correct — 2, 4, 6 are produced; 8 is excluded."
+    feedback_incorrect: "Three values: 2, 4, 6. The stop value (8) is exclusive."
+    options:
+      - { text: "2", correct: false }
+      - { text: "3", correct: true }
+      - { text: "4", correct: false }
+      - { text: "An infinite stream", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "What does `break` do inside a nested loop?"
+    feedback_correct: "Correct — `break` exits only the innermost enclosing loop."
+    feedback_incorrect: "`break` exits only one loop level. To exit multiple levels, refactor or use a flag."
+    options:
+      - { text: "Exits ALL enclosing loops", correct: false }
+      - { text: "Exits only the innermost enclosing loop", correct: true }
+      - { text: "Skips to the next iteration", correct: false }
+      - { text: "Raises a SystemExit", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "Which is the idiomatic Pythonic way to iterate with both index and value?"
+    feedback_correct: "Right — `enumerate` is the standard CS 106A idiom."
+    feedback_incorrect: "Use `enumerate(xs)`. The `range(len(xs))` form is considered non-idiomatic."
+    options:
+      - { text: "`for i in range(len(xs)): v = xs[i]`", correct: false }
+      - { text: "`for i, v in enumerate(xs):`", correct: true }
+      - { text: "`for v in xs.indexes():`", correct: false }
+      - { text: "`while i < len(xs): v = xs[i]; i += 1`", correct: false }
+
+  - slug: q4
+    type: true_false
+    text: "An empty list `[]` is treated as falsy by an `if` statement."
+    feedback_correct: "True — empty containers are falsy in Python."
+    feedback_incorrect: "It IS True. Empty list, dict, set, tuple, and string all evaluate as False."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "Modifying a list with `.remove()` while iterating over it with a `for` loop is safe."
+    feedback_correct: "False — mutating during iteration causes elements to be skipped."
+    feedback_incorrect: "It is NOT safe. Iterate over a copy or build a new list with a comprehension."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q6
+    type: freeform
+    text: "Write a Python loop that sums all positive integers in a list `nums`, stopping early if it sees a negative number."
+    reference_answer: |
+      ```python
+      total = 0
+      for n in nums:
+          if n < 0:
+              break
+          total += n
+      ```
+      The `break` exits the loop immediately on the first negative value.
+      Reading `total` after the loop gives the sum of the leading positive
+      run.

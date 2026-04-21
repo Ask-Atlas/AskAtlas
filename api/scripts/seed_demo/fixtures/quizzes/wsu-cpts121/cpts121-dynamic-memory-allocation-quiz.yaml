@@ -1,0 +1,77 @@
+slug: cpts121-dynamic-memory-allocation-quiz
+study_guide_slug: cpts121-dynamic-memory-allocation
+title: "CPTS 121 — Dynamic Memory Quiz"
+description: "6 questions on malloc, calloc, realloc, free, and the bugs that follow."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "What value does `malloc` return when the allocation fails?"
+    hint: "It's the same special value used to mean `no pointer`."
+    feedback_correct: "Right — always check for `NULL` before dereferencing the result."
+    feedback_incorrect: "`malloc` returns `NULL` on failure. Always check before dereferencing."
+    options:
+      - { text: "`-1` cast to `void *`", correct: false }
+      - { text: "`NULL`", correct: true }
+      - { text: "`0xDEADBEEF`", correct: false }
+      - { text: "It calls `exit()` and never returns", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "How does `calloc(n, sizeof(*p))` differ from `malloc(n * sizeof(*p))`?"
+    hint: "What does `calloc` do to the bytes it returns?"
+    feedback_correct: "Right — `calloc` zeroes the returned memory and checks the multiplication for overflow."
+    feedback_incorrect: "`calloc` zero-initialises the returned memory; `malloc` leaves it uninitialised."
+    options:
+      - { text: "`calloc` zero-initialises the returned memory", correct: true }
+      - { text: "`calloc` is faster because it skips bookkeeping", correct: false }
+      - { text: "`calloc` allocates only on the stack", correct: false }
+      - { text: "There is no difference — they are aliases", correct: false }
+
+  - slug: q3
+    type: true_false
+    text: "Calling `free(NULL)` in standard C is a guaranteed no-op (does nothing)."
+    feedback_correct: "Yes — that's why setting `p = NULL` after `free(p)` makes a second `free` safe."
+    feedback_incorrect: "It is a no-op. The standard explicitly defines `free(NULL)` to do nothing."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "Why is `arr = realloc(arr, new_size);` considered a textbook bug pattern?"
+    hint: "What happens to the original `arr` if `realloc` returns `NULL`?"
+    feedback_correct: "Right — on failure `arr` becomes `NULL` while the original block is still live, leaking it."
+    feedback_incorrect: "On failure `realloc` returns `NULL` and leaves the original block live. Assigning back overwrites and leaks the original."
+    options:
+      - { text: "It overwrites `arr` with `NULL` on failure, leaking the original block", correct: true }
+      - { text: "`realloc` is undefined behavior in C99", correct: false }
+      - { text: "The new size argument is ignored", correct: false }
+      - { text: "`realloc` always reallocates from scratch, copying twice", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "Calling `free(p)` twice on the same non-NULL pointer is safe in C."
+    feedback_correct: "Right — double-free is undefined behavior. Set `p = NULL` after `free(p)` to make a second call a no-op."
+    feedback_incorrect: "Double-free is undefined behavior. The heap allocator may corrupt itself silently."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q6
+    type: freeform
+    text: "Show the recommended pattern for safely growing a heap-allocated array with `realloc`, including failure handling."
+    reference_answer: |
+      Use a temporary pointer so that you don't lose the original
+      block on failure:
+
+          int *bigger = realloc(arr, new_n * sizeof(*arr));
+          if (bigger == NULL) {
+              // arr is still valid; clean it up if you're aborting
+              free(arr);
+              return -1;
+          }
+          arr = bigger;
+
+      The key idea: only assign back to `arr` *after* you've
+      confirmed the realloc succeeded. Doing `arr = realloc(arr, ...)`
+      directly leaks the original block on `NULL` return.

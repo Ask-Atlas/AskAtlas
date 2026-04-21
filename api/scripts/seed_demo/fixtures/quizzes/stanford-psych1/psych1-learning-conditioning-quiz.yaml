@@ -1,0 +1,68 @@
+slug: psych1-learning-conditioning-quiz
+study_guide_slug: psych1-learning-conditioning
+title: "PSYCH 1 — Learning and Conditioning Quiz"
+description: "6 questions covering classical conditioning, the operant 2x2, and reinforcement schedules."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "In Pavlov's experiment, the bell starts as a neutral stimulus and becomes a conditioned stimulus after pairing with food. After conditioning, what does salivation to the bell alone count as?"
+    hint: "It's a learned response to a learned cue."
+    feedback_correct: "Right — salivation to the bell alone is the conditioned response (CR)."
+    feedback_incorrect: "Salivation to the bell alone is the *conditioned response* (CR). The unconditioned response is salivation to the food itself."
+    options:
+      - { text: "Unconditioned stimulus (US)", correct: false }
+      - { text: "Unconditioned response (UR)", correct: false }
+      - { text: "Conditioned response (CR)", correct: true }
+      - { text: "Neutral stimulus (NS)", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "A driver buckles their seatbelt to silence the persistent beeping. The beeping stops when they buckle, and they are more likely to buckle promptly in the future. This is an example of:"
+    hint: "Something aversive is *removed*, and the behaviour goes *up*."
+    feedback_correct: "Right — removing an aversive stimulus to *increase* a behaviour is negative reinforcement."
+    feedback_incorrect: "If a behaviour goes *up* because something aversive is *removed*, that's negative reinforcement, not punishment."
+    options:
+      - { text: "Positive reinforcement", correct: false }
+      - { text: "Negative reinforcement", correct: true }
+      - { text: "Positive punishment", correct: false }
+      - { text: "Negative punishment", correct: false }
+
+  - slug: q3
+    type: true_false
+    text: "Behaviour reinforced on a variable-ratio schedule is generally more resistant to extinction than behaviour reinforced on a continuous schedule."
+    feedback_correct: "True — variable-ratio schedules produce the most extinction-resistant responding we know how to generate."
+    feedback_incorrect: "Variable-ratio schedules (e.g. slot machines) are notoriously *more* extinction-resistant than continuous reinforcement."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "After conditioning, Pavlov presented the bell repeatedly without food and the dog's salivation to the bell diminished. After a rest period, the dog salivated again to the bell, though less strongly. What two phenomena did Pavlov demonstrate, in order?"
+    feedback_correct: "Right — extinction reduces the CR; spontaneous recovery brings it back at reduced strength after a delay."
+    feedback_incorrect: "Diminishing the CR by un-paired CS exposure is extinction; the post-rest return of the CR is spontaneous recovery."
+    options:
+      - { text: "Acquisition, then generalisation", correct: false }
+      - { text: "Extinction, then spontaneous recovery", correct: true }
+      - { text: "Discrimination, then higher-order conditioning", correct: false }
+      - { text: "Habituation, then sensitisation", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "Latent learning experiments showed that rats can build a useful internal representation of a maze even without any reinforcement during exploration."
+    feedback_correct: "True — Tolman's latent-learning rats outperformed unexposed controls once a reward was introduced, demonstrating prior learning without reinforcement."
+    feedback_incorrect: "Tolman's latent-learning result is exactly this: learning that occurs without reinforcement and only shows up later when reward becomes available."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q6
+    type: multiple_choice
+    text: "A rat first learns that a tone predicts food. The experimenter then pairs a *light* with the (already conditioned) tone, and after several pairings the light alone elicits a small CR. This is an example of:"
+    feedback_correct: "Right — using an established CS as the basis for conditioning a new neutral stimulus is higher-order (second-order) conditioning."
+    feedback_incorrect: "Pairing a neutral stimulus with an *already-conditioned* CS is second-order (higher-order) conditioning, not extinction or shaping."
+    options:
+      - { text: "Discrimination training", correct: false }
+      - { text: "Higher-order (second-order) conditioning", correct: true }
+      - { text: "Stimulus generalisation", correct: false }
+      - { text: "Shaping by successive approximations", correct: false }

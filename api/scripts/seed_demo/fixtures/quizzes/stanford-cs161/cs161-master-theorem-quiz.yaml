@@ -1,0 +1,60 @@
+slug: cs161-master-theorem-quiz
+study_guide_slug: cs161-master-theorem
+title: "CS 161 — Master Theorem Quiz"
+description: "Six questions on identifying parameters and applying the three Master Theorem cases."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "For $T(n) = 8T(n/2) + n^2$, what does the Master Theorem give?"
+    options:
+      - { text: "$\\Theta(n^2)$", correct: false }
+      - { text: "$\\Theta(n^2 \\log n)$", correct: false }
+      - { text: "$\\Theta(n^3)$", correct: true }
+      - { text: "$\\Theta(n^{\\log_2 7})$", correct: false }
+    feedback_correct: "$a = 8$, $b = 2$, watershed $n^{\\log_2 8} = n^3$. $f(n) = n^2$ is polynomially smaller, so Case 1 gives $\\Theta(n^3)$."
+    feedback_incorrect: "Compute $n^{\\log_b a} = n^{\\log_2 8} = n^3$, then compare $f(n) = n^2$ to it. $f$ is polynomially smaller — Case 1."
+  - slug: q2
+    type: multiple_choice
+    text: "For mergesort's recurrence $T(n) = 2T(n/2) + n$, the Master Theorem yields:"
+    options:
+      - { text: "$\\Theta(n)$", correct: false }
+      - { text: "$\\Theta(n \\log n)$", correct: true }
+      - { text: "$\\Theta(n^2)$", correct: false }
+      - { text: "$\\Theta(\\log n)$", correct: false }
+    feedback_correct: "$a = 2$, $b = 2$, watershed $n^1 = n$. $f(n) = n$ matches with $k = 0$ — Case 2 gives $\\Theta(n \\log n)$."
+    feedback_incorrect: "Compute $n^{\\log_2 2} = n$. $f(n) = n$ matches the watershed, so Case 2 gives an extra $\\log n$ factor."
+  - slug: q3
+    type: true_false
+    text: "The Master Theorem can solve EVERY recurrence of the form $T(n) = aT(n/b) + f(n)$."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+    feedback_correct: "When $f(n)$ falls in the gap between cases (e.g., $f(n) = n^{\\log_b a} / \\log n$), the MT does not apply."
+    feedback_incorrect: "There is a gap between Case 1, 2, and 3 — recurrences like $T(n) = 2T(n/2) + n / \\log n$ require the recursion-tree method or Akra–Bazzi."
+  - slug: q4
+    type: multiple_choice
+    text: "For $T(n) = 3T(n/4) + n \\log n$, which Master Theorem case applies?"
+    options:
+      - { text: "Case 1 — $\\Theta(n^{\\log_4 3})$", correct: false }
+      - { text: "Case 2 — $\\Theta(n^{\\log_4 3} \\log n)$", correct: false }
+      - { text: "Case 3 — $\\Theta(n \\log n)$", correct: true }
+      - { text: "MT does not apply", correct: false }
+    feedback_correct: "$n^{\\log_4 3} \\approx n^{0.79}$. $f(n) = n \\log n$ is polynomially larger than $n^{0.79}$ (gap $> n^{0.2}$). Regularity holds, so Case 3 applies: $T(n) = \\Theta(n \\log n)$."
+    feedback_incorrect: "$n^{\\log_4 3} \\approx n^{0.79}$. $f(n) = n \\log n$ is polynomially larger ($n^{0.21}$ ahead). Use Case 3."
+  - slug: q5
+    type: true_false
+    text: "In the Master Theorem, the regularity condition for Case 3 always holds when $f(n) = n^k$ with $k > \\log_b a$."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+    feedback_correct: "For polynomial $f(n) = n^k$ with $k > \\log_b a$: $a \\cdot (n/b)^k = (a/b^k) \\cdot n^k$, and $a/b^k < 1$ exactly because $k > \\log_b a$."
+    feedback_incorrect: "For polynomial $f$, regularity reduces to $a/b^k < 1$, which follows directly from the Case 3 hypothesis $k > \\log_b a$."
+  - slug: q6
+    type: freeform
+    text: "Solve $T(n) = 4T(n/2) + n^3$ using the Master Theorem. Identify $a$, $b$, $f(n)$, the watershed, the case, and the final $\\Theta$ bound."
+    reference_answer: |
+      $a = 4$, $b = 2$, $f(n) = n^3$.
+      Watershed: $n^{\log_b a} = n^{\log_2 4} = n^2$.
+      Compare $f(n) = n^3$ to the watershed $n^2$: $f$ is polynomially larger (gap = $n^1$, so $\epsilon = 1 > 0$).
+      Regularity check: $4 \cdot (n/2)^3 = 4 \cdot n^3 / 8 = n^3 / 2 \leq (1/2) \cdot n^3$, with $c = 1/2 < 1$. Regularity holds.
+      Therefore Case 3 applies and $T(n) = \Theta(n^3)$.

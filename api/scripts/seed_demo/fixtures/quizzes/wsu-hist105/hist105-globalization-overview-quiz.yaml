@@ -1,0 +1,74 @@
+slug: hist105-globalization-overview-quiz
+study_guide_slug: hist105-globalization-overview
+title: "HIST 105 — Globalization Quiz"
+description: "6 questions on the four phases of globalization, the Silk Road, the Columbian Exchange, and the post-1945 order."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Which voyage or event most directly closed the loop on the first truly global commercial circuit?"
+    hint: "Think about which event linked the Pacific to the existing Atlantic-Eurasian network."
+    feedback_correct: "Right — the founding of Manila in 1571 closed the silver-for-silk loop between Potosí, Manila, and China."
+    feedback_incorrect: "1492 opened Atlantic integration but did not yet link the Pacific. Manila in 1571 is the conventional 'closing' date."
+    options:
+      - { text: "Columbus's 1492 voyage", correct: false }
+      - { text: "The Spanish founding of Manila in 1571", correct: true }
+      - { text: "Magellan's 1519 departure from Seville", correct: false }
+      - { text: "The 1602 chartering of the Dutch VOC", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "Which technology is most directly associated with the price collapse that powered post-1945 contemporary globalization?"
+    hint: "It standardized in 1956."
+    feedback_correct: "Correct — the shipping container, standardized by Malcom McLean in 1956, roughly halved long-distance freight costs."
+    feedback_incorrect: "Telegraphy and steam shipping mattered for the 19th-century phase. The post-1945 transformation rides on containerization."
+    options:
+      - { text: "The transatlantic telegraph cable", correct: false }
+      - { text: "The shipping container", correct: true }
+      - { text: "The steam engine", correct: false }
+      - { text: "The personal computer", correct: false }
+
+  - slug: q3
+    type: true_false
+    text: "The Silk Road was a single continuous trade route operated by one empire from Xi'an to Antioch."
+    feedback_correct: "Yes — it was a braided network of relay routes, each leg controlled by different middlemen. The single-route image was popularized by Richthofen in 1877."
+    feedback_incorrect: "Actually, it was a braided network of relay routes — the single-highway image is a romantic 19th-century invention."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q4
+    type: true_false
+    text: "Between 1914 and 1945, the share of world output crossing borders as exports fell sharply — a real episode of deglobalization."
+    feedback_correct: "Yes — WWI, the 1930 tariff wars, and the Great Depression rolled back integration. 1913 levels were not matched again until the 1970s."
+    feedback_incorrect: "It IS true. World trade as a share of output fell so dramatically that historians call this the 'end of the first globalization.'"
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q5
+    type: multiple_choice
+    text: "Which trading region was, by 1400, the densest commercial zone on earth?"
+    hint: "Think about the predictable winds that made long-distance bulk trade routine."
+    feedback_correct: "Correct — the Indian Ocean network, driven by reliable monsoon winds, was the largest pre-1500 trading arena."
+    feedback_incorrect: "Pre-1500, the Indian Ocean (not the Mediterranean or Atlantic) was the busiest commercial zone."
+    options:
+      - { text: "The Mediterranean", correct: false }
+      - { text: "The North Atlantic", correct: false }
+      - { text: "The Indian Ocean monsoon network", correct: true }
+      - { text: "The Caribbean", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "In one paragraph, explain why the period 1914–1945 is sometimes called 'the end of the first globalization' and what that tells us about globalization more generally."
+    reference_answer: |
+      Between 1914 and 1945, two world wars, the 1930 Smoot-Hawley
+      tariffs, and the Great Depression rolled back the late-19th-
+      century pattern of integrated trade, capital flows, and mass
+      migration. World trade as a share of output collapsed; the gold
+      standard broke down; cross-border investment dried up. Levels of
+      integration achieved by 1913 were not matched again until roughly
+      the 1970s. The episode is important because it shows that
+      globalization is not a one-way ratchet — it can and has reversed
+      when political conditions (war, depression, nationalist backlash)
+      make integration politically untenable. That is a useful piece of
+      context for current debates about deglobalization.

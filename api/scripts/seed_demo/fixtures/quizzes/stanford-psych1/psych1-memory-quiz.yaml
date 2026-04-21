@@ -1,0 +1,69 @@
+slug: psych1-memory-quiz
+study_guide_slug: psych1-memory
+title: "PSYCH 1 — Memory Quiz"
+description: "6 questions on memory systems, encoding, retrieval, and the misinformation effect."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Patient H.M. lost both hippocampi in 1953. After surgery he could still learn new motor skills (e.g. mirror tracing) but could not remember having ever practised them. What does this dissociation most directly support?"
+    hint: "What two long-term-memory subsystems does this pull apart?"
+    feedback_correct: "Right — H.M. is the canonical demonstration that explicit and implicit memory rely on distinct neural substrates."
+    feedback_incorrect: "The double dissociation in H.M. supports the explicit/implicit memory distinction, with the hippocampus required for explicit but not implicit learning."
+    options:
+      - { text: "The serial-position effect (primacy and recency)", correct: false }
+      - { text: "The distinction between explicit and implicit memory systems", correct: true }
+      - { text: "The Sapir-Whorf hypothesis about language and thought", correct: false }
+      - { text: "Levels-of-processing theory", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "Two students each spend 3 hours studying for a quiz. Student A studies for one 3-hour session the night before. Student B does three 1-hour sessions across three nights. Whose performance does the spacing effect predict will be better?"
+    feedback_correct: "Right — distributed practice reliably outperforms equivalent massed practice."
+    feedback_incorrect: "The spacing effect predicts that the *distributed* practice (Student B) will lead to better long-term retention than the equivalent massed practice."
+    options:
+      - { text: "Student A — concentrated practice deepens encoding", correct: false }
+      - { text: "Student B — distributed practice reliably outperforms equivalent massed practice", correct: true }
+      - { text: "They will be equivalent because total study time is the same", correct: false }
+      - { text: "Student A, but only on recognition tests", correct: false }
+
+  - slug: q3
+    type: true_false
+    text: "Working memory in Baddeley's model is a passive store whose only job is to hold information for a few seconds before it decays."
+    feedback_correct: "Correct — working memory is an *active* workspace with multiple subsystems, not just passive short-term storage."
+    feedback_incorrect: "Working memory is an active processing system in Baddeley's model — phonological loop, visuospatial sketchpad, and central executive — not a passive store."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q4
+    type: multiple_choice
+    text: "The misinformation effect (Loftus) is most relevant to which of the following claims?"
+    feedback_correct: "Right — the misinformation effect undermines the assumed reliability of eyewitness testimony, especially after leading questioning."
+    feedback_incorrect: "The misinformation effect is canonically applied to *eyewitness testimony*, showing that post-event information can distort the original memory."
+    options:
+      - { text: "Implicit motor learning is preserved after hippocampal damage", correct: false }
+      - { text: "Eyewitness memory is reconstructive and can be biased by post-event suggestion", correct: true }
+      - { text: "Working memory capacity averages 7 ± 2 items", correct: false }
+      - { text: "Sleep is necessary for synaptic consolidation", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "Encoding specificity predicts that recall is better when the cues available at retrieval match those present during encoding."
+    feedback_correct: "True — that's the encoding specificity principle in one sentence."
+    feedback_incorrect: "Encoding specificity is exactly the claim that recall improves when retrieval cues match encoding cues (e.g. context-dependent and state-dependent memory)."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "Distinguish proactive from retroactive interference, and give one everyday example of each."
+    reference_answer: |
+      Proactive interference is when *older* learning disrupts the recall of
+      *newer* information — for example, your old phone number keeps
+      surfacing when you try to recall the new one you just got. Retroactive
+      interference is the opposite direction: *newer* learning disrupts the
+      recall of *older* information — for example, after learning this
+      year's locker combination, you can no longer remember last year's.
+      Both are classic accounts of forgetting in which the trace itself may
+      be intact, but other competing memories block successful retrieval.
