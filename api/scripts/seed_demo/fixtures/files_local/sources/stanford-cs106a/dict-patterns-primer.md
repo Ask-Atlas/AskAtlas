@@ -82,7 +82,7 @@ def fib(n: int, cache: dict[int, int] = {}) -> int:
     if n < 2:
         result = n
     else:
-        result = fib(n - 1) + fib(n - 2)
+        result = fib(n - 1, cache) + fib(n - 2, cache)
     cache[n] = result
     return result
 ```

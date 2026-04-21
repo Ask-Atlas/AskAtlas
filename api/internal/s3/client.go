@@ -35,16 +35,15 @@ func New(ctx context.Context, bucket string) (*Client, error) {
 	svc := s3.NewFromConfig(cfg, func(o *s3.Options) {
 		o.UsePathStyle = true
 		// Strip SDK-added proxy-fragile headers RIGHT BEFORE the v4
-		// signer runs. The Garage bucket at daves-wave.dev fronts
-		// behind Cloudflare (responses carry `Server: cloudflare` +
-		// `Cf-Ray: …`). Cloudflare normalises / rewrites a small set
-		// of request headers on its way to the origin, so any header
-		// the SDK signs but Cloudflare mutates invalidates the sig at
+		// signer runs. Our Garage instance is fronted by a CDN
+		// reverse-proxy that normalises / rewrites a small set of
+		// request headers on their way to the origin, so any header
+		// the SDK signs but the proxy mutates invalidates the sig at
 		// Garage. AWS CLI (botocore) dodges this by signing only
 		// `host; x-amz-content-sha256; x-amz-date`; the Go SDK signs
 		// everything it added, including `amz-sdk-invocation-id`,
 		// `amz-sdk-request`, and `accept-encoding` — exactly the
-		// headers Cloudflare rewrites. Deleting them before the signer
+		// headers the proxy rewrites. Deleting them before the signer
 		// step matches the CLI's canonical request and unblocks every
 		// direct S3 call (DeleteObject, GetObject, ListObjectsV2).
 		//

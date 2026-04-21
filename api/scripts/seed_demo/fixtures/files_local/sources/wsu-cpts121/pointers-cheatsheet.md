@@ -40,11 +40,16 @@ int *p = NULL;
 if (p != NULL) { *p = 5; }  // safe check
 ```
 
-Return `NULL` from functions that allocate memory to signal failure:
+Return `NULL` from functions that allocate memory to signal failure
+(matches the "pointer-returning function returns NULL on failure" convention
+used throughout the C standard library):
 
 ```c
-int *arr = malloc(n * sizeof(int));
-if (arr == NULL) { return -1; }
+int *allocate_buffer(size_t n) {
+    int *arr = malloc(n * sizeof(int));
+    if (arr == NULL) { return NULL; }
+    return arr;
+}
 ```
 
 ## Pointers and Arrays
