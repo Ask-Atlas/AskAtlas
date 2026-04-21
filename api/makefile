@@ -147,11 +147,11 @@ seed-study-guides:
 	$(call prod-confirm)
 	infisical run --env=$(ENV) -- go run $(SEED_STUDY_GUIDES_PATH) -guides=$(STUDY_GUIDES_CSV)
 
-## make seed-demo-content [ENV=dev|staging|prod] [SYNTH_USERS=1000] [SEED=42]
+## make seed-demo-content [ENV=dev|staging|prod] [ACTION=seed|clean] [SYNTH_USERS=1000] [SEED=42]
 ##
-## Phase 3 demo-data loader. Reads the Phase 1+2 validated YAML/MD
-## fixtures at scripts/seed_demo/fixtures/ and writes them into the
-## target database in three layers:
+## Phase 3 demo-data loader. ACTION=seed (default) reads the Phase 1+2
+## validated YAML/MD fixtures at scripts/seed_demo/fixtures/ and writes
+## them into the target database in three layers:
 ##   1. Identity: bot + demo + N synthetic users (direct INSERT with
 ##      fake clerk_ids seed_bot, seed_demo, seed_synth_NNNN).
 ##   2. Fixtures: 100 files, 5 resources, 82 guides, 43 quizzes
@@ -163,11 +163,20 @@ seed-study-guides:
 ##      viewed entries. Demo user gets curated heavy population.
 ## All three layers + pass-2 rewrite run in a single transaction;
 ## INSERTs are ON CONFLICT DO NOTHING / SELECT-fallback so re-runs
-## are idempotent. Runs in ~3 minutes against Neon dev. ENV=prod
-## requires interactive [y] confirmation.
+## are idempotent. Runs in ~3 minutes against Neon dev.
+##
+## ACTION=clean reverses everything: removes every Garage object
+## under the seed-demo/ prefix, then removes every DB row owned by
+## a seed_* clerk_id user (FK cascades handle join tables, per-user
+## votes/favorites/sessions/memberships, and all content). Real
+## users (clerk_id prefixed user_*) and the Phase 0 schools/courses
+## catalog are never touched.
+##
+## ENV=prod requires interactive [y] confirmation on both actions.
 seed-demo-content:
 	$(call prod-confirm)
 	infisical run --env=$(ENV) -- go run ./scripts/seed_demo_content/ \
+		--action=$(or $(ACTION),seed) \
 		--synth-users=$(or $(SYNTH_USERS),1000) \
 		--seed=$(or $(SEED),42)
 

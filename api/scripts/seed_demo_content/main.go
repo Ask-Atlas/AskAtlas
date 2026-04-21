@@ -44,6 +44,7 @@ func main() {
 		fixturesDir = flag.String("fixtures-dir", "scripts/seed_demo/fixtures", "Path to Phase 1+2 fixtures directory")
 		nSynth      = flag.Int("synth-users", 1000, "Number of synthetic users to seed")
 		seed        = flag.Int64("seed", 42, "Random seed for deterministic Faker + activity generation")
+		action      = flag.String("action", "seed", "Action to run: `seed` or `clean`. `clean` reverses every insert + removes Garage objects under seed-demo/.")
 	)
 	flag.Parse()
 
@@ -54,6 +55,26 @@ func main() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
+
+	conn, err := pgx.Connect(ctx, databaseURL)
+	if err != nil {
+		log.Fatalf("pgx connect: %v", err)
+	}
+	defer func() { _ = conn.Close(ctx) }()
+
+	// Action dispatch: clean runs before the seed-path fixture load so a
+	// clean never needs fixture YAML to be parseable.
+	switch *action {
+	case "clean":
+		if err := cleanup(ctx, conn); err != nil {
+			log.Fatalf("clean: %v", err)
+		}
+		return
+	case "seed":
+		// fallthrough to seed path below
+	default:
+		log.Fatalf("unknown --action=%s (valid: seed | clean)", *action)
+	}
 
 	rng := rand.New(rand.NewSource(*seed))
 	fk := gofakeit.NewFaker(rand.New(rand.NewSource(*seed)), false)
@@ -78,12 +99,6 @@ func main() {
 	}
 	log.Printf("loaded fixtures: %d files, %d resources, %d guides, %d quizzes",
 		len(files), len(resources), len(guides), len(quizzes))
-
-	conn, err := pgx.Connect(ctx, databaseURL)
-	if err != nil {
-		log.Fatalf("pgx connect: %v", err)
-	}
-	defer func() { _ = conn.Close(ctx) }()
 
 	tx, err := conn.Begin(ctx)
 	if err != nil {
