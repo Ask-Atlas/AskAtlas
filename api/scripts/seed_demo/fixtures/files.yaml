@@ -742,7 +742,7 @@
     - wsu/psych105
     study_guides: []
   owner_role: bot
-- slug: wsu-psych105-stats-primer
+- slug: wsu-psych105-stats-in-psych-primer
   source_url: https://files-local.askatlas-demo.example/stats-in-psych-primer.pdf
   mime_type: application/pdf
   filename: stats-in-psych-primer.pdf

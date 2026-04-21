@@ -1,5 +1,5 @@
 ---
-slug: wsu-psych105-stats-primer
+slug: wsu-psych105-stats-in-psych-primer
 title: "Statistics in Psychology: A Primer"
 mime: application/pdf
 filename: stats-in-psych-primer.pdf

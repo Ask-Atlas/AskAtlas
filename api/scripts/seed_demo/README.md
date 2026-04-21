@@ -50,6 +50,33 @@ Exit codes:
 | 2 | Liveness failure (only when `--check-urls`) |
 | 3 | Internal CLI error |
 
+## Regenerating fixtures
+
+When you edit a markdown source under `fixtures/files_local/sources/`, the
+generated artifacts and `fixtures/files.yaml` need to be rebuilt. Three steps:
+
+```bash
+# 1. Convert sources/**/*.md → generated/<filename> via pandoc.
+#    Reads frontmatter `mime:` and `filename:` to pick the conversion.
+./fixtures/files_local/build.sh
+
+# 2. Walk sources/**/*.md, parse frontmatter, merge with the curated
+#    public-source list, overwrite fixtures/files.yaml.
+uv run python fixtures/files_local/assemble_yaml.py
+
+# 3. Validate the new corpus end-to-end.
+uv run python -m seed_demo validate --check-urls
+```
+
+Same flow when adding a brand-new source: drop the `.md` under the
+appropriate `sources/<course-slug>/` directory with the required
+frontmatter (see `seed_demo/corpus/models.py` for the schema, or any
+existing source for an example), then run the three commands above.
+
+Both scripts are deterministic — re-running with no source changes is a
+no-op against `fixtures/files.yaml` (modulo the `data/attributions.json`
+timestamp, which always advances).
+
 ## Layout
 
 ```

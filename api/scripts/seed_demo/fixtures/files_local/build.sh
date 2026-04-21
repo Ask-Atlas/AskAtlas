@@ -42,12 +42,29 @@ convert_one() {
         echo "[build.sh] SKIP $src (missing mime or filename frontmatter)"
         return 1
     fi
+    # Path-traversal guard: reject filenames that would escape OUT/.
+    # `${filename##*/}` strips any leading path; if that differs from the
+    # original, a slash was present. Also reject `..` segments and backslash.
+    if [[ "$filename" != "${filename##*/}" \
+            || "$filename" == *".."* \
+            || "$filename" == *'\'* ]]; then
+        echo "[build.sh] SKIP $src (unsafe filename '$filename' — contains / or ..)"
+        return 1
+    fi
     out="$OUT/$filename"
 
+    # `--pdf-engine-opt=-no-shell-escape` makes the no-shell-escape default
+    # explicit; pdflatex defaults to restricted mode, but we set it
+    # belt-and-suspenders so a future `--pdf-engine-opt` addition can't
+    # accidentally re-enable `\write18`.
     case "$mime" in
         application/pdf)
-            pandoc "$src" -o "$out" --pdf-engine=pdflatex --metadata title:"$filename" 2>/dev/null \
-                || pandoc "$src" -o "$out" --pdf-engine=xelatex --metadata title:"$filename"
+            pandoc "$src" -o "$out" --pdf-engine=pdflatex \
+                    --pdf-engine-opt=-no-shell-escape \
+                    --metadata "title:$filename" \
+                || pandoc "$src" -o "$out" --pdf-engine=xelatex \
+                    --pdf-engine-opt=-no-shell-escape \
+                    --metadata "title:$filename"
             ;;
         application/vnd.openxmlformats-officedocument.wordprocessingml.document)
             pandoc "$src" -o "$out" --to docx
@@ -57,7 +74,7 @@ convert_one() {
             pandoc "$src" -o "$out" --to pptx --slide-level=2
             ;;
         application/epub+zip)
-            pandoc "$src" -o "$out" --to epub3 --metadata title:"$filename"
+            pandoc "$src" -o "$out" --to epub3 --metadata "title:$filename"
             ;;
         text/plain)
             # Pandoc 'plain' writer strips markdown formatting.

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -25,18 +26,50 @@ FILES_YAML = ROOT / "fixtures" / "files.yaml"
 
 PSEUDO_HOST = "https://files-local.askatlas-demo.example"
 
+# Filenames that become part of a pseudo-host URL + (eventually) a Garage
+# storage key. Require a strict whitelist to prevent `../etc/passwd.pdf`
+# shenanigans reaching Phase 4.
+_SAFE_FILENAME_RE = re.compile(r"^[a-zA-Z0-9][\w\-.]{0,200}\.[a-zA-Z0-9]{2,10}$")
 
-def parse_frontmatter(md: str) -> dict:
-    m = re.match(r"^---\s*\n(.*?)\n---\s*\n", md, flags=re.DOTALL)
+# Line-anchored frontmatter parse. The closing `---` must appear on its own
+# line, preceded by a newline and followed by a newline or EOF. Bare `---`
+# lines used as in-body section dividers no longer confuse the parser.
+_FRONTMATTER_RE = re.compile(
+    r"\A---[ \t]*\n(.*?)\n---[ \t]*(?:\n|\Z)",
+    flags=re.DOTALL,
+)
+
+
+def parse_frontmatter(md: str) -> dict[str, Any]:
+    m = _FRONTMATTER_RE.match(md)
     if not m:
         raise ValueError("no frontmatter")
-    return yaml.safe_load(m.group(1))
+    parsed = yaml.safe_load(m.group(1))
+    if not isinstance(parsed, dict):
+        raise ValueError(f"frontmatter must be a mapping, got {type(parsed).__name__}")
+    return parsed
 
 
-def self_generated_entries() -> list[dict]:
-    out = []
+def _validate_frontmatter(fm: dict[str, Any], path: Path) -> None:
+    for key in ("slug", "filename", "mime", "title", "course"):
+        if key not in fm:
+            raise ValueError(f"{path}: missing frontmatter key '{key}'")
+    filename = fm["filename"]
+    if not isinstance(filename, str) or not _SAFE_FILENAME_RE.fullmatch(filename):
+        raise ValueError(
+            f"{path}: unsafe filename {filename!r} — must match {_SAFE_FILENAME_RE.pattern}"
+        )
+    if ".." in filename or "/" in filename or "\\" in filename:
+        raise ValueError(f"{path}: filename {filename!r} contains path traversal")
+
+
+def self_generated_entries() -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    # `utf-8-sig` strips a UTF-8 BOM if present so the frontmatter regex
+    # can anchor on `---`.
     for md_path in sorted(SOURCES_DIR.rglob("*.md")):
-        fm = parse_frontmatter(md_path.read_text())
+        fm = parse_frontmatter(md_path.read_text(encoding="utf-8-sig"))
+        _validate_frontmatter(fm, md_path)
         entry = {
             "slug": fm["slug"],
             "source_url": f"{PSEUDO_HOST}/{fm['filename']}",

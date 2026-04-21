@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from urllib.parse import urlparse
 
 import httpx
 
@@ -63,8 +64,8 @@ def _content_type_matches(declared: str, got: str) -> bool:
 
 
 def _is_local_file_host(url: str) -> bool:
-    from urllib.parse import urlparse
-
+    """Exact match against the pseudo-host allowlist. Subdomain-confused hosts
+    (e.g. `files-local.askatlas-demo.example.attacker.com`) correctly fail."""
     return (urlparse(url).hostname or "").lower() in LOCAL_FILE_HOSTS
 
 
@@ -73,15 +74,6 @@ async def _check_one(
     f: FileEntry,
     timeout_s: float,
 ) -> LivenessResult:
-    # Pseudo-hosts for repo-local files — don't hit the network.
-    if _is_local_file_host(f.source_url):
-        return LivenessResult(
-            slug=f.slug,
-            ok=True,
-            status=0,
-            content_type=f.mime_type,
-            error=None,
-        )
     """Check one URL via HEAD with GET fallback.
 
     Intentionally retries with streaming GET in two cases:
@@ -92,7 +84,20 @@ async def _check_one(
          succeed. Net effect: at most 2x requests on dead URLs.
       2. HEAD returned 403 or 405 (Method Not Allowed / forbidden for
          HEAD specifically). Wikimedia and Project Gutenberg do this.
+
+    Repo-local pseudo-host entries short-circuit without any network call —
+    the file lives on disk alongside the fixtures.
     """
+    # Pseudo-hosts for repo-local files — don't hit the network.
+    if _is_local_file_host(f.source_url):
+        return LivenessResult(
+            slug=f.slug,
+            ok=True,
+            status=0,
+            content_type=f.mime_type,
+            error=None,
+        )
+
     last_error: str | None = None
 
     for method in ("HEAD", "GET"):

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-21T03:07:33Z",
+  "generated_at": "2026-04-21T03:35:46Z",
   "sources": [
     {
       "default_license": "PUBLIC-DOMAIN",
@@ -471,7 +471,7 @@
           "attribution": "AskAtlas Demo Seed — Statistics in Psychology: A Primer (2026)",
           "filename": "stats-in-psych-primer.pdf",
           "license": "MIT",
-          "slug": "wsu-psych105-stats-primer",
+          "slug": "wsu-psych105-stats-in-psych-primer",
           "source_url": "https://files-local.askatlas-demo.example/stats-in-psych-primer.pdf"
         }
       ],
