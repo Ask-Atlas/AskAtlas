@@ -28,8 +28,6 @@ export function StudyGuideCard({
   courseLabel,
 }: StudyGuideCardProps) {
   const destination = href ?? `/study-guides/${guide.id}`;
-  const title =
-    guide.title.length > 100 ? guide.title.slice(0, 100) + "…" : guide.title;
 
   return (
     <Link
@@ -42,47 +40,40 @@ export function StudyGuideCard({
       )}
     >
       {variant === "compact" ? (
-        <CompactVariant title={title} guide={guide} />
+        <CompactVariant guide={guide} />
       ) : (
-        <ListVariant title={title} guide={guide} courseLabel={courseLabel} />
+        <ListVariant guide={guide} courseLabel={courseLabel} />
       )}
     </Link>
   );
 }
 
-function CompactVariant({
-  title,
-  guide,
-}: {
-  title: string;
-  guide: StudyGuideListItemResponse;
-}) {
+function CompactVariant({ guide }: { guide: StudyGuideListItemResponse }) {
   return (
     <div className="space-y-1">
-      <p className="text-sm font-medium leading-snug text-neutral-800 dark:text-white">
-        {title}
+      <p className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
+        {guide.title}
       </p>
-      <p className="text-xs text-neutral-500 dark:text-neutral-400">
-        by {guide.creator.display_name} · {guide.quiz_count} quizzes
+      <p className="text-xs text-muted-foreground">
+        by {guide.creator.display_name} ·{" "}
+        {guide.quiz_count === 1 ? "1 quiz" : `${guide.quiz_count} quizzes`}
       </p>
     </div>
   );
 }
 
 function ListVariant({
-  title,
   guide,
   courseLabel,
 }: {
-  title: string;
   guide: StudyGuideListItemResponse;
   courseLabel?: string;
 }) {
   return (
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-bold leading-snug text-neutral-800 dark:text-white">
-          {title}
+        <p className="line-clamp-2 text-sm font-bold leading-snug text-foreground">
+          {guide.title}
         </p>
         {guide.is_recommended && (
           <Badge
@@ -94,7 +85,7 @@ function ListVariant({
         )}
       </div>
 
-      <p className="text-xs text-neutral-500 dark:text-neutral-400">
+      <p className="text-xs text-muted-foreground">
         by {guide.creator.display_name}
         {courseLabel ? ` · ${courseLabel}` : ""}
       </p>
@@ -102,26 +93,26 @@ function ListVariant({
       <div className="flex items-center gap-2">
         <Badge
           variant="outline"
-          className="flex items-center gap-1 text-xs border-black/10 dark:border-white/20 text-neutral-600 dark:text-neutral-300"
+          className="flex items-center gap-1 text-xs border-border text-muted-foreground"
         >
           <ThumbsUp className="h-3 w-3" />
           {guide.vote_score}
         </Badge>
         <Badge
           variant="outline"
-          className="text-xs border-black/10 dark:border-white/20 text-neutral-600 dark:text-neutral-300"
+          className="text-xs border-border text-muted-foreground"
         >
-          {guide.quiz_count} quizzes
+          {guide.quiz_count === 1 ? "1 quiz" : `${guide.quiz_count} quizzes`}
         </Badge>
       </div>
 
       {guide.tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {guide.tags.map((tag) => (
+          {guide.tags.map((tag, index) => (
             <Badge
-              key={tag}
+              key={`${tag}-${index}`}
               variant="secondary"
-              className="text-xs bg-black/5 text-neutral-600 dark:bg-white/10 dark:text-neutral-300"
+              className="text-xs bg-muted text-muted-foreground"
             >
               {tag}
             </Badge>
