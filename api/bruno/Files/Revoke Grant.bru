@@ -1,0 +1,30 @@
+meta {
+  name: Revoke Grant
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/api/files/{{fileId}}/grants
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "grantee_id": "00000000-0000-0000-0000-000000000000",
+    "grantee_type": "user",
+    "permission": "view"
+  }
+}
+
+docs {
+  # Revoke a permission on a file (ASK-125)
+
+  Removes the file_grants row matched by (file_id, grantee_type,
+  grantee_id, permission). Only the file owner may revoke.
+  Returns 204 when a row was deleted, 404 when no matching grant
+  exists. Each (grantee_type, grantee_id, permission) tuple is a
+  distinct grant -- revoking `view` does NOT cascade to `share`
+  or `delete`.
+}

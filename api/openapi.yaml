@@ -31,7 +31,15 @@ paths:
           description: Filter by precise document mime-type classification
           schema:
             type: string
-            enum: ["image/jpeg", "image/png", "image/webp", "application/pdf"]
+            enum:
+              - "image/jpeg"
+              - "image/png"
+              - "image/webp"
+              - "application/pdf"
+              - "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              - "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+              - "text/plain"
+              - "application/epub+zip"
         - name: min_size
           in: query
           description: Minimum file size in bytes
@@ -115,6 +123,37 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /files:
+    post:
+      operationId: CreateFile
+      summary: Create a file metadata record (ASK-105)
+      description: |
+        Creates a file metadata record in `pending` status. Called
+        by the Next.js server as the first step of the upload flow,
+        BEFORE the client uploads to S3 via a presigned URL the
+        Next.js server generates separately. The Go API never
+        touches S3 for uploads -- it only manages metadata records.
+        A subsequent PATCH /api/files/{id} transitions the record
+        from `pending` to `complete` or `failed`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFileRequest'
+      responses:
+        '201':
+          description: File metadata record created in pending status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /files/{file_id}:
     get:
       operationId: GetFile
@@ -144,6 +183,52 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+    patch:
+      operationId: UpdateFile
+      summary: Update file metadata and status (ASK-113)
+      description: |
+        Updates file metadata (rename) and/or transitions the upload
+        status. Called by the Next.js server after the presigned-URL
+        upload completes (or fails) to move the record from `pending`
+        to `complete` or `failed`. Also supports standalone renaming
+        of any non-deleted file the caller owns.
+
+        Both fields are optional but at least one must be provided.
+
+        Status transitions are restricted: only `pending -> complete`
+        and `pending -> failed` are allowed. All other combinations
+        return 400 INVALID_TRANSITION.
+      parameters:
+        - name: file_id
+          in: path
+          description: The unique UUID representing the file to update
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFileRequest'
+      responses:
+        '200':
+          description: Updated file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
     delete:
       operationId: DeleteFile
       summary: Delete a file by ID
@@ -158,6 +243,2338 @@ paths:
       responses:
         '204':
           description: File successfully queued for deletion
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /files/{file_id}/view:
+    post:
+      operationId: RecordFileView
+      summary: Record a file view (ASK-134)
+      description: |
+        Records that the authenticated user opened/previewed this
+        file. Inserts an append-only row into `file_views` for
+        analytics, then upserts `file_last_viewed` so the recents
+        sidebar (GET /api/me/recents) reflects the new timestamp.
+
+        Fire-and-forget from the client. Permission-less: any
+        authenticated user can record a view of any non-deleted file
+        -- access control is enforced when the file's contents are
+        actually read, not on the view event itself.
+
+        Returns 204 No Content on success. Returns 404 when the file
+        is missing or in any deletion state, so dangling view rows
+        cannot accumulate.
+      parameters:
+        - name: file_id
+          in: path
+          description: The unique UUID of the file being viewed
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: View recorded
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /files/{file_id}/favorite:
+    post:
+      operationId: ToggleFileFavorite
+      summary: Toggle the file favorite (ASK-130)
+      description: |
+        Toggles whether the authenticated user has favorited this file.
+        If not favorited, inserts a `file_favorites` row and returns
+        `{favorited: true, favorited_at: <NOW>}`. If already favorited,
+        deletes the row and returns `{favorited: false, favorited_at: null}`.
+
+        Favoriting is intentionally permission-less: any authenticated
+        user can favorite any non-deleted file. This is a personal
+        bookmark, not an access-control action -- the favorites list
+        endpoint already filters down to files the viewer can see.
+      parameters:
+        - name: file_id
+          in: path
+          description: The unique UUID of the file to favorite/unfavorite
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Toggle result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToggleFavoriteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /me/study-guides/{study_guide_id}/favorite:
+    post:
+      operationId: ToggleStudyGuideFavorite
+      summary: Toggle the study guide favorite (ASK-156)
+      description: |
+        Toggles whether the authenticated user has favorited this
+        study guide. Same toggle semantics as the file favorite
+        endpoint -- inserts when missing, deletes when present.
+        Permission-less: no enrollment or ownership check.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide to favorite/unfavorite
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Toggle result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToggleFavoriteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /me/courses/{course_id}/favorite:
+    post:
+      operationId: ToggleCourseFavorite
+      summary: Toggle the course favorite (ASK-157)
+      description: |
+        Toggles whether the authenticated user has favorited this
+        course. Same toggle semantics as the file favorite endpoint.
+        Permission-less: no enrollment check.
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the course to favorite/unfavorite
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Toggle result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToggleFavoriteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /files/{file_id}/grants:
+    post:
+      operationId: CreateGrant
+      summary: Grant a permission on a file (ASK-122)
+      description: |
+        Creates a new file_grants row scoped to (file_id, grantee_type,
+        grantee_id, permission). Only the file owner may create grants.
+
+        The grantee_id is validated against the corresponding table:
+        users for grantee_type=user, courses for course, and study_guides
+        (filtered by deleted_at IS NULL) for study_guide. The public
+        sentinel UUID 00000000-0000-0000-0000-000000000000 is exempt
+        from the users lookup when grantee_type=user (represents
+        "public access").
+
+        A duplicate grant returns 409 Conflict; this endpoint does NOT
+        upsert. Permission hierarchy (delete >= share >= view) is
+        enforced by the read-side queries, not here.
+      parameters:
+        - name: file_id
+          in: path
+          description: The unique UUID of the file to grant access to
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGrantRequest'
+      responses:
+        '201':
+          description: Grant created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrantResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: RevokeGrant
+      summary: Revoke a permission on a file (ASK-125)
+      description: |
+        Removes the file_grants row matched by (file_id, grantee_type,
+        grantee_id, permission). Only the file owner may revoke.
+        Returns 204 when a row was deleted, 404 when no matching grant
+        exists. Each (grantee_type, grantee_id, permission) tuple is a
+        distinct grant -- revoking `view` does NOT cascade to `share`
+        or `delete`.
+      parameters:
+        - name: file_id
+          in: path
+          description: The unique UUID of the file to revoke access from
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevokeGrantRequest'
+      responses:
+        '204':
+          description: Grant revoked
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /schools:
+    get:
+      operationId: ListSchools
+      summary: List and search schools
+      parameters:
+        - name: q
+          in: query
+          description: Search term, partial match against school name (trigram) or exact match against acronym (case-insensitive)
+          schema:
+            type: string
+            maxLength: 200
+        - name: page_limit
+          in: query
+          description: Maximum number of schools to return per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          description: Opaque pagination cursor token obtained from the previous response
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A paginated list of schools
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSchoolsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /schools/{school_id}:
+    get:
+      operationId: GetSchool
+      summary: Get a single school by ID
+      parameters:
+        - name: school_id
+          in: path
+          description: The unique UUID of the school
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The requested school
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SchoolResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /courses:
+    get:
+      operationId: ListCourses
+      summary: List and search courses
+      parameters:
+        - name: school_id
+          in: query
+          description: Filter by school UUID
+          schema:
+            type: string
+            format: uuid
+        - name: department
+          in: query
+          description: Exact department code match (case-insensitive, e.g. "CPTS")
+          schema:
+            type: string
+            maxLength: 20
+        - name: q
+          in: query
+          description: Search term, matches against title (trigram), department, or number (case-insensitive)
+          schema:
+            type: string
+            maxLength: 200
+        - name: sort_by
+          in: query
+          description: Database column to sort the results by
+          schema:
+            type: string
+            enum: [department, number, title, created_at]
+            default: department
+        - name: sort_dir
+          in: query
+          description: Sorting direction (ascending or descending)
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+        - name: page_limit
+          in: query
+          description: Maximum number of courses to return per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          description: Opaque pagination cursor token obtained from the previous response
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A paginated list of courses with embedded school summaries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListCoursesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /courses/{course_id}:
+    get:
+      operationId: GetCourse
+      summary: Get a course detail with embedded sections
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the course
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The requested course with embedded school summary and sections
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}:
+    get:
+      operationId: GetStudyGuide
+      summary: Get a study guide detail
+      description: |
+        Returns the full study-guide detail including `content`, the
+        authenticated user's own vote state (`user_vote`), the list of
+        recommenders, inline quizzes (with `question_count`), resources,
+        and attached files. Soft-deleted guides return 404.
+
+        This endpoint is a pure read -- no view-counter increment, no
+        last-viewed upsert, no mutation of any kind. View tracking lives
+        on its own dedicated POST (future ticket, mirroring
+        POST /api/files/{file_id}/view in ASK-134) so GET stays safe
+        and idempotent per HTTP semantics.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The requested study guide with all nested detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGuideDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      operationId: UpdateStudyGuide
+      summary: Update a study guide
+      description: |
+        Partial update of any subset of `title`, `description`, `content`,
+        or `tags`. Only fields provided in the request body are touched;
+        absent fields preserve their current values. Tags, when provided,
+        are REPLACED entirely (no merge) and normalized server-side
+        (trim + lowercase + dedupe).
+
+        Creator-only: 403 if the viewer is not the guide's creator. 404
+        for missing or already-deleted guides. Order of checks:
+          1. Validate the request body (per-field caps + at-least-one
+             field provided).
+          2. Fetch + lock guide row.
+          3. 404 if missing or deleted_at IS NOT NULL.
+          4. 403 if creator_id != viewer_id.
+          5. UPDATE only the provided fields, set updated_at = now(),
+             COMMIT.
+          6. Re-hydrate the full StudyGuideDetail (same shape as GET).
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide to update
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStudyGuideRequest'
+      responses:
+        '200':
+          description: The updated study guide.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGuideDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: DeleteStudyGuide
+      summary: Soft-delete a study guide
+      description: |
+        Soft-deletes the guide (`study_guides.deleted_at = now()`) and
+        cascades to all child quizzes (`quizzes.deleted_at = now()`)
+        atomically in a single transaction. Application-level cascade
+        (not DB CASCADE) so quizzes keep their own deleted_at lifecycle
+        for any future undelete workflow.
+
+        Creator-only: 403 if the viewer is not the guide's creator. 404
+        for missing or already-deleted guides. Order of checks:
+          1. Fetch + lock guide row.
+          2. 404 if missing or deleted_at IS NOT NULL.
+          3. 403 if creator_id != viewer_id.
+          4. UPDATE guide + child quizzes, COMMIT.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide to delete
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Guide soft-deleted; no response body
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}/resources:
+    post:
+      operationId: AttachResource
+      summary: Attach an external resource to a study guide
+      description: |
+        Attaches a URL-based resource (link / video / article / pdf) to
+        a study guide. Resources are community-contributed -- any
+        authenticated user can attach.
+
+        Resource reuse: a (creator_id, url) pair is unique in the
+        `resources` table. If the viewer has previously created a
+        resource row with the same URL (for any guide), the existing
+        row is reused via INSERT ... ON CONFLICT DO NOTHING + lookup;
+        the original title / description / type are preserved.
+
+        Conflict detection: if ANY resource (regardless of creator)
+        with the same URL is already attached to this guide, returns
+        409 BEFORE the upsert -- avoids creating new resource rows
+        only to discard them on the join PK violation.
+
+        Returns 201 with the (possibly-reused) resource row.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttachResourceRequest'
+      responses:
+        '201':
+          description: Resource attached.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResourceSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}/resources/{resource_id}:
+    delete:
+      operationId: DetachResource
+      summary: Detach a resource from a study guide
+      description: |
+        Removes the link between a resource and a guide. Does NOT
+        delete the resource itself -- a resource may be attached to
+        multiple guides + courses.
+
+        Authorization: the guide's creator OR the user who attached
+        the resource (`attached_by` on the join row) can detach. The
+        resource's own creator (if different from both) cannot detach
+        when they didn't attach it here.
+
+        404 covers both 'guide missing/deleted' and 'resource not
+        attached to this guide'.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: resource_id
+          in: path
+          description: The unique UUID of the resource to detach
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Resource detached; no response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}/files/{file_id}:
+    post:
+      operationId: AttachFile
+      summary: Attach a file to a study guide
+      description: |
+        Links an already-uploaded file to a study guide. The file must
+        be owned by the viewer (`files.user_id == JWT viewer`) and in
+        `status = 'complete'` with no deletion in progress.
+
+        Authorization: only the file owner can attach. A user who does
+        not own the file gets 403 (regardless of whether they own the
+        guide -- the rule is "you can only put your own files on
+        guides", to prevent linking other users' private uploads).
+
+        409 on duplicate -- the same `(file_id, study_guide_id)` pair
+        is already attached.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: file_id
+          in: path
+          description: The unique UUID of the file
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: File attached.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileAttachmentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: DetachFile
+      summary: Detach a file from a study guide
+      description: |
+        Removes the link between a file and a guide. Does NOT delete
+        the file itself -- a file may be attached to many guides /
+        courses.
+
+        Dual-authz: viewer must be EITHER the file owner OR the
+        study guide creator. Broader than POST (which requires file
+        owner only) so a guide creator can curate their guide's
+        attached files without owning every file.
+
+        404 covers both 'guide missing/deleted' and 'file not
+        attached to this guide'.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: file_id
+          in: path
+          description: The unique UUID of the file to detach
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: File detached; no response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}/quizzes:
+    get:
+      operationId: ListQuizzes
+      summary: List quizzes attached to a study guide
+      description: |
+        Returns every non-soft-deleted quiz attached to the given study
+        guide, with the creator (privacy floor: id + first_name +
+        last_name only) and a server-computed `question_count`. Quizzes
+        are ordered by `created_at DESC` (newest first), with `id` as
+        the deterministic tiebreaker on identical timestamps.
+
+        No pagination -- per the PRD, study guides typically host a
+        handful of quizzes (<10) and the practice page renders them all
+        in one go. Non-deleted-only by construction (no `include_deleted`
+        toggle); a soft-deleted quiz never surfaces.
+
+        Returns 404 when the study guide does not exist OR is itself
+        soft-deleted, mirroring the studyguides surface convention.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide whose quizzes to list
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: A list of quizzes attached to the study guide.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListQuizzesResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      operationId: CreateQuiz
+      summary: Create a quiz attached to a study guide
+      description: |
+        Creates a new quiz with all of its questions and answer options
+        in a single atomic request. The frontend quiz builder submits the
+        entire quiz at once: if any question fails validation, nothing is
+        created (the entire write runs in one transaction).
+
+        Authorization: any authenticated user can create a quiz on any
+        study guide. AskAtlas explicitly encourages collaborative quiz
+        contribution; ownership of the underlying guide is not required.
+        `creator_id` is set from the JWT and any value supplied in the
+        body is ignored.
+
+        Per-question validation:
+          * `multiple-choice` -- 2-10 options. Each option has `text`
+            (1-500 chars) and `is_correct` (boolean). Exactly one option
+            must have `is_correct: true`. The request's `correct_answer`
+            field is ignored on MCQ.
+          * `true-false` -- `correct_answer` MUST be a boolean. The API
+            internally creates two `quiz_answer_options` rows (`True`
+            and `False`) with the matching `is_correct` flag.
+          * `freeform` -- `correct_answer` MUST be a non-empty string
+            (max 500 chars). Stored as `quiz_questions.reference_answer`.
+            No `quiz_answer_options` rows are created.
+
+        The response mirrors GET /quizzes/{quiz_id} (future ticket) so
+        the frontend can render the freshly-created quiz without a
+        follow-up GET.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide to attach the quiz to
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuizRequest'
+      responses:
+        '201':
+          description: The freshly-created quiz with all questions and options.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /quizzes/{quiz_id}:
+    get:
+      operationId: GetQuiz
+      summary: Get a quiz with all questions and correct answers
+      description: |
+        Returns the full quiz payload — title, description, creator
+        (privacy floor: id + first_name + last_name only), and every
+        question with its options + per-type `correct_answer`. This is
+        the primary endpoint the practice player calls to render a
+        quiz.
+
+        Correct answers are intentionally included on the wire --
+        AskAtlas is a study aid, not a proctored exam. Hiding answers
+        for protected questions (the `is_protected` column) is out of
+        scope for the MVP and tracked separately.
+
+        Response shape per question type:
+          * `multiple-choice` -- `options` is a string array of option
+            text in `sort_order` ascending; `correct_answer` is the
+            text of the option whose `is_correct` flag is true.
+          * `true-false` -- `options` is omitted from the wire;
+            `correct_answer` is a boolean (resolved from the canonical
+            "True" option's `is_correct` flag).
+          * `freeform` -- `options` is omitted; `correct_answer` is
+            the `quiz_questions.reference_answer` string.
+
+        Authorization: any authenticated user can fetch any quiz that
+        is live AND whose parent study guide is live. There is no
+        per-viewer access control beyond authentication.
+
+        404 covers BOTH the quiz being missing/soft-deleted AND the
+        parent study guide being soft-deleted (matches the rest of
+        the quizzes surface).
+      parameters:
+        - name: quiz_id
+          in: path
+          description: The unique UUID of the quiz to fetch
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The full quiz payload with all questions and resolved correct answers.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizDetailResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      operationId: UpdateQuiz
+      summary: Update a quiz's metadata (title and/or description)
+      description: |
+        Partial-update of the quiz's `title` and/or `description`.
+        Question-level edits flow through the per-question endpoints --
+        this PATCH only touches the quiz row.
+
+        Authorization: creator-only. The authenticated user MUST be
+        `quizzes.creator_id`; any other authenticated user gets 403.
+
+        Field semantics:
+          * Both fields are optional. An empty body `{}` is rejected
+            with 400 -- at least one field must be provided.
+          * `title` MUST be non-empty when provided (after trim) and
+            <=500 chars.
+          * `description` accepts JSON `null` to explicitly CLEAR
+            the existing value, a non-empty string to set the value
+            (max 2,000 chars after trim), and a whitespace-only
+            string is downgraded to a clear (NULL) since the column
+            should not store meaningless blank values. To leave the
+            current description untouched, OMIT the field entirely
+            from the request body.
+
+        404 covers BOTH the quiz being missing/soft-deleted AND the
+        parent study guide being soft-deleted (per spec AC6).
+        `updated_at` is refreshed on every successful PATCH.
+      parameters:
+        - name: quiz_id
+          in: path
+          description: The unique UUID of the quiz to update
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateQuizRequest'
+      responses:
+        '200':
+          description: The updated quiz with all questions and options.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: DeleteQuiz
+      summary: Soft-delete a quiz
+      description: |
+        Soft-deletes the quiz by setting `deleted_at = now()` (the row
+        stays in the table; subsequent reads filter by `deleted_at IS
+        NULL` and treat the quiz as gone).
+
+        Authorization: creator-only. The authenticated user MUST be
+        `quizzes.creator_id` for the action to proceed; any other
+        authenticated user gets 403.
+
+        Idempotency: a second DELETE on an already-soft-deleted quiz
+        returns 404 (not 204). This is a deliberate choice -- a
+        duplicate DELETE that returned 204 would silently confirm a
+        destructive action and mask the "is this quiz still here?"
+        question the caller is actually asking. The 404 is also the
+        same response a non-creator would get for the same row, so
+        callers cannot distinguish "quiz was just deleted" from
+        "quiz never existed" or "you can't see this quiz" -- the
+        information-leak prevention covered by the unit tests.
+
+        No cascade: practice sessions, questions, and answer options
+        are NOT touched. The quiz simply becomes invisible to the
+        list/detail endpoints. This preserves historical data for
+        completed sessions and matches the spec's "preserve practice
+        history" requirement.
+      parameters:
+        - name: quiz_id
+          in: path
+          description: The unique UUID of the quiz to soft-delete
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Quiz soft-deleted; no response body.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /quizzes/{quiz_id}/questions:
+    post:
+      operationId: AddQuizQuestion
+      summary: Add a question to an existing quiz
+      description: |
+        Appends a single question (with its answer options for MCQ, or
+        the auto-expanded True/False option pair for TF) to an
+        existing quiz. The validation rules are identical to the
+        per-question rules on POST /api/study-guides/{id}/quizzes --
+        same `type` enum, same per-type `correct_answer` typing, same
+        MCQ option counts and "exactly one correct" invariant.
+
+        Authorization: creator-only. The authenticated user MUST be
+        `quizzes.creator_id`; any other authenticated user gets 403.
+
+        Per-quiz cap: a quiz can hold at most 100 questions. The
+        count is taken inside the same transaction as the insert so
+        a concurrent add cannot push the quiz over the cap.
+
+        `quizzes.updated_at` is refreshed on every successful add.
+        Active practice sessions are NOT affected -- the new
+        question is not retro-injected into existing
+        `practice_session_questions` snapshots; only sessions started
+        after the add will include it.
+
+        404 covers BOTH the quiz being missing/soft-deleted AND the
+        parent study guide being soft-deleted (same convention as
+        PATCH /quizzes/{quiz_id}).
+
+        Default `sort_order`: when omitted, defaults to the current
+        question count (so the new question lands at the end of the
+        existing sequence). An explicit value is honored verbatim --
+        callers may interleave with existing questions if they want.
+      parameters:
+        - name: quiz_id
+          in: path
+          description: The unique UUID of the quiz to add a question to
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuizQuestion'
+      responses:
+        '201':
+          description: The freshly-created question with its options and resolved correct answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizQuestionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /quizzes/{quiz_id}/questions/{question_id}:
+    put:
+      operationId: ReplaceQuizQuestion
+      summary: Replace a question in a quiz (ASK-108)
+      description: |
+        Full replacement of one question in a quiz. PUT semantics --
+        every field on the request body is required; unprovided fields
+        are NOT preserved. The validation rules are identical to a
+        single question on POST /api/study-guides/{id}/quizzes (same
+        type enum, per-type correct_answer typing, MCQ option counts,
+        exactly-one-correct invariant).
+
+        The replacement runs in a single transaction:
+        delete-old-options -> update-question -> insert-new-options.
+        Type changes are allowed (MCQ -> TF -> freeform); the
+        per-type option set is rebuilt from scratch on every call.
+
+        Authorization: creator-only. The authenticated user must be
+        `quizzes.creator_id`; any other authenticated user gets 403.
+
+        404 covers BOTH the quiz being missing/soft-deleted, the
+        parent study guide being soft-deleted, the question being
+        absent, AND the question belonging to a different quiz.
+
+        Existing `practice_answers` rows are NOT affected -- the
+        question_id reference persists across the replace, so
+        historical session data stays intact.
+      parameters:
+        - name: quiz_id
+          in: path
+          description: The unique UUID of the quiz containing the question
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: question_id
+          in: path
+          description: The unique UUID of the question to replace
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateQuizQuestion'
+      responses:
+        '200':
+          description: The replaced question with its options and resolved correct answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizQuestionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: DeleteQuizQuestion
+      summary: Delete a question from a quiz (ASK-119)
+      description: |
+        Hard-delete one question from a quiz. The `quiz_answer_options`
+        for the question CASCADE-delete; references from
+        `practice_session_questions.question_id` and
+        `practice_answers.question_id` are SET NULL so historical
+        session data is preserved with a NULL question reference.
+
+        A quiz must always carry at least 1 question; an attempt to
+        delete the last remaining question returns 400 with
+        `"quiz must have at least 1 question"`. The count check runs
+        inside the same transaction as the delete so two concurrent
+        deletes on a 2-question quiz can't both succeed.
+
+        Authorization: creator-only. The authenticated user must be
+        `quizzes.creator_id`; any other authenticated user gets 403.
+
+        404 covers all of: quiz missing/soft-deleted, parent study
+        guide soft-deleted, question missing, question belonging to a
+        different quiz.
+
+        `quizzes.updated_at` is refreshed on every successful delete.
+      parameters:
+        - name: quiz_id
+          in: path
+          description: The unique UUID of the quiz containing the question
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: question_id
+          in: path
+          description: The unique UUID of the question to delete
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Question deleted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /quizzes/{quiz_id}/sessions:
+    get:
+      operationId: ListPracticeSessions
+      summary: List the authenticated user's practice sessions for a quiz
+      description: |
+        Returns the authenticated user's practice sessions for the
+        target quiz, sorted by `started_at DESC, id DESC`. Used by the
+        practice-history view to render past attempts and scores.
+
+        Pagination: cursor-based keyset on `(started_at, id)`. Pass
+        the `next_cursor` from the previous response to fetch the
+        next page. `has_more` reports whether more pages exist beyond
+        the current one.
+
+        Status filter: `active` returns only in-progress sessions
+        (`completed_at IS NULL`); `completed` returns only completed
+        sessions (`completed_at IS NOT NULL`); omitting the filter
+        returns both interleaved by `started_at DESC`.
+
+        Score: for completed sessions, `score_percentage` is
+        `round((correct_answers / total_questions) * 100)` (same
+        formula as POST /sessions/{id}/complete and GET
+        /sessions/{id}). For in-progress sessions, `score_percentage`
+        is `null` because no final score exists yet.
+
+        Authorization: scoped to the authenticated user. Sessions
+        belonging to other users on the same quiz are NEVER returned,
+        even if the requesting user is the quiz creator.
+
+        Parent quiz lifecycle: a soft-deleted quiz, a quiz under a
+        soft-deleted study guide, and a missing quiz all return 404
+        (info-leak prevention -- the caller cannot distinguish them).
+        This is the OPPOSITE of GET /sessions/{id} (ASK-152), which
+        returns historical sessions for soft-deleted parents because
+        a single session read is anchored on the session id alone --
+        a list scoped to a quiz needs a live quiz to anchor on.
+
+        Response shape: a compact summary per session (no `answers`
+        array). Use GET /api/sessions/{id} (ASK-152) to fetch full
+        detail including the chronological answer list.
+      parameters:
+        - name: quiz_id
+          in: path
+          description: The unique UUID of the quiz to list sessions for
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          description: Filter by session status (active = incomplete; completed = finalised)
+          schema:
+            type: string
+            enum: [active, completed]
+        - name: limit
+          in: query
+          description: Maximum number of sessions to return per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+        - name: cursor
+          in: query
+          description: Opaque pagination cursor token obtained from the previous response's next_cursor
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A page of the user's practice sessions for the quiz.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSessionsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      operationId: StartPracticeSession
+      summary: Start a new practice session or resume an existing incomplete one
+      description: |
+        Returns the practice session for the authenticated user on the
+        target quiz. The status code distinguishes the two paths:
+
+          * **201 Created** -- a new session was inserted. A snapshot
+            of the quiz's CURRENT questions is frozen into
+            `practice_session_questions` so subsequent edits to the
+            quiz (questions added or removed) do not affect this
+            session. `answers` is an empty array.
+          * **200 OK** -- an in-progress session already exists for
+            this user+quiz (`completed_at IS NULL`). The existing
+            row is returned along with all answers submitted so far.
+            No new snapshot is created.
+
+        Stale-session cleanup: incomplete sessions whose `started_at`
+        is older than 7 days are hard-deleted before the resume check.
+        After cleanup, "no incomplete session" surfaces as 201
+        (fresh start) rather than 200 (resume) -- per spec AC6.
+
+        Snapshot semantics: `total_questions` is the COUNT of
+        `quiz_questions` at session-start time. If a question is
+        deleted from the quiz LATER, the
+        `practice_session_questions.question_id` column is set to
+        NULL (ON DELETE SET NULL) but the row persists --
+        `total_questions` does not change. New questions added after
+        session start are NOT in the snapshot.
+
+        Race protection: a partial unique index on
+        `practice_sessions(user_id, quiz_id) WHERE completed_at IS NULL`
+        guarantees at most one incomplete session per user+quiz at
+        the database level. Two simultaneous starts will both attempt
+        to insert; one wins, the other is detected via
+        `INSERT ... ON CONFLICT DO NOTHING RETURNING` and falls back
+        to the resume path (returning 200 with the winner's session).
+
+        Authorization: any authenticated user can start a session on
+        any live quiz on a live study guide. There is no per-viewer
+        access control.
+
+        Resumed-session question content: this endpoint returns
+        session state + answers only. The frontend fetches question
+        content separately via `GET /api/quizzes/{quiz_id}` (ASK-142).
+
+        Response answer rows: `question_id`, `user_answer`, and
+        `is_correct` are all nullable on the wire. `question_id`
+        becomes NULL when the underlying question is hard-deleted
+        after the answer was submitted (ON DELETE SET NULL).
+        `user_answer` and `is_correct` are nullable to match the
+        schema, though in practice the submit-answer endpoint will
+        never write NULL values.
+      parameters:
+        - name: quiz_id
+          in: path
+          description: The unique UUID of the quiz to start a session for
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Existing in-progress session resumed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeSessionResponse'
+        '201':
+          description: A new practice session was created with a fresh question snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeSessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /sessions/{session_id}:
+    get:
+      operationId: GetPracticeSession
+      summary: Get a practice session detail including all submitted answers
+      description: |
+        Returns the full session payload: metadata + all submitted
+        answers in chronological order. Used by the practice player
+        to render post-completion review and to restore in-progress
+        state on return visits (the start endpoint also returns the
+        same data on resume, so this endpoint exists primarily for
+        the post-complete results view).
+
+        Response shape vs sibling sessions endpoints:
+          * Like PracticeSessionResponse (POST /quizzes/{id}/sessions):
+            includes id, quiz_id, started_at, completed_at,
+            total_questions, correct_answers, answers.
+          * Like CompletedSessionResponse (POST /sessions/{id}/complete):
+            includes a server-computed score_percentage.
+          * Unique to this endpoint: score_percentage is nullable
+            (null while the session is in-progress; set once the
+            user calls complete).
+
+        Authorization: session-owner only (403 otherwise). 404 for
+        missing sessions.
+
+        Historical preservation: a session whose parent quiz or
+        study guide has been soft-deleted is STILL returned --
+        sessions are append-only history that survives parent
+        deletion. This is opposite to the read endpoints on the
+        quizzes surface (which 404 on a deleted parent) because
+        sessions have a different lifecycle: once finalised, they
+        belong to the user, not the quiz.
+
+        Answers with `question_id: null` (the underlying quiz
+        question was hard-deleted via ON DELETE SET NULL after the
+        answer was submitted) are INCLUDED in the response, not
+        filtered. The frontend should render those as orphaned
+        answer rows rather than silently dropping them.
+      parameters:
+        - name: session_id
+          in: path
+          description: The unique UUID of the practice session
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session detail with all submitted answers.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: AbandonPracticeSession
+      summary: Hard-delete an in-progress practice session
+      description: |
+        Hard-deletes the session row and CASCADE-removes its
+        `practice_session_questions` snapshot rows and
+        `practice_answers` rows. Used by the practice player when a
+        user wants to start fresh on a quiz they previously started
+        but didn't finish.
+
+        Only INCOMPLETE sessions (`completed_at IS NULL`) can be
+        abandoned. Completed sessions are historical records and
+        return 409. Deletion semantics are intentionally
+        asymmetric to GET /sessions/{id} (which returns historical
+        sessions even after parent soft-delete) -- a user
+        explicitly invoking DELETE on a completed session is
+        ambiguous enough to surface as an error rather than
+        silently destroy analytics data.
+
+        Authorization: session-owner only (403 otherwise). 404
+        for missing sessions; the standard 404-beats-403 ordering
+        does NOT apply here because we have to load the row to
+        check ownership in the same locked SELECT, so we already
+        know the row exists by the time we'd return 403.
+
+        Idempotency: NOT idempotent. A second DELETE on an
+        already-abandoned session returns 404, not 204. Callers
+        that want to "make sure it's gone" must tolerate 404 on
+        the second call.
+
+        Race protection: SELECT FOR UPDATE on the session row
+        serializes against concurrent SubmitAnswer (ASK-137) and
+        CompleteSession (ASK-140). If the DELETE wins, a pending
+        SubmitAnswer either fails its own locked SELECT (404 from
+        sql.ErrNoRows on the gone row) or fails its insert with
+        an FK violation depending on commit timing -- both surface
+        as a clean error to the answer caller. If a concurrent
+        CompleteSession wins, our locked SELECT sees `completed_at`
+        set and we return 409.
+
+        After abandoning, calling POST /quizzes/{quiz_id}/sessions
+        creates a fresh session (the partial unique index
+        previously held by the abandoned row is now free).
+      parameters:
+        - name: session_id
+          in: path
+          description: The unique UUID of the practice session to abandon
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Session abandoned (and its snapshot + answers CASCADE-deleted).
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /sessions/{session_id}/complete:
+    post:
+      operationId: CompletePracticeSession
+      summary: Mark a practice session as completed and return the score
+      description: |
+        Sets the session's `completed_at = now()` and returns the
+        finalized session payload with a server-computed
+        `score_percentage`. Can be called even when not all questions
+        were answered (the user quit early) -- `total_questions`
+        stays at the snapshot value, `correct_answers` reflects
+        only the answers actually submitted.
+
+        Score: `round((correct_answers / total_questions) * 100)`,
+        rounded to the nearest integer. When `total_questions` is 0
+        (theoretically unreachable -- create-quiz requires >=1 --
+        but the read-side defensively handles it), the score is 0
+        rather than a division-by-zero panic.
+
+        Authorization: the session must belong to the
+        authenticated user (403 otherwise). Once completed, a
+        second call returns 409 -- this endpoint is NOT
+        idempotent. Callers that want to fetch a completed
+        session's state should use GET /api/sessions/{id}
+        (ASK-152, future).
+
+        Race protection: SELECT FOR UPDATE on the session row
+        serializes against any concurrent SubmitAnswer (ASK-137).
+        If an answer commits first, it's counted in the final
+        score; if complete commits first, the answer call returns
+        409.
+
+        Response shape: similar to PracticeSessionResponse but
+        without the `answers` array (callers can fetch them via
+        GET /api/sessions/{id}) and with the new
+        `score_percentage` field. `completed_at` is non-nullable
+        on this endpoint -- a successful response always carries
+        the freshly-set timestamp.
+      parameters:
+        - name: session_id
+          in: path
+          description: The unique UUID of the practice session to complete
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session completed; returns the final state with score.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompletedSessionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /sessions/{session_id}/answers:
+    post:
+      operationId: SubmitPracticeAnswer
+      summary: Submit an answer for one question in a practice session
+      description: |
+        Records the user's answer to a single question. The backend
+        determines correctness server-side -- the client does NOT
+        send `is_correct`. Per-type validation:
+
+          * `multiple-choice` -- exact string match between
+            `user_answer` and the text of the option whose
+            `is_correct` flag is true. `verified: true`.
+          * `true-false` -- `user_answer` MUST be the lowercase
+            string `"true"` or `"false"`. The backend parses it
+            and compares against the canonical answer derived
+            from the "True" option's `is_correct` flag.
+            `verified: true`.
+          * `freeform` -- case-insensitive trimmed string compare
+            against `quiz_questions.reference_answer`. The
+            response carries `verified: false` because string-match
+            is not semantic validation.
+
+        On a correct answer, the parent session's
+        `correct_answers` counter is incremented by 1 in the
+        same transaction as the insert.
+
+        Authorization: the session must belong to the
+        authenticated user (403 otherwise). Sessions that have
+        already been completed reject submissions with 409 (the
+        SELECT FOR UPDATE on the session row serializes against
+        a concurrent complete-session call).
+
+        Duplicate submission protection: the
+        `uq_practice_answers_session_question` unique constraint
+        catches the case where a question is answered twice in
+        the same session. The service surfaces the unique
+        violation as a typed 400 with details
+        `{"question_id": "already answered"}`.
+
+        No auto-completion: even when this answer is the last
+        unanswered question in the snapshot, the session stays
+        in-progress until the client explicitly calls
+        `POST /api/sessions/{session_id}/complete` (ASK-140,
+        future).
+      parameters:
+        - name: session_id
+          in: path
+          description: The unique UUID of the practice session
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitAnswerRequest'
+      responses:
+        '201':
+          description: Answer recorded with backend-determined correctness.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeAnswerResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}/recommendations:
+    post:
+      operationId: RecommendStudyGuide
+      summary: Recommend a study guide
+      description: |
+        Records that the authenticated user (an instructor or TA in the
+        guide's course) recommends the guide. Recommendations contribute
+        to the `is_recommended` badge and the `recommended_by` list on
+        the guide detail.
+
+        Authorization: viewer must hold the `instructor` or `ta` role in
+        AT LEAST ONE section of the guide's course. Holding a
+        non-elevated role (`student`) in some sections does NOT block
+        the action -- the rule is "any elevated role somewhere in the
+        course suffices".
+
+        Returns 409 on duplicate (same viewer recommended this guide
+        before) -- recommendations are not idempotent because the
+        creation timestamp matters and re-recommending would silently
+        bump it.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide to recommend
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Recommendation recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: RemoveStudyGuideRecommendation
+      summary: Remove the authenticated user's recommendation on a study guide
+      description: |
+        Hard-deletes the (viewer, guide) row in
+        `study_guide_recommendations`. Authorization mirrors the POST
+        side: viewer must currently hold instructor/TA in the guide's
+        course (a former TA who lost the role can't manage their old
+        recommendations -- the policy is "current elevated-role users
+        only").
+
+        404 covers BOTH "guide missing/deleted" and "viewer never
+        recommended this guide" -- by design, since the desired end
+        state is "no recommendation from viewer", which is reached in
+        either case from the caller's point of view.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Recommendation removed; no response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}/votes:
+    post:
+      operationId: CastStudyGuideVote
+      summary: Cast or change a vote on a study guide
+      description: |
+        Upserts the authenticated user's vote on the guide. Same-direction
+        re-submits are no-ops; opposite-direction submits flip the vote.
+        Returns the post-upsert `vote_score` so the UI can update without
+        a refetch. Soft-deleted guides return 404. Creators may vote on
+        their own guides (no self-vote restriction).
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide to vote on
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CastVoteRequest'
+      responses:
+        '200':
+          description: Vote applied; returns the resulting state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CastVoteResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: RemoveStudyGuideVote
+      summary: Remove the authenticated user's vote on a study guide
+      description: |
+        Hard-deletes the row in `study_guide_votes` for the
+        (viewer, guide) pair, returning the user to a neutral state.
+        Returns 404 when the guide is missing/soft-deleted OR when the
+        viewer has no existing vote -- both surfaces are collapsed to
+        404 by design (the desired state is "no vote", which is reached
+        in either case from the caller's point of view).
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide to remove the vote from
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Vote removed; no response body.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /courses/{course_id}/study-guides:
+    get:
+      operationId: ListStudyGuides
+      summary: List study guides for a course
+      description: |
+        Returns the study guides for the given course as a paginated
+        list. Soft-deleted guides and guides whose creator has been
+        soft-deleted are excluded. Per-row aggregates (`vote_score`,
+        `is_recommended`, `quiz_count`) are computed inline. The full
+        `content` field is intentionally omitted -- it is only returned
+        by the get-by-id endpoint, keeping the list payload small.
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the course
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          description: Case-insensitive partial match against title and tags
+          required: false
+          schema:
+            type: string
+            maxLength: 200
+        - name: tag
+          in: query
+          description: |
+            Filter by exact tag (case-sensitive). Repeatable; multiple
+            values are AND-matched (a guide must carry every supplied
+            tag to be returned).
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+              maxLength: 50
+          style: form
+          explode: true
+        - name: sort_by
+          in: query
+          description: Sort field
+          required: false
+          schema:
+            type: string
+            enum:
+              - score
+              - views
+              - newest
+              - updated
+            default: score
+        - name: sort_dir
+          in: query
+          description: Sort direction
+          required: false
+          schema:
+            type: string
+            enum:
+              - asc
+              - desc
+            default: desc
+        - name: page_limit
+          in: query
+          description: Maximum number of guides per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          description: Opaque keyset cursor token from the previous page
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A paginated list of study guides for the course
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListStudyGuidesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      operationId: CreateStudyGuide
+      summary: Create a study guide for a course
+      description: |
+        Creates a new study guide. Any authenticated user can create a
+        guide for any course. The `creator_id` is taken from the JWT;
+        any value supplied in the request body is ignored.
+
+        Tags are normalized server-side: each value is trimmed +
+        lowercased + deduplicated (case-insensitively). Empty tags
+        after trim are rejected with 400. Validation order on tags:
+        per-tag length cap first (50 chars), total count cap second
+        (20 tags), then normalize.
+
+        Returns the full StudyGuideDetail shape on 201 -- empty
+        recommended_by/quizzes/resources/files arrays, vote_score=0,
+        view_count=0, user_vote=null, is_recommended=false. The
+        frontend can render the freshly-created guide without a
+        follow-up GET.
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the parent course
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStudyGuideRequest'
+      responses:
+        '201':
+          description: The freshly-created study guide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGuideDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /courses/{course_id}/sections:
+    get:
+      operationId: ListCourseSections
+      summary: List sections for a course
+      description: |
+        Returns every section attached to the given course, with a live
+        `member_count` and an optional exact-match `term` filter. Used
+        by the course detail page when the caller needs the dedicated
+        sections payload (with `course_id` + `created_at`) rather than
+        the slimmer inline sections embedded in `GET /courses/{id}`.
+
+        Sorted by `term DESC, section_code ASC` (most-recent term first;
+        within a term, section codes ascend). No pagination -- a course
+        typically has fewer than 10 sections.
+
+        404 dispatch: a missing course (no row matches `course_id`) is
+        a single 404 with "Course not found"; an existing course with
+        zero matching sections (filtered out by `term` or just empty)
+        returns 200 with `sections: []`. The two are intentionally
+        distinguishable so the frontend can show a "no sections in this
+        term" empty state vs a generic not-found page.
+
+        Term filter:
+          * Exact match (no ILIKE, no trigram). Term values are
+            structured strings like "Spring 2026" so case-insensitive
+            matching would only mask typos, not real intent.
+          * Empty string is treated as "no filter" (defensive: a
+            client clearing the input shouldn't send an empty
+            string to the server, but if it does the server treats
+            it as if no filter was supplied).
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the parent course
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: term
+          in: query
+          description: Exact-match filter on the section's term (e.g. "Spring 2026")
+          required: false
+          schema:
+            type: string
+            maxLength: 30
+      responses:
+        '200':
+          description: All sections for the course (optionally filtered by term).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListCourseSectionsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /courses/{course_id}/sections/{section_id}/members:
+    get:
+      operationId: ListSectionMembers
+      summary: List the members of a course section
+      description: |
+        Returns the section roster with limited per-user info: user_id,
+        first_name, last_name, role, joined_at. Email and clerk_id are
+        intentionally NOT exposed -- this endpoint is reachable by any
+        authenticated user (course pages are public within the app), so
+        the payload is the privacy-floor for member identity.
+
+        Sorted by `joined_at ASC` with a `(joined_at, user_id)` keyset
+        cursor as the tiebreaker for stable pagination across pages.
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the parent course
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: section_id
+          in: path
+          description: The unique UUID of the section
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: role
+          in: query
+          description: Filter to members with a specific role
+          required: false
+          schema:
+            type: string
+            enum:
+              - student
+              - ta
+              - instructor
+        - name: limit
+          in: query
+          description: Maximum number of members to return per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          description: Opaque keyset cursor token from the previous page
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A paginated list of section members
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSectionMembersResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      operationId: JoinSection
+      summary: Join a section as the authenticated user
+      description: |
+        Adds the authenticated user as a `student` member of the given section.
+        The role is hardcoded to `student` regardless of any fields supplied in
+        the request body. `instructor` and `ta` roles are assigned only through
+        the seeding pipeline.
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the parent course
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: section_id
+          in: path
+          description: The unique UUID of the section to join
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: Membership created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CourseMemberResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /me/courses:
+    get:
+      operationId: ListMyEnrollments
+      summary: List the authenticated user's section enrollments
+      description: |
+        Returns every section the authenticated user is enrolled in, with
+        compact embedded course + school summaries. Sorted by `term DESC,
+        department ASC, number ASC`. Not paginated -- a user is typically
+        in 4-8 courses, and even outliers fit comfortably in one response.
+      parameters:
+        - name: term
+          in: query
+          description: Exact-match term filter (e.g. "Spring 2026")
+          required: false
+          schema:
+            type: string
+            maxLength: 30
+        - name: role
+          in: query
+          description: Filter to a specific course-member role
+          required: false
+          schema:
+            type: string
+            enum:
+              - student
+              - ta
+              - instructor
+      responses:
+        '200':
+          description: All enrollments matching the supplied filters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListMyEnrollmentsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /me/dashboard:
+    get:
+      operationId: ListDashboard
+      summary: Aggregated dashboard data for the authenticated user
+      description: |
+        Returns the home-page dashboard payload in a single response:
+        enrolled courses for the current term, recently updated study
+        guides the viewer created, practice stats + recent sessions,
+        and file totals + recent files.
+
+        Each section is independent. A user with no enrollments,
+        no guides, no sessions, or no files gets zeros and empty
+        arrays in the relevant section -- the whole endpoint never
+        404s and never partially fails (a DB error in any one
+        section returns 500).
+
+        Soft-deleted entities (study guides with `deleted_at`,
+        files in any deletion lifecycle) are excluded everywhere
+        they appear -- counts, lists, and aggregate sums.
+
+        "Current term" resolution waterfall:
+          1. Active sections covering today (start_date <= today <= end_date).
+          2. Most recently ended term (end_date < today, ordered DESC).
+          3. Lexicographically latest term string (when no dates exist).
+        Returns null when the user has no enrollments at all.
+      responses:
+        '200':
+          description: Dashboard payload for the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /me/study-guides:
+    get:
+      operationId: ListMyStudyGuides
+      summary: List study guides created by the authenticated user (ASK-131)
+      description: |
+        Returns study guides authored by the viewer as a paginated
+        list. Unlike the course-scoped list, this endpoint DOES
+        surface soft-deleted guides -- the response includes a
+        nullable `deleted_at` field so the owner can see (and
+        eventually restore) their own deleted content.
+
+        Sort options: `updated` (default, updated_at DESC),
+        `newest` (created_at DESC), `title` (case-insensitive ASC).
+        Single direction per variant -- the endpoint does not
+        expose a `sort_dir` query param.
+
+        Optional `course_id` filters to one course. A non-existent
+        course yields an empty array, not 404 (the filter just
+        yields no results).
+      parameters:
+        - name: course_id
+          in: query
+          description: Filter results to guides in this course.
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: sort_by
+          in: query
+          description: Sort field
+          required: false
+          schema:
+            type: string
+            enum:
+              - updated
+              - newest
+              - title
+            default: updated
+        - name: limit
+          in: query
+          description: Maximum number of guides per page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          description: Opaque keyset cursor token from the previous page
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A paginated list of the viewer's study guides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListMyStudyGuidesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /me/favorites:
+    get:
+      operationId: ListFavorites
+      summary: List the authenticated user's favorited items
+      description: |
+        Returns favorites across files, study guides, and courses for
+        the authenticated user, sorted by `favorited_at DESC`. Powers
+        the sidebar "Starred" section and the `/me/saved` page.
+        Supports filtering by entity type and offset-based pagination.
+
+        Soft-deleted entities (files in any deletion lifecycle,
+        soft-deleted study guides) are excluded. Courses have no
+        soft-delete and are always eligible.
+
+        The `cursor` is opaque -- callers must pass back the
+        `next_cursor` from the previous response verbatim. The wire
+        contract is opaque so a future migration to keyset
+        pagination is non-breaking. `next_cursor` is required and
+        nullable so it renders as explicit JSON null on the last page.
+      parameters:
+        - name: entity_type
+          in: query
+          description: Filter to a single entity type. Omit for all types.
+          required: false
+          schema:
+            type: string
+            enum:
+              - file
+              - study_guide
+              - course
+        - name: limit
+          in: query
+          description: Maximum number of favorites to return per page
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: cursor
+          in: query
+          description: Opaque pagination cursor from a previous response
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Page of favorites for the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListFavoritesResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /me/recents:
+    get:
+      operationId: ListRecents
+      summary: List the authenticated user's most recently viewed items
+      description: |
+        Returns the most recently viewed items across files, study guides,
+        and courses for the authenticated user, merged and sorted by
+        `viewed_at DESC` and truncated to `limit`. Powers the "Recents"
+        section of the sidebar. Soft-deleted entities (files in a
+        deletion lifecycle, soft-deleted study guides) are excluded.
+        Courses have no soft-delete and are always eligible.
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of recent items to return
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 30
+            default: 10
+      responses:
+        '200':
+          description: Merged recent items for the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListRecentsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /courses/{course_id}/sections/{section_id}/members/me:
+    get:
+      operationId: CheckMembership
+      summary: Check the authenticated user's membership in a section
+      description: |
+        Powers the per-section Join/Leave button on the course detail
+        page. Always returns 200 -- non-membership is `enrolled: false`
+        with null role/joined_at, NOT 404, so the frontend can
+        distinguish "not enrolled" from "section does not exist".
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the parent course
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: section_id
+          in: path
+          description: The unique UUID of the section to check
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Membership status for the authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MembershipCheckResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: LeaveSection
+      summary: Leave a section as the authenticated user
+      description: |
+        Removes the authenticated user's membership from the given section.
+        The membership row is hard-deleted. Any role (`student`, `ta`,
+        `instructor`) can leave.
+      parameters:
+        - name: course_id
+          in: path
+          description: The unique UUID of the parent course
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: section_id
+          in: path
+          description: The unique UUID of the section to leave
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Membership removed; no response body
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -210,6 +2627,72 @@ components:
         - status
         - created_at
         - updated_at
+    CreateFileRequest:
+      type: object
+      description: |
+        Payload to create a new file metadata record (ASK-105).
+        Caller (typically the Next.js server) generates the S3 key
+        and provides it here; the Go API never touches S3 for
+        uploads. The record is created in `pending` status; a
+        subsequent PATCH transitions it to `complete` or `failed`.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        mime_type:
+          type: string
+          enum:
+            - "image/jpeg"
+            - "image/png"
+            - "image/webp"
+            - "application/pdf"
+            - "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            - "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+            - "text/plain"
+            - "application/epub+zip"
+        size:
+          type: integer
+          format: int64
+          minimum: 1
+          maximum: 104857600
+        s3_key:
+          type: string
+          minLength: 1
+          maxLength: 1024
+          description: |
+            S3 object key generated by the caller. Stored as-is on
+            the file record; the Go API does not validate this
+            against S3.
+      required:
+        - name
+        - mime_type
+        - size
+        - s3_key
+    UpdateFileRequest:
+      type: object
+      description: |
+        Partial update for a file. Both fields are optional but at
+        least one must be provided -- an empty body returns 400.
+        Only the provided fields are updated; unprovided fields are
+        left unchanged. Status transitions are restricted to
+        `pending -> complete` and `pending -> failed` (see endpoint
+        description).
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: New display name. Trimmed before validation.
+        status:
+          type: string
+          enum:
+            - complete
+            - failed
+          description: |
+            New upload status. Only `complete` or `failed` are valid
+            target states; the file must currently be `pending` for
+            the transition to succeed.
     ListFilesResponse:
       type: object
       description: A paginated collection of files
@@ -226,6 +2709,2030 @@ components:
       required:
         - files
         - has_more
+    CreateGrantRequest:
+      type: object
+      description: Request body for creating a file grant
+      properties:
+        grantee_type:
+          type: string
+          enum: [user, course, study_guide]
+        grantee_id:
+          type: string
+          format: uuid
+        permission:
+          type: string
+          enum: [view, share, delete]
+      required:
+        - grantee_type
+        - grantee_id
+        - permission
+    RevokeGrantRequest:
+      type: object
+      description: Request body for revoking a file grant
+      properties:
+        grantee_type:
+          type: string
+          enum: [user, course, study_guide]
+        grantee_id:
+          type: string
+          format: uuid
+        permission:
+          type: string
+          enum: [view, share, delete]
+      required:
+        - grantee_type
+        - grantee_id
+        - permission
+    GrantResponse:
+      type: object
+      description: A file permission grant
+      properties:
+        id:
+          type: string
+          format: uuid
+        file_id:
+          type: string
+          format: uuid
+        grantee_type:
+          type: string
+        grantee_id:
+          type: string
+          format: uuid
+        permission:
+          type: string
+        granted_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - file_id
+        - grantee_type
+        - grantee_id
+        - permission
+        - granted_by
+        - created_at
+    SchoolResponse:
+      type: object
+      description: A school (university or college)
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        acronym:
+          type: string
+        domain:
+          type: string
+          nullable: true
+        url:
+          type: string
+          nullable: true
+        city:
+          type: string
+          nullable: true
+        state:
+          type: string
+          nullable: true
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2 country code
+          maxLength: 2
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - acronym
+        - created_at
+    ListSchoolsResponse:
+      type: object
+      description: A paginated collection of schools
+      properties:
+        schools:
+          type: array
+          items:
+            $ref: '#/components/schemas/SchoolResponse'
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+      required:
+        - schools
+        - has_more
+    SchoolSummary:
+      type: object
+      description: Compact school payload embedded inside other resources (courses, study guides)
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        acronym:
+          type: string
+        city:
+          type: string
+          nullable: true
+        state:
+          type: string
+          nullable: true
+        country:
+          type: string
+          description: ISO 3166-1 alpha-2 country code
+          maxLength: 2
+          nullable: true
+      required:
+        - id
+        - name
+        - acronym
+    CourseResponse:
+      type: object
+      description: A course (e.g. CPTS 322) with its school summary embedded
+      properties:
+        id:
+          type: string
+          format: uuid
+        school:
+          $ref: '#/components/schemas/SchoolSummary'
+        department:
+          type: string
+        number:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - school
+        - department
+        - number
+        - title
+        - created_at
+    SectionSummary:
+      type: object
+      description: A section of a course (term + instructor + roster size)
+      properties:
+        id:
+          type: string
+          format: uuid
+        term:
+          type: string
+        section_code:
+          type: string
+          nullable: true
+        instructor_name:
+          type: string
+          nullable: true
+        member_count:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+        - id
+        - term
+        - member_count
+    SectionResponse:
+      type: object
+      description: |
+        Returned by GET /courses/{course_id}/sections (ASK-127).
+        Superset of SectionSummary -- adds `course_id` and
+        `created_at` so the dedicated sections endpoint payload is
+        self-describing (the inline sections in CourseDetailResponse
+        omit them because the parent course already carries the id).
+      properties:
+        id:
+          type: string
+          format: uuid
+        course_id:
+          type: string
+          format: uuid
+        term:
+          type: string
+        section_code:
+          type: string
+          nullable: true
+        instructor_name:
+          type: string
+          nullable: true
+        member_count:
+          type: integer
+          format: int64
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - course_id
+        - term
+        - section_code
+        - instructor_name
+        - member_count
+        - created_at
+    ListCourseSectionsResponse:
+      type: object
+      description: |
+        Wrapper for GET /courses/{course_id}/sections. Single field
+        rather than a bare array so future fields (a filter echo,
+        cursor for pagination, aggregate counts) can be added
+        backwards-compatibly. Always emits `sections: []` (never
+        omitted or null) when the course has no matching sections.
+      properties:
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/SectionResponse'
+      required:
+        - sections
+    CourseDetailResponse:
+      type: object
+      description: A course with its school summary and the full list of sections
+      properties:
+        id:
+          type: string
+          format: uuid
+        school:
+          $ref: '#/components/schemas/SchoolSummary'
+        department:
+          type: string
+        number:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/SectionSummary'
+      required:
+        - id
+        - school
+        - department
+        - number
+        - title
+        - created_at
+        - sections
+    ListCoursesResponse:
+      type: object
+      description: A paginated collection of courses
+      properties:
+        courses:
+          type: array
+          items:
+            $ref: '#/components/schemas/CourseResponse'
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+      required:
+        - courses
+        - has_more
+    CourseMemberResponse:
+      type: object
+      description: A user's membership in a course section
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        section_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum:
+            - student
+            - ta
+            - instructor
+        joined_at:
+          type: string
+          format: date-time
+      required:
+        - user_id
+        - section_id
+        - role
+        - joined_at
+    EnrollmentSectionSummary:
+      type: object
+      description: Compact section payload embedded in an EnrollmentResponse
+      properties:
+        id:
+          type: string
+          format: uuid
+        term:
+          type: string
+        section_code:
+          type: string
+          nullable: true
+        instructor_name:
+          type: string
+          nullable: true
+      required:
+        - id
+        - term
+    EnrollmentCourseSummary:
+      type: object
+      description: Compact course payload embedded in an EnrollmentResponse
+      properties:
+        id:
+          type: string
+          format: uuid
+        department:
+          type: string
+        number:
+          type: string
+        title:
+          type: string
+      required:
+        - id
+        - department
+        - number
+        - title
+    EnrollmentSchoolSummary:
+      type: object
+      description: |
+        Compact school payload embedded in an EnrollmentResponse. Only id +
+        acronym -- the full school summary is available via the course
+        detail endpoint and would bloat the dashboard payload.
+      properties:
+        id:
+          type: string
+          format: uuid
+        acronym:
+          type: string
+      required:
+        - id
+        - acronym
+    EnrollmentResponse:
+      type: object
+      description: A single enrollment with embedded section, course, and school
+      properties:
+        section:
+          $ref: '#/components/schemas/EnrollmentSectionSummary'
+        course:
+          $ref: '#/components/schemas/EnrollmentCourseSummary'
+        school:
+          $ref: '#/components/schemas/EnrollmentSchoolSummary'
+        role:
+          type: string
+          enum:
+            - student
+            - ta
+            - instructor
+        joined_at:
+          type: string
+          format: date-time
+      required:
+        - section
+        - course
+        - school
+        - role
+        - joined_at
+    ListMyEnrollmentsResponse:
+      type: object
+      description: All enrollments for the authenticated user
+      properties:
+        enrollments:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnrollmentResponse'
+      required:
+        - enrollments
+    SectionMemberResponse:
+      type: object
+      description: |
+        Limited per-user payload returned by ListSectionMembers. Email
+        and clerk_id are intentionally NOT exposed -- any authenticated
+        user can list members of any section, so this is the privacy
+        floor for member identity.
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        first_name:
+          type: string
+        last_name:
+          type: string
+        role:
+          type: string
+          enum:
+            - student
+            - ta
+            - instructor
+        joined_at:
+          type: string
+          format: date-time
+      required:
+        - user_id
+        - first_name
+        - last_name
+        - role
+        - joined_at
+    ListSectionMembersResponse:
+      type: object
+      description: A paginated collection of section members
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/SectionMemberResponse'
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+      required:
+        - members
+        - has_more
+    CreatorSummary:
+      type: object
+      description: |
+        Compact user payload used as the `creator` of a study guide. Same
+        privacy floor as SectionMemberResponse -- no email, no clerk_id.
+      properties:
+        id:
+          type: string
+          format: uuid
+        first_name:
+          type: string
+        last_name:
+          type: string
+      required:
+        - id
+        - first_name
+        - last_name
+    StudyGuideListItemResponse:
+      type: object
+      description: |
+        A study guide as it appears in the list response. Excludes
+        `content` (only returned by the get-by-id endpoint) to keep the
+        list payload small. Per-row aggregates (`vote_score`,
+        `is_recommended`, `quiz_count`) are computed inline.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        creator:
+          $ref: '#/components/schemas/CreatorSummary'
+        course_id:
+          type: string
+          format: uuid
+        vote_score:
+          type: integer
+          format: int64
+        view_count:
+          type: integer
+          format: int64
+          minimum: 0
+        is_recommended:
+          type: boolean
+        quiz_count:
+          type: integer
+          format: int64
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - tags
+        - creator
+        - course_id
+        - vote_score
+        - view_count
+        - is_recommended
+        - quiz_count
+        - created_at
+        - updated_at
+    GuideCourseSummary:
+      type: object
+      description: |
+        Compact course payload embedded in StudyGuideDetailResponse.
+        Mirrors EnrollmentCourseSummary but lives here separately so
+        the two surfaces can evolve independently.
+      properties:
+        id:
+          type: string
+          format: uuid
+        department:
+          type: string
+        number:
+          type: string
+        title:
+          type: string
+      required:
+        - id
+        - department
+        - number
+        - title
+    QuizSummary:
+      type: object
+      description: |
+        Compact quiz payload embedded in StudyGuideDetailResponse.
+        Privacy floor: id + title + question_count only. Creator id,
+        quiz content, and scoring config are intentionally absent --
+        the quiz detail endpoint (future ticket ASK-142) is the source
+        of truth for those.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        question_count:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+        - id
+        - title
+        - question_count
+    FileAttachmentResponse:
+      type: object
+      description: |
+        Response body for POST /api/study-guides/{study_guide_id}/files/{file_id}.
+        Returns the join row's keys + creation timestamp. The file's
+        own metadata (name, mime_type, size) is intentionally NOT
+        included -- the wire shape mirrors the join table since this
+        endpoint only creates the link, not the file. Callers that
+        want full file metadata can hit GET /api/study-guides/{id}
+        which includes the attached file list with privacy floor.
+      properties:
+        file_id:
+          type: string
+          format: uuid
+        study_guide_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - file_id
+        - study_guide_id
+        - created_at
+    AttachResourceRequest:
+      type: object
+      description: |
+        Request body for POST /api/study-guides/{study_guide_id}/resources.
+        `title` and `url` are required. `type` defaults to `link` when
+        omitted. URL must be http or https (validated server-side; the
+        openapi `format: uri` only checks general syntax).
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+        url:
+          type: string
+          format: uri
+          maxLength: 2000
+        type:
+          type: string
+          enum:
+            - link
+            - video
+            - article
+            - pdf
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+      required:
+        - title
+        - url
+    ResourceSummary:
+      type: object
+      description: |
+        Compact resource payload embedded in StudyGuideDetailResponse.
+        No creator or uploader info -- the study-guide detail caller
+        does not need to know who attached the resource.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        url:
+          type: string
+        type:
+          type: string
+          enum:
+            - link
+            - video
+            - article
+            - pdf
+        description:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - url
+        - type
+        - created_at
+    StudyGuideFileSummary:
+      type: object
+      description: |
+        Compact file payload embedded in StudyGuideDetailResponse.
+        Privacy floor: id + name + mime_type + size only. Owner,
+        s3_key, and checksum are intentionally absent.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        mime_type:
+          type: string
+        size:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+        - id
+        - name
+        - mime_type
+        - size
+    RecommendationResponse:
+      type: object
+      description: |
+        Response body for POST /api/study-guides/{study_guide_id}/recommendations.
+        Returns the freshly-created recommendation row plus the
+        recommender's compact identity (same privacy floor as
+        CreatorSummary -- no email, no clerk_id).
+      properties:
+        study_guide_id:
+          type: string
+          format: uuid
+        recommended_by:
+          $ref: '#/components/schemas/CreatorSummary'
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - study_guide_id
+        - recommended_by
+        - created_at
+    CastVoteRequest:
+      type: object
+      description: |
+        Request body for POST /api/study-guides/{study_guide_id}/votes.
+        `vote` is the desired direction. Same-direction submits are
+        no-ops at the SQL layer (the upsert WHERE clause skips the row
+        modification when vote is unchanged).
+      properties:
+        vote:
+          type: string
+          enum:
+            - up
+            - down
+      required:
+        - vote
+    CastVoteResponse:
+      type: object
+      description: |
+        Response body for POST /api/study-guides/{study_guide_id}/votes.
+        Returns the post-upsert state so the UI can patch its local
+        vote_score without a follow-up GET.
+      properties:
+        vote:
+          type: string
+          enum:
+            - up
+            - down
+        vote_score:
+          type: integer
+          format: int64
+      required:
+        - vote
+        - vote_score
+    CreateStudyGuideRequest:
+      type: object
+      description: |
+        Request body for POST /api/courses/{course_id}/study-guides.
+        Only `title` is required. Tags are normalized server-side
+        (trim + lowercase + dedupe); empty tags after trim are
+        rejected with 400. `creator_id` is set from the JWT and
+        ignored if supplied here.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+        content:
+          type: string
+          nullable: true
+          maxLength: 100000
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+            maxLength: 50
+      required:
+        - title
+    UpdateStudyGuideRequest:
+      type: object
+      description: |
+        Request body for PATCH /api/study-guides/{study_guide_id}.
+        All fields are optional; absent fields preserve their current
+        value. Tags, when provided, REPLACE all existing tags (no
+        merge) and are normalized server-side (trim + lowercase +
+        dedupe). At least one field must be provided -- an empty body
+        `{}` is rejected with 400.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+        content:
+          type: string
+          nullable: true
+          maxLength: 100000
+        tags:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            minLength: 1
+            maxLength: 50
+    StudyGuideDetailResponse:
+      type: object
+      description: |
+        Full study-guide payload for the detail endpoint. Includes
+        content (excluded from the list payload) plus the
+        authenticated user's own vote state and the nested
+        recommenders / quizzes / resources / files arrays.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        content:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        creator:
+          $ref: '#/components/schemas/CreatorSummary'
+        course:
+          $ref: '#/components/schemas/GuideCourseSummary'
+        vote_score:
+          type: integer
+          format: int64
+        user_vote:
+          type: string
+          nullable: true
+          enum:
+            - up
+            - down
+        view_count:
+          type: integer
+          format: int64
+          minimum: 0
+        is_recommended:
+          type: boolean
+        recommended_by:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreatorSummary'
+        quizzes:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizSummary'
+        resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResourceSummary'
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudyGuideFileSummary'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - tags
+        - creator
+        - course
+        - vote_score
+        - user_vote
+        - view_count
+        - is_recommended
+        - recommended_by
+        - quizzes
+        - resources
+        - files
+        - created_at
+        - updated_at
+    ListStudyGuidesResponse:
+      type: object
+      description: A paginated collection of study guides for a course
+      properties:
+        study_guides:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudyGuideListItemResponse'
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+      required:
+        - study_guides
+        - has_more
+    MyStudyGuideSummary:
+      type: object
+      description: |
+        Row shape for GET /api/me/study-guides (ASK-131). Same fields
+        as StudyGuideListItemResponse plus a nullable `deleted_at` so
+        the viewer can see (and eventually restore) their own
+        soft-deleted guides. Live guides render `deleted_at: null`;
+        soft-deleted guides render a timestamp.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        creator:
+          $ref: '#/components/schemas/CreatorSummary'
+        course_id:
+          type: string
+          format: uuid
+        vote_score:
+          type: integer
+          format: int64
+        view_count:
+          type: integer
+          format: int64
+          minimum: 0
+        is_recommended:
+          type: boolean
+        quiz_count:
+          type: integer
+          format: int64
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            Null for live guides; a timestamp for soft-deleted ones.
+            Required + nullable so the field is always present on the
+            wire (the frontend can check `=== null` without worrying
+            about an undefined case).
+      required:
+        - id
+        - title
+        - tags
+        - creator
+        - course_id
+        - vote_score
+        - view_count
+        - is_recommended
+        - quiz_count
+        - created_at
+        - updated_at
+        - deleted_at
+    ListMyStudyGuidesResponse:
+      type: object
+      description: |
+        Paginated envelope for GET /api/me/study-guides (ASK-131).
+        Includes soft-deleted guides authored by the viewer.
+      properties:
+        study_guides:
+          type: array
+          items:
+            $ref: '#/components/schemas/MyStudyGuideSummary'
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+      required:
+        - study_guides
+        - next_cursor
+        - has_more
+    MembershipCheckResponse:
+      type: object
+      description: |
+        Per-section membership status for the authenticated user. `enrolled`
+        is always present; `role` and `joined_at` are non-null only when
+        `enrolled` is true. Both nullable fields are emitted as JSON null
+        (not omitted) so the frontend can safely destructure.
+      properties:
+        enrolled:
+          type: boolean
+        role:
+          type: string
+          nullable: true
+          enum:
+            - student
+            - ta
+            - instructor
+        joined_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - enrolled
+        - role
+        - joined_at
+    CreateQuizMCQOption:
+      type: object
+      description: |
+        A single option for a `multiple-choice` question on the create
+        request. Exactly one option per MCQ question must have
+        `is_correct: true`. The text is rendered to the student
+        verbatim; no normalization is applied server-side.
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 500
+        is_correct:
+          type: boolean
+      required:
+        - text
+        - is_correct
+    CreateQuizQuestion:
+      type: object
+      description: |
+        A single question on the create-quiz request. The `type` field
+        discriminates which other fields are meaningful:
+          * `multiple-choice` -- requires `options`; ignores
+            `correct_answer`.
+          * `true-false` -- requires `correct_answer` as a boolean;
+            ignores `options`.
+          * `freeform` -- requires `correct_answer` as a non-empty
+            string; ignores `options`.
+        Cross-field validation is enforced by the service layer with
+        per-field 400 error details when the rules above are violated.
+      properties:
+        type:
+          type: string
+          enum:
+            - multiple-choice
+            - true-false
+            - freeform
+        question:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        options:
+          type: array
+          minItems: 2
+          maxItems: 10
+          items:
+            $ref: '#/components/schemas/CreateQuizMCQOption'
+        correct_answer:
+          description: |
+            For `true-false` questions this is a boolean; for `freeform`
+            questions this is a non-empty string (max 500 chars).
+            Ignored for `multiple-choice` questions (correctness is
+            embedded in `options[].is_correct`).
+          nullable: true
+        hint:
+          type: string
+          nullable: true
+          maxLength: 1000
+        feedback_correct:
+          type: string
+          nullable: true
+          maxLength: 1000
+        feedback_incorrect:
+          type: string
+          nullable: true
+          maxLength: 1000
+        sort_order:
+          type: integer
+          minimum: 0
+      required:
+        - type
+        - question
+    CreateQuizRequest:
+      type: object
+      description: |
+        Request body for POST /api/study-guides/{study_guide_id}/quizzes.
+        The entire quiz (title + N questions + each question's options)
+        is created atomically. If any question fails validation, the
+        whole request is rejected and no rows are written.
+
+        `creator_id` is set from the JWT; any value supplied here is
+        ignored (sending one is not an error to keep the wire shape
+        forgiving for frontend builders).
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+        questions:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/CreateQuizQuestion'
+      required:
+        - title
+        - questions
+    QuizQuestionResponse:
+      type: object
+      description: |
+        A single question on the quiz detail response. The `options`
+        array is present only on `multiple-choice` questions and lists
+        the option text in display order. `correct_answer` is the
+        text of the correct option for MCQ, the boolean for true-false,
+        and the reference answer string for freeform.
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - multiple-choice
+            - true-false
+            - freeform
+        question:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correct_answer:
+          description: |
+            The correct answer for this question. String for
+            multiple-choice (the winning option's text) and freeform
+            (the reference answer); boolean for true-false.
+          nullable: true
+        hint:
+          type: string
+          nullable: true
+        feedback:
+          type: object
+          properties:
+            correct:
+              type: string
+              nullable: true
+            incorrect:
+              type: string
+              nullable: true
+          required:
+            - correct
+            - incorrect
+        sort_order:
+          type: integer
+      required:
+        - id
+        - type
+        - question
+        - hint
+        - feedback
+        - sort_order
+    QuizDetailResponse:
+      type: object
+      description: |
+        Full quiz payload returned by POST /api/study-guides/{id}/quizzes,
+        GET /api/quizzes/{quiz_id}, and PATCH /api/quizzes/{quiz_id}.
+        Includes the embedded study guide id, the creator (privacy
+        floor: id + first_name + last_name only), and every question
+        with its options and correct answer.
+      properties:
+        id:
+          type: string
+          format: uuid
+        study_guide_id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        creator:
+          $ref: '#/components/schemas/CreatorSummary'
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizQuestionResponse'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - study_guide_id
+        - title
+        - description
+        - creator
+        - questions
+        - created_at
+        - updated_at
+    QuizListItemResponse:
+      type: object
+      description: |
+        Compact quiz payload returned by GET /api/study-guides/{id}/quizzes.
+        Richer than QuizSummary (which embeds inside StudyGuideDetailResponse
+        and intentionally stays minimal): includes the creator (privacy
+        floor: id + first_name + last_name only), description, and
+        timestamps so the practice page can render the quiz card without
+        a follow-up GET on the quiz detail.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        question_count:
+          type: integer
+          format: int64
+          minimum: 0
+        creator:
+          $ref: '#/components/schemas/CreatorSummary'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - description
+        - question_count
+        - creator
+        - created_at
+        - updated_at
+    ListQuizzesResponse:
+      type: object
+      description: |
+        A non-paginated collection of quizzes for one study guide. The
+        spec deliberately omits pagination -- guides typically host
+        fewer than ten quizzes and the practice page renders them all
+        in one shot.
+      properties:
+        quizzes:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizListItemResponse'
+      required:
+        - quizzes
+    UpdateQuizRequest:
+      type: object
+      description: |
+        Request body for PATCH /api/quizzes/{quiz_id}. Both fields
+        are optional; absent fields preserve their current value.
+        At least one field must be provided -- an empty body `{}`
+        is rejected with 400.
+
+        `description` supports an explicit JSON `null` to clear the
+        existing value (the only field on this endpoint with that
+        semantic; `title` cannot be cleared because the column is
+        NOT NULL on the underlying schema).
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 500
+        description:
+          type: string
+          nullable: true
+          maxLength: 2000
+    SessionSummaryResponse:
+      type: object
+      description: |
+        A compact session summary returned in
+        GET /api/quizzes/{quiz_id}/sessions (ASK-149) listings.
+        Distinct from SessionDetailResponse: there is no `answers`
+        array (callers fetch it via GET /api/sessions/{id}) and no
+        `quiz_id` (the listing is already scoped to a quiz).
+
+        `score_percentage` is `null` while the session is in-progress
+        (`completed_at` is null too) and an integer 0-100 once the
+        session is completed -- same gating rule as
+        SessionDetailResponse.
+      properties:
+        id:
+          type: string
+          format: uuid
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        total_questions:
+          type: integer
+          minimum: 0
+        correct_answers:
+          type: integer
+          minimum: 0
+        score_percentage:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 100
+      required:
+        - id
+        - started_at
+        - completed_at
+        - total_questions
+        - correct_answers
+        - score_percentage
+    ListSessionsResponse:
+      type: object
+      description: |
+        A paginated list of the authenticated user's practice
+        sessions for a quiz (ASK-149). `next_cursor` is null on the
+        last page (always present on the wire -- the field is
+        required + nullable so codegen renders explicit `null`
+        instead of dropping the key); `has_more` is the explicit
+        boolean for client-side page-end detection so callers don't
+        have to inspect the cursor field.
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionSummaryResponse'
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+      required:
+        - sessions
+        - has_more
+        - next_cursor
+    SessionDetailResponse:
+      type: object
+      description: |
+        Returned by GET /api/sessions/{session_id} (ASK-152). The
+        response shape is the union of PracticeSessionResponse +
+        a nullable score_percentage:
+          * `score_percentage` is null while the session is
+            in-progress (`completed_at` is null too) and an integer
+            0-100 once the session is completed.
+          * `answers` is identical to the PracticeSessionResponse
+            field -- chronological list of submitted answers,
+            with nullable question_id for answers whose underlying
+            question was hard-deleted (ON DELETE SET NULL).
+          * `completed_at` is nullable -- distinguishes in-progress
+            from completed sessions on the wire.
+      properties:
+        id:
+          type: string
+          format: uuid
+        quiz_id:
+          type: string
+          format: uuid
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        total_questions:
+          type: integer
+          minimum: 0
+        correct_answers:
+          type: integer
+          minimum: 0
+        score_percentage:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 100
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PracticeAnswerResponse'
+      required:
+        - id
+        - quiz_id
+        - started_at
+        - completed_at
+        - total_questions
+        - correct_answers
+        - score_percentage
+        - answers
+    CompletedSessionResponse:
+      type: object
+      description: |
+        Returned by POST /api/sessions/{session_id}/complete
+        (ASK-140). Same shape as PracticeSessionResponse minus the
+        `answers` array (callers fetch them separately via
+        GET /api/sessions/{id}) and plus the server-computed
+        `score_percentage` field.
+
+        `completed_at` is non-nullable here -- a successful response
+        always carries the freshly-set timestamp from the
+        completion UPDATE.
+
+        `score_percentage` is `round((correct_answers /
+        total_questions) * 100)`, rounded to the nearest integer.
+        Always 0 when `total_questions` is 0 (avoids
+        division-by-zero on the theoretically unreachable
+        empty-quiz edge case).
+      properties:
+        id:
+          type: string
+          format: uuid
+        quiz_id:
+          type: string
+          format: uuid
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+        total_questions:
+          type: integer
+          minimum: 0
+        correct_answers:
+          type: integer
+          minimum: 0
+        score_percentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+      required:
+        - id
+        - quiz_id
+        - started_at
+        - completed_at
+        - total_questions
+        - correct_answers
+        - score_percentage
+    SubmitAnswerRequest:
+      type: object
+      description: |
+        Request body for POST /api/sessions/{session_id}/answers
+        (ASK-137). The client supplies only the question being
+        answered and the raw user input -- the backend is the sole
+        source of truth for `is_correct` and `verified` on the
+        response. Any extra fields a client sends (including
+        attempts to forge `is_correct` or `verified`) are silently
+        dropped by the Go JSON decoder because the
+        SubmitAnswerRequest struct has no fields for them; the
+        scoring path inside the service ignores client input
+        entirely on those two fields, so a forged value cannot
+        flow into the persisted row.
+
+        Per-type expectations on `user_answer`:
+          * `multiple-choice` -- the exact text of the chosen
+            option (e.g. `"Sorted ascending"`). Comparison is
+            byte-exact against the option's stored text.
+          * `true-false` -- the lowercase string `"true"` or
+            `"false"`. Anything else is a 400.
+          * `freeform` -- the user's free-text response. Compared
+            case-insensitively against the reference answer
+            after trimming whitespace.
+      properties:
+        question_id:
+          type: string
+          format: uuid
+        user_answer:
+          type: string
+          minLength: 1
+      required:
+        - question_id
+        - user_answer
+    PracticeAnswerResponse:
+      type: object
+      description: |
+        A single answer submitted within a practice session.
+        `question_id`, `user_answer`, and `is_correct` are nullable:
+          * `question_id` becomes NULL when the underlying quiz
+            question is hard-deleted after the answer was submitted
+            (ON DELETE SET NULL on `practice_answers.question_id`).
+          * `user_answer` and `is_correct` track the schema's
+            nullable columns; in practice, the submit-answer
+            endpoint always writes non-null values.
+        `verified` is true for server-validated answer types
+        (multiple-choice, true-false) and false for freeform answers
+        (string-match only).
+      properties:
+        question_id:
+          type: string
+          format: uuid
+          nullable: true
+        user_answer:
+          type: string
+          nullable: true
+        is_correct:
+          type: boolean
+          nullable: true
+        verified:
+          type: boolean
+        answered_at:
+          type: string
+          format: date-time
+      required:
+        - question_id
+        - user_answer
+        - is_correct
+        - verified
+        - answered_at
+    PracticeSessionResponse:
+      type: object
+      description: |
+        A practice session row plus the answers submitted so far.
+        Returned by POST /api/quizzes/{quiz_id}/sessions on both the
+        201 (created) and 200 (resumed) paths -- the wire shape is
+        identical, the status code distinguishes the two paths.
+
+        `total_questions` is frozen at session-start time from the
+        snapshot count (COUNT of `practice_session_questions` rows).
+        Subsequent edits to the parent quiz do not change it.
+        `correct_answers` is the running count of submitted answers
+        with `is_correct = true`; the submit-answer endpoint
+        increments it.
+
+        On a freshly-created session, `answers` is an empty array
+        (not null). On a resumed session, `answers` carries every
+        row submitted so far, ordered by `answered_at ASC`.
+      properties:
+        id:
+          type: string
+          format: uuid
+        quiz_id:
+          type: string
+          format: uuid
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        total_questions:
+          type: integer
+          minimum: 0
+        correct_answers:
+          type: integer
+          minimum: 0
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PracticeAnswerResponse'
+      required:
+        - id
+        - quiz_id
+        - started_at
+        - completed_at
+        - total_questions
+        - correct_answers
+        - answers
+    DashboardCourseSummary:
+      type: object
+      description: |
+        Compact course payload embedded in the dashboard's courses
+        section. Includes the viewer's role + the section term so
+        the home page can render "CPTS 322 (Spring 2026, student)"
+        without follow-up requests.
+      properties:
+        id:
+          type: string
+          format: uuid
+        department:
+          type: string
+        number:
+          type: string
+        title:
+          type: string
+        role:
+          type: string
+          enum:
+            - student
+            - ta
+            - instructor
+        section_term:
+          type: string
+      required:
+        - id
+        - department
+        - number
+        - title
+        - role
+        - section_term
+    DashboardCoursesSection:
+      type: object
+      description: |
+        Enrollment summary block. `current_term` is null when the
+        viewer has no enrollments. `enrolled_count` is the number
+        of courses the viewer is enrolled in for the resolved
+        current term (NOT the lifetime enrollment total). `courses`
+        is capped at 10.
+      properties:
+        enrolled_count:
+          type: integer
+          format: int32
+        current_term:
+          type: string
+          nullable: true
+        courses:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardCourseSummary'
+      required:
+        - enrolled_count
+        - current_term
+        - courses
+    DashboardStudyGuideSummary:
+      type: object
+      description: |
+        Compact study-guide payload embedded in the dashboard's
+        study_guides section. `course_department` + `course_number`
+        let the home page render a "CPTS 322 -- <title>" label.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        course_department:
+          type: string
+        course_number:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - course_department
+        - course_number
+        - updated_at
+    DashboardStudyGuidesSection:
+      type: object
+      description: |
+        Study-guide summary block. `created_count` excludes
+        soft-deleted guides. `recent` is the 5 most recently
+        updated guides the viewer created.
+      properties:
+        created_count:
+          type: integer
+          format: int32
+        recent:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardStudyGuideSummary'
+      required:
+        - created_count
+        - recent
+    DashboardSessionSummary:
+      type: object
+      description: |
+        Compact practice-session payload embedded in the dashboard's
+        practice.recent_sessions array. `score_percentage` is the
+        rounded per-session accuracy (0..100); `quiz_title` and
+        `study_guide_title` are de-normalized from the session's
+        quiz so the home page renders without follow-up GETs.
+      properties:
+        id:
+          type: string
+          format: uuid
+        quiz_title:
+          type: string
+        study_guide_title:
+          type: string
+        score_percentage:
+          type: integer
+          format: int32
+        completed_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - quiz_title
+        - study_guide_title
+        - score_percentage
+        - completed_at
+    DashboardPracticeSection:
+      type: object
+      description: |
+        Practice stats block. `sessions_completed` counts only
+        sessions where `completed_at IS NOT NULL`.
+        `total_questions_answered` is the sum of submitted answers
+        across all completed sessions (from practice_answers, not
+        the snapshot total on practice_sessions). `overall_accuracy`
+        is the rounded percentage of correct/total across completed
+        sessions; 0 when no sessions are completed (NULLIF prevents
+        division by zero). `recent_sessions` is the 5 most recently
+        completed sessions.
+      properties:
+        sessions_completed:
+          type: integer
+          format: int32
+        total_questions_answered:
+          type: integer
+          format: int32
+        overall_accuracy:
+          type: integer
+          format: int32
+        recent_sessions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardSessionSummary'
+      required:
+        - sessions_completed
+        - total_questions_answered
+        - overall_accuracy
+        - recent_sessions
+    DashboardFileSummary:
+      type: object
+      description: |
+        Compact file payload embedded in the dashboard's
+        files.recent array.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        mime_type:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - mime_type
+        - updated_at
+    DashboardFilesSection:
+      type: object
+      description: |
+        File totals block. `total_count` and `total_size` exclude
+        files in any deletion lifecycle and only count files with
+        upload_status='complete'. `total_size` is bytes (int64).
+        `recent` is the 5 most recently updated complete files.
+      properties:
+        total_count:
+          type: integer
+          format: int32
+        total_size:
+          type: integer
+          format: int64
+        recent:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardFileSummary'
+      required:
+        - total_count
+        - total_size
+        - recent
+    DashboardResponse:
+      type: object
+      description: |
+        Response envelope for GET /api/me/dashboard. All four
+        sections are always present (never null) so the frontend
+        can render the home page from a single response. Each
+        section's count fields are 0 and list fields are [] when
+        the viewer has no data in that area.
+      properties:
+        courses:
+          $ref: '#/components/schemas/DashboardCoursesSection'
+        study_guides:
+          $ref: '#/components/schemas/DashboardStudyGuidesSection'
+        practice:
+          $ref: '#/components/schemas/DashboardPracticeSection'
+        files:
+          $ref: '#/components/schemas/DashboardFilesSection'
+      required:
+        - courses
+        - study_guides
+        - practice
+        - files
+    FavoriteFileSummary:
+      type: object
+      description: |
+        Compact file payload embedded in a FavoriteItem when
+        `entity_type=file`. Same fields as RecentFileSummary -- a
+        separate schema so the favorites and recents endpoints can
+        evolve independently without one accidentally bloating the
+        other.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        mime_type:
+          type: string
+      required:
+        - id
+        - name
+        - mime_type
+    FavoriteStudyGuideSummary:
+      type: object
+      description: |
+        Compact study-guide payload embedded in a FavoriteItem when
+        `entity_type=study_guide`. Includes the parent course's
+        department + number so the sidebar can render a
+        "CPTS 322 -- <title>" label without a follow-up request.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        course_department:
+          type: string
+        course_number:
+          type: string
+      required:
+        - id
+        - title
+        - course_department
+        - course_number
+    FavoriteCourseSummary:
+      type: object
+      description: |
+        Compact course payload embedded in a FavoriteItem when
+        `entity_type=course`. Mirrors the (department, number, title)
+        triple used elsewhere in the API.
+      properties:
+        id:
+          type: string
+          format: uuid
+        department:
+          type: string
+        number:
+          type: string
+        title:
+          type: string
+      required:
+        - id
+        - department
+        - number
+        - title
+    FavoriteItem:
+      type: object
+      description: |
+        A single favorited item. Exactly one of `file`, `study_guide`,
+        or `course` is populated; the other two fields are absent
+        (not null) and `entity_type` declares which one. `entity_id`
+        mirrors the populated summary's `id` so callers can route
+        purely off the envelope without unpacking the per-type
+        payload.
+      properties:
+        entity_type:
+          type: string
+          enum:
+            - file
+            - study_guide
+            - course
+        entity_id:
+          type: string
+          format: uuid
+        favorited_at:
+          type: string
+          format: date-time
+        file:
+          $ref: '#/components/schemas/FavoriteFileSummary'
+        study_guide:
+          $ref: '#/components/schemas/FavoriteStudyGuideSummary'
+        course:
+          $ref: '#/components/schemas/FavoriteCourseSummary'
+      required:
+        - entity_type
+        - entity_id
+        - favorited_at
+    ListFavoritesResponse:
+      type: object
+      description: |
+        Response envelope for GET /api/me/favorites. `favorites` is
+        always an array (empty when the user has none).
+        `next_cursor` is required and nullable so it renders as
+        explicit JSON null on the last page (the frontend can
+        check `=== null` instead of `=== undefined`).
+      properties:
+        favorites:
+          type: array
+          items:
+            $ref: '#/components/schemas/FavoriteItem'
+        has_more:
+          type: boolean
+        next_cursor:
+          type: string
+          nullable: true
+      required:
+        - favorites
+        - has_more
+        - next_cursor
+    ToggleFavoriteResponse:
+      type: object
+      description: |
+        Result of POST /api/files/{file_id}/favorite (ASK-130),
+        POST /api/me/study-guides/{study_guide_id}/favorite (ASK-156),
+        and POST /api/me/courses/{course_id}/favorite (ASK-157).
+        `favorited` reflects the resulting state -- true when the
+        toggle inserted a row, false when it deleted one.
+        `favorited_at` is the row timestamp when favorited=true and
+        explicit JSON null when favorited=false (so the frontend can
+        check `=== null` rather than `=== undefined`).
+      properties:
+        favorited:
+          type: boolean
+          description: True if the entity is now favorited, false if just unfavorited.
+        favorited_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp when the favorite row was created. Null when unfavorited.
+      required:
+        - favorited
+        - favorited_at
+    RecentFileSummary:
+      type: object
+      description: |
+        Compact file payload embedded in a RecentItem when
+        `entity_type=file`. Only the fields the sidebar needs to render
+        a row label and an icon — full file metadata lives at
+        GET /api/files/{file_id}.
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        mime_type:
+          type: string
+      required:
+        - id
+        - name
+        - mime_type
+    RecentStudyGuideSummary:
+      type: object
+      description: |
+        Compact study-guide payload embedded in a RecentItem when
+        `entity_type=study_guide`. Includes the parent course's
+        department + number so the sidebar can render
+        "CPTS 322 -- Binary Trees Cheat Sheet" without a follow-up
+        request.
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        course_department:
+          type: string
+        course_number:
+          type: string
+      required:
+        - id
+        - title
+        - course_department
+        - course_number
+    RecentCourseSummary:
+      type: object
+      description: |
+        Compact course payload embedded in a RecentItem when
+        `entity_type=course`. Mirrors the (department, number, title)
+        triple used elsewhere in the API.
+      properties:
+        id:
+          type: string
+          format: uuid
+        department:
+          type: string
+        number:
+          type: string
+        title:
+          type: string
+      required:
+        - id
+        - department
+        - number
+        - title
+    RecentItem:
+      type: object
+      description: |
+        A single recent item. Exactly one of `file`, `study_guide`, or
+        `course` is populated; the other two fields are absent (not
+        null) and `entity_type` declares which one. `entity_id` mirrors
+        the populated summary's `id` so callers can route purely off
+        the envelope without unpacking the per-type payload.
+      properties:
+        entity_type:
+          type: string
+          enum:
+            - file
+            - study_guide
+            - course
+        entity_id:
+          type: string
+          format: uuid
+        viewed_at:
+          type: string
+          format: date-time
+        file:
+          $ref: '#/components/schemas/RecentFileSummary'
+        study_guide:
+          $ref: '#/components/schemas/RecentStudyGuideSummary'
+        course:
+          $ref: '#/components/schemas/RecentCourseSummary'
+      required:
+        - entity_type
+        - entity_id
+        - viewed_at
+    ListRecentsResponse:
+      type: object
+      description: |
+        Response envelope for GET /api/me/recents. `recents` is always
+        an array (empty when the user has no view history). A struct
+        wrapper rather than a bare array so future additions (an
+        echoed `limit`, an aggregate `total_view_count`) can land
+        backwards-compatibly.
+      properties:
+        recents:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecentItem'
+      required:
+        - recents
     AppError:
       type: object
       description: Standardized error response structure matching application error domains
@@ -265,6 +4772,12 @@ components:
             $ref: '#/components/schemas/AppError'
     NotFound:
       description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AppError'
+    Conflict:
+      description: Conflict with current resource state
       content:
         application/json:
           schema:

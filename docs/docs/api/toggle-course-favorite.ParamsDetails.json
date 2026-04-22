@@ -1,0 +1,1 @@
+{"parameters":[{"name":"course_id","in":"path","description":"The unique UUID of the course to favorite/unfavorite","required":true,"schema":{"type":"string","format":"uuid"}}]}

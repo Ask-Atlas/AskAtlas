@@ -1,0 +1,20 @@
+meta {
+  name: Join Section
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/courses/{{courseId}}/sections/{{sectionId}}/members
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Join a section as the authenticated user
+
+  Adds the authenticated user as a `student` member of the given section.
+  The role is hardcoded to `student` regardless of any fields supplied in
+  the request body. `instructor` and `ta` roles are assigned only through
+  the seeding pipeline.
+}

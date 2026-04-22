@@ -19,3 +19,14 @@ type File struct {
 	FavoritedAt  *time.Time
 	LastViewedAt *time.Time
 }
+
+// Grant represents a permission granted on a file to a specific grantee.
+type Grant struct {
+	ID          uuid.UUID
+	FileID      uuid.UUID
+	GranteeType string
+	GranteeID   uuid.UUID
+	Permission  string
+	GrantedBy   uuid.UUID
+	CreatedAt   time.Time
+}

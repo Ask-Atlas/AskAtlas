@@ -47,6 +47,23 @@ func (r *sqlcRepository) InTx(ctx context.Context, fn func(Repository) error) er
 	return nil
 }
 
+func (r *sqlcRepository) InsertFile(ctx context.Context, arg db.InsertFileParams) (db.File, error) {
+	slog.Debug("inserting file", "user_id", arg.UserID, "name", arg.Name)
+	file, err := r.queries.InsertFile(ctx, arg)
+	if err != nil {
+		return db.File{}, fmt.Errorf("InsertFile: %w", err)
+	}
+	return file, nil
+}
+
+func (r *sqlcRepository) UpdateFileStatus(ctx context.Context, arg db.UpdateFileStatusParams) error {
+	slog.Debug("updating file status", "file_id", arg.FileID, "status", arg.Status)
+	if err := r.queries.UpdateFileStatus(ctx, arg); err != nil {
+		return fmt.Errorf("UpdateFileStatus: %w", err)
+	}
+	return nil
+}
+
 func (r *sqlcRepository) GetFileIfViewable(ctx context.Context, arg db.GetFileIfViewableParams) (db.File, error) {
 	slog.Debug("getting file if viewable", "file_id", arg.FileID, "viewer_id", arg.ViewerID)
 
@@ -193,6 +210,56 @@ func (r *sqlcRepository) ListOwnedFilesMimeDesc(ctx context.Context, arg db.List
 	return files, nil
 }
 
+func (r *sqlcRepository) InsertFileGrant(ctx context.Context, arg db.InsertFileGrantParams) (db.FileGrant, error) {
+	slog.Debug("inserting file grant", "file_id", arg.FileID, "grantee_type", arg.GranteeType, "grantee_id", arg.GranteeID, "permission", arg.Permission)
+	// We deliberately do NOT translate the unique-violation here --
+	// the service layer inspects the pgconn.PgError to map sqlstate
+	// 23505 to apperrors.ErrConflict. Translating here would lose
+	// the typed error info.
+	row, err := r.queries.InsertFileGrant(ctx, arg)
+	if err != nil {
+		return db.FileGrant{}, fmt.Errorf("InsertFileGrant: %w", err)
+	}
+	return row, nil
+}
+
+func (r *sqlcRepository) RevokeFileGrant(ctx context.Context, arg db.RevokeFileGrantParams) (int64, error) {
+	slog.Debug("revoking file grant", "file_id", arg.FileID, "grantee_type", arg.GranteeType, "grantee_id", arg.GranteeID, "permission", arg.Permission)
+	rows, err := r.queries.RevokeFileGrant(ctx, arg)
+	if err != nil {
+		return 0, fmt.Errorf("RevokeFileGrant: %w", err)
+	}
+	return rows, nil
+}
+
+// checkExistsResult collapses the (int32 scan, sql.ErrNoRows) pair
+// the three Check*Exists probes share into a single ErrNotFound /
+// wrapped error / nil result.
+func checkExistsResult(_ int32, err error, label string) error {
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("%s: %w", label, apperrors.ErrNotFound)
+		}
+		return fmt.Errorf("%s: %w", label, err)
+	}
+	return nil
+}
+
+func (r *sqlcRepository) CheckUserExists(ctx context.Context, userID pgtype.UUID) error {
+	val, err := r.queries.CheckUserExists(ctx, userID)
+	return checkExistsResult(val, err, "CheckUserExists")
+}
+
+func (r *sqlcRepository) CheckCourseExists(ctx context.Context, courseID pgtype.UUID) error {
+	val, err := r.queries.CheckCourseExists(ctx, courseID)
+	return checkExistsResult(val, err, "CheckCourseExists")
+}
+
+func (r *sqlcRepository) CheckStudyGuideExists(ctx context.Context, studyGuideID pgtype.UUID) error {
+	val, err := r.queries.CheckStudyGuideExists(ctx, studyGuideID)
+	return checkExistsResult(val, err, "CheckStudyGuideExists")
+}
+
 func (r *sqlcRepository) GetFileByOwner(ctx context.Context, arg db.GetFileByOwnerParams) (db.GetFileByOwnerRow, error) {
 	slog.Debug("getting file by owner", "file_id", arg.FileID, "owner_id", arg.OwnerID)
 	file, err := r.queries.GetFileByOwner(ctx, arg)
@@ -218,6 +285,47 @@ func (r *sqlcRepository) SetFileDeletionJobID(ctx context.Context, arg db.SetFil
 	slog.Debug("setting deletion job id", "file_id", arg.FileID)
 	if err := r.queries.SetFileDeletionJobID(ctx, arg); err != nil {
 		return fmt.Errorf("SetFileDeletionJobID: %w", err)
+	}
+	return nil
+}
+
+func (r *sqlcRepository) GetFileForUpdate(ctx context.Context, fileID pgtype.UUID) (db.GetFileForUpdateRow, error) {
+	slog.Debug("getting file for update", "file_id", fileID)
+	row, err := r.queries.GetFileForUpdate(ctx, fileID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return db.GetFileForUpdateRow{}, fmt.Errorf("GetFileForUpdate: %w", apperrors.ErrNotFound)
+		}
+		return db.GetFileForUpdateRow{}, fmt.Errorf("GetFileForUpdate: %w", err)
+	}
+	return row, nil
+}
+
+func (r *sqlcRepository) PatchFile(ctx context.Context, arg db.PatchFileParams) (db.PatchFileRow, error) {
+	slog.Debug("patching file", "file_id", arg.FileID, "owner_id", arg.OwnerID)
+	row, err := r.queries.PatchFile(ctx, arg)
+	if err != nil {
+		// A concurrent DELETE between the GetFileForUpdate probe and
+		// this UPDATE drops the WHERE clause to zero rows, so the CTE
+		// scan returns sql.ErrNoRows -- map to 404 to match the spec.
+		if errors.Is(err, sql.ErrNoRows) {
+			return db.PatchFileRow{}, fmt.Errorf("PatchFile: %w", apperrors.ErrNotFound)
+		}
+		return db.PatchFileRow{}, fmt.Errorf("PatchFile: %w", err)
+	}
+	return row, nil
+}
+
+func (r *sqlcRepository) InsertFileView(ctx context.Context, arg db.InsertFileViewParams) error {
+	if err := r.queries.InsertFileView(ctx, arg); err != nil {
+		return fmt.Errorf("InsertFileView: %w", err)
+	}
+	return nil
+}
+
+func (r *sqlcRepository) UpsertFileLastViewed(ctx context.Context, arg db.UpsertFileLastViewedParams) error {
+	if err := r.queries.UpsertFileLastViewed(ctx, arg); err != nil {
+		return fmt.Errorf("UpsertFileLastViewed: %w", err)
 	}
 	return nil
 }

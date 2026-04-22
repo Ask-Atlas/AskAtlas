@@ -1,0 +1,20 @@
+meta {
+  name: Toggle Study Guide Favorite
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/me/study-guides/{{studyGuideId}}/favorite
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Toggle the study guide favorite (ASK-156)
+
+  Toggles whether the authenticated user has favorited this
+  study guide. Same toggle semantics as the file favorite
+  endpoint -- inserts when missing, deletes when present.
+  Permission-less: no enrollment or ownership check.
+}

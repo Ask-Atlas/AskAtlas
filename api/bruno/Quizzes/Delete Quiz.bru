@@ -1,0 +1,39 @@
+meta {
+  name: Delete Quiz
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{baseUrl}}/api/quizzes/{{quizId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Soft-delete a quiz
+
+  Soft-deletes the quiz by setting `deleted_at = now()` (the row
+  stays in the table; subsequent reads filter by `deleted_at IS
+  NULL` and treat the quiz as gone).
+  
+  Authorization: creator-only. The authenticated user MUST be
+  `quizzes.creator_id` for the action to proceed; any other
+  authenticated user gets 403.
+  
+  Idempotency: a second DELETE on an already-soft-deleted quiz
+  returns 404 (not 204). This is a deliberate choice -- a
+  duplicate DELETE that returned 204 would silently confirm a
+  destructive action and mask the "is this quiz still here?"
+  question the caller is actually asking. The 404 is also the
+  same response a non-creator would get for the same row, so
+  callers cannot distinguish "quiz was just deleted" from
+  "quiz never existed" or "you can't see this quiz" -- the
+  information-leak prevention covered by the unit tests.
+  
+  No cascade: practice sessions, questions, and answer options
+  are NOT touched. The quiz simply becomes invisible to the
+  list/detail endpoints. This preserves historical data for
+  completed sessions and matches the spec's "preserve practice
+  history" requirement.
+}

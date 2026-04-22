@@ -1,0 +1,36 @@
+meta {
+  name: List Favorites
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/me/favorites
+  body: none
+  auth: inherit
+}
+
+params:query {
+  entity_type: file
+  limit: 25
+  ~cursor: 
+}
+
+docs {
+  # List the authenticated user's favorited items
+
+  Returns favorites across files, study guides, and courses for
+  the authenticated user, sorted by `favorited_at DESC`. Powers
+  the sidebar "Starred" section and the `/me/saved` page.
+  Supports filtering by entity type and offset-based pagination.
+  
+  Soft-deleted entities (files in any deletion lifecycle,
+  soft-deleted study guides) are excluded. Courses have no
+  soft-delete and are always eligible.
+  
+  The `cursor` is opaque -- callers must pass back the
+  `next_cursor` from the previous response verbatim. The wire
+  contract is opaque so a future migration to keyset
+  pagination is non-breaking. `next_cursor` is required and
+  nullable so it renders as explicit JSON null on the last page.
+}

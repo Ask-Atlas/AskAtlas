@@ -1,0 +1,28 @@
+meta {
+  name: Delete Study Guide
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Soft-delete a study guide
+
+  Soft-deletes the guide (`study_guides.deleted_at = now()`) and
+  cascades to all child quizzes (`quizzes.deleted_at = now()`)
+  atomically in a single transaction. Application-level cascade
+  (not DB CASCADE) so quizzes keep their own deleted_at lifecycle
+  for any future undelete workflow.
+  
+  Creator-only: 403 if the viewer is not the guide's creator. 404
+  for missing or already-deleted guides. Order of checks:
+    1. Fetch + lock guide row.
+    2. 404 if missing or deleted_at IS NOT NULL.
+    3. 403 if creator_id != viewer_id.
+    4. UPDATE guide + child quizzes, COMMIT.
+}

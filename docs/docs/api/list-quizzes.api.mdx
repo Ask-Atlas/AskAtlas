@@ -1,0 +1,82 @@
+---
+id: list-quizzes
+title: "List quizzes attached to a study guide"
+description: "Returns every non-soft-deleted quiz attached to the given study"
+sidebar_label: "List quizzes attached to a study guide"
+hide_title: true
+hide_table_of_contents: true
+api: eJztWE1vGzcQ/SsDnmxkZTuF24Pai5ukgYs2Te0EPXgNi16OtGy4wzU5tCsL+u/FcFfy6iNpixZIDzlZMjnDmffeDDlaKN9i0Gw9nRs1Vj/ZyL8m+/iIURXKYKyCbWVVjdUFcgoUAe8xzIE8jaKf8sigQ0YDd8k+gmbWVY0G2APXCDN7jwSRk5mXNEvWYAEPluu8WAXU7AMctMHe62oOU+d9GIM18AymNkS+Id0gPCvJ6dUXT25+CJoMaIgY7jGMKt+0SUKY3CWMEu1N5RPx5Aj6XErSAcEHgwEN3M5hks9Gc6MZXr66fDGBA8IHjNyde9hHObFmAjqWJOEaZAyNJRvZVsAWbwPqDxjAE1iDxLbSDtg2GFk3bTwqqaQ3Hlo9s5QhhtEIWgw5+bcXL4sOGMi4ROB5Kx7cHGofGXRJtSYzTQ78NKP7iBEOvnt+0qUvTtqgK7YVyhkIAclgiLLSgHauJEvgCWHmj+CNpxVVI8FQUKg8RQ6pyrEdkIeJpcolgzf9zklJ7Gczh4ffCtw7dJNoAWIKU11hl/BKJacnp/BQI+U4B3mC8RiBPAP+YSPDLxdgI1iO6KYlDY8ooLEh+GBp9uSkx6o/UjK4F+Q9HZWkCtXqoBvhKarx1UKJYtRYZcubbHpjjSqUFT23musdkb+rERLZu4Tw/v35S4F+O4GH2kdcE8IenI2sChXwLtmARo05JCxUrGpstBovFM/bLgzJRRVq6kOjWY1VStao5fJajGPrKWKU/V+dnMifzcjO8jlDLWwX2yDII1WoyhMjsXjSbetslTV4/HsUd4vd8Pzt71jxDiJnudR7EaOByjuHnWQGsUx9yFIbxgDvaiwptliBQWdvpdGgm4NvLMetsthbAyVN8SHXiyZgpKfM/5n+Y+2510eQfse2w7l3N8BAh6DnIhDGJv41Ni980+qKu2Jo9dx5bSDkCuj6zOtX7+BYt/Y44zLqsjxeWLM87g8/KunCVvUqS2lYl6lpdJjDwUNtqxqwuUUTwVIU9V2Ko9fi5yWytu6iF05JAorNlFtPGcPIeh5BWlaj3eEY+uqOe7tvSR9rv7DVfQsYoFAIGSU9tT2Ifg83laaen7yYAat0MLnP+sQlaZh65/zDKLUZNk9PO01OdR+F1vyNAisUW3a4u3O5ReiuJ0rO6VuxlaJeFmrzihmYCPQzDMPTLfE3p6pQmYHUqPHJslA97n9fXCliWIsrRTSgOwYnvauJFKLeLL1L3WBJGxermF12lfuzaCqspCP1Rx6w0dYV8qlyGD7cWPMvAH/Sz17U14ras7octtIrlRv2wN3Q+HrNrHrRYdHXjloBna/4T0ZsNONI5Cs2qTX/0GZftF1Mm3zuKOdJCRuhbsQwyE8ag7zOzhmbFXFquX38qqMNDAdPuqHdslCnJ893r5n3pBPXPthHNP/dJXLJmowORrwCyq0OqxsPuidICgiN5qqW635wVL/b+EZbijtyrLzBPUW4LFRkzSnuVV+DMerZx/qBtJq9vV8bY7ve+nYjhm39bnGSQ1zH83T6gKOztn0laa6JOd0l5o1nmPpEX1j5TKx8ve9Vdk6MgbTrZ5EOly8MfQ6GcoBce5ljZ8h5GuBajdXW42tzGlg/xOSozGE3OqTgxFS3Vsn7PGKVguV5XvsedcBwlsT71fVw+VJ47bIbblrnWjO3qh8N5Ptt3qSK/sMPqwvmx9/e5avF0tRn81XC8cMZOx3h7O25KpRE2wnl+dHJ0Ynw0PrIjc4i66cfuQD2zgwbT4Zt6S2eJPxl8v8y+f/vJ/++wBj/4OPWaUv5OSdFvOj7wJUa9gFVqPHO7wKD55MwITaLxa2O+D645VL+fZcwSBO4LtS9DrYbDa4Wytgon40aT7WL+IliOrjoe9wh/IsfG/amuxpiSUbYe+2SfFOF+oDz3V9BltfLQtWoDYacQbfprKqw5YH5zu0l7W7dZ1+/kj71J9yLOhY=
+sidebar_class_name: "get api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"List quizzes attached to a study guide"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/study-guides/{study_guide_id}/quizzes"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Returns every non-soft-deleted quiz attached to the given study
+guide, with the creator (privacy floor: id + first_name +
+last_name only) and a server-computed `question_count`. Quizzes
+are ordered by `created_at DESC` (newest first), with `id` as
+the deterministic tiebreaker on identical timestamps.
+
+No pagination -- per the PRD, study guides typically host a
+handful of quizzes (&lt;10) and the practice page renders them all
+in one go. Non-deleted-only by construction (no `include_deleted`
+toggle); a soft-deleted quiz never surfaces.
+
+Returns 404 when the study guide does not exist OR is itself
+soft-deleted, mirroring the studyguides surface convention.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./list-quizzes.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./list-quizzes.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./list-quizzes.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

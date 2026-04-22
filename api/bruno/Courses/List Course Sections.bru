@@ -1,0 +1,45 @@
+meta {
+  name: List Course Sections
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/courses/{{courseId}}/sections
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~term: 
+}
+
+docs {
+  # List sections for a course
+
+  Returns every section attached to the given course, with a live
+  `member_count` and an optional exact-match `term` filter. Used
+  by the course detail page when the caller needs the dedicated
+  sections payload (with `course_id` + `created_at`) rather than
+  the slimmer inline sections embedded in `GET /courses/{id}`.
+  
+  Sorted by `term DESC, section_code ASC` (most-recent term first;
+  within a term, section codes ascend). No pagination -- a course
+  typically has fewer than 10 sections.
+  
+  404 dispatch: a missing course (no row matches `course_id`) is
+  a single 404 with "Course not found"; an existing course with
+  zero matching sections (filtered out by `term` or just empty)
+  returns 200 with `sections: []`. The two are intentionally
+  distinguishable so the frontend can show a "no sections in this
+  term" empty state vs a generic not-found page.
+  
+  Term filter:
+    * Exact match (no ILIKE, no trigram). Term values are
+      structured strings like "Spring 2026" so case-insensitive
+      matching would only mask typos, not real intent.
+    * Empty string is treated as "no filter" (defensive: a
+      client clearing the input shouldn't send an empty
+      string to the server, but if it does the server treats
+      it as if no filter was supplied).
+}

@@ -1,0 +1,74 @@
+---
+id: cast-study-guide-vote
+title: "Cast or change a vote on a study guide"
+description: "Upserts the authenticated user's vote on the guide. Same-direction"
+sidebar_label: "Cast or change a vote on a study guide"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV01vGzcQ/SsDXpoAK9kp3B6Uk526qYuiTSy7OUiCM16OtEx2SYYcRlGF/e/FcFeWbKlBmwbIxb5Yuzvf7w1nuFbOU0A2zl5oNVIvMPKYk169TEbTn45JFUpTLIPxIqRG6tpHChyBKwJMXJFlUyKThhQpfBfho2MCZ7PAQswMYYwNDbQJVIqRqQ00iOm2MRwBA4F1A+fjc3Deu2h4RxQ2YvPa+GxRrA+n9pI4BdtF4V3kQcphwVv5fhNLF+gtRJe/X19AiRaS18gES8OVSzy1CIHmxGU1hLGb80BTTZJGjjlCyB7g5PhkCC8CIbsQocHVJr+p5YpMALe0G5Un1kGkej7IIoEiB5PTeDqcWlUojwEbYgpRjSZrZbEhNVJR6n2TTdwYrQplpMweudqr/VVFkKz5kAiury9+AjfPCWYLXRDAbhOgKlSgD8kE0mrEIVGhYllRg2q0Vrzyne9g7EIVau5Cg6xGKiWjVdvOOmWKfOb0SjQe2iqdZbIsn9D7WjhgnD16FyXS9b4rd/uOSt5L6bLzArdOr2DuArz6Y3wFR+jNUU5r0NX2aH2/TO2RZBmHU5sRfwum44KmKEHCHYMekg92iDe1HfMAOSuPX/8GNa4owBN57Cn15pfzy3Moa0yRIL43vvMU3HJqG6fNvE8dlhXZrvgmQrJlhXZBeoN9kE5jQ1FqIlKHYCCbGjWaqOSlUG5p1axtd3GcdKqzQrHhmvqWlUbtC6nattOI3tnYefv++Fj+3S+86EBGjvTznu19ZhRTzcYuIDIyDdVXBLuL6svR/qe+z5E+aHiPXFYgWNeuxHpqt2fD5hQAhLmra7ccJA8vz6/+L1aF2vrY0TGWaUFht8+M5R9P1EFw7xk5iHRXxR7qk0PonqGGvoG/HnxjRqsxaPMXaaAQXIANzyBySCWnQNBI2YU9O656ae0aNDbulbh0+lC52kIJrinul78tVEMx4uIANK3EzWjqeCgl1NpISFi/uhfDAxsPkckh3sWz9b6Dz6n355LmHS7P9nG5tjIzXZASPgLzrYA52Qfmd8cwd8k+ovKNUPnh0DF2YZmCxRoihY8Uuro8IvQtEMoBcuXkmiCTN++zXKmR+jejWzxlCLvVN4VaFNEbJatmpDIFw6v87YwwUDhNYnsy2/08Fli75HaF7lKtmGUWZ/Tl+TYLqaL/8fNm9v765ipPXqHL5XbLPf+Eja9pO/NltLeyj89d9rIpS3x/yjVGOH11IcOaQuzo9Gx4PDwWDalPg5mK/ZIvsxtcgG4pBLy7JeHu9v6QoOst0R/vXV9+7+rpwfSJj3yNxgpGmYLrnsMTtcthVajR3q2so/GsUJWQfzRR6/UtRroOddvK6w+JghB4VqiPGAzeClcma6VNlN9ajeZYR/oMwk8u+/Z8Cv/1oncww/4l2pWEj3WSJ1Wo97Tav3a2srxWhJpCDrsTetEFN7gSU1sje2duW2w0TsuSPH9WdrZzksj+Lw3aXzKbfG6qgEu5veKyC9jlYuW+z+/Wqka7SPmsVJ1N+fsbpPbxog==
+sidebar_class_name: "post api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Cast or change a vote on a study guide"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/study-guides/{study_guide_id}/votes"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Upserts the authenticated user's vote on the guide. Same-direction
+re-submits are no-ops; opposite-direction submits flip the vote.
+Returns the post-upsert `vote_score` so the UI can update without
+a refetch. Soft-deleted guides return 404. Creators may vote on
+their own guides (no self-vote restriction).
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./cast-study-guide-vote.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./cast-study-guide-vote.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./cast-study-guide-vote.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

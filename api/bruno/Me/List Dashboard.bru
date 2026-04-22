@@ -1,0 +1,36 @@
+meta {
+  name: List Dashboard
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/me/dashboard
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Aggregated dashboard data for the authenticated user
+
+  Returns the home-page dashboard payload in a single response:
+  enrolled courses for the current term, recently updated study
+  guides the viewer created, practice stats + recent sessions,
+  and file totals + recent files.
+  
+  Each section is independent. A user with no enrollments,
+  no guides, no sessions, or no files gets zeros and empty
+  arrays in the relevant section -- the whole endpoint never
+  404s and never partially fails (a DB error in any one
+  section returns 500).
+  
+  Soft-deleted entities (study guides with `deleted_at`,
+  files in any deletion lifecycle) are excluded everywhere
+  they appear -- counts, lists, and aggregate sums.
+  
+  "Current term" resolution waterfall:
+    1. Active sections covering today (start_date <= today <= end_date).
+    2. Most recently ended term (end_date < today, ordered DESC).
+    3. Lexicographically latest term string (when no dates exist).
+  Returns null when the user has no enrollments at all.
+}

@@ -46,20 +46,25 @@ func NullUploadStatus(s *string) db.NullUploadStatus {
 	return db.NullUploadStatus{UploadStatus: db.UploadStatus(*s), Valid: true}
 }
 
-// NullMimeType converts a string pointer to a db.NullMimeType.
-func NullMimeType(s *string) db.NullMimeType {
-	if s == nil {
-		return db.NullMimeType{}
-	}
-	return db.NullMimeType{MimeType: db.MimeType(*s), Valid: true}
-}
-
 // TimestamptzPtr converts a pgtype.Timestamptz to a time.Time pointer.
 func TimestamptzPtr(t pgtype.Timestamptz) *time.Time {
 	if !t.Valid {
 		return nil
 	}
 	return &t.Time
+}
+
+// TextPtr converts a pgtype.Text into a *string pointer, returning nil
+// for SQL NULL. Use this in mappers when the column is nullable and
+// the wire shape wants JSON null (not empty string) on absence. Three
+// domain packages were each carrying their own local textPtr; this
+// shared helper is the single source of truth.
+func TextPtr(t pgtype.Text) *string {
+	if !t.Valid {
+		return nil
+	}
+	s := t.String
+	return &s
 }
 
 // PgxToGoogleUUID converts a pgtype.UUID to a standard Google UUID.

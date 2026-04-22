@@ -1,0 +1,76 @@
+---
+id: create-file
+title: "Create a file metadata record (ASK-105)"
+description: "Creates a file metadata record in `pending` status. Called"
+sidebar_label: "Create a file metadata record (ASK-105)"
+hide_title: true
+hide_table_of_contents: true
+api: eJztWE1vGzcQ/SsETwm6luXYTgvlJBt2mzZoDMtBD5Jgj5YjiQ6XZMhZ2Yqg/14MdyWtZNWF0QDpIb54yeHnvPeGM1pI5zEAaWffK9mR5wGB8FIblJlUGPOgPRvXpihAjLVBUSCBAgIRMHdBCW3FnUertJ3ciUhAZWyJczAG1cCO5oKmKP7ER2rdRxExzDAIiKl3rEMkEQm9cOPUU3rjQImxcQ/ZwJ5dXH68vkiG3Gi0VNujICd6x2KmQYDwAaOeWFTi0/UHHjywO9tN0PJVkTs88JeZt8TNFMWvTnSv3guLMwwDS67Mpxh56bEL680ODoQm4ayZiwIsTDDu+iC2BrYrYjmK+KXkc151b85/E4fg9SH7LB4utFoKCmCjZq9W968mD+w4uKLhQ3LiLneFN0h4J1wQd2PQBtVda2BlJgPvEenMqbnsLFJTB1SyQ6HETObOElpiE3hvdJ4wPryPjOVCxnyKBfAXzT3KjnSje8zpCehXME9QkBN5wl+AsPiwnwKvur0/Do7ap69bA5uQD+IVzb3OwZh9BHjdgIStvWPxGecDC1YJH9xMK4zs8ykGfJdGNIES2zgNbA1UBemKlbE+916CvhMwsE/wauKj6d9w8IEVRBoje9NCgQ2vRgraTmQmC20/oJ3QVHaOMlnA46r15vR0yeYCb6s5T+eiLQvZ6UtdwAQP7z1yZ9XwdvP9gCMvsy20vRrv9MysajmP9rEwYxcKoHjgxmOdo3J5WaCl1oMLygeXY4zaTgrTWllevBIrEi2l4YXZaspMEj7SoTeg7c7C6MvRT1+1l8NlJqP+2vSJtoQTDDKT1Z5V19uTysO6YEdV/q2/2ye/nP78tt3mpY5vP+P8ReActd+c7CqidywqrTBX1wRWog5xeeJ9S/TIBVQC4oGOwtmBrSKdWTFzi8/KYRTWkZiB0YpVRlMdBxYmoG0k0Ttmri2XWUPm/YprTe7U7lpfdZhJ0mRwK65fV3FDLpfVetE7Gyvyvmkf8b/t+17uU3pDU7WkakXJbxZ5zmvJbfb2dSyqxo14U7B1eEaVnPtEj1rtA3xNnrLUSi6zf5DtC/j3vIZ5oco9+0y1M2+Bnj0r8+KAdIE8p/TqxXPGMHNBv2hWJm1pDIyYQ/yuLDNpINLtTOPDf1pnh8payWzF55rDW7Rec2vjqi0fNJhecbxidU3yk3b7Ka/PQIn6Df12pO0RWAVB6a+oBIbgglgpTEQKZU5lQFEA5dNE381W9WjlCpb8Ex7nTu3j4fPEKjBGmOzno0ICbeK+K4FS6fUDc7V1hp01djFMR2xgtdq9gU3X+wu+5hqXPfHmk4WSpi6wC38A832AOd0nmPeWMFgwq3Q6+eUHQt8DoXRAmjqu2LxLAcwDJyyyqjN4rQRSlJ3+QpbBsAm8lsshm/IyaJon2xlCwNAteXZ/2DT3GLjq+M1B68tMiTjfTPhye5QGyaz+uFy9Ar//dZNSFybE9aZouXgEfuA3SXMzH1u/pNtJb/Uatze5XAMVbccunW7lsPi5SwYiJ1gyk+yMimhHrXarzTPYcwXYxgnOVyXO8+XNLncXGw38qJL/X1VyzaJGscHJE+thUUumLyvJDDM5ZSl1+nKxGEHET8Esl9z9pcTAYhlmcgZBV1lMn6uTKYLCkHRU0fG84sHBTZW3zMCUvP2TuLjMVjO6eY6enh07bKj96mPvhiVWV/1Fim0ywAP/IgAPsiNlJl3iZVJu6ltIA3ZSpngmqzX572/YHEyy
+sidebar_class_name: "post api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Create a file metadata record (ASK-105)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/files"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Creates a file metadata record in `pending` status. Called
+by the Next.js server as the first step of the upload flow,
+BEFORE the client uploads to S3 via a presigned URL the
+Next.js server generates separately. The Go API never
+touches S3 for uploads -- it only manages metadata records.
+A subsequent PATCH /api/files/\{id\} transitions the record
+from `pending` to `complete` or `failed`.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  parameters={undefined}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./create-file.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./create-file.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

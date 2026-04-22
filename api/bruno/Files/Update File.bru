@@ -1,0 +1,34 @@
+meta {
+  name: Update File
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/api/files/{{fileId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "string",
+    "status": "complete"
+  }
+}
+
+docs {
+  # Update file metadata and status (ASK-113)
+
+  Updates file metadata (rename) and/or transitions the upload
+  status. Called by the Next.js server after the presigned-URL
+  upload completes (or fails) to move the record from `pending`
+  to `complete` or `failed`. Also supports standalone renaming
+  of any non-deleted file the caller owns.
+  
+  Both fields are optional but at least one must be provided.
+  
+  Status transitions are restricted: only `pending -> complete`
+  and `pending -> failed` are allowed. All other combinations
+  return 400 INVALID_TRANSITION.
+}

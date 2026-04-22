@@ -1,0 +1,62 @@
+meta {
+  name: Add Quiz Question
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/quizzes/{{quizId}}/questions
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "correct_answer": null,
+    "feedback_correct": "string",
+    "feedback_incorrect": "string",
+    "hint": "string",
+    "options": [
+      {
+        "is_correct": false,
+        "text": "string"
+      }
+    ],
+    "question": "string",
+    "sort_order": 0,
+    "type": "multiple-choice"
+  }
+}
+
+docs {
+  # Add a question to an existing quiz
+
+  Appends a single question (with its answer options for MCQ, or
+  the auto-expanded True/False option pair for TF) to an
+  existing quiz. The validation rules are identical to the
+  per-question rules on POST /api/study-guides/{id}/quizzes --
+  same `type` enum, same per-type `correct_answer` typing, same
+  MCQ option counts and "exactly one correct" invariant.
+  
+  Authorization: creator-only. The authenticated user MUST be
+  `quizzes.creator_id`; any other authenticated user gets 403.
+  
+  Per-quiz cap: a quiz can hold at most 100 questions. The
+  count is taken inside the same transaction as the insert so
+  a concurrent add cannot push the quiz over the cap.
+  
+  `quizzes.updated_at` is refreshed on every successful add.
+  Active practice sessions are NOT affected -- the new
+  question is not retro-injected into existing
+  `practice_session_questions` snapshots; only sessions started
+  after the add will include it.
+  
+  404 covers BOTH the quiz being missing/soft-deleted AND the
+  parent study guide being soft-deleted (same convention as
+  PATCH /quizzes/{quiz_id}).
+  
+  Default `sort_order`: when omitted, defaults to the current
+  question count (so the new question lands at the end of the
+  existing sequence). An explicit value is honored verbatim --
+  callers may interleave with existing questions if they want.
+}

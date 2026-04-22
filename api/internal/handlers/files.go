@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -13,11 +15,21 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// maxFileSizeBytes is the upper bound on file size that a client may declare (100 MB).
+const maxFileSizeBytes int64 = 100 * 1024 * 1024
+
+// maxS3KeyLength caps the s3_key field on POST /files (ASK-105).
+// Matches the openapi.yaml maxLength on CreateFileRequest.s3_key.
+const maxS3KeyLength = 1024
+
 // FileService defines the application logic required by the FileHandler.
 type FileService interface {
+	CreateFile(ctx context.Context, params files.CreateFileParams) (files.File, error)
 	GetFile(ctx context.Context, params files.GetFileParams) (files.File, error)
 	ListFiles(ctx context.Context, params files.ListFilesParams) ([]files.File, *string, error)
 	DeleteFile(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher) error
+	UpdateFile(ctx context.Context, params files.UpdateFileParams) (files.File, error)
+	RecordFileView(ctx context.Context, viewerID, fileID uuid.UUID) error
 }
 
 // FileHandler manages incoming HTTP requests relating to File operations.
@@ -29,6 +41,73 @@ type FileHandler struct {
 // NewFileHandler creates a new FileHandler backed by the given FileService.
 func NewFileHandler(service FileService, publisher files.QStashPublisher) *FileHandler {
 	return &FileHandler{service: service, publisher: publisher}
+}
+
+// CreateFile handles POST /api/files (ASK-105). Creates a `pending`
+// file metadata record. The caller (typically the Next.js server)
+// generates the S3 key and provides it in the request body; this
+// handler trusts the key and stores it as-is. The Go API never
+// touches S3 for uploads -- the upload itself happens client-side
+// against an S3 presigned URL the Next.js server generates.
+func (h *FileHandler) CreateFile(w http.ResponseWriter, r *http.Request) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	var body api.CreateFileJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", nil))
+		return
+	}
+
+	// Defense-in-depth validation. The openapi wrapper enforces the
+	// minLength/maxLength/enum/min/max bounds before this handler
+	// runs, but we re-validate here so internal Go callers that
+	// bypass the wrapper still get clear errors.
+	errDetails := make(map[string]string)
+	trimmedName := strings.TrimSpace(body.Name)
+	if trimmedName == "" {
+		errDetails["name"] = "must not be empty"
+	} else if len(trimmedName) > 255 {
+		errDetails["name"] = "must not exceed 255 characters"
+	}
+	if body.Size < 1 || body.Size > maxFileSizeBytes {
+		errDetails["size"] = fmt.Sprintf("must be between 1 and %d bytes", maxFileSizeBytes)
+	}
+	if !body.MimeType.Valid() {
+		errDetails["mime_type"] = "unsupported mime type"
+	}
+	if body.S3Key == "" {
+		errDetails["s3_key"] = "must not be empty"
+	} else if len(body.S3Key) > maxS3KeyLength {
+		errDetails["s3_key"] = fmt.Sprintf("must not exceed %d characters", maxS3KeyLength)
+	}
+	if len(errDetails) > 0 {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", errDetails))
+		return
+	}
+
+	params := files.CreateFileParams{
+		UserID:   viewerID,
+		Name:     trimmedName,
+		MimeType: string(body.MimeType),
+		Size:     body.Size,
+		S3Key:    body.S3Key,
+	}
+
+	file, err := h.service.CreateFile(r.Context(), params)
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("CreateFile failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusCreated, toDTOFileResponse(file))
 }
 
 // DeleteFile handles requests to delete a single file by its unique identifier.
@@ -54,6 +133,83 @@ func (h *FileHandler) DeleteFile(w http.ResponseWriter, r *http.Request, fileId 
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// RecordFileView handles POST /api/files/{file_id}/view (ASK-134).
+// Logs an analytics row in file_views and bumps file_last_viewed for
+// the (viewer, file) pair so the recents sidebar reflects the new
+// timestamp. Service enforces existence (404 for missing or
+// soft-deleted files) and runs both writes sequentially without a
+// transaction (partial failure is acceptable per spec). Returns
+// 204 No Content on success.
+func (h *FileHandler) RecordFileView(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	if err := h.service.RecordFileView(r.Context(), viewerID, uuid.UUID(fileId)); err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("RecordFileView failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// UpdateFile handles PATCH /api/files/{file_id} (ASK-113). Both
+// `name` and `status` are optional but at least one must be provided
+// -- the service enforces the at-least-one rule and the per-field
+// validation (length, allowed chars, status enum, transition).
+//
+// The handler trusts the openapi-codegen wrapper to reject completely
+// malformed JSON before this runs; an explicit decode error here just
+// means the wrapper passed through a payload we still couldn't parse,
+// so it surfaces as a generic 400.
+func (h *FileHandler) UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	var body api.UpdateFileRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("Invalid request body", nil))
+		return
+	}
+
+	// Reshape the openapi typed enum into a plain *string so the
+	// service can validate it without reaching back into api.* types.
+	var statusPtr *string
+	if body.Status != nil {
+		s := string(*body.Status)
+		statusPtr = &s
+	}
+
+	params := files.UpdateFileParams{
+		FileID:   uuid.UUID(fileId),
+		OwnerID:  viewerID,
+		ViewerID: viewerID,
+		Name:     body.Name,
+		Status:   statusPtr,
+	}
+
+	file, err := h.service.UpdateFile(r.Context(), params)
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("UpdateFile failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	respondJSON(w, http.StatusOK, toDTOFileResponse(file))
 }
 
 // GetFile handles requests to retrieve a single file by its unique identifier.

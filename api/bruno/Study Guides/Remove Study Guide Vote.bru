@@ -1,0 +1,22 @@
+meta {
+  name: Remove Study Guide Vote
+  type: http
+  seq: 13
+}
+
+delete {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}/votes
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Remove the authenticated user's vote on a study guide
+
+  Hard-deletes the row in `study_guide_votes` for the
+  (viewer, guide) pair, returning the user to a neutral state.
+  Returns 404 when the guide is missing/soft-deleted OR when the
+  viewer has no existing vote -- both surfaces are collapsed to
+  404 by design (the desired state is "no vote", which is reached
+  in either case from the caller's point of view).
+}

@@ -1,0 +1,36 @@
+meta {
+  name: Delete Quiz Question
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/api/quizzes/{{quizId}}/questions/{{questionId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Delete a question from a quiz (ASK-119)
+
+  Hard-delete one question from a quiz. The `quiz_answer_options`
+  for the question CASCADE-delete; references from
+  `practice_session_questions.question_id` and
+  `practice_answers.question_id` are SET NULL so historical
+  session data is preserved with a NULL question reference.
+  
+  A quiz must always carry at least 1 question; an attempt to
+  delete the last remaining question returns 400 with
+  `"quiz must have at least 1 question"`. The count check runs
+  inside the same transaction as the delete so two concurrent
+  deletes on a 2-question quiz can't both succeed.
+  
+  Authorization: creator-only. The authenticated user must be
+  `quizzes.creator_id`; any other authenticated user gets 403.
+  
+  404 covers all of: quiz missing/soft-deleted, parent study
+  guide soft-deleted, question missing, question belonging to a
+  different quiz.
+  
+  `quizzes.updated_at` is refreshed on every successful delete.
+}

@@ -2,11 +2,35 @@
 package api
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
+	"github.com/getkin/kin-openapi/openapi3filter"
 )
+
+// BearerAuthFunc is an openapi3filter.AuthenticationFunc that asserts the
+// operation's security scheme is HTTP bearer and that an Authorization:
+// Bearer header is present. It does not verify the token.
+func BearerAuthFunc(_ context.Context, input *openapi3filter.AuthenticationInput) error {
+	scheme := input.SecurityScheme
+	if scheme == nil || scheme.Type != "http" || !strings.EqualFold(scheme.Scheme, "bearer") {
+		return fmt.Errorf("unsupported security scheme %q", input.SecuritySchemeName)
+	}
+	header := input.RequestValidationInput.Request.Header.Get("Authorization")
+	if header == "" {
+		return errors.New("missing Authorization header")
+	}
+	const prefix = "Bearer "
+	if len(header) <= len(prefix) || !strings.EqualFold(header[:len(prefix)], prefix) {
+		return errors.New("Authorization header must use Bearer scheme")
+	}
+	return nil
+}
 
 var paramErrorRegex = regexp.MustCompile(`^parameter "([^"]+)"(?: in [^ ]+)? has an error: (.+)$`)
 

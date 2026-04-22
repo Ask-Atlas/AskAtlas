@@ -1,0 +1,29 @@
+meta {
+  name: List Quizzes
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}/quizzes
+  body: none
+  auth: inherit
+}
+
+docs {
+  # List quizzes attached to a study guide
+
+  Returns every non-soft-deleted quiz attached to the given study
+  guide, with the creator (privacy floor: id + first_name +
+  last_name only) and a server-computed `question_count`. Quizzes
+  are ordered by `created_at DESC` (newest first), with `id` as
+  the deterministic tiebreaker on identical timestamps.
+  
+  No pagination -- per the PRD, study guides typically host a
+  handful of quizzes (<10) and the practice page renders them all
+  in one go. Non-deleted-only by construction (no `include_deleted`
+  toggle); a soft-deleted quiz never surfaces.
+  
+  Returns 404 when the study guide does not exist OR is itself
+  soft-deleted, mirroring the studyguides surface convention.
+}

@@ -1,0 +1,19 @@
+meta {
+  name: Toggle Course Favorite
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/me/courses/{{courseId}}/favorite
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Toggle the course favorite (ASK-157)
+
+  Toggles whether the authenticated user has favorited this
+  course. Same toggle semantics as the file favorite endpoint.
+  Permission-less: no enrollment check.
+}

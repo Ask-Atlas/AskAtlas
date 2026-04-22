@@ -1,0 +1,80 @@
+---
+id: remove-study-guide-recommendation
+title: "Remove the authenticated user's recommendation on a study guide"
+description: "Hard-deletes the (viewer, guide) row in"
+sidebar_label: "Remove the authenticated user's recommendation on a study guide"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV01v20YQ/SuDudgGaMlp3Qt7khGncVE0hi2jB9NIVtyxuAm5S88O5SoC/3sxS8XWhxH05otPEpfz8WbfzPLtCkNLbMQFf2ExxytqwoKupbPLPzpn6YrK0DTkbTLBDC3Fkl2bnnL8aNgeW6pJKIJUBIcLR4/EGczV+wg4PILzhf8SNeTntPqZt4LGLyOYdFIFdt/TAjSOOfAQ8PLT9bTw0VnKYYgNTRcFyo6ZvNRLqEJtwfko3JUSeDydgPPJN2U7iIUvQ8eR4NDAfeCGGKYTeKwC1CFKsuRQE5TGHwg0xps56apjCLUt/A5cOD5OPm2oXbkEF6HANRqgmhZGyB6ngF0kjoUPvl4WeDQqfOFPT06hDAviCGefph+hwAQSGhej8/PxsJe2QDDeQoHrkj0tiDeQkAWpXBwqLFAhzZZgKbq5zyA6X6YK0gqTBfK28FGM0IDXB9iuCu45NOsNLjCDx8qVldoymbIim0gkJxUxlCbSYK8pSlPXxAcR2uC8QLhPUUaFNktr2DQkxBHz2xV60xDmuNkKzmKGTlupNVLt9de0Iui8e+gIbm4u3mt0zZkiDMVjhkwPnVaJuXBHGcayosZgvkJZtkNCdn6OGSr7RjDHrnMW+/5OnWMbfKSo9r+cnOrPNobtEQBOE2J/h7SHgzPMgl2OsM/w9ORkP8KZsaAgKQpmWAYv5EXNTNvWrkxxx1+j2q720YfZVyplb2uuxXhr2Lrvyq8OzDOcYRY6JmiMlJXzc9hItba2oTHOR6WJ9RAQN2xCGSxtpHdeaE6sxWkDdXF/Y/sMG4rRzOnFd5bEuDq+VJKx1ikkU19uYdiJ0febLN8OEJ/wPGe/y1Cc1Oo6adtzLVOdEy/v9nm58WZ97pB9I+a1iPl1n5gPgWfOWvJvrLwWKy8chH8HgfvQ+bdZeSVWfnvp43LhhdibGiLxgnjYlzeGXoOhBFCqoEJ6EHJJA0mFOY6TZjlOmiWOV9saqB/vaEzNmugchFPHtYYwrUPVLJHKjp0s07szMkysAhrz27vN19dK8VDoptFT2ZVIi2u5pM+zZITZ+s+HH2Lpz3+mqLU5fx+S+4/a47eJ1CbC5PICM1S0Q8+8G52MTpSSNkRpTOq3tfYb7hdJxOm3l7xot5BNWvkg7qrS4MHsqL2t9lw9t/nbXeTtLvKzu8i66YX+lXFbG+e1QdNgrdYzeoubM4oZ5ns3ld0xvcuwClHUd7WamUg3XPe9Lj90xDqgdxkuDDsz05G5XaF1Uf9bzO9NHekn/Xx4tT6KjuB/XYNeLHC9aPxSJ9TUnT5hht9ouX8T6+/6DCsyljhhHYwmZUmtbLjvfU700Hk6+N6f/3U+Pce+/w82gcw8
+sidebar_class_name: "delete api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Remove the authenticated user's recommendation on a study guide"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"delete"}
+  path={"/study-guides/{study_guide_id}/recommendations"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Hard-deletes the (viewer, guide) row in
+`study_guide_recommendations`. Authorization mirrors the POST
+side: viewer must currently hold instructor/TA in the guide's
+course (a former TA who lost the role can't manage their old
+recommendations -- the policy is "current elevated-role users
+only").
+
+404 covers BOTH "guide missing/deleted" and "viewer never
+recommended this guide" -- by design, since the desired end
+state is "no recommendation from viewer", which is reached in
+either case from the caller's point of view.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./remove-study-guide-recommendation.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./remove-study-guide-recommendation.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./remove-study-guide-recommendation.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

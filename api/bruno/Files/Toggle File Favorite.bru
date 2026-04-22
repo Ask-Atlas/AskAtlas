@@ -1,0 +1,25 @@
+meta {
+  name: Toggle File Favorite
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/files/{{fileId}}/favorite
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Toggle the file favorite (ASK-130)
+
+  Toggles whether the authenticated user has favorited this file.
+  If not favorited, inserts a `file_favorites` row and returns
+  `{favorited: true, favorited_at: <NOW>}`. If already favorited,
+  deletes the row and returns `{favorited: false, favorited_at: null}`.
+  
+  Favoriting is intentionally permission-less: any authenticated
+  user can favorite any non-deleted file. This is a personal
+  bookmark, not an access-control action -- the favorites list
+  endpoint already filters down to files the viewer can see.
+}

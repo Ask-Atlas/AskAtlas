@@ -1,0 +1,25 @@
+meta {
+  name: List My Enrollments
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/me/courses
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~term: 
+  role: student
+}
+
+docs {
+  # List the authenticated user's section enrollments
+
+  Returns every section the authenticated user is enrolled in, with
+  compact embedded course + school summaries. Sorted by `term DESC,
+  department ASC, number ASC`. Not paginated -- a user is typically
+  in 4-8 courses, and even outliers fit comfortably in one response.
+}

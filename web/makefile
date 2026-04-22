@@ -31,6 +31,15 @@ lint-fix:
 typecheck:
 	pnpm exec tsc --noEmit
 
+## make generate-api-types
+##
+## Regenerates web/lib/api/generated/types.ts from ../api/openapi.yaml
+## using openapi-typescript. Re-run after any openapi.yaml change so
+## the frontend keeps contract parity with the Go API. Safe to run
+## repeatedly -- the generator wipes + rewrites the single file.
+generate-api-types:
+	pnpm run generate:api-types
+
 test:
 	pnpm run test
 
@@ -55,4 +64,4 @@ docker-build:
 docker-run-local:
 	docker run -p 3000:3000 --env-file .env.local askatlas-web
 
-.PHONY: dev build staging prod clean install format lint lint-fix format-check test typecheck test-e2e test-e2e-staging test-e2e-prod test-e2e-codegen e2e-report docker-build docker-run-local
+.PHONY: dev build staging prod clean install format lint lint-fix format-check test typecheck generate-api-types test-e2e test-e2e-staging test-e2e-prod test-e2e-codegen e2e-report docker-build docker-run-local

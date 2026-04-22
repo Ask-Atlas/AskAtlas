@@ -1,0 +1,57 @@
+meta {
+  name: List Practice Sessions
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/quizzes/{{quizId}}/sessions
+  body: none
+  auth: inherit
+}
+
+params:query {
+  status: active
+  limit: 10
+  ~cursor: 
+}
+
+docs {
+  # List the authenticated user's practice sessions for a quiz
+
+  Returns the authenticated user's practice sessions for the
+  target quiz, sorted by `started_at DESC, id DESC`. Used by the
+  practice-history view to render past attempts and scores.
+  
+  Pagination: cursor-based keyset on `(started_at, id)`. Pass
+  the `next_cursor` from the previous response to fetch the
+  next page. `has_more` reports whether more pages exist beyond
+  the current one.
+  
+  Status filter: `active` returns only in-progress sessions
+  (`completed_at IS NULL`); `completed` returns only completed
+  sessions (`completed_at IS NOT NULL`); omitting the filter
+  returns both interleaved by `started_at DESC`.
+  
+  Score: for completed sessions, `score_percentage` is
+  `round((correct_answers / total_questions) * 100)` (same
+  formula as POST /sessions/{id}/complete and GET
+  /sessions/{id}). For in-progress sessions, `score_percentage`
+  is `null` because no final score exists yet.
+  
+  Authorization: scoped to the authenticated user. Sessions
+  belonging to other users on the same quiz are NEVER returned,
+  even if the requesting user is the quiz creator.
+  
+  Parent quiz lifecycle: a soft-deleted quiz, a quiz under a
+  soft-deleted study guide, and a missing quiz all return 404
+  (info-leak prevention -- the caller cannot distinguish them).
+  This is the OPPOSITE of GET /sessions/{id} (ASK-152), which
+  returns historical sessions for soft-deleted parents because
+  a single session read is anchored on the session id alone --
+  a list scoped to a quiz needs a live quiz to anchor on.
+  
+  Response shape: a compact summary per session (no `answers`
+  array). Use GET /api/sessions/{id} (ASK-152) to fetch full
+  detail including the chronological answer list.
+}

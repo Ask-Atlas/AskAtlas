@@ -11,6 +11,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const checkUserExists = `-- name: CheckUserExists :one
+SELECT 1
+FROM users
+WHERE id = $1::uuid
+`
+
+// Grantee-existence probe for ASK-122 when grantee_type='user'.
+// Returns sql.ErrNoRows when the referenced user does not exist;
+// the service maps this to a 400 VALIDATION_ERROR ("no user with
+// this ID") rather than 404. The public sentinel UUID
+// 00000000-0000-0000-0000-000000000000 is handled in the service
+// layer (skipped before this query ever runs).
+func (q *Queries) CheckUserExists(ctx context.Context, userID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, checkUserExists, userID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const getFileByOwner = `-- name: GetFileByOwner :one
 SELECT id, user_id, s3_key, name, mime_type, size, checksum,
        status, deletion_status, deleted_at, s3_deleted_at, deletion_job_id,
@@ -31,7 +50,7 @@ type GetFileByOwnerRow struct {
 	UserID         pgtype.UUID            `json:"user_id"`
 	S3Key          string                 `json:"s3_key"`
 	Name           string                 `json:"name"`
-	MimeType       MimeType               `json:"mime_type"`
+	MimeType       string                 `json:"mime_type"`
 	Size           int64                  `json:"size"`
 	Checksum       pgtype.Text            `json:"checksum"`
 	Status         UploadStatus           `json:"status"`
@@ -64,6 +83,34 @@ func (q *Queries) GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
+	return i, err
+}
+
+const getFileForUpdate = `-- name: GetFileForUpdate :one
+SELECT id, user_id, status
+FROM files
+WHERE id = $1::uuid
+  AND deletion_status IS NULL
+`
+
+type GetFileForUpdateRow struct {
+	ID     pgtype.UUID  `json:"id"`
+	UserID pgtype.UUID  `json:"user_id"`
+	Status UploadStatus `json:"status"`
+}
+
+// Existence + state probe used by PATCH /api/files/{file_id} (ASK-113).
+// Returns the row's user_id and current status so the service can:
+//   - 404 when the row is missing or in any deletion state.
+//   - 403 when the caller is not the owner (returned row's user_id mismatch).
+//   - Validate status transitions (only pending -> complete / failed allowed).
+//
+// Soft-deleted files are filtered out here so they always map to 404,
+// regardless of caller -- matching the spec's "Resource not found" rule.
+func (q *Queries) GetFileForUpdate(ctx context.Context, fileID pgtype.UUID) (GetFileForUpdateRow, error) {
+	row := q.db.QueryRow(ctx, getFileForUpdate, fileID)
+	var i GetFileForUpdateRow
+	err := row.Scan(&i.ID, &i.UserID, &i.Status)
 	return i, err
 }
 
@@ -152,6 +199,119 @@ func (q *Queries) GetFileIfViewable(ctx context.Context, arg GetFileIfViewablePa
 	return i, err
 }
 
+const insertFile = `-- name: InsertFile :one
+INSERT INTO files (id, user_id, s3_key, name, mime_type, size, status)
+VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+RETURNING id, user_id, s3_key, name, mime_type, size, checksum, status, created_at, updated_at, deletion_status, deleted_at, s3_deleted_at, deletion_job_id
+`
+
+type InsertFileParams struct {
+	ID       pgtype.UUID `json:"id"`
+	UserID   pgtype.UUID `json:"user_id"`
+	S3Key    string      `json:"s3_key"`
+	Name     string      `json:"name"`
+	MimeType string      `json:"mime_type"`
+	Size     int64       `json:"size"`
+}
+
+func (q *Queries) InsertFile(ctx context.Context, arg InsertFileParams) (File, error) {
+	row := q.db.QueryRow(ctx, insertFile,
+		arg.ID,
+		arg.UserID,
+		arg.S3Key,
+		arg.Name,
+		arg.MimeType,
+		arg.Size,
+	)
+	var i File
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.S3Key,
+		&i.Name,
+		&i.MimeType,
+		&i.Size,
+		&i.Checksum,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletionStatus,
+		&i.DeletedAt,
+		&i.S3DeletedAt,
+		&i.DeletionJobID,
+	)
+	return i, err
+}
+
+const insertFileGrant = `-- name: InsertFileGrant :one
+INSERT INTO file_grants (file_id, grantee_type, grantee_id, permission, granted_by)
+VALUES (
+    $1::uuid,
+    $2::grantee_type,
+    $3::uuid,
+    $4::permission,
+    $5::uuid
+)
+RETURNING id, file_id, grantee_type, grantee_id, permission, granted_by, created_at
+`
+
+type InsertFileGrantParams struct {
+	FileID      pgtype.UUID `json:"file_id"`
+	GranteeType GranteeType `json:"grantee_type"`
+	GranteeID   pgtype.UUID `json:"grantee_id"`
+	Permission  Permission  `json:"permission"`
+	GrantedBy   pgtype.UUID `json:"granted_by"`
+}
+
+// Inserts a new file_grants row for POST /api/files/{file_id}/grants
+// (ASK-122). Plain INSERT -- no ON CONFLICT DO UPDATE because the
+// spec requires returning 409 Conflict on a duplicate (not silently
+// updating granted_by). A unique-key violation (sqlstate 23505)
+// propagates up as a pgx PgError; the service translates it to
+// apperrors.ErrConflict so the handler emits a 409.
+func (q *Queries) InsertFileGrant(ctx context.Context, arg InsertFileGrantParams) (FileGrant, error) {
+	row := q.db.QueryRow(ctx, insertFileGrant,
+		arg.FileID,
+		arg.GranteeType,
+		arg.GranteeID,
+		arg.Permission,
+		arg.GrantedBy,
+	)
+	var i FileGrant
+	err := row.Scan(
+		&i.ID,
+		&i.FileID,
+		&i.GranteeType,
+		&i.GranteeID,
+		&i.Permission,
+		&i.GrantedBy,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const insertFileView = `-- name: InsertFileView :exec
+INSERT INTO file_views (file_id, user_id)
+VALUES ($1::uuid, $2::uuid)
+`
+
+type InsertFileViewParams struct {
+	FileID pgtype.UUID `json:"file_id"`
+	UserID pgtype.UUID `json:"user_id"`
+}
+
+// Append-only analytics row for POST /api/files/{file_id}/view (ASK-134).
+// Each call inserts a fresh row -- no dedup, no upsert. The viewed_at
+// column defaults to now() so the wall-clock stamp lives at the DB
+// layer, not the client. id defaults to gen_random_uuid().
+//
+// Existence of the parent file is gated by the service via
+// GetFileForUpdate before this call -- this query trusts inputs.
+func (q *Queries) InsertFileView(ctx context.Context, arg InsertFileViewParams) error {
+	_, err := q.db.Exec(ctx, insertFileView, arg.FileID, arg.UserID)
+	return err
+}
+
 const listOwnedFilesCreatedAsc = `-- name: ListOwnedFilesCreatedAsc :many
 SELECT
   f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id,
@@ -165,7 +325,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = $2
   AND f.deletion_status IS NULL
   AND ($3::upload_status IS NULL OR f.status = $3::upload_status)
-  AND ($4::mime_type IS NULL OR f.mime_type = $4::mime_type)
+  AND ($4::text IS NULL OR f.mime_type = $4::text)
   AND ($5::bigint IS NULL OR f.size >= $5::bigint)
   AND ($6::bigint IS NULL OR f.size <= $6::bigint)
   AND ($7::timestamptz IS NULL OR f.created_at >= $7::timestamptz)
@@ -185,7 +345,7 @@ type ListOwnedFilesCreatedAscParams struct {
 	ViewerID        pgtype.UUID        `json:"viewer_id"`
 	OwnerID         pgtype.UUID        `json:"owner_id"`
 	Status          NullUploadStatus   `json:"status"`
-	MimeType        NullMimeType       `json:"mime_type"`
+	MimeType        pgtype.Text        `json:"mime_type"`
 	MinSize         pgtype.Int8        `json:"min_size"`
 	MaxSize         pgtype.Int8        `json:"max_size"`
 	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
@@ -203,7 +363,7 @@ type ListOwnedFilesCreatedAscRow struct {
 	UserID         pgtype.UUID            `json:"user_id"`
 	S3Key          string                 `json:"s3_key"`
 	Name           string                 `json:"name"`
-	MimeType       MimeType               `json:"mime_type"`
+	MimeType       string                 `json:"mime_type"`
 	Size           int64                  `json:"size"`
 	Checksum       pgtype.Text            `json:"checksum"`
 	Status         UploadStatus           `json:"status"`
@@ -282,7 +442,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = $2
   AND f.deletion_status IS NULL
   AND ($3::upload_status IS NULL OR f.status = $3::upload_status)
-  AND ($4::mime_type IS NULL OR f.mime_type = $4::mime_type)
+  AND ($4::text IS NULL OR f.mime_type = $4::text)
   AND ($5::bigint IS NULL OR f.size >= $5::bigint)
   AND ($6::bigint IS NULL OR f.size <= $6::bigint)
   AND ($7::timestamptz IS NULL OR f.created_at >= $7::timestamptz)
@@ -302,7 +462,7 @@ type ListOwnedFilesCreatedDescParams struct {
 	ViewerID        pgtype.UUID        `json:"viewer_id"`
 	OwnerID         pgtype.UUID        `json:"owner_id"`
 	Status          NullUploadStatus   `json:"status"`
-	MimeType        NullMimeType       `json:"mime_type"`
+	MimeType        pgtype.Text        `json:"mime_type"`
 	MinSize         pgtype.Int8        `json:"min_size"`
 	MaxSize         pgtype.Int8        `json:"max_size"`
 	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
@@ -320,7 +480,7 @@ type ListOwnedFilesCreatedDescRow struct {
 	UserID         pgtype.UUID            `json:"user_id"`
 	S3Key          string                 `json:"s3_key"`
 	Name           string                 `json:"name"`
-	MimeType       MimeType               `json:"mime_type"`
+	MimeType       string                 `json:"mime_type"`
 	Size           int64                  `json:"size"`
 	Checksum       pgtype.Text            `json:"checksum"`
 	Status         UploadStatus           `json:"status"`
@@ -399,7 +559,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = $2
   AND f.deletion_status IS NULL
   AND ($3::upload_status IS NULL OR f.status = $3::upload_status)
-  AND ($4::mime_type IS NULL OR f.mime_type = $4::mime_type)
+  AND ($4::text IS NULL OR f.mime_type = $4::text)
   AND ($5::bigint IS NULL OR f.size >= $5::bigint)
   AND ($6::bigint IS NULL OR f.size <= $6::bigint)
   AND ($7::timestamptz IS NULL OR f.created_at >= $7::timestamptz)
@@ -408,8 +568,8 @@ WHERE f.user_id = $2
   AND ($10::timestamptz   IS NULL OR f.updated_at <  $10::timestamptz)
   AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%' ESCAPE '\')
   AND (
-    $12::mime_type IS NULL
-    OR (f.mime_type, f.id) > ($12::mime_type, $13::uuid)
+    $12::text IS NULL
+    OR (f.mime_type, f.id) > ($12::text, $13::uuid)
   )
 ORDER BY f.mime_type ASC, f.id ASC
 LIMIT $14
@@ -419,7 +579,7 @@ type ListOwnedFilesMimeAscParams struct {
 	ViewerID       pgtype.UUID        `json:"viewer_id"`
 	OwnerID        pgtype.UUID        `json:"owner_id"`
 	Status         NullUploadStatus   `json:"status"`
-	MimeType       NullMimeType       `json:"mime_type"`
+	MimeType       pgtype.Text        `json:"mime_type"`
 	MinSize        pgtype.Int8        `json:"min_size"`
 	MaxSize        pgtype.Int8        `json:"max_size"`
 	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
@@ -427,7 +587,7 @@ type ListOwnedFilesMimeAscParams struct {
 	UpdatedFrom    pgtype.Timestamptz `json:"updated_from"`
 	UpdatedTo      pgtype.Timestamptz `json:"updated_to"`
 	Q              pgtype.Text        `json:"q"`
-	CursorMimeType NullMimeType       `json:"cursor_mime_type"`
+	CursorMimeType pgtype.Text        `json:"cursor_mime_type"`
 	CursorID       pgtype.UUID        `json:"cursor_id"`
 	PageLimit      int32              `json:"page_limit"`
 }
@@ -437,7 +597,7 @@ type ListOwnedFilesMimeAscRow struct {
 	UserID         pgtype.UUID            `json:"user_id"`
 	S3Key          string                 `json:"s3_key"`
 	Name           string                 `json:"name"`
-	MimeType       MimeType               `json:"mime_type"`
+	MimeType       string                 `json:"mime_type"`
 	Size           int64                  `json:"size"`
 	Checksum       pgtype.Text            `json:"checksum"`
 	Status         UploadStatus           `json:"status"`
@@ -516,7 +676,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = $2
   AND f.deletion_status IS NULL
   AND ($3::upload_status IS NULL OR f.status = $3::upload_status)
-  AND ($4::mime_type IS NULL OR f.mime_type = $4::mime_type)
+  AND ($4::text IS NULL OR f.mime_type = $4::text)
   AND ($5::bigint IS NULL OR f.size >= $5::bigint)
   AND ($6::bigint IS NULL OR f.size <= $6::bigint)
   AND ($7::timestamptz IS NULL OR f.created_at >= $7::timestamptz)
@@ -525,8 +685,8 @@ WHERE f.user_id = $2
   AND ($10::timestamptz   IS NULL OR f.updated_at <  $10::timestamptz)
   AND ($11::text IS NULL OR f.name ILIKE '%' || $11::text || '%' ESCAPE '\')
   AND (
-    $12::mime_type IS NULL
-    OR (f.mime_type, f.id) < ($12::mime_type, $13::uuid)
+    $12::text IS NULL
+    OR (f.mime_type, f.id) < ($12::text, $13::uuid)
   )
 ORDER BY f.mime_type DESC, f.id DESC
 LIMIT $14
@@ -536,7 +696,7 @@ type ListOwnedFilesMimeDescParams struct {
 	ViewerID       pgtype.UUID        `json:"viewer_id"`
 	OwnerID        pgtype.UUID        `json:"owner_id"`
 	Status         NullUploadStatus   `json:"status"`
-	MimeType       NullMimeType       `json:"mime_type"`
+	MimeType       pgtype.Text        `json:"mime_type"`
 	MinSize        pgtype.Int8        `json:"min_size"`
 	MaxSize        pgtype.Int8        `json:"max_size"`
 	CreatedFrom    pgtype.Timestamptz `json:"created_from"`
@@ -544,7 +704,7 @@ type ListOwnedFilesMimeDescParams struct {
 	UpdatedFrom    pgtype.Timestamptz `json:"updated_from"`
 	UpdatedTo      pgtype.Timestamptz `json:"updated_to"`
 	Q              pgtype.Text        `json:"q"`
-	CursorMimeType NullMimeType       `json:"cursor_mime_type"`
+	CursorMimeType pgtype.Text        `json:"cursor_mime_type"`
 	CursorID       pgtype.UUID        `json:"cursor_id"`
 	PageLimit      int32              `json:"page_limit"`
 }
@@ -554,7 +714,7 @@ type ListOwnedFilesMimeDescRow struct {
 	UserID         pgtype.UUID            `json:"user_id"`
 	S3Key          string                 `json:"s3_key"`
 	Name           string                 `json:"name"`
-	MimeType       MimeType               `json:"mime_type"`
+	MimeType       string                 `json:"mime_type"`
 	Size           int64                  `json:"size"`
 	Checksum       pgtype.Text            `json:"checksum"`
 	Status         UploadStatus           `json:"status"`
@@ -633,7 +793,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = $2
   AND f.deletion_status IS NULL
   AND ($3::upload_status IS NULL OR f.status = $3::upload_status)
-  AND ($4::mime_type IS NULL OR f.mime_type = $4::mime_type)
+  AND ($4::text IS NULL OR f.mime_type = $4::text)
   AND ($5::bigint IS NULL OR f.size >= $5::bigint)
   AND ($6::bigint IS NULL OR f.size <= $6::bigint)
   AND ($7::timestamptz IS NULL OR f.created_at >= $7::timestamptz)
@@ -653,7 +813,7 @@ type ListOwnedFilesNameAscParams struct {
 	ViewerID        pgtype.UUID        `json:"viewer_id"`
 	OwnerID         pgtype.UUID        `json:"owner_id"`
 	Status          NullUploadStatus   `json:"status"`
-	MimeType        NullMimeType       `json:"mime_type"`
+	MimeType        pgtype.Text        `json:"mime_type"`
 	MinSize         pgtype.Int8        `json:"min_size"`
 	MaxSize         pgtype.Int8        `json:"max_size"`
 	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
@@ -671,7 +831,7 @@ type ListOwnedFilesNameAscRow struct {
 	UserID         pgtype.UUID            `json:"user_id"`
 	S3Key          string                 `json:"s3_key"`
 	Name           string                 `json:"name"`
-	MimeType       MimeType               `json:"mime_type"`
+	MimeType       string                 `json:"mime_type"`
 	Size           int64                  `json:"size"`
 	Checksum       pgtype.Text            `json:"checksum"`
 	Status         UploadStatus           `json:"status"`
@@ -750,7 +910,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = $2
   AND f.deletion_status IS NULL
   AND ($3::upload_status IS NULL OR f.status = $3::upload_status)
-  AND ($4::mime_type IS NULL OR f.mime_type = $4::mime_type)
+  AND ($4::text IS NULL OR f.mime_type = $4::text)
   AND ($5::bigint IS NULL OR f.size >= $5::bigint)
   AND ($6::bigint IS NULL OR f.size <= $6::bigint)
   AND ($7::timestamptz IS NULL OR f.created_at >= $7::timestamptz)
@@ -770,7 +930,7 @@ type ListOwnedFilesNameDescParams struct {
 	ViewerID        pgtype.UUID        `json:"viewer_id"`
 	OwnerID         pgtype.UUID        `json:"owner_id"`
 	Status          NullUploadStatus   `json:"status"`
-	MimeType        NullMimeType       `json:"mime_type"`
+	MimeType        pgtype.Text        `json:"mime_type"`
 	MinSize         pgtype.Int8        `json:"min_size"`
 	MaxSize         pgtype.Int8        `json:"max_size"`
 	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
@@ -788,7 +948,7 @@ type ListOwnedFilesNameDescRow struct {
 	UserID         pgtype.UUID            `json:"user_id"`
 	S3Key          string                 `json:"s3_key"`
 	Name           string                 `json:"name"`
-	MimeType       MimeType               `json:"mime_type"`
+	MimeType       string                 `json:"mime_type"`
 	Size           int64                  `json:"size"`
 	Checksum       pgtype.Text            `json:"checksum"`
 	Status         UploadStatus           `json:"status"`
@@ -867,7 +1027,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = $2
   AND f.deletion_status IS NULL
   AND ($3::upload_status IS NULL OR f.status = $3::upload_status)
-  AND ($4::mime_type IS NULL OR f.mime_type = $4::mime_type)
+  AND ($4::text IS NULL OR f.mime_type = $4::text)
   AND ($5::bigint IS NULL OR f.size >= $5::bigint)
   AND ($6::bigint IS NULL OR f.size <= $6::bigint)
   AND ($7::timestamptz IS NULL OR f.created_at >= $7::timestamptz)
@@ -887,7 +1047,7 @@ type ListOwnedFilesSizeAscParams struct {
 	ViewerID    pgtype.UUID        `json:"viewer_id"`
 	OwnerID     pgtype.UUID        `json:"owner_id"`
 	Status      NullUploadStatus   `json:"status"`
-	MimeType    NullMimeType       `json:"mime_type"`
+	MimeType    pgtype.Text        `json:"mime_type"`
 	MinSize     pgtype.Int8        `json:"min_size"`
 	MaxSize     pgtype.Int8        `json:"max_size"`
 	CreatedFrom pgtype.Timestamptz `json:"created_from"`
@@ -905,7 +1065,7 @@ type ListOwnedFilesSizeAscRow struct {
 	UserID         pgtype.UUID            `json:"user_id"`
 	S3Key          string                 `json:"s3_key"`
 	Name           string                 `json:"name"`
-	MimeType       MimeType               `json:"mime_type"`
+	MimeType       string                 `json:"mime_type"`
 	Size           int64                  `json:"size"`
 	Checksum       pgtype.Text            `json:"checksum"`
 	Status         UploadStatus           `json:"status"`
@@ -984,7 +1144,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = $2
   AND f.deletion_status IS NULL
   AND ($3::upload_status IS NULL OR f.status = $3::upload_status)
-  AND ($4::mime_type IS NULL OR f.mime_type = $4::mime_type)
+  AND ($4::text IS NULL OR f.mime_type = $4::text)
   AND ($5::bigint IS NULL OR f.size >= $5::bigint)
   AND ($6::bigint IS NULL OR f.size <= $6::bigint)
   AND ($7::timestamptz IS NULL OR f.created_at >= $7::timestamptz)
@@ -1004,7 +1164,7 @@ type ListOwnedFilesSizeDescParams struct {
 	ViewerID    pgtype.UUID        `json:"viewer_id"`
 	OwnerID     pgtype.UUID        `json:"owner_id"`
 	Status      NullUploadStatus   `json:"status"`
-	MimeType    NullMimeType       `json:"mime_type"`
+	MimeType    pgtype.Text        `json:"mime_type"`
 	MinSize     pgtype.Int8        `json:"min_size"`
 	MaxSize     pgtype.Int8        `json:"max_size"`
 	CreatedFrom pgtype.Timestamptz `json:"created_from"`
@@ -1022,7 +1182,7 @@ type ListOwnedFilesSizeDescRow struct {
 	UserID         pgtype.UUID            `json:"user_id"`
 	S3Key          string                 `json:"s3_key"`
 	Name           string                 `json:"name"`
-	MimeType       MimeType               `json:"mime_type"`
+	MimeType       string                 `json:"mime_type"`
 	Size           int64                  `json:"size"`
 	Checksum       pgtype.Text            `json:"checksum"`
 	Status         UploadStatus           `json:"status"`
@@ -1101,7 +1261,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = $2
   AND f.deletion_status IS NULL
   AND ($3::upload_status IS NULL OR f.status = $3::upload_status)
-  AND ($4::mime_type IS NULL OR f.mime_type = $4::mime_type)
+  AND ($4::text IS NULL OR f.mime_type = $4::text)
   AND ($5::bigint IS NULL OR f.size >= $5::bigint)
   AND ($6::bigint IS NULL OR f.size <= $6::bigint)
   AND ($7::timestamptz IS NULL OR f.created_at >= $7::timestamptz)
@@ -1121,7 +1281,7 @@ type ListOwnedFilesStatusAscParams struct {
 	ViewerID     pgtype.UUID        `json:"viewer_id"`
 	OwnerID      pgtype.UUID        `json:"owner_id"`
 	Status       NullUploadStatus   `json:"status"`
-	MimeType     NullMimeType       `json:"mime_type"`
+	MimeType     pgtype.Text        `json:"mime_type"`
 	MinSize      pgtype.Int8        `json:"min_size"`
 	MaxSize      pgtype.Int8        `json:"max_size"`
 	CreatedFrom  pgtype.Timestamptz `json:"created_from"`
@@ -1139,7 +1299,7 @@ type ListOwnedFilesStatusAscRow struct {
 	UserID         pgtype.UUID            `json:"user_id"`
 	S3Key          string                 `json:"s3_key"`
 	Name           string                 `json:"name"`
-	MimeType       MimeType               `json:"mime_type"`
+	MimeType       string                 `json:"mime_type"`
 	Size           int64                  `json:"size"`
 	Checksum       pgtype.Text            `json:"checksum"`
 	Status         UploadStatus           `json:"status"`
@@ -1218,7 +1378,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = $2
   AND f.deletion_status IS NULL
   AND ($3::upload_status IS NULL OR f.status = $3::upload_status)
-  AND ($4::mime_type IS NULL OR f.mime_type = $4::mime_type)
+  AND ($4::text IS NULL OR f.mime_type = $4::text)
   AND ($5::bigint IS NULL OR f.size >= $5::bigint)
   AND ($6::bigint IS NULL OR f.size <= $6::bigint)
   AND ($7::timestamptz IS NULL OR f.created_at >= $7::timestamptz)
@@ -1238,7 +1398,7 @@ type ListOwnedFilesStatusDescParams struct {
 	ViewerID     pgtype.UUID        `json:"viewer_id"`
 	OwnerID      pgtype.UUID        `json:"owner_id"`
 	Status       NullUploadStatus   `json:"status"`
-	MimeType     NullMimeType       `json:"mime_type"`
+	MimeType     pgtype.Text        `json:"mime_type"`
 	MinSize      pgtype.Int8        `json:"min_size"`
 	MaxSize      pgtype.Int8        `json:"max_size"`
 	CreatedFrom  pgtype.Timestamptz `json:"created_from"`
@@ -1256,7 +1416,7 @@ type ListOwnedFilesStatusDescRow struct {
 	UserID         pgtype.UUID            `json:"user_id"`
 	S3Key          string                 `json:"s3_key"`
 	Name           string                 `json:"name"`
-	MimeType       MimeType               `json:"mime_type"`
+	MimeType       string                 `json:"mime_type"`
 	Size           int64                  `json:"size"`
 	Checksum       pgtype.Text            `json:"checksum"`
 	Status         UploadStatus           `json:"status"`
@@ -1335,7 +1495,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = $2
   AND f.deletion_status IS NULL
   AND ($3::upload_status IS NULL OR f.status = $3::upload_status)
-  AND ($4::mime_type IS NULL OR f.mime_type = $4::mime_type)
+  AND ($4::text IS NULL OR f.mime_type = $4::text)
   AND ($5::bigint IS NULL OR f.size >= $5::bigint)
   AND ($6::bigint IS NULL OR f.size <= $6::bigint)
   AND ($7::timestamptz IS NULL OR f.created_at >= $7::timestamptz)
@@ -1355,7 +1515,7 @@ type ListOwnedFilesUpdatedAscParams struct {
 	ViewerID        pgtype.UUID        `json:"viewer_id"`
 	OwnerID         pgtype.UUID        `json:"owner_id"`
 	Status          NullUploadStatus   `json:"status"`
-	MimeType        NullMimeType       `json:"mime_type"`
+	MimeType        pgtype.Text        `json:"mime_type"`
 	MinSize         pgtype.Int8        `json:"min_size"`
 	MaxSize         pgtype.Int8        `json:"max_size"`
 	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
@@ -1373,7 +1533,7 @@ type ListOwnedFilesUpdatedAscRow struct {
 	UserID         pgtype.UUID            `json:"user_id"`
 	S3Key          string                 `json:"s3_key"`
 	Name           string                 `json:"name"`
-	MimeType       MimeType               `json:"mime_type"`
+	MimeType       string                 `json:"mime_type"`
 	Size           int64                  `json:"size"`
 	Checksum       pgtype.Text            `json:"checksum"`
 	Status         UploadStatus           `json:"status"`
@@ -1452,7 +1612,7 @@ LEFT JOIN file_last_viewed lv
 WHERE f.user_id = $2
   AND f.deletion_status IS NULL
   AND ($3::upload_status IS NULL OR f.status = $3::upload_status)
-  AND ($4::mime_type IS NULL OR f.mime_type = $4::mime_type)
+  AND ($4::text IS NULL OR f.mime_type = $4::text)
   AND ($5::bigint IS NULL OR f.size >= $5::bigint)
   AND ($6::bigint IS NULL OR f.size <= $6::bigint)
   AND ($7::timestamptz IS NULL OR f.created_at >= $7::timestamptz)
@@ -1472,7 +1632,7 @@ type ListOwnedFilesUpdatedDescParams struct {
 	ViewerID        pgtype.UUID        `json:"viewer_id"`
 	OwnerID         pgtype.UUID        `json:"owner_id"`
 	Status          NullUploadStatus   `json:"status"`
-	MimeType        NullMimeType       `json:"mime_type"`
+	MimeType        pgtype.Text        `json:"mime_type"`
 	MinSize         pgtype.Int8        `json:"min_size"`
 	MaxSize         pgtype.Int8        `json:"max_size"`
 	CreatedFrom     pgtype.Timestamptz `json:"created_from"`
@@ -1490,7 +1650,7 @@ type ListOwnedFilesUpdatedDescRow struct {
 	UserID         pgtype.UUID            `json:"user_id"`
 	S3Key          string                 `json:"s3_key"`
 	Name           string                 `json:"name"`
-	MimeType       MimeType               `json:"mime_type"`
+	MimeType       string                 `json:"mime_type"`
 	Size           int64                  `json:"size"`
 	Checksum       pgtype.Text            `json:"checksum"`
 	Status         UploadStatus           `json:"status"`
@@ -1572,6 +1732,120 @@ func (q *Queries) MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
 	return err
 }
 
+const patchFile = `-- name: PatchFile :one
+WITH updated AS (
+  UPDATE files
+  SET
+    name       = COALESCE($2::text,                  name),
+    status     = COALESCE($3::upload_status,       status),
+    updated_at = NOW()
+  WHERE id = $4::uuid
+    AND user_id = $5::uuid
+    AND deletion_status IS NULL
+  RETURNING id, user_id, name, size, mime_type, status, created_at, updated_at
+)
+SELECT
+  u.id, u.user_id, u.name, u.size, u.mime_type, u.status, u.created_at, u.updated_at,
+  fav.created_at AS favorited_at,
+  lv.viewed_at   AS last_viewed_at
+FROM updated u
+LEFT JOIN file_favorites  fav ON fav.user_id = $1::uuid AND fav.file_id = u.id
+LEFT JOIN file_last_viewed lv ON lv.user_id = $1::uuid AND lv.file_id = u.id
+`
+
+type PatchFileParams struct {
+	ViewerID pgtype.UUID      `json:"viewer_id"`
+	Name     pgtype.Text      `json:"name"`
+	Status   NullUploadStatus `json:"status"`
+	FileID   pgtype.UUID      `json:"file_id"`
+	OwnerID  pgtype.UUID      `json:"owner_id"`
+}
+
+type PatchFileRow struct {
+	ID           pgtype.UUID        `json:"id"`
+	UserID       pgtype.UUID        `json:"user_id"`
+	Name         string             `json:"name"`
+	Size         int64              `json:"size"`
+	MimeType     string             `json:"mime_type"`
+	Status       UploadStatus       `json:"status"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	FavoritedAt  pgtype.Timestamptz `json:"favorited_at"`
+	LastViewedAt pgtype.Timestamptz `json:"last_viewed_at"`
+}
+
+// Partial update for ASK-113. Each updatable column uses
+// COALESCE(narg, current) so a nil arg means "leave alone" and a
+// non-nil arg means "replace". The CTE returns the post-update row
+// joined with file_favorites + file_last_viewed so the handler can
+// emit a complete FileResponse without a follow-up SELECT.
+//
+// The service is responsible for:
+//   - 404 / 403 gating (via GetFileForUpdate before this call).
+//   - The at-least-one-field rule (an empty body is a 400 before SQL).
+//   - Status transition validation (only pending -> complete / failed).
+//
+// Defense-in-depth: the WHERE clause re-asserts owner + non-deleted so
+// a concurrent DELETE between GetFileForUpdate and this UPDATE yields
+// sql.ErrNoRows -> 404 instead of a phantom write.
+func (q *Queries) PatchFile(ctx context.Context, arg PatchFileParams) (PatchFileRow, error) {
+	row := q.db.QueryRow(ctx, patchFile,
+		arg.ViewerID,
+		arg.Name,
+		arg.Status,
+		arg.FileID,
+		arg.OwnerID,
+	)
+	var i PatchFileRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.Size,
+		&i.MimeType,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.FavoritedAt,
+		&i.LastViewedAt,
+	)
+	return i, err
+}
+
+const revokeFileGrant = `-- name: RevokeFileGrant :execrows
+DELETE FROM file_grants
+WHERE file_id = $1::uuid
+  AND grantee_type = $2::grantee_type
+  AND grantee_id = $3::uuid
+  AND permission = $4::permission
+`
+
+type RevokeFileGrantParams struct {
+	FileID      pgtype.UUID `json:"file_id"`
+	GranteeType GranteeType `json:"grantee_type"`
+	GranteeID   pgtype.UUID `json:"grantee_id"`
+	Permission  Permission  `json:"permission"`
+}
+
+// Deletes a file grant matching the exact composite key for DELETE
+// /api/files/{file_id}/grants (ASK-125). Returns the rows-affected
+// count so the service can distinguish "grant exists and was
+// deleted" (1 row -> 204) from "no matching grant" (0 rows -> 404).
+// The spec requires 404 when the grant is missing -- this replaces
+// the previous idempotent no-op behavior.
+func (q *Queries) RevokeFileGrant(ctx context.Context, arg RevokeFileGrantParams) (int64, error) {
+	result, err := q.db.Exec(ctx, revokeFileGrant,
+		arg.FileID,
+		arg.GranteeType,
+		arg.GranteeID,
+		arg.Permission,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const setFileDeletionJobID = `-- name: SetFileDeletionJobID :exec
 UPDATE files
 SET
@@ -1616,4 +1890,47 @@ func (q *Queries) SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) 
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const updateFileStatus = `-- name: UpdateFileStatus :exec
+UPDATE files
+SET
+    status     = $1::upload_status,
+    updated_at = NOW()
+WHERE id = $2::uuid
+  AND user_id = $3::uuid
+`
+
+type UpdateFileStatusParams struct {
+	Status  UploadStatus `json:"status"`
+	FileID  pgtype.UUID  `json:"file_id"`
+	OwnerID pgtype.UUID  `json:"owner_id"`
+}
+
+func (q *Queries) UpdateFileStatus(ctx context.Context, arg UpdateFileStatusParams) error {
+	_, err := q.db.Exec(ctx, updateFileStatus, arg.Status, arg.FileID, arg.OwnerID)
+	return err
+}
+
+const upsertFileLastViewed = `-- name: UpsertFileLastViewed :exec
+INSERT INTO file_last_viewed (user_id, file_id, viewed_at)
+VALUES ($1::uuid, $2::uuid, NOW())
+ON CONFLICT (user_id, file_id) DO UPDATE
+SET viewed_at = NOW()
+`
+
+type UpsertFileLastViewedParams struct {
+	UserID pgtype.UUID `json:"user_id"`
+	FileID pgtype.UUID `json:"file_id"`
+}
+
+// Per-(user, file) most-recent-view timestamp for POST /api/files/{file_id}/view
+// (ASK-134). Powers the recents sidebar (ASK-145). The PK is
+// (user_id, file_id) so a repeat view by the same user is a write to
+// the same row -- viewed_at gets bumped to now(). On the first view
+// the INSERT path runs; on every subsequent view the ON CONFLICT
+// branch fires.
+func (q *Queries) UpsertFileLastViewed(ctx context.Context, arg UpsertFileLastViewedParams) error {
+	_, err := q.db.Exec(ctx, upsertFileLastViewed, arg.UserID, arg.FileID)
+	return err
 }
