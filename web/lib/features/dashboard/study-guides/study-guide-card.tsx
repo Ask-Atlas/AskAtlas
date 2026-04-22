@@ -29,9 +29,7 @@ export function StudyGuideCard({
 }: StudyGuideCardProps) {
   const destination = href ?? `/study-guides/${guide.id}`;
   const title =
-    guide.title.length > 100
-      ? guide.title.slice(0, 100) + "…"
-      : guide.title;
+    guide.title.length > 100 ? guide.title.slice(0, 100) + "…" : guide.title;
 
   return (
     <Link
