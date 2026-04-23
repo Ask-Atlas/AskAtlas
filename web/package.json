@@ -13,6 +13,7 @@
   "dependencies": {
     "@clerk/nextjs": "^6.37.4",
     "@clerk/themes": "^2.4.52",
+    "@hookform/resolvers": "^5.2.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "embla-carousel-autoplay": "^8.6.0",
@@ -26,7 +27,9 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-fast-marquee": "^1.6.5",
-    "tailwind-merge": "^3.4.0"
+    "react-hook-form": "^7.73.1",
+    "tailwind-merge": "^3.4.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.1",
