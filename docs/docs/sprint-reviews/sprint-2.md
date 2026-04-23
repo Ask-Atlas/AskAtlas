@@ -28,7 +28,7 @@ No issues that were actively worked on this sprint were left incomplete. The ope
 | [#6](https://github.com/Ask-Atlas/AskAtlas/issues/6) | UI/UX design for the dashboard |
 | [#15](https://github.com/Ask-Atlas/AskAtlas/issues/15) | Design and implement the UI/UX for the Study Guide View |
 | [#19](https://github.com/Ask-Atlas/AskAtlas/issues/19) | UI/UX design for the library |
-| [#61](https://github.com/Ask-Atlas/AskAtlas/issues/61) | API - PATCH /api/files/{file_id} (update file metadata) |
+| [#61](https://github.com/Ask-Atlas/AskAtlas/issues/61) | API - PATCH `/api/files/{file_id}` (update file metadata) |
 
 ## Incomplete Issues/User Stories
 
