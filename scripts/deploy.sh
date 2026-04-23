@@ -24,7 +24,22 @@ echo "Logging in to GHCR..."
 echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin 2>/dev/null || echo "Already logged in"
 
 echo "Pulling image..."
-docker pull "$IMAGE"
+# Concurrent api+web pulls on the same VM occasionally race containerd's
+# snapshotter/content store (lchown/rename/lease-not-found errors).
+# Retry with backoff -- pulls are idempotent and the second attempt
+# nearly always succeeds once the contending pull has finished.
+for attempt in 1 2 3; do
+    if docker pull "$IMAGE"; then
+        break
+    fi
+    if [ "$attempt" -eq 3 ]; then
+        echo "✗ docker pull failed after 3 attempts"
+        exit 1
+    fi
+    SLEEP=$(( attempt * 10 ))
+    echo "Pull attempt $attempt failed; retrying in ${SLEEP}s..."
+    sleep "$SLEEP"
+done
 docker image inspect "$LOCAL_TAG" &>/dev/null && {
     echo "Rotating tags: $LOCAL_TAG -> $PREVIOUS_TAG"
     docker tag "$LOCAL_TAG" "$PREVIOUS_TAG"
