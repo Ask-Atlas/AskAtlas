@@ -51,3 +51,6 @@ node_modules/
 
 # clerk configuration 
 /.clerk/
+
+*storybook.log
+storybook-static
