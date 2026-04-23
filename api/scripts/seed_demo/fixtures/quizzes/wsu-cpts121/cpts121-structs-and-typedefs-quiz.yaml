@@ -1,0 +1,69 @@
+slug: cpts121-structs-and-typedefs-quiz
+study_guide_slug: cpts121-structs-and-typedefs
+title: "CPTS 121 — Structs & Typedefs Quiz"
+description: "6 questions covering struct declarations, field access, pointer-to-struct syntax, and pass-by-value behavior."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Given `student_t s; student_t *p = &s;`, which expression accesses the `gpa` field through `p`?"
+    hint: "Reach for the `->` operator when you have a pointer to a struct."
+    feedback_correct: "Right — `p->gpa` is shorthand for `(*p).gpa`."
+    feedback_incorrect: "Use `p->gpa`. The `.` operator only works on a struct value, not a pointer."
+    options:
+      - { text: "`p.gpa`", correct: false }
+      - { text: "`*p.gpa`", correct: false }
+      - { text: "`p->gpa`", correct: true }
+      - { text: "`&p.gpa`", correct: false }
+
+  - slug: q2
+    type: true_false
+    text: "In C, structs are passed to functions by value (the function gets its own copy)."
+    feedback_correct: "Yes — modifying the parameter inside the function does not affect the caller's struct."
+    feedback_incorrect: "They are passed by value. Pass a pointer if you want the function to mutate the caller's struct."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "What does the `typedef` in `typedef struct student { ... } student_t;` add?"
+    hint: "Compare `struct student s;` to `student_t s;`."
+    feedback_correct: "Right — the typedef name lets you write `student_t s;` without the `struct` keyword."
+    feedback_incorrect: "Without the typedef, every declaration must spell out `struct student`."
+    options:
+      - { text: "It adds a hidden length field to the struct", correct: false }
+      - { text: "It declares an alias `student_t` for `struct student`", correct: true }
+      - { text: "It allocates one instance of the struct", correct: false }
+      - { text: "It marks the struct as immutable", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "Why might `sizeof(struct s)` be larger than the sum of its fields' sizes?"
+    hint: "Modern CPUs require fields to land on aligned addresses."
+    feedback_correct: "Yes — the compiler inserts padding so each field meets its alignment requirement."
+    feedback_incorrect: "Compilers add padding bytes between fields so larger fields land on aligned addresses."
+    options:
+      - { text: "The compiler stores a hidden vtable pointer", correct: false }
+      - { text: "The compiler inserts padding for field alignment", correct: true }
+      - { text: "The struct keeps a hidden reference count", correct: false }
+      - { text: "It cannot — `sizeof` always equals the field-size sum", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "Two structs of the same type can be compared with `==` to test for equality field-by-field."
+    feedback_correct: "Right — C does not define struct `==`. Compare each field manually or write a helper."
+    feedback_incorrect: "C does not define `==` on structs. You must compare fields one at a time."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q6
+    type: freeform
+    text: "Why is returning a pointer to a local struct (`return &s;` from inside a function) a bug?"
+    reference_answer: |
+      `s` lives on the stack frame of the function. Once the function
+      returns, that frame is reclaimed and the storage may be reused
+      by the next call. The returned pointer is a dangling reference;
+      reading or writing through it is undefined behavior. Either
+      return the struct by value (the compiler manages the copy) or
+      have the caller pass in a pointer to a struct it owns.

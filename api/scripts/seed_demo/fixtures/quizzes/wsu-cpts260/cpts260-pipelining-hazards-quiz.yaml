@@ -1,0 +1,71 @@
+slug: cpts260-pipelining-hazards-quiz
+study_guide_slug: cpts260-pipelining-hazards
+title: "CPTS 260 — Pipelining and Hazards Quiz"
+description: "6 questions on the five-stage pipeline, hazard categories, and forwarding."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "What are the five stages of the classic MIPS pipeline, in order?"
+    feedback_correct: "Right — IF, ID, EX, MEM, WB."
+    feedback_incorrect: "The canonical order is IF (fetch), ID (decode + register read), EX (ALU/branch compare), MEM (data cache), WB (writeback)."
+    options:
+      - { text: "Fetch, Decode, Execute, Memory, Writeback", correct: true }
+      - { text: "Fetch, Memory, Execute, Decode, Writeback", correct: false }
+      - { text: "Decode, Fetch, Execute, Writeback, Memory", correct: false }
+      - { text: "Memory, Fetch, Decode, Execute, Writeback", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "A `lw` followed immediately by an `add` that depends on its result requires a 1-cycle stall *even with* full forwarding. This is an example of a:"
+    feedback_correct: "Yes — load-use hazard. The load value is only ready at the end of MEM, but the dependent ALU op needs it at the start of EX in the same cycle, so one bubble is unavoidable."
+    feedback_incorrect: "It's a load-use hazard — a specific data hazard that forwarding alone cannot eliminate."
+    options:
+      - { text: "Structural hazard", correct: false }
+      - { text: "Control hazard", correct: false }
+      - { text: "Load-use data hazard", correct: true }
+      - { text: "WAW hazard", correct: false }
+
+  - slug: q3
+    type: true_false
+    text: "Forwarding (bypassing) lets the result of one ALU instruction reach a dependent ALU instruction in the very next cycle without stalling."
+    feedback_correct: "Yes — the EX/MEM pipeline register forwards the result back to the ALU input in time for the next instruction's EX stage."
+    feedback_incorrect: "True — EX-to-EX forwarding handles back-to-back ALU dependencies without any bubbles."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "Two instructions need the same hardware resource in the same cycle. Which hazard is this?"
+    feedback_correct: "Right — that is a structural hazard. Classic MIPS avoids most by using split I-cache + D-cache and dual-ported register files."
+    feedback_incorrect: "Resource conflicts are structural hazards. Data hazards involve register dependencies; control hazards involve branches."
+    options:
+      - { text: "Data hazard", correct: false }
+      - { text: "Control hazard", correct: false }
+      - { text: "Structural hazard", correct: true }
+      - { text: "Speculative hazard", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "In an in-order MIPS pipeline, WAR (write-after-read) hazards never occur."
+    feedback_correct: "Yes — by the time a later instruction enters WB, all earlier instructions have already read their operands. Only out-of-order pipelines see WAR/WAW."
+    feedback_incorrect: "True — WAR and WAW hazards only arise once instructions can complete out of program order."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "Explain why the MIPS branch delay slot exists and one reason modern deeper pipelines abandoned it."
+    reference_answer: |
+      Branches resolve in EX, but by then the instruction at PC + 4 has
+      already entered IF. Rather than always squashing it, classic MIPS
+      defines that instruction to *always* execute (the branch delay
+      slot), and lets the compiler schedule something useful into it.
+      That eliminates one stall per branch on a 5-stage pipeline.
+      Modern pipelines are 15–20 stages deep, so a single delay slot is
+      a tiny fraction of the misprediction window — and it is now
+      architecturally visible legacy that complicates speculative
+      execution and out-of-order issue. Newer ISAs (and MIPS R6) drop
+      the delay slot entirely and lean on dynamic branch prediction
+      instead.

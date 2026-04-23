@@ -1,0 +1,63 @@
+slug: cpts260-mips-cheatsheet-quiz
+study_guide_slug: cpts260-mips-cheatsheet
+title: "CPTS 260 — MIPS Cheatsheet Quiz"
+description: "6 questions on register conventions, addressing modes, and the load/store paradigm."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Which register holds the return address after a `jal` instruction?"
+    hint: "Look at register number 31."
+    feedback_correct: "Right — `jal` writes PC + 4 into `$ra`, and `jr $ra` is how functions return."
+    feedback_incorrect: "`$ra` (register 31) is the dedicated return-address register."
+    options:
+      - { text: "$ra", correct: true }
+      - { text: "$sp", correct: false }
+      - { text: "$gp", correct: false }
+      - { text: "$v0", correct: false }
+
+  - slug: q2
+    type: true_false
+    text: "MIPS is a load/store architecture — arithmetic instructions only operate on registers."
+    feedback_correct: "Yes. To add two memory locations you must `lw` them into registers first, then `add`, then `sw`."
+    feedback_incorrect: "It IS a load/store architecture. There is no `add mem, mem` form."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "Which register is hard-wired to the value 0?"
+    feedback_correct: "Correct — `$zero` always reads as 0; writes to it are silently dropped."
+    feedback_incorrect: "`$zero` (register 0) is the special hard-wired one. None of the others have that property."
+    options:
+      - { text: "$at", correct: false }
+      - { text: "$zero", correct: true }
+      - { text: "$gp", correct: false }
+      - { text: "$k0", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "Which group of registers is **callee-saved** (a function must restore them before returning)?"
+    feedback_correct: "Yes — `$s0`–`$s7` are saved across calls; the called function must preserve them."
+    feedback_incorrect: "The `$s` registers are the callee-saved ones. `$t` registers are caller-saved (free for the function to clobber)."
+    options:
+      - { text: "$t0–$t7", correct: false }
+      - { text: "$a0–$a3", correct: false }
+      - { text: "$s0–$s7", correct: true }
+      - { text: "$v0–$v1", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "`addiu` does not sign-extend its 16-bit immediate."
+    feedback_correct: "It DOES sign-extend, despite the 'u'. The 'u' in MIPS only means 'no overflow trap'."
+    feedback_incorrect: "False — `addiu` still sign-extends the immediate. The 'u' suffix in MIPS only suppresses the overflow trap."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q6
+    type: freeform
+    text: "Explain the difference between `lw` and `lb` in one sentence."
+    reference_answer: |
+      `lw` loads a 32-bit word from a 4-byte-aligned address; `lb` loads a
+      single byte and sign-extends it into the 32-bit destination register.

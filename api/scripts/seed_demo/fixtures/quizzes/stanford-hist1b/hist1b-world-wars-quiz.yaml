@@ -1,0 +1,67 @@
+slug: hist1b-world-wars-quiz
+study_guide_slug: hist1b-world-wars
+title: "HIST 1B — The World Wars Quiz"
+description: "Six questions on the chronology, treaties, and turning points of the European wars of 1914–1945."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Which event in Sarajevo on 28 June 1914 triggered the July Crisis?"
+    options:
+      - { text: "The assassination of Archduke Franz Ferdinand of Austria-Hungary by Gavrilo Princip", correct: true }
+      - { text: "The Austrian declaration of war on Serbia", correct: false }
+      - { text: "The Russian general mobilization", correct: false }
+      - { text: "The German invasion of Belgium", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "Which 1919 treaty assigned Germany sole responsibility for the First World War in its 'war guilt' clause (Article 231)?"
+    options:
+      - { text: "Treaty of Versailles", correct: true }
+      - { text: "Treaty of Saint-Germain", correct: false }
+      - { text: "Treaty of Trianon", correct: false }
+      - { text: "Treaty of Sèvres", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "What was Operation Barbarossa?"
+    options:
+      - { text: "The German invasion of the Soviet Union, launched on 22 June 1941", correct: true }
+      - { text: "The Allied invasion of Normandy, June 1944", correct: false }
+      - { text: "The Italian invasion of Ethiopia, 1935", correct: false }
+      - { text: "The Soviet counter-offensive at Stalingrad, 1942", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "At which 1942 conference did senior Nazi officials coordinate the implementation of the systematic murder of European Jews?"
+    options:
+      - { text: "Wannsee Conference (20 January 1942)", correct: true }
+      - { text: "Munich Conference (1938)", correct: false }
+      - { text: "Yalta Conference (1945)", correct: false }
+      - { text: "Potsdam Conference (1945)", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "Japan formally surrendered before the United States dropped atomic bombs on Hiroshima and Nagasaki in August 1945."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+    feedback_incorrect: "The atomic attacks (6 and 9 August 1945) preceded Japan's surrender announcement on 15 August 1945."
+
+  - slug: q6
+    type: freeform
+    text: "In two or three sentences, explain why historians often treat the period 1914–1945 as a single 'thirty-one-year European civil war' rather than as two separate wars."
+    reference_answer: |
+      Historians such as Eric Hobsbawm have argued that the First and
+      Second World Wars are best understood as one extended European
+      catastrophe because the Versailles settlement of 1919 — its
+      reparations regime, its territorial revisions, and its failure
+      to integrate Germany or contain the Soviet Union — directly
+      generated the economic, political, and ideological conditions
+      that produced the 1930s authoritarian wave and the war of
+      1939–1945. The interwar 'peace' was structurally an armistice;
+      the same great-power rivalries, the same mass mobilization
+      capacities, and many of the same personnel carried through both
+      conflicts. Treating them as a single episode also captures the
+      continuity of total-war doctrine, civilian targeting, and
+      industrial-scale violence that culminated in the Holocaust and
+      the atomic bombings.

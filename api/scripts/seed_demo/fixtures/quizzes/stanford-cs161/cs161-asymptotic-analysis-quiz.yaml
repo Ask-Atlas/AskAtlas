@@ -1,0 +1,60 @@
+slug: cs161-asymptotic-analysis-quiz
+study_guide_slug: cs161-asymptotic-analysis
+title: "CS 161 — Asymptotic Analysis Quiz"
+description: "Six questions on Big-O classification, formal definitions, and growth ranking."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Which is the tightest asymptotic bound for $T(n) = 3n^2 + 5n + 100$?"
+    options:
+      - { text: "$\\Theta(n)$", correct: false }
+      - { text: "$\\Theta(n \\log n)$", correct: false }
+      - { text: "$\\Theta(n^2)$", correct: true }
+      - { text: "$\\Theta(n^3)$", correct: false }
+    feedback_correct: "Lower-order terms and constants are dropped: $3n^2 + 5n + 100 = \\Theta(n^2)$."
+    feedback_incorrect: "Drop the lower-order $5n$ and $100$, then drop the constant 3 — the dominant term is $n^2$."
+  - slug: q2
+    type: true_false
+    text: "If $f(n) = O(g(n))$, then $f(n) = \\Theta(g(n))$."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+    feedback_correct: "$O$ is only an upper bound. For example, $n = O(n^2)$ but $n \\neq \\Theta(n^2)$."
+    feedback_incorrect: "$O$ is one-sided. $\\Theta$ requires BOTH $O$ AND $\\Omega$ to hold."
+  - slug: q3
+    type: multiple_choice
+    text: "Which ordering is correct from slowest- to fastest-growing as $n \\to \\infty$?"
+    options:
+      - { text: "$\\log n,\\ \\sqrt{n},\\ n,\\ n \\log n,\\ n^2,\\ 2^n$", correct: true }
+      - { text: "$\\sqrt{n},\\ \\log n,\\ n,\\ n^2,\\ n \\log n,\\ 2^n$", correct: false }
+      - { text: "$\\log n,\\ n,\\ \\sqrt{n},\\ n \\log n,\\ 2^n,\\ n^2$", correct: false }
+      - { text: "$n,\\ \\log n,\\ \\sqrt{n},\\ n^2,\\ n \\log n,\\ 2^n$", correct: false }
+    feedback_correct: "Standard hierarchy: logs grow slower than polynomials, which grow slower than exponentials."
+    feedback_incorrect: "Remember: $\\log n < \\sqrt{n} < n < n \\log n < n^2 < 2^n$."
+  - slug: q4
+    type: true_false
+    text: "$2^{\\log_2 n} = n$, so $2^{\\log_2 n} = \\Theta(n)$."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+    feedback_correct: "Exact equality: $2^{\\log_2 n} = n$, which is trivially $\\Theta(n)$."
+    feedback_incorrect: "By definition of logarithm, $2^{\\log_2 n} = n$ exactly."
+  - slug: q5
+    type: multiple_choice
+    text: "Which of the following statements is FALSE?"
+    options:
+      - { text: "$n \\log n = O(n^2)$", correct: false }
+      - { text: "$n^2 = \\Omega(n \\log n)$", correct: false }
+      - { text: "$n = \\Theta(n^2)$", correct: true }
+      - { text: "$\\log n = o(n)$", correct: false }
+    feedback_correct: "$n$ grows strictly slower than $n^2$, so $n \\neq \\Theta(n^2)$ — it's $O(n^2)$ but not $\\Omega(n^2)$."
+    feedback_incorrect: "Check whether each statement gives a TIGHT ($\\Theta$) bound versus a one-sided ($O$ or $\\Omega$) bound."
+  - slug: q6
+    type: freeform
+    text: "Prove from the definition of $O$ that $5n^2 + 17n + 1000 = O(n^2)$. Give a witness pair $(c, n_0)$ and justify the inequality."
+    reference_answer: |
+      Pick $c = 7$ and $n_0 = 32$.
+      For $n \geq 32$: $17n \leq n^2$ (since $17 \leq n$) and $1000 \leq n^2$ (since $n^2 \geq 32^2 = 1024 > 1000$).
+      Therefore $5n^2 + 17n + 1000 \leq 5n^2 + n^2 + n^2 = 7n^2 = c \cdot n^2$ for all $n \geq n_0$.
+      This satisfies the definition of $O(n^2)$.
+      (Other valid witness pairs exist — e.g., $c = 1023$, $n_0 = 1$.)

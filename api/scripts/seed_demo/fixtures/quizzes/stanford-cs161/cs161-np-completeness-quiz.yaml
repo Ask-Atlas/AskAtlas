@@ -1,0 +1,62 @@
+slug: cs161-np-completeness-quiz
+study_guide_slug: cs161-np-completeness
+title: "CS 161 — NP-Completeness Quiz"
+description: "Six questions covering complexity classes, reductions, and the standard NP-complete catalog."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Which definition correctly describes the class NP?"
+    options:
+      - { text: "Decision problems solvable in polynomial time", correct: false }
+      - { text: "Decision problems solvable in non-polynomial time", correct: false }
+      - { text: "Decision problems whose YES instances admit a polynomial-time-checkable certificate", correct: true }
+      - { text: "Decision problems that are NP-hard", correct: false }
+    feedback_correct: "NP = Nondeterministic Polynomial — a YES instance has a polynomial-size certificate that can be verified in polynomial time."
+    feedback_incorrect: "NP requires only a polynomial-time VERIFIER for YES instances given a certificate, not a polynomial-time SOLVER."
+  - slug: q2
+    type: true_false
+    text: "If problem $A$ polynomial-time reduces to problem $B$ ($A \\leq_P B$) and $B \\in P$, then $A \\in P$."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+    feedback_correct: "Compose the polynomial reduction with $B$'s polynomial solver to get a polynomial-time solver for $A$."
+    feedback_incorrect: "Compose the reduction (polynomial) with $B$'s solver (polynomial). Polynomial composition stays polynomial."
+  - slug: q3
+    type: multiple_choice
+    text: "To prove that some new problem $B$ is NP-hard, you should construct a polynomial-time reduction:"
+    options:
+      - { text: "From $B$ to a problem in P", correct: false }
+      - { text: "From $B$ to a known NP-complete problem", correct: false }
+      - { text: "From a known NP-complete problem to $B$", correct: true }
+      - { text: "From $B$ to itself", correct: false }
+    feedback_correct: "If a known NP-hard problem $A$ reduces to $B$, then $B$ is at least as hard as $A$, so $B$ is NP-hard."
+    feedback_incorrect: "The direction matters: reduce a KNOWN-HARD problem TO your new problem to inherit its hardness. Reducing the other way proves nothing."
+  - slug: q4
+    type: true_false
+    text: "Knapsack admits a $\\Theta(nW)$ DP, so it is in P."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+    feedback_correct: "$\\Theta(nW)$ is pseudo-polynomial — exponential in $\\log W$, the bit length of $W$. Knapsack is NP-hard."
+    feedback_incorrect: "Polynomial-time means polynomial in input bit length. $W$ is encoded in $\\log W$ bits, so $nW$ is exponential in input size — Knapsack remains NP-hard."
+  - slug: q5
+    type: multiple_choice
+    text: "Which of the following is NOT known to be NP-complete?"
+    options:
+      - { text: "3-SAT", correct: false }
+      - { text: "Hamiltonian Cycle", correct: false }
+      - { text: "Sorting", correct: true }
+      - { text: "Independent Set", correct: false }
+    feedback_correct: "Sorting is in P (e.g., mergesort runs in $\\Theta(n \\log n)$). The others are classical NP-complete problems."
+    feedback_incorrect: "Sorting has a $\\Theta(n \\log n)$ algorithm — it's in P. The other three are textbook NP-complete problems."
+  - slug: q6
+    type: freeform
+    text: "Briefly describe the polynomial-time reduction from Independent Set to Vertex Cover. Why does it prove Vertex Cover is NP-hard?"
+    reference_answer: |
+      Reduction: Given a graph $G = (V, E)$ and integer $k$ for the Independent Set instance, output the same graph $G$ with target value $k' = |V| - k$ for the Vertex Cover instance.
+
+      Correctness: $S \subseteq V$ is an independent set iff $V \setminus S$ is a vertex cover. (For any edge $(u, v) \in E$: if $S$ is independent then at most one of $u, v$ is in $S$, so at least one of $u, v$ is in $V \setminus S$ — that's the vertex-cover condition.)
+
+      Therefore $G$ has an independent set of size $\geq k$ iff $G$ has a vertex cover of size $\leq |V| - k$.
+
+      The reduction is computable in $O(V + E)$ — polynomial in input size. So Independent Set $\leq_P$ Vertex Cover. Since Independent Set is NP-hard, Vertex Cover is NP-hard. Combined with Vertex Cover $\in$ NP (the cover itself is a polynomial-checkable certificate), Vertex Cover is NP-complete.

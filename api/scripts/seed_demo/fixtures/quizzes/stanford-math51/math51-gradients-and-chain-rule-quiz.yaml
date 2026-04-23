@@ -1,0 +1,67 @@
+slug: math51-gradients-and-chain-rule-quiz
+study_guide_slug: math51-gradients-and-chain-rule
+title: "MATH 51 — Gradients and the Chain Rule Quiz"
+description: "6 questions on partial derivatives, the gradient, directional derivatives, and the multivariable chain rule."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "What is $\\nabla f$ for $f(x, y) = x^2 y + 3 y$?"
+    hint: "Take the partial with respect to each variable in turn."
+    feedback_correct: "Right — $\\partial f / \\partial x = 2 x y$ and $\\partial f / \\partial y = x^2 + 3$."
+    feedback_incorrect: "Hold $y$ constant and differentiate w.r.t. $x$, then hold $x$ constant and differentiate w.r.t. $y$."
+    options:
+      - { text: "$(2 x y,\\; x^2 + 3)$", correct: true }
+      - { text: "$(x^2,\\; 2 y + 3)$", correct: false }
+      - { text: "$(2 x y + 3,\\; x^2)$", correct: false }
+      - { text: "$(2 x y,\\; x^2)$", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "In which direction does $f$ increase fastest at a point $\\mathbf{p}$?"
+    hint: "The gradient is the steepest-ascent direction."
+    feedback_correct: "Right — by definition, $\\nabla f(\\mathbf{p})$ points in the direction of fastest increase."
+    feedback_incorrect: "The direction of fastest increase is exactly $\\nabla f(\\mathbf{p})$ (and the rate is its magnitude)."
+    options:
+      - { text: "Along $\\nabla f(\\mathbf{p})$", correct: true }
+      - { text: "Perpendicular to $\\nabla f(\\mathbf{p})$", correct: false }
+      - { text: "Along $-\\nabla f(\\mathbf{p})$", correct: false }
+      - { text: "Along the $x$-axis, always", correct: false }
+
+  - slug: q3
+    type: true_false
+    text: "$\\nabla f(\\mathbf{p})$ is orthogonal to the level set of $f$ passing through $\\mathbf{p}$."
+    feedback_correct: "Right — moving along a level set keeps $f$ constant, so the directional derivative there is zero, which means the gradient is perpendicular to the level set."
+    feedback_incorrect: "Along a level set, $f$ doesn't change, so the directional derivative is zero — i.e., $\\nabla f$ is perpendicular to the level set."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "If $g(t) = f(\\mathbf{r}(t))$ for $f : \\mathbb{R}^n \\to \\mathbb{R}$ and a smooth curve $\\mathbf{r}$, what is $g'(t)$?"
+    hint: "Multivariable chain rule, single-variable input."
+    feedback_correct: "Yes — that is the chain rule for paths."
+    feedback_incorrect: "Use $g'(t) = \\nabla f(\\mathbf{r}(t)) \\cdot \\mathbf{r}'(t)$ — gradient dot velocity."
+    options:
+      - { text: "$\\nabla f(\\mathbf{r}(t)) \\cdot \\mathbf{r}'(t)$", correct: true }
+      - { text: "$\\nabla f(\\mathbf{r}(t)) + \\mathbf{r}'(t)$", correct: false }
+      - { text: "$f'(\\mathbf{r}(t))$", correct: false }
+      - { text: "$\\nabla f(t) \\cdot \\mathbf{r}(t)$", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "When computing a directional derivative $D_{\\mathbf{u}} f(\\mathbf{p})$, you must normalize $\\mathbf{u}$ to a unit vector first if you want the standard interpretation as a rate per unit distance."
+    feedback_correct: "Correct — the convention is that $\\mathbf{u}$ should be a unit vector. Otherwise the value scales with $\\|\\mathbf{u}\\|$."
+    feedback_incorrect: "If $\\mathbf{u}$ is not a unit vector, $\\nabla f \\cdot \\mathbf{u}$ scales with the length of $\\mathbf{u}$ and isn't a per-unit-distance rate."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "Compute the directional derivative of $f(x, y) = x^2 + y^2$ at $(1, 1)$ in the direction of $\\mathbf{u} = (3, 4)$."
+    reference_answer: |
+      First normalize: $\|\mathbf{u}\| = 5$, so $\hat{\mathbf{u}} = (3/5, 4/5)$.
+      Then $\nabla f = (2x, 2y)$, evaluated at $(1, 1)$ gives $(2, 2)$.
+      The directional derivative is
+      $D_{\hat{\mathbf{u}}} f(1,1) = (2)(3/5) + (2)(4/5) = 14/5$.

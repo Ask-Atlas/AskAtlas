@@ -1,0 +1,65 @@
+slug: hist1b-renaissance-humanism-quiz
+study_guide_slug: hist1b-renaissance-humanism
+title: "HIST 1B — Renaissance Humanism Quiz"
+description: "Six questions on the figures, methods, and texts of fifteenth- and sixteenth-century humanism."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Which fourteenth-century figure is conventionally called the 'father of humanism'?"
+    options:
+      - { text: "Francesco Petrarca (Petrarch)", correct: true }
+      - { text: "Thomas Aquinas", correct: false }
+      - { text: "Niccolò Machiavelli", correct: false }
+      - { text: "Dante Alighieri", correct: false }
+    feedback_correct: "Right — Petrarch's manuscript-hunting and his Latin letters to long-dead authors set the humanist template."
+    feedback_incorrect: "Petrarch (1304–1374) is the conventional answer; the others all belong to adjacent but different intellectual moments."
+
+  - slug: q2
+    type: multiple_choice
+    text: "What did Lorenzo Valla demonstrate in his 1440 *Declamation Concerning the False Donation of Constantine*?"
+    options:
+      - { text: "That the document was a medieval forgery, by means of philological analysis of its Latin", correct: true }
+      - { text: "That Constantine had genuinely transferred the Western Empire to the papacy", correct: false }
+      - { text: "That the papacy had no claim to spiritual authority", correct: false }
+      - { text: "That medieval Latin was identical to classical Latin", correct: false }
+    hint: "Valla's method is what mattered as much as his conclusion."
+
+  - slug: q3
+    type: multiple_choice
+    text: "Which of the following best describes the *studia humanitatis*?"
+    options:
+      - { text: "A curriculum of grammar, rhetoric, poetry, history, and moral philosophy", correct: true }
+      - { text: "A monastic order founded by Petrarch", correct: false }
+      - { text: "A papal commission to suppress heretical texts", correct: false }
+      - { text: "A scholastic theological program centered on Aquinas", correct: false }
+
+  - slug: q4
+    type: true_false
+    text: "Erasmus of Rotterdam followed Martin Luther into open schism from the Catholic Church."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+    feedback_incorrect: "Erasmus remained Catholic and clashed with Luther over free will in *De libero arbitrio* (1524)."
+
+  - slug: q5
+    type: true_false
+    text: "Aldus Manutius's Aldine Press in Venice (founded 1494) helped standardize the texts of Greek and Latin classics."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "In two or three sentences, explain why Lorenzo Valla's philological method mattered for the later Reformation."
+    reference_answer: |
+      Valla's exposure of the *Donation of Constantine* and his
+      *Annotations on the New Testament* showed that the same close
+      linguistic and manuscript analysis that destabilized one
+      medieval text could be turned on the Vulgate Bible itself.
+      When Erasmus printed Valla's *Annotations* in 1505 and produced
+      his own Greek New Testament in 1516, he made humanist
+      philology a tool that Luther and other reformers could use to
+      challenge Catholic doctrinal claims grounded in particular
+      Vulgate readings. Method, in other words, traveled from secular
+      forgery-detection to scriptural revision, with explosive
+      consequences for the unity of Latin Christendom.

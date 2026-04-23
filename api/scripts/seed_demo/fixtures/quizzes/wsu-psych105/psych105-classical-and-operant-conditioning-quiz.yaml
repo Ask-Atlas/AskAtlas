@@ -1,0 +1,78 @@
+slug: psych105-classical-and-operant-conditioning-quiz
+study_guide_slug: psych105-classical-and-operant-conditioning
+title: "PSYCH 105 — Classical and Operant Conditioning Quiz"
+description: "6 questions on Pavlov's vocabulary, Skinner's matrix, and reinforcement schedules."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "In Pavlov's classic experiment, the bell becomes a CS because it has been:"
+    hint: "What's the role of pairing?"
+    feedback_correct: "Right — the previously neutral bell predicts food and acquires the power to elicit salivation."
+    feedback_incorrect: "The bell starts as neutral and becomes a CS through repeated pairing with the US."
+    options:
+      - { text: "Repeatedly paired with the unconditioned stimulus (food).", correct: true }
+      - { text: "Reinforced after each salivation response.", correct: false }
+      - { text: "Punished when the dog failed to respond.", correct: false }
+      - { text: "Presented immediately after the unconditioned response.", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "A teen does the dishes to stop her parents' nagging. The nagging stops, and the teen does the dishes more often. The dish-washing behavior was:"
+    hint: "Did a stimulus get added or removed? Did the behavior go up or down?"
+    feedback_correct: "Negative reinforcement — an aversive stimulus was removed and the behavior increased."
+    feedback_incorrect: "The aversive nagging was *removed* (not added), and behavior *increased* — that's negative reinforcement, not punishment."
+    options:
+      - { text: "Positive reinforcement", correct: false }
+      - { text: "Negative reinforcement", correct: true }
+      - { text: "Positive punishment", correct: false }
+      - { text: "Negative punishment", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "Which reinforcement schedule typically produces the HIGHEST and most extinction-resistant response rate?"
+    feedback_correct: "Variable ratio — slot machines, fishing — produces high, persistent responding."
+    feedback_incorrect: "Variable ratio is the canonical answer; fixed schedules produce more predictable but less persistent rates."
+    options:
+      - { text: "Fixed Ratio", correct: false }
+      - { text: "Variable Ratio", correct: true }
+      - { text: "Fixed Interval", correct: false }
+      - { text: "Variable Interval", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "Which scenario is the BEST example of classical conditioning?"
+    hint: "Look for an involuntary response to a previously neutral signal."
+    feedback_correct: "Salivation is an involuntary response to a CS that was previously neutral — classic Pavlovian setup."
+    feedback_incorrect: "Classical conditioning involves an involuntary response triggered by a CS, not a voluntary action followed by a consequence."
+    options:
+      - { text: "A child cleans her room to earn an allowance.", correct: false }
+      - { text: "A dog begins to salivate at the sound of a can opener that has reliably preceded feeding.", correct: true }
+      - { text: "A pigeon pecks a key for grain on a fixed-interval schedule.", correct: false }
+      - { text: "A driver slows down to avoid a speeding ticket.", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "Negative reinforcement decreases the likelihood of a behavior."
+    feedback_correct: "False — negative reinforcement INCREASES behavior by removing an aversive stimulus."
+    feedback_incorrect: "Reinforcement (positive or negative) always increases behavior; only punishment decreases it."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q6
+    type: freeform
+    text: "Explain the difference between negative reinforcement and positive punishment using one concrete example for each."
+    reference_answer: |
+      Negative reinforcement removes an aversive stimulus and increases the
+      preceding behavior. Example: buckling a seatbelt to silence the car's
+      warning chime — the behavior (buckling) goes up because the aversive
+      sound (chime) is removed.
+
+      Positive punishment adds an aversive stimulus and decreases the
+      preceding behavior. Example: touching a hot stove and feeling pain —
+      the behavior (touching the stove) goes down because the aversive
+      stimulus (pain) is added.
+
+      Key contrast: both involve aversive stimuli, but negative
+      reinforcement removes one (behavior up) while positive punishment
+      adds one (behavior down).

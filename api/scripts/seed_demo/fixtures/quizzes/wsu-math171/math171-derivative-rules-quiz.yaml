@@ -1,0 +1,74 @@
+slug: math171-derivative-rules-quiz
+study_guide_slug: math171-derivative-rules
+title: "MATH 171 — Derivative Rules Quiz"
+description: "7 questions on power, sum, product, and quotient rules and the standard derivative library."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "What is $\\dfrac{d}{dx}\\left[3x^4\\right]$?"
+    hint: "Apply the power rule: bring the exponent down, subtract 1."
+    feedback_correct: "Right — $3 \\cdot 4 x^{4-1} = 12 x^3$."
+    feedback_incorrect: "Power rule: $\\frac{d}{dx}[c x^n] = c n x^{n-1}$."
+    options:
+      - { text: "$12 x^3$", correct: true }
+      - { text: "$12 x^4$", correct: false }
+      - { text: "$3 x^3$", correct: false }
+      - { text: "$4 x^3$", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "Differentiate $f(x) = \\dfrac{x^2 + 1}{x - 3}$."
+    hint: "Quotient rule: low D-high minus high D-low, all over low squared."
+    feedback_correct: "Yes — numerator simplifies to $x^2 - 6x - 1$."
+    feedback_incorrect: "Apply $(f/g)' = (f'g - fg')/g^2$ with $f = x^2 + 1$ and $g = x - 3$."
+    options:
+      - { text: "$\\dfrac{x^2 - 6x - 1}{(x - 3)^2}$", correct: true }
+      - { text: "$\\dfrac{x^2 + 6x + 1}{(x - 3)^2}$", correct: false }
+      - { text: "$\\dfrac{2x}{1}$", correct: false }
+      - { text: "$\\dfrac{2x(x - 3) + (x^2 + 1)}{(x - 3)^2}$", correct: false }
+
+  - slug: q3
+    type: true_false
+    text: "$\\dfrac{d}{dx}[\\sin(x)] = \\cos(x)$ when $x$ is measured in radians."
+    feedback_correct: "Correct — the formula assumes radian measure."
+    feedback_incorrect: "It is true: the standard derivative of sine assumes radians."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q4
+    type: true_false
+    text: "$(fg)'(x) = f'(x) g'(x)$ for all differentiable $f$ and $g$."
+    feedback_correct: "Correct — the actual product rule is $(fg)' = f'g + fg'$."
+    feedback_incorrect: "This is the classic mistake. Try it on $f(x) = g(x) = x$: you would get $1$ instead of the correct $2x$."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q5
+    type: multiple_choice
+    text: "What is $\\dfrac{d}{dx}\\left[2^x\\right]$?"
+    hint: "Power rule does NOT apply — the variable is in the exponent."
+    feedback_correct: "Right — for $a^x$ the derivative is $a^x \\ln a$."
+    feedback_incorrect: "Use $\\frac{d}{dx}[a^x] = a^x \\ln a$, not the power rule."
+    options:
+      - { text: "$x \\cdot 2^{x-1}$", correct: false }
+      - { text: "$2^x$", correct: false }
+      - { text: "$2^x \\ln 2$", correct: true }
+      - { text: "$\\ln 2$", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "Compute $\\dfrac{d}{dx}\\left[x^2 \\sin x\\right]$ using the product rule, and show your work."
+    reference_answer: |
+      Apply $(fg)' = f'g + fg'$ with $f = x^2$ and $g = \sin x$:
+      $f' = 2x$, $g' = \cos x$.
+      Therefore $\frac{d}{dx}[x^2 \sin x] = 2x \sin x + x^2 \cos x$.
+
+  - slug: q7
+    type: freeform
+    text: "Find $f'(x)$ for $f(x) = \\sqrt{x} + \\dfrac{1}{x^2}$. Rewrite using exponents first."
+    reference_answer: |
+      Rewrite as $f(x) = x^{1/2} + x^{-2}$.
+      Apply the power rule term by term:
+      $f'(x) = \tfrac{1}{2} x^{-1/2} + (-2) x^{-3} = \dfrac{1}{2\sqrt{x}} - \dfrac{2}{x^3}$.
