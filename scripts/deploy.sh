@@ -36,7 +36,7 @@ for attempt in 1 2 3; do
         echo "✗ docker pull failed after 3 attempts"
         exit 1
     fi
-    SLEEP=$(( attempt * 10 ))
+    SLEEP=$((attempt * 10))
     echo "Pull attempt $attempt failed; retrying in ${SLEEP}s..."
     sleep "$SLEEP"
 done
