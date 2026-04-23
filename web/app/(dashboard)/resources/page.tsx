@@ -1,19 +1,20 @@
 "use client";
 
-import * as React from "react";
-import { useState, useEffect } from "react";
 import {
-  FileText,
   Download,
+  FileText,
+  LayoutGrid,
+  List as ListIcon,
   MoreVertical,
+  RotateCcw,
   X,
   ZoomIn,
   ZoomOut,
-  RotateCcw,
-  LayoutGrid,
-  List as ListIcon,
 } from "lucide-react";
 import Image from "next/image";
+import * as React from "react";
+import { useEffect, useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,22 +22,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-// Matches the API FileResponse schema
-interface Document {
-  id: string; // UUID
-  name: string;
-  size: number; // bytes
-  mime_type: string;
-  status: "pending" | "complete" | "failed";
-  created_at: string; // ISO date
-  updated_at: string; // ISO date
-  favorited_at?: string | null;
-  last_viewed_at?: string | null;
-}
+import { toggleFileFavorite } from "@/lib/api";
+import type { FileResponse } from "@/lib/api/types";
+import { FileCard } from "@/lib/features/dashboard/files/file-card";
+import { FavoriteButton } from "@/lib/features/shared/favorite-button";
+import { toast } from "@/lib/features/shared/toast/toast";
 
 interface DocumentViewerProps {
-  document: Document | null;
+  document: FileResponse | null;
   onClose: () => void;
 }
 
@@ -48,7 +41,7 @@ function DocumentViewer({ document, onClose }: DocumentViewerProps) {
 
   const isImage = document.mime_type.startsWith("image/");
   const isPDF = document.mime_type === "application/pdf";
-  const fileUrl = `/api/files/${document.id}`; // Assuming this serves the file content
+  const fileUrl = `/api/files/${document.id}`;
 
   const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 3));
   const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.25, 0.5));
@@ -67,7 +60,6 @@ function DocumentViewer({ document, onClose }: DocumentViewerProps) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex flex-col">
-      {/* Header */}
       <div className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
         <div className="flex items-center gap-3">
           <FileText className="w-5 h-5 text-zinc-500" />
@@ -82,7 +74,6 @@ function DocumentViewer({ document, onClose }: DocumentViewerProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Zoom Controls */}
           <Button
             variant="ghost"
             size="sm"
@@ -117,7 +108,6 @@ function DocumentViewer({ document, onClose }: DocumentViewerProps) {
         </div>
       </div>
 
-      {/* Viewer */}
       <div className="flex-1 overflow-auto bg-zinc-100 dark:bg-zinc-800 p-4">
         <div className="max-w-full mx-auto">
           <div
@@ -166,63 +156,84 @@ function DocumentViewer({ document, onClose }: DocumentViewerProps) {
 }
 
 export default function ResourcesPage() {
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const [files, setFiles] = useState<FileResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
-  const [selectedDocument, setSelectedDocument] = useState<Document | null>(
-    null,
-  );
+  const [selectedFile, setSelectedFile] = useState<FileResponse | null>(null);
 
   useEffect(() => {
-    // Fetch user's documents
-    const fetchDocuments = async () => {
+    const fetchFiles = async () => {
       try {
         const response = await fetch("/api/me/files");
         if (response.ok) {
-          const data = await response.json();
-          setDocuments(data.files || []);
+          const data = (await response.json()) as { files?: FileResponse[] };
+          setFiles(data.files ?? []);
         }
       } catch (error) {
-        console.error("Failed to fetch documents:", error);
+        console.error("Failed to fetch files:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDocuments();
+    fetchFiles();
   }, []);
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
-  };
-
-  const getRelativeTime = (isoString: string): string => {
-    const date = new Date(isoString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffHours < 1) return "Just now";
-    if (diffHours < 24)
-      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30)
-      return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? "s" : ""} ago`;
-    return date.toLocaleDateString();
-  };
-
-  const handleDownload = (doc: Document) => {
+  const handleDownload = (file: FileResponse) => {
     const link = window.document.createElement("a");
-    link.href = `/api/files/${doc.id}`;
-    link.download = doc.name;
+    link.href = `/api/files/${file.id}`;
+    link.download = file.name;
     link.click();
   };
+
+  const rowMenu = (file: FileResponse) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label="File actions"
+          className="opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <MoreVertical className="w-4 h-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => handleDownload(file)}>
+          <Download className="w-4 h-4 mr-2" />
+          Download
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const favoriteButton = (file: FileResponse) => (
+    <FavoriteButton
+      initialFavorited={file.favorited_at !== null}
+      label={
+        file.favorited_at !== null
+          ? "Unfavorite this file"
+          : "Favorite this file"
+      }
+      size="sm"
+      onToggle={async () => {
+        try {
+          const response = await toggleFileFavorite(file.id);
+          setFiles((current) =>
+            current.map((f) =>
+              f.id === file.id
+                ? { ...f, favorited_at: response.favorited_at }
+                : f,
+            ),
+          );
+          return response;
+        } catch (err) {
+          toast.error(err);
+          throw err;
+        }
+      }}
+    />
+  );
 
   if (loading) {
     return (
@@ -249,13 +260,13 @@ export default function ResourcesPage() {
           </p>
         </header>
 
-        {/* View Mode Toggle */}
         <div className="flex justify-end">
           <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg border">
             <Button
               variant={viewMode === "list" ? "default" : "ghost"}
               size="sm"
               onClick={() => setViewMode("list")}
+              aria-label="List view"
             >
               <ListIcon className="w-4 h-4" />
             </Button>
@@ -263,14 +274,14 @@ export default function ResourcesPage() {
               variant={viewMode === "grid" ? "default" : "ghost"}
               size="sm"
               onClick={() => setViewMode("grid")}
+              aria-label="Grid view"
             >
               <LayoutGrid className="w-4 h-4" />
             </Button>
           </div>
         </div>
 
-        {/* Documents Display */}
-        {documents.length === 0 ? (
+        {files.length === 0 ? (
           <div className="text-center py-16 bg-muted/50 rounded-xl">
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">No resources found</h3>
@@ -280,102 +291,36 @@ export default function ResourcesPage() {
           </div>
         ) : viewMode === "list" ? (
           <div className="space-y-2">
-            {documents.map((doc) => (
-              <div
-                key={doc.id}
-                className="flex items-center justify-between p-4 bg-card rounded-lg border hover:bg-muted/50 transition-colors group"
-              >
-                <button
-                  onClick={() => setSelectedDocument(doc)}
-                  className="flex items-center gap-4 flex-1 text-left"
-                >
-                  <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-orange-500/10">
-                    <FileText className="w-6 h-6 text-orange-500" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium group-hover:text-orange-500 transition-colors">
-                      {doc.name}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {formatFileSize(doc.size)} • Uploaded{" "}
-                      {getRelativeTime(doc.created_at)}
-                    </p>
-                  </div>
-                </button>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <MoreVertical className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleDownload(doc)}>
-                      <Download className="w-4 h-4 mr-2" />
-                      Download
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+            {files.map((file) => (
+              <FileCard
+                key={file.id}
+                file={file}
+                variant="list"
+                onOpen={setSelectedFile}
+                favoriteButton={favoriteButton(file)}
+                rowMenu={rowMenu(file)}
+              />
             ))}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {documents.map((doc) => (
-              <div
-                key={doc.id}
-                className="group relative bg-card rounded-lg border hover:shadow-md transition-all overflow-hidden"
-              >
-                <button
-                  onClick={() => setSelectedDocument(doc)}
-                  className="w-full p-4 text-left"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-orange-500/10">
-                      <FileText className="w-6 h-6 text-orange-500" />
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleDownload(doc)}>
-                          <Download className="w-4 h-4 mr-2" />
-                          Download
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-
-                  <h3 className="font-medium group-hover:text-orange-500 transition-colors line-clamp-2 mb-2">
-                    {doc.name}
-                  </h3>
-
-                  <p className="text-xs text-muted-foreground">
-                    Uploaded {getRelativeTime(doc.created_at)}
-                  </p>
-                </button>
-              </div>
+            {files.map((file) => (
+              <FileCard
+                key={file.id}
+                file={file}
+                variant="grid"
+                onOpen={setSelectedFile}
+                favoriteButton={favoriteButton(file)}
+              />
             ))}
           </div>
         )}
       </section>
 
-      {/* Document Viewer */}
-      {selectedDocument && (
+      {selectedFile && (
         <DocumentViewer
-          document={selectedDocument}
-          onClose={() => setSelectedDocument(null)}
+          document={selectedFile}
+          onClose={() => setSelectedFile(null)}
         />
       )}
     </>
