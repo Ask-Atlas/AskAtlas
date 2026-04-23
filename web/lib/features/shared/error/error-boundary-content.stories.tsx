@@ -22,7 +22,7 @@ const meta: Meta<typeof ErrorBoundaryContent> = {
     docs: {
       description: {
         component:
-          "Client error boundary rendered by `app/error.tsx` and `app/(dashboard)/error.tsx`. Surfaces `ApiError.body.message`, falls back to a generic string, and hard-redirects to `/sign-in` on 401. The 401 story does not actually navigate -- the redirect helper is real and will drive a full page load when used for real, so this Storybook preview is blank-on-purpose.",
+          "Client error boundary rendered by `app/error.tsx` and `app/(dashboard)/error.tsx`. Surfaces `ApiError.body.message`, falls back to a generic string, and hard-redirects to `/sign-in` on 401 (not demo-able in Storybook because the redirect would navigate the preview iframe away -- see unit tests for that branch).",
       },
     },
   },
@@ -52,21 +52,6 @@ export const ApiErrorWithoutBody: Story = {
 export const GenericError: Story = {
   args: {
     error: new Error("Unexpected render failure"),
-    reset: fn(),
-  },
-};
-
-export const AuthExpired401: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Renders nothing while the effect fires a hard redirect. In Storybook the redirect is a no-op against the preview iframe's URL; in prod it sends the user to `/sign-in`.",
-      },
-    },
-  },
-  args: {
-    error: apiError(401, null),
     reset: fn(),
   },
 };
