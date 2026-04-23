@@ -2,7 +2,6 @@
 
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -10,6 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 
 interface ConfirmationDialogProps {
   open: boolean;
@@ -19,6 +19,17 @@ interface ConfirmationDialogProps {
   confirmLabel?: string;
   cancelLabel?: string;
   destructive?: boolean;
+  /**
+   * When true, both buttons are disabled. Callers should flip this
+   * while the async `onConfirm` is in flight to prevent double-submit
+   * without having to close the dialog mid-operation.
+   */
+  disabled?: boolean;
+  /**
+   * The primitive fires this synchronously; the returned promise (if
+   * any) is the caller's to await. The dialog does not auto-close --
+   * the caller decides when via `onOpenChange(false)`.
+   */
   onConfirm: () => void | Promise<void>;
 }
 
@@ -30,6 +41,7 @@ export function ConfirmationDialog({
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   destructive = false,
+  disabled = false,
   onConfirm,
 }: ConfirmationDialogProps) {
   return (
@@ -40,13 +52,17 @@ export function ConfirmationDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
-          <AlertDialogAction
+          <AlertDialogCancel disabled={disabled}>
+            {cancelLabel}
+          </AlertDialogCancel>
+          <Button
+            type="button"
             variant={destructive ? "destructive" : "default"}
+            disabled={disabled}
             onClick={onConfirm}
           >
             {confirmLabel}
-          </AlertDialogAction>
+          </Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

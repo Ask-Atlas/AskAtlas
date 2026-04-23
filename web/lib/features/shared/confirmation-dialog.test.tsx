@@ -1,8 +1,9 @@
 /**
- * Covers the four acceptance criteria on ASK-163: dialog is visible
- * when `open`, async `onConfirm` is awaited (caller controls close),
- * destructive flag swaps the confirm button variant, and dismissing
- * fires `onOpenChange(false)`.
+ * Exercises the ConfirmationDialog contract: it's visible when `open`,
+ * invokes `onConfirm` on confirm click (may return a promise the caller
+ * awaits), does NOT auto-close on confirm (caller owns close), fires
+ * `onOpenChange(false)` when Cancel closes it, the destructive flag
+ * swaps the confirm button variant, and `disabled` locks both buttons.
  */
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -44,7 +45,7 @@ describe("ConfirmationDialog", () => {
     expect(props.onConfirm).toHaveBeenCalledTimes(1);
   });
 
-  it("returns the async onConfirm promise so callers can await it", async () => {
+  it("stays open during async confirm so callers can await the promise", async () => {
     let released = false;
     const onConfirm = jest.fn(
       () =>
@@ -55,8 +56,12 @@ describe("ConfirmationDialog", () => {
           }, 10);
         }),
     );
-    renderDialog({ onConfirm, confirmLabel: "Delete" });
+    const { props } = renderDialog({ onConfirm, confirmLabel: "Delete" });
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    // Critical: the primitive must NOT have closed the dialog itself. If
+    // downstream tickets await an API call before closing, a self-closing
+    // dialog would unmount the spinner and re-enable buttons prematurely.
+    expect(props.onOpenChange).not.toHaveBeenCalledWith(false);
     await onConfirm.mock.results[0]?.value;
     expect(released).toBe(true);
   });
@@ -79,5 +84,20 @@ describe("ConfirmationDialog", () => {
     expect(screen.getByRole("button", { name: "Save" })).not.toHaveClass(
       "bg-destructive",
     );
+  });
+
+  it("disables both buttons when `disabled` is true", async () => {
+    const { props } = renderDialog({
+      disabled: true,
+      confirmLabel: "Delete",
+      cancelLabel: "Nevermind",
+    });
+    const confirm = screen.getByRole("button", { name: "Delete" });
+    const cancel = screen.getByRole("button", { name: "Nevermind" });
+    expect(confirm).toBeDisabled();
+    expect(cancel).toBeDisabled();
+
+    await userEvent.click(confirm);
+    expect(props.onConfirm).not.toHaveBeenCalled();
   });
 });
