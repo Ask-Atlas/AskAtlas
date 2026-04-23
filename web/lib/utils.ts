@@ -39,6 +39,12 @@ const RELATIVE_THRESHOLDS: Array<{
   { limit: Number.POSITIVE_INFINITY, divisor: 31_557_600, unit: "year" },
 ];
 
+// Hoisted so list renders don't allocate a formatter per row.
+const RELATIVE_FORMATTER = new Intl.RelativeTimeFormat(undefined, {
+  numeric: "auto",
+  style: "short",
+});
+
 /**
  * Short relative timestamp backed by `Intl.RelativeTimeFormat` so the
  * copy follows the user's locale (e.g. "3d ago", "2 months ago"). Past
@@ -52,14 +58,16 @@ export function formatRelativeDate(iso: string): string {
   const diffSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
   if (diffSeconds < 5) return "just now";
 
-  const formatter = new Intl.RelativeTimeFormat(undefined, {
-    numeric: "auto",
-    style: "short",
-  });
   for (const { limit, divisor, unit } of RELATIVE_THRESHOLDS) {
     if (diffSeconds < limit) {
-      return formatter.format(-Math.floor(diffSeconds / divisor), unit);
+      return RELATIVE_FORMATTER.format(
+        -Math.floor(diffSeconds / divisor),
+        unit,
+      );
     }
   }
-  return formatter.format(-Math.floor(diffSeconds / 31_557_600), "year");
+  return RELATIVE_FORMATTER.format(
+    -Math.floor(diffSeconds / 31_557_600),
+    "year",
+  );
 }

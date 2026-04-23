@@ -11,9 +11,11 @@ interface FavoriteButtonProps {
   /**
    * Fires the actual toggle request. Must resolve to the server's
    * ToggleFavoriteResponse so the caller can sync back any derived
-   * state (counts, last-favorited timestamps, etc). If it throws,
-   * this component rolls the star back to `initialFavorited` and
-   * re-throws so a caller-owned toast can surface the failure.
+   * state (counts, last-favorited timestamps, etc). Rejections are
+   * caught internally -- the optimistic UI rolls back when the
+   * transition settles, and callers that need to surface the error
+   * should wrap their own `onToggle` with a `try`/`catch`/`toast`
+   * (see the resources page for the canonical pattern).
    */
   onToggle: () => Promise<ToggleFavoriteResponse>;
   /** Screen-reader label + tooltip. Context-specific ("Favorite this file"). */

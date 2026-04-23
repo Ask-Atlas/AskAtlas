@@ -180,11 +180,30 @@ function resolveIcon(mime: string): LucideIcon {
   return FileText;
 }
 
+const SHORT_LABEL_BY_MIME: Record<string, string> = {
+  "application/pdf": "PDF",
+  "application/msword": "DOC",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+    "DOCX",
+  "application/vnd.ms-excel": "XLS",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "XLSX",
+  "application/vnd.ms-powerpoint": "PPT",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+    "PPTX",
+  "application/zip": "ZIP",
+  "application/epub+zip": "EPUB",
+  "text/plain": "TXT",
+  "text/csv": "CSV",
+};
+
 function shortMimeLabel(mime: string): string {
+  if (SHORT_LABEL_BY_MIME[mime]) return SHORT_LABEL_BY_MIME[mime];
+  if (mime.startsWith("image/")) return "IMG";
+  if (mime.startsWith("video/")) return "VIDEO";
+  if (mime.startsWith("audio/")) return "AUDIO";
+  // Unknown mime: show just the subtype (e.g. "application/unknown" -> "UNKNOW").
   const subtype = mime.split("/")[1] ?? mime;
-  // Strip vendor prefixes ("vnd.openxmlformats-...wordprocessingml.document" -> "word")
-  const cleaned = subtype.replace(/^vnd\..+?(\w+)$/, "$1");
-  return cleaned.slice(0, 6);
+  return subtype.slice(0, 6).toUpperCase();
 }
 
 function stopPropagation(event: React.MouseEvent) {

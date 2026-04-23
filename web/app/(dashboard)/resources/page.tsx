@@ -12,7 +12,6 @@ import {
   ZoomOut,
 } from "lucide-react";
 import Image from "next/image";
-import * as React from "react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toggleFileFavorite } from "@/lib/api";
-import type { FileResponse } from "@/lib/api/types";
+import type { FileResponse, ListFilesResponse } from "@/lib/api/types";
 import { FileCard } from "@/lib/features/dashboard/files/file-card";
 import { FavoriteButton } from "@/lib/features/shared/favorite-button";
 import { toast } from "@/lib/features/shared/toast/toast";
@@ -54,7 +53,7 @@ function DocumentViewer({ document, onClose }: DocumentViewerProps) {
   const handleDownload = () => {
     const link = window.document.createElement("a");
     link.href = fileUrl;
-    link.download = document.name;
+    link.download = document.name || "Untitled";
     link.click();
   };
 
@@ -166,7 +165,7 @@ export default function ResourcesPage() {
       try {
         const response = await fetch("/api/me/files");
         if (response.ok) {
-          const data = (await response.json()) as { files?: FileResponse[] };
+          const data = (await response.json()) as ListFilesResponse;
           setFiles(data.files ?? []);
         }
       } catch (error) {
@@ -182,7 +181,7 @@ export default function ResourcesPage() {
   const handleDownload = (file: FileResponse) => {
     const link = window.document.createElement("a");
     link.href = `/api/files/${file.id}`;
-    link.download = file.name;
+    link.download = file.name || "Untitled";
     link.click();
   };
 
@@ -209,9 +208,9 @@ export default function ResourcesPage() {
 
   const favoriteButton = (file: FileResponse) => (
     <FavoriteButton
-      initialFavorited={file.favorited_at !== null}
+      initialFavorited={file.favorited_at != null}
       label={
-        file.favorited_at !== null
+        file.favorited_at != null
           ? "Unfavorite this file"
           : "Favorite this file"
       }

@@ -106,14 +106,9 @@ describe("FavoriteButton", () => {
     );
     const button = screen.getByRole("button");
 
-    // React's default UX logs the unhandled error; swallow it here so jest
-    // doesn't treat the noise as a separate test failure.
-    const originalOnError = window.onerror;
-    window.onerror = () => true;
     await act(async () => {
       await userEvent.click(button);
     });
-    window.onerror = originalOnError;
 
     await waitFor(() => expect(onToggle).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(button).toHaveAttribute("aria-pressed", "true"));
