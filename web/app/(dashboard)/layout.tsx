@@ -10,6 +10,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToastProvider } from "@/lib/features/shared/toast/toast-provider";
 
 export default async function DashboardLayout({
   children,
@@ -38,6 +39,7 @@ export default async function DashboardLayout({
             <main className="flex flex-1 flex-col gap-4 p-4">{children}</main>
           </SidebarInset>
         </SidebarProvider>
+        <ToastProvider />
       </DashboardCommonCopyProvider>
     </TooltipProvider>
   );
