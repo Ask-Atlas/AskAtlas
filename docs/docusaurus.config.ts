@@ -100,6 +100,11 @@ const config: Config = {
         },
         { to: '/blog', label: 'Blog', position: 'left' },
         {
+          href: 'pathname:///storybook/',
+          label: 'Components',
+          position: 'left',
+        },
+        {
           href: 'https://github.com/Ask-Atlas/AskAtlas',
           label: 'GitHub',
           position: 'right',

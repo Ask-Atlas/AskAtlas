@@ -1,4 +1,4 @@
-name: Deploy Docs to GitHub Pages
+name: Deploy Docs + Storybook to GitHub Pages
 
 on:
   push:
@@ -6,6 +6,12 @@ on:
       - main
     paths:
       - 'docs/**'
+      - 'web/lib/**'
+      - 'web/components/**'
+      - 'web/.storybook/**'
+      - 'web/package.json'
+      - 'web/pnpm-lock.yaml'
+      - '.github/workflows/docs-deploy.yml'
   workflow_dispatch:
 
 permissions:
@@ -19,25 +25,56 @@ concurrency:
 
 jobs:
   build:
-    name: Build Docusaurus
+    name: Build Docusaurus + Storybook
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: docs
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      # --- Storybook (pnpm) ---
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node 22 (Storybook)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install web dependencies
+        working-directory: web
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Storybook
+        working-directory: web
+        env:
+          # Storybook is served at `https://ask-atlas.github.io/AskAtlas/storybook/`,
+          # so Vite needs to rewrite asset URLs to that subpath. `.storybook/main.ts`
+          # reads this env into `viteFinal.base`.
+          STORYBOOK_BASE_URL: /AskAtlas/storybook/
+        run: pnpm build-storybook --output-dir storybook-static
+
+      # --- Docusaurus (npm) ---
+      - name: Set up Node 20 (Docusaurus)
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
           cache-dependency-path: docs/package-lock.json
 
-      - name: Install dependencies
+      - name: Install docs dependencies
+        working-directory: docs
         run: npm ci
 
-      - name: Build website
+      - name: Build Docusaurus
+        working-directory: docs
         run: npm run build
+
+      - name: Merge Storybook into Pages artifact
+        run: |
+          mkdir -p docs/build/storybook
+          cp -R web/storybook-static/. docs/build/storybook/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
