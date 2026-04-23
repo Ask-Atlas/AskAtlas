@@ -8,9 +8,10 @@
  */
 jest.mock("sonner", () => ({
   toast: {
-    success: jest.fn(),
-    error: jest.fn(),
-    info: jest.fn(),
+    success: jest.fn(() => 1),
+    error: jest.fn(() => 2),
+    info: jest.fn(() => 3),
+    dismiss: jest.fn(),
   },
 }));
 
@@ -24,6 +25,7 @@ import { toast } from "./toast";
 const mockSuccess = sonnerToast.success as jest.Mock;
 const mockError = sonnerToast.error as jest.Mock;
 const mockInfo = sonnerToast.info as jest.Mock;
+const mockDismiss = sonnerToast.dismiss as jest.Mock;
 
 function fakeResponse(status: number): Response {
   return { status } as unknown as Response;
@@ -33,23 +35,31 @@ beforeEach(() => {
   mockSuccess.mockClear();
   mockError.mockClear();
   mockInfo.mockClear();
+  mockDismiss.mockClear();
 });
 
 describe("toast.success", () => {
-  it("forwards the message to sonner.success", () => {
-    toast.success("Saved");
+  it("forwards the message and returns the sonner id", () => {
+    const id = toast.success("Saved");
     expect(mockSuccess).toHaveBeenCalledWith("Saved");
+    expect(id).toBe(1);
   });
 });
 
 describe("toast.info", () => {
-  it("forwards the message to sonner.info", () => {
-    toast.info("Heads up");
+  it("forwards the message and returns the sonner id", () => {
+    const id = toast.info("Heads up");
     expect(mockInfo).toHaveBeenCalledWith("Heads up");
+    expect(id).toBe(3);
   });
 });
 
 describe("toast.error", () => {
+  it("surfaces a non-empty string as the message", () => {
+    toast.error("bare string");
+    expect(mockError).toHaveBeenCalledWith("bare string");
+  });
+
   it("uses ApiError.body.message when the envelope is present", () => {
     const body: AppError = {
       code: 404,
@@ -65,18 +75,45 @@ describe("toast.error", () => {
     expect(mockError).toHaveBeenCalledWith("Request failed (500)");
   });
 
+  it("falls back to `Request failed (STATUS)` when ApiError body.message is empty", () => {
+    const body: AppError = { code: 500, status: "internal", message: "" };
+    toast.error(new ApiError("op failed: 500", fakeResponse(500), body));
+    expect(mockError).toHaveBeenCalledWith("Request failed (500)");
+  });
+
   it("uses Error.message for non-ApiError errors", () => {
     toast.error(new Error("network down"));
     expect(mockError).toHaveBeenCalledWith("network down");
   });
 
-  it("falls back to a generic message for non-Error values", () => {
-    toast.error("bare string");
+  it("falls back to the generic message when Error.message is empty", () => {
+    toast.error(new Error(""));
     expect(mockError).toHaveBeenCalledWith("Something went wrong");
   });
 
-  it("falls back to a generic message for null", () => {
+  it("falls back to the generic message for an empty string", () => {
+    toast.error("");
+    expect(mockError).toHaveBeenCalledWith("Something went wrong");
+  });
+
+  it("falls back to the generic message for null", () => {
     toast.error(null);
     expect(mockError).toHaveBeenCalledWith("Something went wrong");
+  });
+
+  it("returns the sonner id", () => {
+    expect(toast.error(new Error("x"))).toBe(2);
+  });
+});
+
+describe("toast.dismiss", () => {
+  it("forwards a specific id to sonner.dismiss", () => {
+    toast.dismiss(7);
+    expect(mockDismiss).toHaveBeenCalledWith(7);
+  });
+
+  it("dismisses all toasts when called without an id", () => {
+    toast.dismiss();
+    expect(mockDismiss).toHaveBeenCalledWith(undefined);
   });
 });

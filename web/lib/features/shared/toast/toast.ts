@@ -2,22 +2,26 @@ import { toast as sonnerToast } from "sonner";
 
 import { ApiError } from "@/lib/api/errors";
 
+type ToastId = string | number;
+
 export const toast = {
-  success: (message: string): void => {
-    sonnerToast.success(message);
-  },
-  error: (err: unknown): void => {
+  success: (message: string): ToastId => sonnerToast.success(message),
+  info: (message: string): ToastId => sonnerToast.info(message),
+  error: (err: unknown): ToastId => {
+    if (typeof err === "string" && err.length > 0) {
+      return sonnerToast.error(err);
+    }
     if (err instanceof ApiError) {
-      sonnerToast.error(err.body?.message ?? `Request failed (${err.status})`);
-      return;
+      return sonnerToast.error(
+        err.body?.message || `Request failed (${err.status})`,
+      );
     }
-    if (err instanceof Error) {
-      sonnerToast.error(err.message);
-      return;
+    if (err instanceof Error && err.message) {
+      return sonnerToast.error(err.message);
     }
-    sonnerToast.error("Something went wrong");
+    return sonnerToast.error("Something went wrong");
   },
-  info: (message: string): void => {
-    sonnerToast.info(message);
+  dismiss: (id?: ToastId): void => {
+    sonnerToast.dismiss(id);
   },
 };
