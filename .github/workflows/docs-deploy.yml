@@ -8,6 +8,7 @@ on:
       - 'docs/**'
       - 'web/lib/**'
       - 'web/components/**'
+      - 'web/public/**'
       - 'web/.storybook/**'
       - 'web/package.json'
       - 'web/pnpm-lock.yaml'
@@ -49,9 +50,10 @@ jobs:
       - name: Build Storybook
         working-directory: web
         env:
-          # Storybook is served at `https://ask-atlas.github.io/AskAtlas/storybook/`,
-          # so Vite needs to rewrite asset URLs to that subpath. `.storybook/main.ts`
-          # reads this env into `viteFinal.base`.
+          # Preview iframe's asset URLs are rewritten via `viteFinal.base`
+          # in .storybook/main.ts. The Manager UI's assets already emit
+          # relative paths (`./sb-manager/runtime.js`), so they resolve
+          # correctly under any subpath without extra configuration.
           STORYBOOK_BASE_URL: /AskAtlas/storybook/
         run: pnpm build-storybook --output-dir storybook-static
 

@@ -100,7 +100,9 @@ const config: Config = {
         },
         { to: '/blog', label: 'Blog', position: 'left' },
         {
-          href: 'pathname:///storybook/',
+          // `pathname://` bypasses Docusaurus link rewriting, so the path
+          // has to include the Pages baseUrl (`/AskAtlas/`) explicitly.
+          href: 'pathname:///AskAtlas/storybook/',
           label: 'Components',
           position: 'left',
         },
