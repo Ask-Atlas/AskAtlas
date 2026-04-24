@@ -255,6 +255,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/refs/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Batch-resolve inline entity refs (ASK-208)
+         * @description Given a list of `(type, id)` pairs, returns a compact summary
+         *     for each entity the viewer can see. Used by the study-guide
+         *     article renderer to hydrate `::sg{id}`, `::quiz{id}`,
+         *     `::file{id}`, and `::course{id}` directives.
+         *
+         *     Response is a map keyed by `"{type}:{id}"`. A `null` value
+         *     means the entity is deleted, invisible to the viewer, or
+         *     nonexistent. Refs the viewer can't see return `null` (not
+         *     403) so a study guide can legitimately reference a file a
+         *     reader doesn't have access to without raising an error.
+         *
+         *     Server dedupes on `(type, id)` before running the per-type
+         *     lookups; the request cap of 50 refs is generous for a single
+         *     article.
+         */
+        post: operations["ResolveRefs"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/schools": {
         parameters: {
             query?: never;
@@ -1463,6 +1496,81 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description Request body for POST /api/refs/resolve (ASK-208). `refs` is a
+         *     list of `(type, id)` pairs to hydrate. Bounded at 50 entries --
+         *     typical articles have 3-10 refs; the cap prevents accidental
+         *     N-squared fetches from an editor that didn't debounce.
+         */
+        RefsResolveRequest: {
+            refs: components["schemas"]["RefsResolveRequestRef"][];
+        };
+        RefsResolveRequestRef: {
+            /** @enum {string} */
+            type: "sg" | "quiz" | "file" | "course";
+            /** Format: uuid */
+            id: string;
+        };
+        RefsResolveResponse: {
+            /**
+             * @description Map keyed by `"{type}:{id}"`. Value is a RefSummary for
+             *     visible entities or `null` for refs the viewer cannot see
+             *     (deleted, no grant, or nonexistent). The type discriminator
+             *     on the summary object lets clients narrow to per-type
+             *     fields (see RefSummary).
+             */
+            results: {
+                [key: string]: components["schemas"]["RefSummary"];
+            };
+        };
+        /**
+         * @description Discriminated union. `type` picks which fields are populated;
+         *     fields for other types are absent.
+         */
+        RefSummary: {
+            /** @enum {string} */
+            type: "sg" | "quiz" | "file" | "course";
+            /** Format: uuid */
+            id: string;
+            /** @description sg / quiz / course title. */
+            title?: string;
+            course?: components["schemas"]["RefCourseInfo"];
+            /** @description sg only. Count of non-deleted quizzes on the guide. */
+            quiz_count?: number;
+            /** @description sg only. */
+            is_recommended?: boolean;
+            /** @description quiz only. Count of quiz_questions rows. */
+            question_count?: number;
+            creator?: components["schemas"]["RefCreatorInfo"];
+            /** @description file only. Original filename. */
+            name?: string;
+            /**
+             * Format: int64
+             * @description file only. Bytes.
+             */
+            size?: number;
+            /** @description file only. */
+            mime_type?: string;
+            /** @description file only. `pending` / `complete` / `failed`. */
+            status?: string;
+            /** @description course only. e.g. `CPTS`. */
+            department?: string;
+            /** @description course only. e.g. `322`. */
+            number?: string;
+            school?: components["schemas"]["RefSchoolInfo"];
+        };
+        RefCourseInfo: {
+            department: string;
+            number: string;
+        };
+        RefCreatorInfo: {
+            first_name: string;
+            last_name: string;
+        };
+        RefSchoolInfo: {
+            name: string;
+            acronym: string;
+        };
         /** @description Complete metadata payload describing an uploaded file */
         FileResponse: {
             /** Format: uuid */
@@ -3052,6 +3160,33 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    ResolveRefs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefsResolveRequest"];
+            };
+        };
+        responses: {
+            /** @description Resolved ref map (`null` for missing / invisible refs). */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefsResolveResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
             500: components["responses"]["InternalServerError"];
         };
     };
