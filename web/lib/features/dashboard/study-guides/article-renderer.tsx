@@ -62,6 +62,15 @@ const sanitizeSchema = {
   },
 };
 
+function debugDumpHast() {
+  return (tree: unknown) => {
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.debug("[hast after sanitize]", JSON.stringify(tree, null, 2));
+    }
+  };
+}
+
 /**
  * Renders study-guide markdown as styled HTML. GFM tables + task lists,
  * inline HTML via rehype-raw behind rehype-sanitize's XSS-safe schema,
@@ -88,7 +97,11 @@ export function ArticleRenderer({
       >
         <Markdown
           remarkPlugins={[remarkGfm, remarkDirective, remarkAskAtlasDirectives]}
-          rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
+          rehypePlugins={[
+            rehypeRaw,
+            [rehypeSanitize, sanitizeSchema],
+            debugDumpHast,
+          ]}
           components={markdownComponents}
         >
           {content}
