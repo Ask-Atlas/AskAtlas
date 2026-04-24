@@ -2049,6 +2049,116 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}/grants:
+    get:
+      operationId: ListStudyGuideGrants
+      summary: List permission grants on a study guide (ASK-211)
+      description: |
+        Returns every `study_guide_grants` row for the guide. Only
+        the guide's creator may list grants; non-creators receive 403.
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Grants list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListStudyGuideGrantsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      operationId: CreateStudyGuideGrant
+      summary: Grant a permission on a study guide (ASK-211)
+      description: |
+        Creates a new `study_guide_grants` row scoped to
+        `(study_guide_id, grantee_type, grantee_id, permission)`.
+        Only the guide's creator may create grants. A duplicate
+        grant returns 409 Conflict. `grantee_type` is limited to
+        `user` or `course` -- study guides cannot grant access to
+        other study guides (the table enforces this via a CHECK
+        constraint).
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudyGuideCreateGrantRequest'
+      responses:
+        '201':
+          description: Grant created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StudyGuideGrantResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      operationId: RevokeStudyGuideGrant
+      summary: Revoke a permission on a study guide (ASK-211)
+      description: |
+        Deletes the `study_guide_grants` row matched by
+        `(study_guide_id, grantee_type, grantee_id, permission)`.
+        Only the guide's creator may revoke. Returns 204 on success,
+        404 when no matching grant exists (not idempotent -- mirrors
+        file_grants).
+      parameters:
+        - name: study_guide_id
+          in: path
+          description: The unique UUID of the study guide
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudyGuideRevokeGrantRequest'
+      responses:
+        '204':
+          description: Grant revoked
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /courses/{course_id}/study-guides:
     get:
       operationId: ListStudyGuides
@@ -2976,6 +3086,89 @@ components:
         - permission
         - granted_by
         - created_at
+    StudyGuideCreateGrantRequest:
+      type: object
+      description: |
+        Request body for POST /api/study-guides/{study_guide_id}/grants
+        (ASK-211). Mirrors CreateGrantRequest but constrains
+        `grantee_type` to `user`/`course` since study guides cannot
+        grant access to other study guides.
+      properties:
+        grantee_type:
+          type: string
+          enum: [user, course]
+        grantee_id:
+          type: string
+          format: uuid
+        permission:
+          type: string
+          enum: [view, edit, delete]
+      required:
+        - grantee_type
+        - grantee_id
+        - permission
+    StudyGuideRevokeGrantRequest:
+      type: object
+      description: |
+        Request body for DELETE /api/study-guides/{study_guide_id}/grants
+        (ASK-211).
+      properties:
+        grantee_type:
+          type: string
+          enum: [user, course]
+        grantee_id:
+          type: string
+          format: uuid
+        permission:
+          type: string
+          enum: [view, edit, delete]
+      required:
+        - grantee_type
+        - grantee_id
+        - permission
+    StudyGuideGrantResponse:
+      type: object
+      description: A study-guide permission grant (ASK-211)
+      properties:
+        id:
+          type: string
+          format: uuid
+        study_guide_id:
+          type: string
+          format: uuid
+        grantee_type:
+          type: string
+        grantee_id:
+          type: string
+          format: uuid
+        permission:
+          type: string
+        granted_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - study_guide_id
+        - grantee_type
+        - grantee_id
+        - permission
+        - granted_by
+        - created_at
+    ListStudyGuideGrantsResponse:
+      type: object
+      description: |
+        Collection of grants on a study guide. Sorted by created_at
+        DESC so the newest share surfaces first.
+      properties:
+        grants:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudyGuideGrantResponse'
+      required:
+        - grants
     SchoolResponse:
       type: object
       description: A school (university or college)
@@ -3418,6 +3611,11 @@ components:
           type: integer
           format: int64
           minimum: 0
+        visibility:
+          type: string
+          enum:
+            - private
+            - public
         created_at:
           type: string
           format: date-time
@@ -3434,6 +3632,7 @@ components:
         - view_count
         - is_recommended
         - quiz_count
+        - visibility
         - created_at
         - updated_at
     GuideCourseSummary:
@@ -3650,6 +3849,13 @@ components:
         (trim + lowercase + dedupe); empty tags after trim are
         rejected with 400. `creator_id` is set from the JWT and
         ignored if supplied here.
+
+        `visibility` is optional and defaults to `private`. Private
+        guides are visible only to the creator + grantees (direct
+        user grant or enrolled-course grant). A course-wide view
+        grant is auto-seeded on create so course members keep their
+        "visible to everyone in the course" ergonomics without a
+        follow-up POST /grants call (ASK-211).
       properties:
         title:
           type: string
@@ -3670,6 +3876,11 @@ components:
             type: string
             minLength: 1
             maxLength: 50
+        visibility:
+          type: string
+          enum:
+            - private
+            - public
       required:
         - title
     UpdateStudyGuideRequest:
@@ -3680,7 +3891,9 @@ components:
         value. Tags, when provided, REPLACE all existing tags (no
         merge) and are normalized server-side (trim + lowercase +
         dedupe). At least one field must be provided -- an empty body
-        `{}` is rejected with 400.
+        `{}` is rejected with 400. Supplying `visibility` flips the
+        guide between private and public (ASK-211); existing grants
+        are preserved either way.
       properties:
         title:
           type: string
@@ -3701,6 +3914,11 @@ components:
             type: string
             minLength: 1
             maxLength: 50
+        visibility:
+          type: string
+          enum:
+            - private
+            - public
     StudyGuideDetailResponse:
       type: object
       description: |
@@ -3759,6 +3977,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/StudyGuideFileSummary'
+        visibility:
+          type: string
+          enum:
+            - private
+            - public
+          description: |
+            Visibility of the guide (ASK-211). `private` guides are
+            visible only to the creator + grantees; `public` guides
+            are visible to every authenticated user.
         created_at:
           type: string
           format: date-time
@@ -3779,6 +4006,7 @@ components:
         - quizzes
         - resources
         - files
+        - visibility
         - created_at
         - updated_at
     ListStudyGuidesResponse:
@@ -3851,6 +4079,11 @@ components:
             Required + nullable so the field is always present on the
             wire (the frontend can check `=== null` without worrying
             about an undefined case).
+        visibility:
+          type: string
+          enum:
+            - private
+            - public
       required:
         - id
         - title
@@ -3861,6 +4094,7 @@ components:
         - view_count
         - is_recommended
         - quiz_count
+        - visibility
         - created_at
         - updated_at
         - deleted_at

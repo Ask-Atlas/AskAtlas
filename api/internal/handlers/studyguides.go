@@ -55,7 +55,8 @@ func NewStudyGuideHandler(service StudyGuideService) *StudyGuideHandler {
 // guides'). Malformed cursors are rejected at the handler with a 400
 // before the service is reached.
 func (h *StudyGuideHandler) ListStudyGuides(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, params api.ListStudyGuidesParams) {
-	if _, appErr := viewerIDFromContext(r); appErr != nil {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
 		apperrors.RespondWithError(w, appErr)
 		return
 	}
@@ -71,6 +72,7 @@ func (h *StudyGuideHandler) ListStudyGuides(w http.ResponseWriter, r *http.Reque
 
 	svcParams := studyguides.ListStudyGuidesParams{
 		CourseID: uuid.UUID(courseId),
+		ViewerID: viewerID,
 		Q:        params.Q,
 	}
 	if params.Tag != nil {
@@ -167,6 +169,10 @@ func (h *StudyGuideHandler) CreateStudyGuide(w http.ResponseWriter, r *http.Requ
 	if body.Tags != nil {
 		params.Tags = append([]string(nil), *body.Tags...)
 	}
+	if body.Visibility != nil {
+		v := string(*body.Visibility)
+		params.Visibility = &v
+	}
 
 	detail, err := h.service.CreateStudyGuide(r.Context(), params)
 	if err != nil {
@@ -212,6 +218,10 @@ func (h *StudyGuideHandler) UpdateStudyGuide(w http.ResponseWriter, r *http.Requ
 		// without aliasing the decoded body's backing array.
 		copied := append([]string(nil), (*body.Tags)...)
 		params.Tags = &copied
+	}
+	if body.Visibility != nil {
+		v := string(*body.Visibility)
+		params.Visibility = &v
 	}
 
 	detail, err := h.service.UpdateStudyGuide(r.Context(), params)
@@ -580,6 +590,7 @@ func mapMyStudyGuideSummary(g studyguides.MyStudyGuide) api.MyStudyGuideSummary 
 		ViewCount:     g.ViewCount,
 		IsRecommended: g.IsRecommended,
 		QuizCount:     g.QuizCount,
+		Visibility:    api.MyStudyGuideSummaryVisibility(g.Visibility),
 		CreatedAt:     g.CreatedAt,
 		UpdatedAt:     g.UpdatedAt,
 		DeletedAt:     g.DeletedAt,
@@ -619,6 +630,7 @@ func mapStudyGuideListItemResponse(g studyguides.StudyGuide) api.StudyGuideListI
 		ViewCount:     g.ViewCount,
 		IsRecommended: g.IsRecommended,
 		QuizCount:     g.QuizCount,
+		Visibility:    api.StudyGuideListItemResponseVisibility(g.Visibility),
 		CreatedAt:     g.CreatedAt,
 		UpdatedAt:     g.UpdatedAt,
 	}
@@ -721,6 +733,7 @@ func mapStudyGuideDetailResponse(d studyguides.StudyGuideDetail) api.StudyGuideD
 		Quizzes:       quizzes,
 		Resources:     resources,
 		Files:         files,
+		Visibility:    api.StudyGuideDetailResponseVisibility(d.Visibility),
 		CreatedAt:     d.CreatedAt,
 		UpdatedAt:     d.UpdatedAt,
 	}

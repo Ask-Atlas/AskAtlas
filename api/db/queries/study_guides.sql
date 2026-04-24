@@ -27,14 +27,15 @@
 -- The course preflight (in service.go) gates on AssertCourseExists so
 -- the FK violation is unreachable in normal flow; the FK still acts
 -- as a backstop if a course is hard-deleted between preflight + insert.
-INSERT INTO study_guides (course_id, creator_id, title, description, content, tags)
+INSERT INTO study_guides (course_id, creator_id, title, description, content, tags, visibility)
 VALUES (
   sqlc.arg(course_id)::uuid,
   sqlc.arg(creator_id)::uuid,
   sqlc.arg(title)::text,
   sqlc.narg(description)::text,
   sqlc.narg(content)::text,
-  sqlc.arg(tags)::text[]
+  sqlc.arg(tags)::text[],
+  COALESCE(sqlc.narg(visibility)::study_guide_visibility, 'private'::study_guide_visibility)
 )
 RETURNING id, view_count, created_at, updated_at;
 
@@ -93,7 +94,7 @@ WHERE study_guide_id = sqlc.arg(study_guide_id)::uuid
 -- id/first_name/last_name.
 SELECT
   sg.id, sg.title, sg.description, sg.content, sg.tags,
-  sg.view_count, sg.created_at, sg.updated_at,
+  sg.view_count, sg.visibility, sg.created_at, sg.updated_at,
   c.id           AS course_id,
   c.department   AS course_department,
   c.number       AS course_number,
@@ -115,7 +116,25 @@ JOIN courses c ON c.id = sg.course_id
 JOIN users   u ON u.id = sg.creator_id
 WHERE sg.id = sqlc.arg(id)::uuid
   AND sg.deleted_at IS NULL
-  AND u.deleted_at IS NULL;
+  AND u.deleted_at IS NULL
+  AND (
+    sg.visibility = 'public'
+    OR sg.creator_id = sqlc.arg(viewer_id)::uuid
+    OR EXISTS (
+      SELECT 1 FROM study_guide_grants g
+      WHERE g.study_guide_id = sg.id
+        AND g.permission IN ('view', 'edit', 'delete')
+        AND (
+          (g.grantee_type = 'user' AND g.grantee_id = sqlc.arg(viewer_id)::uuid)
+          OR (g.grantee_type = 'course' AND EXISTS (
+            SELECT 1 FROM course_sections cs
+            JOIN course_members cm ON cm.section_id = cs.id
+            WHERE cs.course_id = g.grantee_id
+              AND cm.user_id = sqlc.arg(viewer_id)::uuid
+          ))
+        )
+    )
+  );
 
 -- name: GetUserVoteForGuide :one
 -- Returns the viewer's own vote on the guide, or sql.ErrNoRows when
@@ -195,7 +214,7 @@ SELECT EXISTS (
 WITH scored AS (
   SELECT
     sg.id, sg.title, sg.description, sg.tags, sg.course_id,
-    sg.view_count, sg.created_at, sg.updated_at,
+    sg.view_count, sg.visibility, sg.created_at, sg.updated_at,
     u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
     COALESCE((
       SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
@@ -217,6 +236,24 @@ WITH scored AS (
     AND sg.deleted_at IS NULL
     AND u.deleted_at IS NULL
     AND (
+      sg.visibility = 'public'
+      OR sg.creator_id = sqlc.arg(viewer_id)::uuid
+      OR EXISTS (
+        SELECT 1 FROM study_guide_grants g
+        WHERE g.study_guide_id = sg.id
+          AND g.permission IN ('view', 'edit', 'delete')
+          AND (
+            (g.grantee_type = 'user' AND g.grantee_id = sqlc.arg(viewer_id)::uuid)
+            OR (g.grantee_type = 'course' AND EXISTS (
+              SELECT 1 FROM course_sections cs
+              JOIN course_members cm ON cm.section_id = cs.id
+              WHERE cs.course_id = g.grantee_id
+                AND cm.user_id = sqlc.arg(viewer_id)::uuid
+            ))
+          )
+      )
+    )
+    AND (
       sqlc.narg(q)::text IS NULL
       OR sg.title ILIKE '%' || sqlc.narg(q)::text || '%' ESCAPE '\'
       OR EXISTS (
@@ -226,7 +263,7 @@ WITH scored AS (
     )
     AND (sqlc.narg(tags)::text[] IS NULL OR sg.tags @> sqlc.narg(tags)::text[])
 )
-SELECT id, title, description, tags, course_id, view_count,
+SELECT id, title, description, tags, course_id, view_count, visibility,
        created_at, updated_at,
        creator_id, creator_first_name, creator_last_name,
        vote_score, is_recommended, quiz_count
@@ -247,7 +284,7 @@ LIMIT sqlc.arg(page_limit);
 WITH scored AS (
   SELECT
     sg.id, sg.title, sg.description, sg.tags, sg.course_id,
-    sg.view_count, sg.created_at, sg.updated_at,
+    sg.view_count, sg.visibility, sg.created_at, sg.updated_at,
     u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
     COALESCE((
       SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
@@ -268,6 +305,24 @@ WITH scored AS (
     AND sg.deleted_at IS NULL
     AND u.deleted_at IS NULL
     AND (
+      sg.visibility = 'public'
+      OR sg.creator_id = sqlc.arg(viewer_id)::uuid
+      OR EXISTS (
+        SELECT 1 FROM study_guide_grants g
+        WHERE g.study_guide_id = sg.id
+          AND g.permission IN ('view', 'edit', 'delete')
+          AND (
+            (g.grantee_type = 'user' AND g.grantee_id = sqlc.arg(viewer_id)::uuid)
+            OR (g.grantee_type = 'course' AND EXISTS (
+              SELECT 1 FROM course_sections cs
+              JOIN course_members cm ON cm.section_id = cs.id
+              WHERE cs.course_id = g.grantee_id
+                AND cm.user_id = sqlc.arg(viewer_id)::uuid
+            ))
+          )
+      )
+    )
+    AND (
       sqlc.narg(q)::text IS NULL
       OR sg.title ILIKE '%' || sqlc.narg(q)::text || '%' ESCAPE '\'
       OR EXISTS (
@@ -277,7 +332,7 @@ WITH scored AS (
     )
     AND (sqlc.narg(tags)::text[] IS NULL OR sg.tags @> sqlc.narg(tags)::text[])
 )
-SELECT id, title, description, tags, course_id, view_count,
+SELECT id, title, description, tags, course_id, view_count, visibility,
        created_at, updated_at,
        creator_id, creator_first_name, creator_last_name,
        vote_score, is_recommended, quiz_count
@@ -298,7 +353,7 @@ LIMIT sqlc.arg(page_limit);
 WITH scored AS (
   SELECT
     sg.id, sg.title, sg.description, sg.tags, sg.course_id,
-    sg.view_count, sg.created_at, sg.updated_at,
+    sg.view_count, sg.visibility, sg.created_at, sg.updated_at,
     u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
     COALESCE((
       SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
@@ -319,6 +374,24 @@ WITH scored AS (
     AND sg.deleted_at IS NULL
     AND u.deleted_at IS NULL
     AND (
+      sg.visibility = 'public'
+      OR sg.creator_id = sqlc.arg(viewer_id)::uuid
+      OR EXISTS (
+        SELECT 1 FROM study_guide_grants g
+        WHERE g.study_guide_id = sg.id
+          AND g.permission IN ('view', 'edit', 'delete')
+          AND (
+            (g.grantee_type = 'user' AND g.grantee_id = sqlc.arg(viewer_id)::uuid)
+            OR (g.grantee_type = 'course' AND EXISTS (
+              SELECT 1 FROM course_sections cs
+              JOIN course_members cm ON cm.section_id = cs.id
+              WHERE cs.course_id = g.grantee_id
+                AND cm.user_id = sqlc.arg(viewer_id)::uuid
+            ))
+          )
+      )
+    )
+    AND (
       sqlc.narg(q)::text IS NULL
       OR sg.title ILIKE '%' || sqlc.narg(q)::text || '%' ESCAPE '\'
       OR EXISTS (
@@ -328,7 +401,7 @@ WITH scored AS (
     )
     AND (sqlc.narg(tags)::text[] IS NULL OR sg.tags @> sqlc.narg(tags)::text[])
 )
-SELECT id, title, description, tags, course_id, view_count,
+SELECT id, title, description, tags, course_id, view_count, visibility,
        created_at, updated_at,
        creator_id, creator_first_name, creator_last_name,
        vote_score, is_recommended, quiz_count
@@ -348,7 +421,7 @@ LIMIT sqlc.arg(page_limit);
 WITH scored AS (
   SELECT
     sg.id, sg.title, sg.description, sg.tags, sg.course_id,
-    sg.view_count, sg.created_at, sg.updated_at,
+    sg.view_count, sg.visibility, sg.created_at, sg.updated_at,
     u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
     COALESCE((
       SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
@@ -369,6 +442,24 @@ WITH scored AS (
     AND sg.deleted_at IS NULL
     AND u.deleted_at IS NULL
     AND (
+      sg.visibility = 'public'
+      OR sg.creator_id = sqlc.arg(viewer_id)::uuid
+      OR EXISTS (
+        SELECT 1 FROM study_guide_grants g
+        WHERE g.study_guide_id = sg.id
+          AND g.permission IN ('view', 'edit', 'delete')
+          AND (
+            (g.grantee_type = 'user' AND g.grantee_id = sqlc.arg(viewer_id)::uuid)
+            OR (g.grantee_type = 'course' AND EXISTS (
+              SELECT 1 FROM course_sections cs
+              JOIN course_members cm ON cm.section_id = cs.id
+              WHERE cs.course_id = g.grantee_id
+                AND cm.user_id = sqlc.arg(viewer_id)::uuid
+            ))
+          )
+      )
+    )
+    AND (
       sqlc.narg(q)::text IS NULL
       OR sg.title ILIKE '%' || sqlc.narg(q)::text || '%' ESCAPE '\'
       OR EXISTS (
@@ -378,7 +469,7 @@ WITH scored AS (
     )
     AND (sqlc.narg(tags)::text[] IS NULL OR sg.tags @> sqlc.narg(tags)::text[])
 )
-SELECT id, title, description, tags, course_id, view_count,
+SELECT id, title, description, tags, course_id, view_count, visibility,
        created_at, updated_at,
        creator_id, creator_first_name, creator_last_name,
        vote_score, is_recommended, quiz_count
@@ -398,7 +489,7 @@ LIMIT sqlc.arg(page_limit);
 WITH scored AS (
   SELECT
     sg.id, sg.title, sg.description, sg.tags, sg.course_id,
-    sg.view_count, sg.created_at, sg.updated_at,
+    sg.view_count, sg.visibility, sg.created_at, sg.updated_at,
     u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
     COALESCE((
       SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
@@ -419,6 +510,24 @@ WITH scored AS (
     AND sg.deleted_at IS NULL
     AND u.deleted_at IS NULL
     AND (
+      sg.visibility = 'public'
+      OR sg.creator_id = sqlc.arg(viewer_id)::uuid
+      OR EXISTS (
+        SELECT 1 FROM study_guide_grants g
+        WHERE g.study_guide_id = sg.id
+          AND g.permission IN ('view', 'edit', 'delete')
+          AND (
+            (g.grantee_type = 'user' AND g.grantee_id = sqlc.arg(viewer_id)::uuid)
+            OR (g.grantee_type = 'course' AND EXISTS (
+              SELECT 1 FROM course_sections cs
+              JOIN course_members cm ON cm.section_id = cs.id
+              WHERE cs.course_id = g.grantee_id
+                AND cm.user_id = sqlc.arg(viewer_id)::uuid
+            ))
+          )
+      )
+    )
+    AND (
       sqlc.narg(q)::text IS NULL
       OR sg.title ILIKE '%' || sqlc.narg(q)::text || '%' ESCAPE '\'
       OR EXISTS (
@@ -428,7 +537,7 @@ WITH scored AS (
     )
     AND (sqlc.narg(tags)::text[] IS NULL OR sg.tags @> sqlc.narg(tags)::text[])
 )
-SELECT id, title, description, tags, course_id, view_count,
+SELECT id, title, description, tags, course_id, view_count, visibility,
        created_at, updated_at,
        creator_id, creator_first_name, creator_last_name,
        vote_score, is_recommended, quiz_count
@@ -447,7 +556,7 @@ LIMIT sqlc.arg(page_limit);
 WITH scored AS (
   SELECT
     sg.id, sg.title, sg.description, sg.tags, sg.course_id,
-    sg.view_count, sg.created_at, sg.updated_at,
+    sg.view_count, sg.visibility, sg.created_at, sg.updated_at,
     u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
     COALESCE((
       SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
@@ -468,6 +577,24 @@ WITH scored AS (
     AND sg.deleted_at IS NULL
     AND u.deleted_at IS NULL
     AND (
+      sg.visibility = 'public'
+      OR sg.creator_id = sqlc.arg(viewer_id)::uuid
+      OR EXISTS (
+        SELECT 1 FROM study_guide_grants g
+        WHERE g.study_guide_id = sg.id
+          AND g.permission IN ('view', 'edit', 'delete')
+          AND (
+            (g.grantee_type = 'user' AND g.grantee_id = sqlc.arg(viewer_id)::uuid)
+            OR (g.grantee_type = 'course' AND EXISTS (
+              SELECT 1 FROM course_sections cs
+              JOIN course_members cm ON cm.section_id = cs.id
+              WHERE cs.course_id = g.grantee_id
+                AND cm.user_id = sqlc.arg(viewer_id)::uuid
+            ))
+          )
+      )
+    )
+    AND (
       sqlc.narg(q)::text IS NULL
       OR sg.title ILIKE '%' || sqlc.narg(q)::text || '%' ESCAPE '\'
       OR EXISTS (
@@ -477,7 +604,7 @@ WITH scored AS (
     )
     AND (sqlc.narg(tags)::text[] IS NULL OR sg.tags @> sqlc.narg(tags)::text[])
 )
-SELECT id, title, description, tags, course_id, view_count,
+SELECT id, title, description, tags, course_id, view_count, visibility,
        created_at, updated_at,
        creator_id, creator_first_name, creator_last_name,
        vote_score, is_recommended, quiz_count
@@ -496,7 +623,7 @@ LIMIT sqlc.arg(page_limit);
 WITH scored AS (
   SELECT
     sg.id, sg.title, sg.description, sg.tags, sg.course_id,
-    sg.view_count, sg.created_at, sg.updated_at,
+    sg.view_count, sg.visibility, sg.created_at, sg.updated_at,
     u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
     COALESCE((
       SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
@@ -517,6 +644,24 @@ WITH scored AS (
     AND sg.deleted_at IS NULL
     AND u.deleted_at IS NULL
     AND (
+      sg.visibility = 'public'
+      OR sg.creator_id = sqlc.arg(viewer_id)::uuid
+      OR EXISTS (
+        SELECT 1 FROM study_guide_grants g
+        WHERE g.study_guide_id = sg.id
+          AND g.permission IN ('view', 'edit', 'delete')
+          AND (
+            (g.grantee_type = 'user' AND g.grantee_id = sqlc.arg(viewer_id)::uuid)
+            OR (g.grantee_type = 'course' AND EXISTS (
+              SELECT 1 FROM course_sections cs
+              JOIN course_members cm ON cm.section_id = cs.id
+              WHERE cs.course_id = g.grantee_id
+                AND cm.user_id = sqlc.arg(viewer_id)::uuid
+            ))
+          )
+      )
+    )
+    AND (
       sqlc.narg(q)::text IS NULL
       OR sg.title ILIKE '%' || sqlc.narg(q)::text || '%' ESCAPE '\'
       OR EXISTS (
@@ -526,7 +671,7 @@ WITH scored AS (
     )
     AND (sqlc.narg(tags)::text[] IS NULL OR sg.tags @> sqlc.narg(tags)::text[])
 )
-SELECT id, title, description, tags, course_id, view_count,
+SELECT id, title, description, tags, course_id, view_count, visibility,
        created_at, updated_at,
        creator_id, creator_first_name, creator_last_name,
        vote_score, is_recommended, quiz_count
@@ -545,7 +690,7 @@ LIMIT sqlc.arg(page_limit);
 WITH scored AS (
   SELECT
     sg.id, sg.title, sg.description, sg.tags, sg.course_id,
-    sg.view_count, sg.created_at, sg.updated_at,
+    sg.view_count, sg.visibility, sg.created_at, sg.updated_at,
     u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
     COALESCE((
       SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
@@ -566,6 +711,24 @@ WITH scored AS (
     AND sg.deleted_at IS NULL
     AND u.deleted_at IS NULL
     AND (
+      sg.visibility = 'public'
+      OR sg.creator_id = sqlc.arg(viewer_id)::uuid
+      OR EXISTS (
+        SELECT 1 FROM study_guide_grants g
+        WHERE g.study_guide_id = sg.id
+          AND g.permission IN ('view', 'edit', 'delete')
+          AND (
+            (g.grantee_type = 'user' AND g.grantee_id = sqlc.arg(viewer_id)::uuid)
+            OR (g.grantee_type = 'course' AND EXISTS (
+              SELECT 1 FROM course_sections cs
+              JOIN course_members cm ON cm.section_id = cs.id
+              WHERE cs.course_id = g.grantee_id
+                AND cm.user_id = sqlc.arg(viewer_id)::uuid
+            ))
+          )
+      )
+    )
+    AND (
       sqlc.narg(q)::text IS NULL
       OR sg.title ILIKE '%' || sqlc.narg(q)::text || '%' ESCAPE '\'
       OR EXISTS (
@@ -575,7 +738,7 @@ WITH scored AS (
     )
     AND (sqlc.narg(tags)::text[] IS NULL OR sg.tags @> sqlc.narg(tags)::text[])
 )
-SELECT id, title, description, tags, course_id, view_count,
+SELECT id, title, description, tags, course_id, view_count, visibility,
        created_at, updated_at,
        creator_id, creator_first_name, creator_last_name,
        vote_score, is_recommended, quiz_count
@@ -611,7 +774,7 @@ LIMIT sqlc.arg(page_limit);
 WITH scored AS (
   SELECT
     sg.id, sg.title, sg.description, sg.tags, sg.course_id,
-    sg.view_count, sg.created_at, sg.updated_at, sg.deleted_at,
+    sg.view_count, sg.visibility, sg.created_at, sg.updated_at, sg.deleted_at,
     u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
     COALESCE((
       SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
@@ -632,7 +795,7 @@ WITH scored AS (
     AND u.deleted_at IS NULL
     AND (sqlc.narg(course_id)::uuid IS NULL OR sg.course_id = sqlc.narg(course_id)::uuid)
 )
-SELECT id, title, description, tags, course_id, view_count,
+SELECT id, title, description, tags, course_id, view_count, visibility,
        created_at, updated_at, deleted_at,
        creator_id, creator_first_name, creator_last_name,
        vote_score, is_recommended, quiz_count
@@ -653,7 +816,7 @@ LIMIT sqlc.arg(page_limit);
 WITH scored AS (
   SELECT
     sg.id, sg.title, sg.description, sg.tags, sg.course_id,
-    sg.view_count, sg.created_at, sg.updated_at, sg.deleted_at,
+    sg.view_count, sg.visibility, sg.created_at, sg.updated_at, sg.deleted_at,
     u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
     COALESCE((
       SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
@@ -674,7 +837,7 @@ WITH scored AS (
     AND u.deleted_at IS NULL
     AND (sqlc.narg(course_id)::uuid IS NULL OR sg.course_id = sqlc.narg(course_id)::uuid)
 )
-SELECT id, title, description, tags, course_id, view_count,
+SELECT id, title, description, tags, course_id, view_count, visibility,
        created_at, updated_at, deleted_at,
        creator_id, creator_first_name, creator_last_name,
        vote_score, is_recommended, quiz_count
@@ -696,7 +859,7 @@ LIMIT sqlc.arg(page_limit);
 WITH scored AS (
   SELECT
     sg.id, sg.title, sg.description, sg.tags, sg.course_id,
-    sg.view_count, sg.created_at, sg.updated_at, sg.deleted_at,
+    sg.view_count, sg.visibility, sg.created_at, sg.updated_at, sg.deleted_at,
     u.id AS creator_id, u.first_name AS creator_first_name, u.last_name AS creator_last_name,
     COALESCE((
       SELECT SUM(CASE WHEN vote = 'up' THEN 1 ELSE -1 END)::bigint
@@ -717,7 +880,7 @@ WITH scored AS (
     AND u.deleted_at IS NULL
     AND (sqlc.narg(course_id)::uuid IS NULL OR sg.course_id = sqlc.narg(course_id)::uuid)
 )
-SELECT id, title, description, tags, course_id, view_count,
+SELECT id, title, description, tags, course_id, view_count, visibility,
        created_at, updated_at, deleted_at,
        creator_id, creator_first_name, creator_last_name,
        vote_score, is_recommended, quiz_count
@@ -887,10 +1050,11 @@ WHERE study_guide_id = sqlc.arg(study_guide_id)::uuid
 -- empty-body 400 check prevents that case from reaching SQL).
 UPDATE study_guides
 SET
-  title       = COALESCE(sqlc.narg(title)::text,        title),
-  description = COALESCE(sqlc.narg(description)::text,  description),
-  content     = COALESCE(sqlc.narg(content)::text,      content),
-  tags        = COALESCE(sqlc.narg(tags)::text[],       tags),
+  title       = COALESCE(sqlc.narg(title)::text,                            title),
+  description = COALESCE(sqlc.narg(description)::text,                      description),
+  content     = COALESCE(sqlc.narg(content)::text,                          content),
+  tags        = COALESCE(sqlc.narg(tags)::text[],                           tags),
+  visibility  = COALESCE(sqlc.narg(visibility)::study_guide_visibility,     visibility),
   updated_at  = now()
 WHERE id = sqlc.arg(id)::uuid;
 
@@ -1043,3 +1207,64 @@ SELECT EXISTS (
 DELETE FROM study_guide_files
 WHERE file_id = sqlc.arg(file_id)::uuid
   AND study_guide_id = sqlc.arg(study_guide_id)::uuid;
+
+-- ============================================================================
+-- Study-guide grants (ASK-211). Parallel to file_grants. The study_guide_grants
+-- table lives in migration 20260424192951 (ASK-207 phase 1); these queries
+-- add the CRUD surface.
+-- ============================================================================
+
+-- name: InsertStudyGuideGrant :one
+-- Creates a row for POST /study-guides/{id}/grants. Plain INSERT -- no
+-- ON CONFLICT DO UPDATE because the spec requires 409 CONFLICT on a
+-- duplicate (mirrors file_grants). A unique-key violation (sqlstate
+-- 23505) propagates as a pgx PgError and is translated to
+-- apperrors.ErrConflict at the service layer.
+--
+-- The CHECK constraint `grantee_type IN ('user', 'course')` lives on
+-- the table; the service re-validates grantee_type defensively so a
+-- clean 400 surfaces before the DB round trip.
+INSERT INTO study_guide_grants (study_guide_id, grantee_type, grantee_id, permission, granted_by)
+VALUES (
+    sqlc.arg(study_guide_id)::uuid,
+    sqlc.arg(grantee_type)::grantee_type,
+    sqlc.arg(grantee_id)::uuid,
+    sqlc.arg(permission)::permission,
+    sqlc.arg(granted_by)::uuid
+)
+RETURNING *;
+
+-- name: RevokeStudyGuideGrant :execrows
+-- Deletes the exact composite-key row for DELETE
+-- /study-guides/{id}/grants. Returns rows-affected so the service can
+-- distinguish "grant exists and was deleted" (1 row -> 204) from "no
+-- matching grant" (0 rows -> 404). Spec parity with file_grants: not
+-- idempotent.
+DELETE FROM study_guide_grants
+WHERE study_guide_id = sqlc.arg(study_guide_id)::uuid
+  AND grantee_type = sqlc.arg(grantee_type)::grantee_type
+  AND grantee_id = sqlc.arg(grantee_id)::uuid
+  AND permission = sqlc.arg(permission)::permission;
+
+-- name: ListStudyGuideGrants :many
+-- Returns every grant on a guide for GET /study-guides/{id}/grants.
+-- No visibility filter here -- the handler gates on creator-only
+-- BEFORE this query runs (a non-creator can't list the grants on
+-- someone else's guide). Sorted by created_at DESC so newest
+-- shares surface first; id is the stable tiebreaker.
+SELECT id, study_guide_id, grantee_type, grantee_id, permission, granted_by, created_at
+FROM study_guide_grants
+WHERE study_guide_id = sqlc.arg(study_guide_id)::uuid
+ORDER BY created_at DESC, id DESC;
+
+-- name: GetStudyGuideCreator :one
+-- Creator-only probe for the grants handler. Returns sql.ErrNoRows
+-- when the guide doesn't exist or is soft-deleted (both -> 404 at the
+-- handler). Returns the creator_id so the service can compare against
+-- the JWT viewer_id (-> 403 on mismatch) before running grant writes.
+-- Separate from GetStudyGuideByIDForUpdate so this path stays
+-- non-locking (the grants CRUD doesn't need row-level locking).
+SELECT creator_id
+FROM study_guides
+WHERE id = sqlc.arg(id)::uuid
+  AND deleted_at IS NULL;

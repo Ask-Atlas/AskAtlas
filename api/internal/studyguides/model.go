@@ -20,6 +20,29 @@ type Creator struct {
 	LastName  string
 }
 
+// Visibility constants mirror the study_guide_visibility Postgres
+// enum added in migration 20260424192951 (ASK-207). Default is
+// "private" at the DB layer; the service/handler accept the same
+// string values from the wire.
+const (
+	VisibilityPrivate = "private"
+	VisibilityPublic  = "public"
+)
+
+// Grant is the domain payload for a study_guide_grants row (ASK-211).
+// Mirrors files.Grant: id + foreign keys + grantee_type / permission
+// as plain strings so the handler doesn't leak sqlc-generated enum
+// types onto the wire.
+type Grant struct {
+	ID           uuid.UUID
+	StudyGuideID uuid.UUID
+	GranteeType  string
+	GranteeID    uuid.UUID
+	Permission   string
+	GrantedBy    uuid.UUID
+	CreatedAt    time.Time
+}
+
 // StudyGuide is the list-row domain type returned by
 // Service.ListStudyGuides. Excludes `content` (only on the get-by-id
 // endpoint) to keep the list payload small.
@@ -34,6 +57,7 @@ type StudyGuide struct {
 	ViewCount     int64
 	IsRecommended bool
 	QuizCount     int64
+	Visibility    string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -57,6 +81,7 @@ type MyStudyGuide struct {
 	ViewCount     int64
 	IsRecommended bool
 	QuizCount     int64
+	Visibility    string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 	DeletedAt     *time.Time
@@ -146,6 +171,7 @@ type StudyGuideDetail struct {
 	Quizzes       []Quiz
 	Resources     []Resource
 	Files         []GuideFile
+	Visibility    string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }

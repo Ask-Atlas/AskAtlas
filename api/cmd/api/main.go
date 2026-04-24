@@ -103,6 +103,7 @@ func main() {
 	studyGuidesRepo := studyguides.NewSQLCRepository(connPool, queries)
 	studyGuidesService := studyguides.NewService(studyGuidesRepo)
 	studyGuidesHandler := handlers.NewStudyGuideHandler(studyGuidesService)
+	studyGuideGrantHandler := handlers.NewStudyGuideGrantHandler(studyGuidesService)
 
 	quizzesRepo := quizzes.NewSQLCRepository(connPool, queries)
 	quizzesService := quizzes.NewService(quizzesRepo)
@@ -157,7 +158,20 @@ func main() {
 		},
 	}
 
-	compositeHandler := handlers.NewCompositeHandler(fileHandler, grantHandler, schoolsHandler, coursesHandler, studyGuidesHandler, quizzesHandler, sessionsHandler, recentsHandler, favoritesHandler, dashboardHandler, refsHandler)
+	compositeHandler := handlers.NewCompositeHandler(
+		fileHandler,
+		grantHandler,
+		schoolsHandler,
+		coursesHandler,
+		studyGuidesHandler,
+		studyGuideGrantHandler,
+		quizzesHandler,
+		sessionsHandler,
+		recentsHandler,
+		favoritesHandler,
+		dashboardHandler,
+		refsHandler,
+	)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(clerkAuth)

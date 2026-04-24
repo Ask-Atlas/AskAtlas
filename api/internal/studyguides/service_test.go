@@ -18,6 +18,7 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -793,13 +794,16 @@ func TestService_GetStudyGuide_FilesErrorPropagates(t *testing.T) {
 // CreateStudyGuide (ASK-120)
 // ---------------------------------------------------------------------
 
-// expectInsertReturning sets up the InsertStudyGuide mock to capture the
-// resolved sqlc params and return a synthetic row with the given id.
-// The capture is exposed via the returned pointer so individual tests
-// can assert the params the service ended up sending to the DB (most
-// importantly: the normalized tags).
+// expectInsertReturning sets up the InsertStudyGuide mock (inside the
+// InTx closure) to capture the resolved sqlc params and return a
+// synthetic row with the given id. Also wires the ASK-211
+// course-grant seed insert so the TX finishes successfully. The
+// InsertStudyGuide capture is exposed via the returned pointer so
+// individual tests can assert the params the service ended up sending
+// to the DB (most importantly: the normalized tags).
 func expectInsertReturning(t *testing.T, repo *mock_studyguides.MockRepository, guideID uuid.UUID) *db.InsertStudyGuideParams {
 	t.Helper()
+	inTxRunsFn(repo)
 	captured := &db.InsertStudyGuideParams{}
 	repo.EXPECT().
 		InsertStudyGuide(mock.Anything, mock.Anything).
@@ -812,6 +816,13 @@ func expectInsertReturning(t *testing.T, repo *mock_studyguides.MockRepository, 
 			CreatedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
 			UpdatedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
 		}, nil)
+	// ASK-211: CreateStudyGuide auto-seeds a course-view grant in the
+	// same tx so course members keep their "visible to the whole
+	// course" ergonomics. Tests don't assert the seed row shape; they
+	// only need the call to succeed for the tx to commit.
+	repo.EXPECT().
+		InsertStudyGuideGrant(mock.Anything, mock.Anything).
+		Return(db.StudyGuideGrant{}, nil).Maybe()
 	return captured
 }
 
@@ -1102,6 +1113,7 @@ func TestService_CreateStudyGuide_CourseNotFound_404(t *testing.T) {
 func TestService_CreateStudyGuide_InsertError_500(t *testing.T) {
 	repo := mock_studyguides.NewMockRepository(t)
 	repo.EXPECT().CourseExistsForGuides(mock.Anything, mock.Anything).Return(true, nil)
+	inTxRunsFn(repo)
 	repo.EXPECT().InsertStudyGuide(mock.Anything, mock.Anything).
 		Return(db.InsertStudyGuideRow{}, errors.New("insert blew up"))
 
@@ -3107,4 +3119,273 @@ func TestListMyStudyGuides_LimitClampedToMax(t *testing.T) {
 		Limit:    500,
 	})
 	require.NoError(t, err)
+}
+
+// =============================================================================
+// ASK-211: Study-guide grants CRUD tests.
+// =============================================================================
+
+func TestService_CreateGrant_Forbidden_NonCreator(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	creatorID := uuid.New()
+	viewerID := uuid.New()
+	repo.EXPECT().
+		GetStudyGuideCreator(mock.Anything, mock.Anything).
+		Return(utils.UUID(creatorID), nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.CreateGrant(context.Background(), studyguides.CreateGrantParams{
+		StudyGuideID: uuid.New(),
+		ViewerID:     viewerID,
+		GranteeType:  "user",
+		GranteeID:    uuid.New(),
+		Permission:   "view",
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusForbidden, appErr.Code)
+}
+
+func TestService_CreateGrant_GuideMissing_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	repo.EXPECT().
+		GetStudyGuideCreator(mock.Anything, mock.Anything).
+		Return(pgtype.UUID{}, sql.ErrNoRows)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.CreateGrant(context.Background(), studyguides.CreateGrantParams{
+		StudyGuideID: uuid.New(),
+		ViewerID:     uuid.New(),
+		GranteeType:  "user",
+		GranteeID:    uuid.New(),
+		Permission:   "view",
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+	assert.Equal(t, "Study guide not found", appErr.Message)
+}
+
+func TestService_CreateGrant_InvalidGranteeType_400(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.CreateGrant(context.Background(), studyguides.CreateGrantParams{
+		StudyGuideID: uuid.New(),
+		ViewerID:     uuid.New(),
+		GranteeType:  "study_guide", // disallowed on this surface
+		GranteeID:    uuid.New(),
+		Permission:   "view",
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusBadRequest, appErr.Code)
+	repo.AssertNotCalled(t, "GetStudyGuideCreator", mock.Anything, mock.Anything)
+}
+
+func TestService_CreateGrant_DuplicateGrant_409(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	creatorID := uuid.New()
+
+	repo.EXPECT().
+		GetStudyGuideCreator(mock.Anything, mock.Anything).
+		Return(utils.UUID(creatorID), nil)
+	repo.EXPECT().
+		CheckUserExists(mock.Anything, mock.Anything).
+		Return(nil)
+	repo.EXPECT().
+		InsertStudyGuideGrant(mock.Anything, mock.Anything).
+		Return(db.StudyGuideGrant{}, &pgconn.PgError{Code: "23505"})
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.CreateGrant(context.Background(), studyguides.CreateGrantParams{
+		StudyGuideID: uuid.New(),
+		ViewerID:     creatorID,
+		GranteeType:  "user",
+		GranteeID:    uuid.New(),
+		Permission:   "view",
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusConflict, appErr.Code)
+}
+
+func TestService_CreateGrant_Success(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	creatorID := uuid.New()
+	studyGuideID := uuid.New()
+	granteeID := uuid.New()
+	grantID := uuid.New()
+
+	repo.EXPECT().
+		GetStudyGuideCreator(mock.Anything, mock.Anything).
+		Return(utils.UUID(creatorID), nil)
+	repo.EXPECT().
+		CheckUserExists(mock.Anything, mock.Anything).
+		Return(nil)
+	repo.EXPECT().
+		InsertStudyGuideGrant(mock.Anything, mock.Anything).
+		Return(db.StudyGuideGrant{
+			ID:           utils.UUID(grantID),
+			StudyGuideID: utils.UUID(studyGuideID),
+			GranteeType:  db.GranteeTypeUser,
+			GranteeID:    utils.UUID(granteeID),
+			Permission:   db.PermissionView,
+			GrantedBy:    utils.UUID(creatorID),
+			CreatedAt:    pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		}, nil)
+
+	svc := studyguides.NewService(repo)
+	got, err := svc.CreateGrant(context.Background(), studyguides.CreateGrantParams{
+		StudyGuideID: studyGuideID,
+		ViewerID:     creatorID,
+		GranteeType:  "user",
+		GranteeID:    granteeID,
+		Permission:   "view",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, grantID, got.ID)
+	assert.Equal(t, "user", got.GranteeType)
+	assert.Equal(t, "view", got.Permission)
+}
+
+func TestService_RevokeGrant_NotFound_404(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	creatorID := uuid.New()
+
+	repo.EXPECT().
+		GetStudyGuideCreator(mock.Anything, mock.Anything).
+		Return(utils.UUID(creatorID), nil)
+	repo.EXPECT().
+		RevokeStudyGuideGrant(mock.Anything, mock.Anything).
+		Return(int64(0), nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.RevokeGrant(context.Background(), studyguides.RevokeGrantParams{
+		StudyGuideID: uuid.New(),
+		ViewerID:     creatorID,
+		GranteeType:  "user",
+		GranteeID:    uuid.New(),
+		Permission:   "view",
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusNotFound, appErr.Code)
+}
+
+func TestService_RevokeGrant_Forbidden(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	creatorID := uuid.New()
+	viewerID := uuid.New()
+
+	repo.EXPECT().
+		GetStudyGuideCreator(mock.Anything, mock.Anything).
+		Return(utils.UUID(creatorID), nil)
+
+	svc := studyguides.NewService(repo)
+	err := svc.RevokeGrant(context.Background(), studyguides.RevokeGrantParams{
+		StudyGuideID: uuid.New(),
+		ViewerID:     viewerID,
+		GranteeType:  "user",
+		GranteeID:    uuid.New(),
+		Permission:   "view",
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusForbidden, appErr.Code)
+}
+
+func TestService_ListGrants_Forbidden(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	creatorID := uuid.New()
+	viewerID := uuid.New()
+
+	repo.EXPECT().
+		GetStudyGuideCreator(mock.Anything, mock.Anything).
+		Return(utils.UUID(creatorID), nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.ListGrants(context.Background(), studyguides.ListGrantsParams{
+		StudyGuideID: uuid.New(),
+		ViewerID:     viewerID,
+	})
+	require.Error(t, err)
+	var appErr *apperrors.AppError
+	require.ErrorAs(t, err, &appErr)
+	assert.Equal(t, http.StatusForbidden, appErr.Code)
+}
+
+func TestService_ListGrants_Success(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	creatorID := uuid.New()
+	studyGuideID := uuid.New()
+
+	repo.EXPECT().
+		GetStudyGuideCreator(mock.Anything, mock.Anything).
+		Return(utils.UUID(creatorID), nil)
+	repo.EXPECT().
+		ListStudyGuideGrants(mock.Anything, mock.Anything).
+		Return([]db.StudyGuideGrant{
+			{
+				ID:           utils.UUID(uuid.New()),
+				StudyGuideID: utils.UUID(studyGuideID),
+				GranteeType:  db.GranteeTypeCourse,
+				GranteeID:    utils.UUID(uuid.New()),
+				Permission:   db.PermissionView,
+				GrantedBy:    utils.UUID(creatorID),
+				CreatedAt:    pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+			},
+		}, nil)
+
+	svc := studyguides.NewService(repo)
+	got, err := svc.ListGrants(context.Background(), studyguides.ListGrantsParams{
+		StudyGuideID: studyGuideID,
+		ViewerID:     creatorID,
+	})
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, "course", got[0].GranteeType)
+}
+
+func TestService_CreateStudyGuide_AutoSeedsCourseGrant(t *testing.T) {
+	repo := mock_studyguides.NewMockRepository(t)
+	guideID := uuid.New()
+	courseID := uuid.New()
+	creatorID := uuid.New()
+
+	repo.EXPECT().CourseExistsForGuides(mock.Anything, mock.Anything).Return(true, nil)
+	inTxRunsFn(repo)
+	repo.EXPECT().InsertStudyGuide(mock.Anything, mock.Anything).
+		Return(db.InsertStudyGuideRow{
+			ID:        utils.UUID(guideID),
+			ViewCount: 0,
+			CreatedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+			UpdatedAt: pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		}, nil)
+	var grantArgs db.InsertStudyGuideGrantParams
+	repo.EXPECT().InsertStudyGuideGrant(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, arg db.InsertStudyGuideGrantParams) {
+			grantArgs = arg
+		}).
+		Return(db.StudyGuideGrant{}, nil)
+	repo.EXPECT().GetStudyGuideDetail(mock.Anything, mock.Anything).
+		Return(hydrateRow(t, guideID, courseID, creatorID, "T", nil), nil)
+
+	svc := studyguides.NewService(repo)
+	_, err := svc.CreateStudyGuide(context.Background(), studyguides.CreateStudyGuideParams{
+		CourseID:  courseID,
+		CreatorID: creatorID,
+		Title:     "T",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, db.GranteeTypeCourse, grantArgs.GranteeType)
+	assert.Equal(t, db.PermissionView, grantArgs.Permission)
+	assert.Equal(t, utils.UUID(courseID), grantArgs.GranteeID)
+	assert.Equal(t, utils.UUID(creatorID), grantArgs.GrantedBy)
 }

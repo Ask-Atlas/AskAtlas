@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -12,8 +13,42 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+// resolveVisibility normalizes the optional *string visibility param
+// into a db.NullStudyGuideVisibility suitable for the sqlc-generated
+// params. Returns Valid=false when the param is nil (SQL NULL ->
+// COALESCE preserves current), Valid=true when the value is one of
+// the known enum values, and a 400 AppError when the value is
+// unknown. Empty-after-trim is treated as "absent".
+func resolveVisibility(v *string) (db.NullStudyGuideVisibility, error) {
+	if v == nil {
+		return db.NullStudyGuideVisibility{}, nil
+	}
+	trimmed := strings.TrimSpace(*v)
+	if trimmed == "" {
+		return db.NullStudyGuideVisibility{}, nil
+	}
+	switch trimmed {
+	case VisibilityPrivate:
+		return db.NullStudyGuideVisibility{
+			StudyGuideVisibility: db.StudyGuideVisibilityPrivate,
+			Valid:                true,
+		}, nil
+	case VisibilityPublic:
+		return db.NullStudyGuideVisibility{
+			StudyGuideVisibility: db.StudyGuideVisibilityPublic,
+			Valid:                true,
+		}, nil
+	default:
+		return db.NullStudyGuideVisibility{}, apperrors.NewBadRequest("Invalid request body", map[string]string{
+			"visibility": "must be 'private' or 'public'",
+		})
+	}
+}
 
 // normalizeTags trims, lowercases, and dedupes a raw input tag slice.
 // Returns the cleaned slice or apperrors.NewBadRequest with a per-field
@@ -122,28 +157,68 @@ func (s *Service) CreateStudyGuide(ctx context.Context, p CreateStudyGuideParams
 		return StudyGuideDetail{}, err
 	}
 
+	visibility, err := resolveVisibility(p.Visibility)
+	if err != nil {
+		return StudyGuideDetail{}, err
+	}
+
 	if err := s.AssertCourseExists(ctx, p.CourseID); err != nil {
 		return StudyGuideDetail{}, err
 	}
 
-	// Title is required; description/content are optional. For all three,
-	// trim leading/trailing whitespace and treat the empty result as the
-	// absent value so the DB stores SQL NULL (not a whitespace-only
-	// string). Title's "absent" form is rejected upstream by
-	// validateCreateParams; description/content are dropped to nil.
-	inserted, err := s.repo.InsertStudyGuide(ctx, db.InsertStudyGuideParams{
-		CourseID:    utils.UUID(p.CourseID),
-		CreatorID:   utils.UUID(p.CreatorID),
-		Title:       strings.TrimSpace(p.Title),
-		Description: utils.Text(trimmedNonEmpty(p.Description)),
-		Content:     utils.Text(trimmedNonEmpty(p.Content)),
-		Tags:        tags,
-	})
-	if err != nil {
-		return StudyGuideDetail{}, fmt.Errorf("CreateStudyGuide: insert: %w", err)
+	creatorPgxID := utils.UUID(p.CreatorID)
+	coursePgxID := utils.UUID(p.CourseID)
+
+	// Wrap insert + course-grant seed in a single tx so a partial
+	// commit can't leave a guide with no course-grant (the ergonomics
+	// contract from ASK-207: new private guides stay visible to the
+	// course members they were created in without the creator having
+	// to re-share by hand).
+	var inserted db.InsertStudyGuideRow
+	if err := s.repo.InTx(ctx, func(tx Repository) error {
+		row, err := tx.InsertStudyGuide(ctx, db.InsertStudyGuideParams{
+			CourseID:    coursePgxID,
+			CreatorID:   creatorPgxID,
+			Title:       strings.TrimSpace(p.Title),
+			Description: utils.Text(trimmedNonEmpty(p.Description)),
+			Content:     utils.Text(trimmedNonEmpty(p.Content)),
+			Tags:        tags,
+			Visibility:  visibility,
+		})
+		if err != nil {
+			return fmt.Errorf("insert: %w", err)
+		}
+		inserted = row
+
+		// Seed a course-view grant so course members keep their
+		// "visible to the whole course" ergonomics. 23505 (duplicate)
+		// is swallowed defensively -- the call is idempotent in spirit
+		// even though the underlying INSERT isn't. Only swallow when
+		// the row is "this exact study_guide_id" to avoid masking
+		// unrelated constraint violations.
+		if _, err := tx.InsertStudyGuideGrant(ctx, db.InsertStudyGuideGrantParams{
+			StudyGuideID: row.ID,
+			GranteeType:  db.GranteeTypeCourse,
+			GranteeID:    coursePgxID,
+			Permission:   db.PermissionView,
+			GrantedBy:    creatorPgxID,
+		}); err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+				slog.Debug("CreateStudyGuide: course-grant seed duplicate (swallowed)", "study_guide_id", row.ID)
+			} else {
+				return fmt.Errorf("seed course grant: %w", err)
+			}
+		}
+		return nil
+	}); err != nil {
+		return StudyGuideDetail{}, fmt.Errorf("CreateStudyGuide: %w", err)
 	}
 
-	row, err := s.repo.GetStudyGuideDetail(ctx, inserted.ID)
+	row, err := s.repo.GetStudyGuideDetail(ctx, db.GetStudyGuideDetailParams{
+		ID:       inserted.ID,
+		ViewerID: creatorPgxID,
+	})
 	if err != nil {
 		return StudyGuideDetail{}, fmt.Errorf("CreateStudyGuide: hydrate: %w", err)
 	}
@@ -402,7 +477,7 @@ func (s *Service) RemoveRecommendation(ctx context.Context, p RemoveRecommendati
 // re-checked by normalizeTags downstream so we don't duplicate that
 // logic here.
 func validateUpdateParams(p UpdateStudyGuideParams) error {
-	if p.Title == nil && p.Description == nil && p.Content == nil && p.Tags == nil {
+	if p.Title == nil && p.Description == nil && p.Content == nil && p.Tags == nil && p.Visibility == nil {
 		return apperrors.NewBadRequest("Invalid request body", map[string]string{
 			"body": "at least one field must be provided",
 		})
@@ -492,6 +567,13 @@ func (s *Service) UpdateStudyGuide(ctx context.Context, p UpdateStudyGuideParams
 		// when the arg is non-NULL, so an empty slice clears tags
 		// while a nil slice leaves them alone.
 		sqlArgs.Tags = tags
+	}
+	if p.Visibility != nil {
+		vis, err := resolveVisibility(p.Visibility)
+		if err != nil {
+			return StudyGuideDetail{}, err
+		}
+		sqlArgs.Visibility = vis
 	}
 
 	if err := s.repo.InTx(ctx, func(tx Repository) error {

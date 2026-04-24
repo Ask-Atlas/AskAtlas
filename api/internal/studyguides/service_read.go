@@ -54,8 +54,15 @@ func (s *Service) GetStudyGuide(ctx context.Context, p GetStudyGuideParams) (Stu
 	guidePgxID := utils.UUID(p.StudyGuideID)
 	viewerPgxID := utils.UUID(p.ViewerID)
 
-	row, err := s.repo.GetStudyGuideDetail(ctx, guidePgxID)
+	row, err := s.repo.GetStudyGuideDetail(ctx, db.GetStudyGuideDetailParams{
+		ID:       guidePgxID,
+		ViewerID: viewerPgxID,
+	})
 	if err != nil {
+		// sql.ErrNoRows covers three cases: guide missing, guide
+		// soft-deleted, or guide visibility denies the viewer. All
+		// three collapse to 404 to avoid leaking existence to viewers
+		// who can't access the guide -- same posture as files.GetFile.
 		if errors.Is(err, sql.ErrNoRows) {
 			return StudyGuideDetail{}, apperrors.NewNotFound("Study guide not found")
 		}

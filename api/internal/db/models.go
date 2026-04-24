@@ -269,6 +269,48 @@ func (ns NullResourceType) Value() (driver.Value, error) {
 	return string(ns.ResourceType), nil
 }
 
+type StudyGuideVisibility string
+
+const (
+	StudyGuideVisibilityPrivate StudyGuideVisibility = "private"
+	StudyGuideVisibilityPublic  StudyGuideVisibility = "public"
+)
+
+func (e *StudyGuideVisibility) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = StudyGuideVisibility(s)
+	case string:
+		*e = StudyGuideVisibility(s)
+	default:
+		return fmt.Errorf("unsupported scan type for StudyGuideVisibility: %T", src)
+	}
+	return nil
+}
+
+type NullStudyGuideVisibility struct {
+	StudyGuideVisibility StudyGuideVisibility `json:"study_guide_visibility"`
+	Valid                bool                 `json:"valid"` // Valid is true if StudyGuideVisibility is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullStudyGuideVisibility) Scan(value interface{}) error {
+	if value == nil {
+		ns.StudyGuideVisibility, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.StudyGuideVisibility.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullStudyGuideVisibility) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.StudyGuideVisibility), nil
+}
+
 type UploadStatus string
 
 const (
@@ -542,17 +584,18 @@ type School struct {
 }
 
 type StudyGuide struct {
-	ID          pgtype.UUID        `json:"id"`
-	CourseID    pgtype.UUID        `json:"course_id"`
-	CreatorID   pgtype.UUID        `json:"creator_id"`
-	Title       string             `json:"title"`
-	Description pgtype.Text        `json:"description"`
-	Content     pgtype.Text        `json:"content"`
-	Tags        []string           `json:"tags"`
-	ViewCount   int32              `json:"view_count"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
+	ID          pgtype.UUID          `json:"id"`
+	CourseID    pgtype.UUID          `json:"course_id"`
+	CreatorID   pgtype.UUID          `json:"creator_id"`
+	Title       string               `json:"title"`
+	Description pgtype.Text          `json:"description"`
+	Content     pgtype.Text          `json:"content"`
+	Tags        []string             `json:"tags"`
+	ViewCount   int32                `json:"view_count"`
+	CreatedAt   pgtype.Timestamptz   `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz   `json:"updated_at"`
+	DeletedAt   pgtype.Timestamptz   `json:"deleted_at"`
+	Visibility  StudyGuideVisibility `json:"visibility"`
 }
 
 type StudyGuideFavorite struct {
@@ -564,6 +607,16 @@ type StudyGuideFavorite struct {
 type StudyGuideFile struct {
 	FileID       pgtype.UUID        `json:"file_id"`
 	StudyGuideID pgtype.UUID        `json:"study_guide_id"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type StudyGuideGrant struct {
+	ID           pgtype.UUID        `json:"id"`
+	StudyGuideID pgtype.UUID        `json:"study_guide_id"`
+	GranteeType  GranteeType        `json:"grantee_type"`
+	GranteeID    pgtype.UUID        `json:"grantee_id"`
+	Permission   Permission         `json:"permission"`
+	GrantedBy    pgtype.UUID        `json:"granted_by"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 

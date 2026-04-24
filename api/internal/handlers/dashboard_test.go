@@ -32,7 +32,7 @@ func dashboardTestRouter(t *testing.T, dh *handlers.DashboardHandler) chi.Router
 	sgh := handlers.NewStudyGuideHandler(mock_handlers.NewMockStudyGuideService(t))
 	qh := handlers.NewQuizzesHandler(mock_handlers.NewMockQuizService(t))
 	ssh := handlers.NewSessionsHandler(mock_handlers.NewMockSessionService(t))
-	composite := handlers.NewCompositeHandler(fileH, gh, sh, ch, sgh, qh, ssh, nil, nil, dh, nil)
+	composite := handlers.NewCompositeHandler(fileH, gh, sh, ch, sgh, nil, qh, ssh, nil, nil, dh, nil)
 	r := chi.NewRouter()
 	api.HandlerWithOptions(composite, api.ChiServerOptions{BaseRouter: r})
 	return r

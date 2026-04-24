@@ -317,6 +317,13 @@ type Querier interface {
 	// service inspects deleted_at + creator_id to choose 404 vs 403 vs
 	// proceed.
 	GetStudyGuideByIDForUpdate(ctx context.Context, id pgtype.UUID) (GetStudyGuideByIDForUpdateRow, error)
+	// Creator-only probe for the grants handler. Returns sql.ErrNoRows
+	// when the guide doesn't exist or is soft-deleted (both -> 404 at the
+	// handler). Returns the creator_id so the service can compare against
+	// the JWT viewer_id (-> 403 on mismatch) before running grant writes.
+	// Separate from GetStudyGuideByIDForUpdate so this path stays
+	// non-locking (the grants CRUD doesn't need row-level locking).
+	GetStudyGuideCreator(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error)
 	// The detail endpoint's main query (ASK-114). Returns the guide's own
 	// columns + a compact course payload + a compact creator payload
 	// + two inline aggregates as subqueries:
@@ -337,7 +344,7 @@ type Querier interface {
 	//
 	// Privacy floor: no email, no clerk_id. Creator exposes only
 	// id/first_name/last_name.
-	GetStudyGuideDetail(ctx context.Context, id pgtype.UUID) (GetStudyGuideDetailRow, error)
+	GetStudyGuideDetail(ctx context.Context, arg GetStudyGuideDetailParams) (GetStudyGuideDetailRow, error)
 	// =============================================================================
 	// Files section: aggregate stats + recent files.
 	// =============================================================================
@@ -510,6 +517,21 @@ type Querier interface {
 	// the FK violation is unreachable in normal flow; the FK still acts
 	// as a backstop if a course is hard-deleted between preflight + insert.
 	InsertStudyGuide(ctx context.Context, arg InsertStudyGuideParams) (InsertStudyGuideRow, error)
+	// ============================================================================
+	// Study-guide grants (ASK-211). Parallel to file_grants. The study_guide_grants
+	// table lives in migration 20260424192951 (ASK-207 phase 1); these queries
+	// add the CRUD surface.
+	// ============================================================================
+	// Creates a row for POST /study-guides/{id}/grants. Plain INSERT -- no
+	// ON CONFLICT DO UPDATE because the spec requires 409 CONFLICT on a
+	// duplicate (mirrors file_grants). A unique-key violation (sqlstate
+	// 23505) propagates as a pgx PgError and is translated to
+	// apperrors.ErrConflict at the service layer.
+	//
+	// The CHECK constraint `grantee_type IN ('user', 'course')` lives on
+	// the table; the service re-validates grantee_type defensively so a
+	// clean 400 surfaces before the DB round trip.
+	InsertStudyGuideGrant(ctx context.Context, arg InsertStudyGuideGrantParams) (StudyGuideGrant, error)
 	// Inserts the (study_guide_id, recommended_by) row and returns the
 	// created_at PLUS the recommender's privacy-floor identity
 	// (first_name + last_name) via a CTE join to users. One round trip
@@ -811,16 +833,26 @@ type Querier interface {
 	// Index used: idx_study_guide_favorites_user_created
 	// (user_id, created_at, study_guide_id).
 	ListStudyGuideFavorites(ctx context.Context, arg ListStudyGuideFavoritesParams) ([]ListStudyGuideFavoritesRow, error)
+	// Returns every grant on a guide for GET /study-guides/{id}/grants.
+	// No visibility filter here -- the handler gates on creator-only
+	// BEFORE this query runs (a non-creator can't list the grants on
+	// someone else's guide). Sorted by created_at DESC so newest
+	// shares surface first; id is the stable tiebreaker.
+	ListStudyGuideGrants(ctx context.Context, studyGuideID pgtype.UUID) ([]StudyGuideGrant, error)
 	// Queries for the batch `POST /api/refs/resolve` endpoint (ASK-208).
 	// Each query returns the compact summary shape the frontend uses to
 	// render a ref card. Entities missing from the result (deleted,
 	// invisible to the viewer, or nonexistent) are absent from the rows;
 	// the service fills nulls into the response map.
-	// Compact summary for `::sg{id}` refs. Study guides are publicly
-	// viewable aside from the soft-delete invariant (same as
-	// GetStudyGuideDetail). The quiz_count subquery excludes soft-deleted
-	// quizzes so a ref to a guide whose only quiz was deleted shows 0.
-	ListStudyGuideRefSummaries(ctx context.Context, ids []pgtype.UUID) ([]ListStudyGuideRefSummariesRow, error)
+	// Compact summary for `::sg{id}` refs. Grants-gated (ASK-211): a ref
+	// hydrates only when the viewer can see the guide under the same
+	// visibility rules as GetStudyGuideDetail -- public, creator, direct
+	// user grant, or course grant via enrollment. Guides the viewer can't
+	// see simply don't appear in the result set and surface as null refs
+	// on the wire (the service layer handles the map lookup). The
+	// quiz_count subquery excludes soft-deleted quizzes so a ref to a
+	// guide whose only quiz was deleted shows 0.
+	ListStudyGuideRefSummaries(ctx context.Context, arg ListStudyGuideRefSummariesParams) ([]ListStudyGuideRefSummariesRow, error)
 	ListStudyGuidesNewestAsc(ctx context.Context, arg ListStudyGuidesNewestAscParams) ([]ListStudyGuidesNewestAscRow, error)
 	ListStudyGuidesNewestDesc(ctx context.Context, arg ListStudyGuidesNewestDescParams) ([]ListStudyGuidesNewestDescRow, error)
 	ListStudyGuidesScoreAsc(ctx context.Context, arg ListStudyGuidesScoreAscParams) ([]ListStudyGuidesScoreAscRow, error)
@@ -936,6 +968,12 @@ type Querier interface {
 	// The spec requires 404 when the grant is missing -- this replaces
 	// the previous idempotent no-op behavior.
 	RevokeFileGrant(ctx context.Context, arg RevokeFileGrantParams) (int64, error)
+	// Deletes the exact composite-key row for DELETE
+	// /study-guides/{id}/grants. Returns rows-affected so the service can
+	// distinguish "grant exists and was deleted" (1 row -> 204) from "no
+	// matching grant" (0 rows -> 404). Spec parity with file_grants: not
+	// idempotent.
+	RevokeStudyGuideGrant(ctx context.Context, arg RevokeStudyGuideGrantParams) (int64, error)
 	// Verifies the section exists AND belongs to the supplied course. A
 	// section UUID that targets a different course is treated as not found
 	// to avoid leaking the existence of unrelated sections via the URL path.

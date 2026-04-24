@@ -10,7 +10,6 @@ import (
 	mock_refs "github.com/Ask-Atlas/AskAtlas/api/internal/refs/mocks"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -122,8 +121,8 @@ func TestService_Resolve_DedupesAndSeedsMissing(t *testing.T) {
 	// Repository must be called with the deduped ID set -- a single
 	// query per type even with duplicate request refs.
 	repo.EXPECT().
-		ListStudyGuideRefSummaries(mock.Anything, mock.MatchedBy(func(ids []pgtype.UUID) bool {
-			return len(ids) == 2
+		ListStudyGuideRefSummaries(mock.Anything, mock.MatchedBy(func(p db.ListStudyGuideRefSummariesParams) bool {
+			return len(p.Ids) == 2
 		})).
 		Return([]db.ListStudyGuideRefSummariesRow{
 			{

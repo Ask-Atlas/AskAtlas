@@ -244,8 +244,8 @@ func (_c *MockRepository_ListQuizRefSummaries_Call) RunAndReturn(run func(ctx co
 }
 
 // ListStudyGuideRefSummaries provides a mock function for the type MockRepository
-func (_mock *MockRepository) ListStudyGuideRefSummaries(ctx context.Context, ids []pgtype.UUID) ([]db.ListStudyGuideRefSummariesRow, error) {
-	ret := _mock.Called(ctx, ids)
+func (_mock *MockRepository) ListStudyGuideRefSummaries(ctx context.Context, arg db.ListStudyGuideRefSummariesParams) ([]db.ListStudyGuideRefSummariesRow, error) {
+	ret := _mock.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListStudyGuideRefSummaries")
@@ -253,18 +253,18 @@ func (_mock *MockRepository) ListStudyGuideRefSummaries(ctx context.Context, ids
 
 	var r0 []db.ListStudyGuideRefSummariesRow
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []pgtype.UUID) ([]db.ListStudyGuideRefSummariesRow, error)); ok {
-		return returnFunc(ctx, ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListStudyGuideRefSummariesParams) ([]db.ListStudyGuideRefSummariesRow, error)); ok {
+		return returnFunc(ctx, arg)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []pgtype.UUID) []db.ListStudyGuideRefSummariesRow); ok {
-		r0 = returnFunc(ctx, ids)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, db.ListStudyGuideRefSummariesParams) []db.ListStudyGuideRefSummariesRow); ok {
+		r0 = returnFunc(ctx, arg)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]db.ListStudyGuideRefSummariesRow)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, []pgtype.UUID) error); ok {
-		r1 = returnFunc(ctx, ids)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, db.ListStudyGuideRefSummariesParams) error); ok {
+		r1 = returnFunc(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -278,20 +278,20 @@ type MockRepository_ListStudyGuideRefSummaries_Call struct {
 
 // ListStudyGuideRefSummaries is a helper method to define mock.On call
 //   - ctx context.Context
-//   - ids []pgtype.UUID
-func (_e *MockRepository_Expecter) ListStudyGuideRefSummaries(ctx interface{}, ids interface{}) *MockRepository_ListStudyGuideRefSummaries_Call {
-	return &MockRepository_ListStudyGuideRefSummaries_Call{Call: _e.mock.On("ListStudyGuideRefSummaries", ctx, ids)}
+//   - arg db.ListStudyGuideRefSummariesParams
+func (_e *MockRepository_Expecter) ListStudyGuideRefSummaries(ctx interface{}, arg interface{}) *MockRepository_ListStudyGuideRefSummaries_Call {
+	return &MockRepository_ListStudyGuideRefSummaries_Call{Call: _e.mock.On("ListStudyGuideRefSummaries", ctx, arg)}
 }
 
-func (_c *MockRepository_ListStudyGuideRefSummaries_Call) Run(run func(ctx context.Context, ids []pgtype.UUID)) *MockRepository_ListStudyGuideRefSummaries_Call {
+func (_c *MockRepository_ListStudyGuideRefSummaries_Call) Run(run func(ctx context.Context, arg db.ListStudyGuideRefSummariesParams)) *MockRepository_ListStudyGuideRefSummaries_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 []pgtype.UUID
+		var arg1 db.ListStudyGuideRefSummariesParams
 		if args[1] != nil {
-			arg1 = args[1].([]pgtype.UUID)
+			arg1 = args[1].(db.ListStudyGuideRefSummariesParams)
 		}
 		run(
 			arg0,
@@ -306,7 +306,7 @@ func (_c *MockRepository_ListStudyGuideRefSummaries_Call) Return(listStudyGuideR
 	return _c
 }
 
-func (_c *MockRepository_ListStudyGuideRefSummaries_Call) RunAndReturn(run func(ctx context.Context, ids []pgtype.UUID) ([]db.ListStudyGuideRefSummariesRow, error)) *MockRepository_ListStudyGuideRefSummaries_Call {
+func (_c *MockRepository_ListStudyGuideRefSummaries_Call) RunAndReturn(run func(ctx context.Context, arg db.ListStudyGuideRefSummariesParams) ([]db.ListStudyGuideRefSummariesRow, error)) *MockRepository_ListStudyGuideRefSummaries_Call {
 	_c.Call.Return(run)
 	return _c
 }
