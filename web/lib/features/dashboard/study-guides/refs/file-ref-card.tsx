@@ -61,7 +61,7 @@ export function FileRefCard({ id, inline }: Props) {
         </div>
       </div>
       <Button asChild size="sm" variant="outline" className="shrink-0">
-        <a href={downloadHref}>
+        <a href={downloadHref} className="no-underline">
           <Download className="size-4" aria-hidden />
           Download
         </a>

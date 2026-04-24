@@ -58,7 +58,7 @@ export function QuizRefCard({ id, inline }: Props) {
         </div>
       </div>
       <Button asChild size="sm" className="shrink-0">
-        <Link href={practiceHref}>
+        <Link href={practiceHref} className="no-underline">
           <Play className="size-4" aria-hidden />
           Practice
         </Link>
