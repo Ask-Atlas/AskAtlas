@@ -226,7 +226,7 @@ WHERE sg.id = ANY($1::uuid[])
     OR EXISTS (
       SELECT 1 FROM study_guide_grants g
       WHERE g.study_guide_id = sg.id
-        AND g.permission IN ('view', 'edit', 'delete')
+        AND g.permission IN ('view', 'share', 'delete')
         AND (
           (g.grantee_type = 'user' AND g.grantee_id = $2::uuid)
           OR (g.grantee_type = 'course' AND EXISTS (

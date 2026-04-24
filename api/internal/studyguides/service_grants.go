@@ -28,7 +28,7 @@ var (
 	}
 	validStudyGuidePermissions = map[string]struct{}{
 		"view":   {},
-		"edit":   {},
+		"share":  {},
 		"delete": {},
 	}
 )
@@ -42,7 +42,7 @@ func validateGrantFields(granteeType, permission string) *apperrors.AppError {
 		details["grantee_type"] = "must be 'user' or 'course'"
 	}
 	if _, ok := validStudyGuidePermissions[permission]; !ok {
-		details["permission"] = "must be 'view', 'edit', or 'delete'"
+		details["permission"] = "must be 'view', 'share', or 'delete'"
 	}
 	if len(details) > 0 {
 		return apperrors.NewBadRequest("Invalid request body", details)

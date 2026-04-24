@@ -358,7 +358,7 @@ type DetachFileParams struct {
 //
 // grantee_type must be "user" or "course" (study-guide grants do NOT
 // accept "study_guide" as a grantee_type); permission must be one of
-// "view", "edit", "delete". Validated by the service before the DB
+// "view", "share", "delete". Validated by the service before the DB
 // round trip.
 type CreateGrantParams struct {
 	StudyGuideID uuid.UUID

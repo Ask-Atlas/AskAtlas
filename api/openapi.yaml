@@ -3102,7 +3102,7 @@ components:
           format: uuid
         permission:
           type: string
-          enum: [view, edit, delete]
+          enum: [view, share, delete]
       required:
         - grantee_type
         - grantee_id
@@ -3121,7 +3121,7 @@ components:
           format: uuid
         permission:
           type: string
-          enum: [view, edit, delete]
+          enum: [view, share, delete]
       required:
         - grantee_type
         - grantee_id
