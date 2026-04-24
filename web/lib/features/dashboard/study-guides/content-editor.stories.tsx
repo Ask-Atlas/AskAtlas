@@ -5,9 +5,17 @@ import { ContentEditor } from "./content-editor";
 
 const SG_ID = "11111111-2222-3333-4444-555555555555";
 
+const DEFAULT_HOSTS = [
+  "askatlas.app",
+  "www.askatlas.app",
+  "staging.askatlas.study",
+  "dev.askatlas.study",
+  "localhost",
+];
+
 function Playground({
   initial = "",
-  hosts = ["askatlas.app", "localhost"],
+  hosts = DEFAULT_HOSTS,
 }: {
   initial?: string;
   hosts?: string[];
