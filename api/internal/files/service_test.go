@@ -700,9 +700,7 @@ func TestService_RecordFileView_UpsertLastViewedFails(t *testing.T) {
 	assert.Contains(t, err.Error(), "deadlock detected")
 }
 
-// ----------------------------------------------------------------------
 // GetDownloadURL (ASK-205)
-// ----------------------------------------------------------------------
 
 func TestService_GetDownloadURL_HappyPath(t *testing.T) {
 	repo := mock_files.NewMockRepository(t)
@@ -729,16 +727,12 @@ func TestService_GetDownloadURL_HappyPath(t *testing.T) {
 
 	got, err := svc.GetDownloadURL(context.Background(), viewerID, fileID)
 	require.NoError(t, err)
-	assert.Equal(t, want, got, "service returns whatever the generator produces")
+	assert.Equal(t, want, got)
 }
 
 func TestService_GetDownloadURL_NoGeneratorConfigured(t *testing.T) {
-	// Production wiring must inject WithDownloadURLGenerator. If it
-	// doesn't, the service fails fast with a non-nil error so the
-	// handler's 500 path kicks in -- we do NOT want a silent "no URL"
-	// 302-to-empty-Location.
 	repo := mock_files.NewMockRepository(t)
-	svc := files.NewService(repo) // deliberately no option
+	svc := files.NewService(repo)
 
 	_, err := svc.GetDownloadURL(context.Background(), uuid.New(), uuid.New())
 	require.Error(t, err)
@@ -746,9 +740,6 @@ func TestService_GetDownloadURL_NoGeneratorConfigured(t *testing.T) {
 }
 
 func TestService_GetDownloadURL_ForwardsRepoNotFound(t *testing.T) {
-	// GetFileIfViewable returns ErrNotFound for three distinct cases:
-	// missing file, no grant, soft-deleted. All three collapse to 404
-	// by design -- the service just passes the error through.
 	repo := mock_files.NewMockRepository(t)
 	gen := mock_files.NewMockDownloadURLGenerator(t)
 	svc := files.NewService(repo, files.WithDownloadURLGenerator(gen))
@@ -762,8 +753,6 @@ func TestService_GetDownloadURL_ForwardsRepoNotFound(t *testing.T) {
 }
 
 func TestService_GetDownloadURL_NonCompleteStatusIs404(t *testing.T) {
-	// pending / failed files have no bytes in storage -> 404 so
-	// callers can't distinguish "not ready yet" from "doesn't exist".
 	cases := []string{"pending", "failed"}
 
 	for _, status := range cases {
@@ -774,9 +763,6 @@ func TestService_GetDownloadURL_NonCompleteStatusIs404(t *testing.T) {
 
 			repo.EXPECT().GetFileIfViewable(mock.Anything, mock.Anything).
 				Return(db.File{S3Key: "uploads/x", Status: db.UploadStatus(status)}, nil)
-			// generator MUST NOT be called for non-complete files --
-			// the t-registered cleanup on NewMockDownloadURLGenerator
-			// fails the test if any unexpected call happens.
 
 			_, err := svc.GetDownloadURL(context.Background(), uuid.New(), uuid.New())
 			require.Error(t, err)
@@ -786,8 +772,6 @@ func TestService_GetDownloadURL_NonCompleteStatusIs404(t *testing.T) {
 }
 
 func TestService_GetDownloadURL_PresignerErrorBubblesUp(t *testing.T) {
-	// If the presigner itself errors (e.g. creds misconfigured), the
-	// service wraps and propagates. The handler maps this to 500.
 	repo := mock_files.NewMockRepository(t)
 	gen := mock_files.NewMockDownloadURLGenerator(t)
 	svc := files.NewService(repo, files.WithDownloadURLGenerator(gen))

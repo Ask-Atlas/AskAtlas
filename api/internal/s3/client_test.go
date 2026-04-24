@@ -3,7 +3,6 @@ package s3client_test
 import (
 	"context"
 	"net/url"
-	"strings"
 	"testing"
 
 	s3client "github.com/Ask-Atlas/AskAtlas/api/internal/s3"
@@ -11,9 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Presigning happens entirely client-side -- no network, no creds
-// validation. We inject dummy creds via env so the AWS config chain
-// resolves locally and the signer has something to work with.
+// Presigning is fully client-side; stub creds so the SDK config chain resolves.
 func withStubCreds(t *testing.T) {
 	t.Helper()
 	t.Setenv("AWS_ACCESS_KEY_ID", "AKIATEST")
@@ -38,9 +35,9 @@ func TestGeneratePresignedGetURL(t *testing.T) {
 			bucket: "askatlas-dev",
 			key:    "uploads/abc/file.pdf",
 			wantFragments: []string{
-				"/askatlas-dev/uploads/abc/file.pdf", // path-style addressing
+				"/askatlas-dev/uploads/abc/file.pdf",
 				"X-Amz-Signature=",
-				"X-Amz-Expires=900", // presignExpiry = 15 min
+				"X-Amz-Expires=900",
 				"X-Amz-Algorithm=AWS4-HMAC-SHA256",
 			},
 		},
@@ -64,21 +61,16 @@ func TestGeneratePresignedGetURL(t *testing.T) {
 			require.NoError(t, err)
 
 			parsed, err := url.Parse(got)
-			require.NoError(t, err, "presigned URL must be parseable")
-			assert.NotEmpty(t, parsed.Host, "presigned URL must have a host")
+			require.NoError(t, err)
+			assert.NotEmpty(t, parsed.Host)
 
 			for _, want := range tc.wantFragments {
-				assert.True(t,
-					strings.Contains(got, want),
-					"expected URL to contain %q, got %q", want, got,
-				)
+				assert.Contains(t, got, want)
 			}
 		})
 	}
 }
 
-// Empty key: AWS SDK validates and returns an error at presign time,
-// so our wrapper should surface it wrapped.
 func TestGeneratePresignedGetURL_EmptyKey(t *testing.T) {
 	withStubCreds(t)
 	c, err := s3client.New(context.Background(), "askatlas-dev")

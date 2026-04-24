@@ -519,14 +519,7 @@ func TestFileHandler_RecordFileView_BadUUID_400(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-// ----------------------------------------------------------------------
-// GET /api/files/{file_id}/download (ASK-205) -- wire-level coverage.
-// Service-layer gating lives in files.Service.GetDownloadURL; handler
-// tests verify the 302 + Location + Cache-Control shape on the happy
-// path, and that known error classes from the service map to the
-// right HTTP status.
-// ----------------------------------------------------------------------
-
+// GET /api/files/{file_id}/download (ASK-205).
 func TestFileHandler_DownloadFile_302_Owner(t *testing.T) {
 	mockSvc := mock_handlers.NewMockFileService(t)
 	h := handlers.NewFileHandler(mockSvc, nil)
@@ -545,23 +538,17 @@ func TestFileHandler_DownloadFile_302_Owner(t *testing.T) {
 	r := fileTestRouter(t, h)
 	r.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusFound, w.Code, "owner happy path must return 302 Found")
+	assert.Equal(t, http.StatusFound, w.Code)
 	assert.Equal(t, presigned, w.Header().Get("Location"))
-	assert.Equal(t, "no-store", w.Header().Get("Cache-Control"),
-		"redirect itself must not be cached -- presigned URL has its own 15-min TTL")
-	assert.Empty(t, w.Body.String(), "302 response must have no body")
+	assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
+	assert.Empty(t, w.Body.String())
 }
 
-// AC2: grants are respected. The handler doesn't care whether the
-// viewer owns the file or holds a grant -- the service does the check
-// and returns either the URL or ErrNotFound. This test just pins the
-// handler's behavior when the service returns success for a
-// non-owner viewer.
 func TestFileHandler_DownloadFile_302_GrantedViewer(t *testing.T) {
 	mockSvc := mock_handlers.NewMockFileService(t)
 	h := handlers.NewFileHandler(mockSvc, nil)
 
-	viewerID := uuid.New() // not the owner
+	viewerID := uuid.New()
 	fileID := uuid.New()
 	presigned := "https://s3.example/askatlas/uploads/abc?X-Amz-Signature=granted"
 
@@ -579,15 +566,12 @@ func TestFileHandler_DownloadFile_302_GrantedViewer(t *testing.T) {
 	assert.Equal(t, presigned, w.Header().Get("Location"))
 }
 
-// AC4: unsigned request. No authctx -> viewerIDFromContext returns
-// 401 before the service is ever called.
 func TestFileHandler_DownloadFile_Unauthorized_401(t *testing.T) {
 	mockSvc := mock_handlers.NewMockFileService(t)
 	h := handlers.NewFileHandler(mockSvc, nil)
 
 	fileID := uuid.New()
 	req := httptest.NewRequest(http.MethodGet, "/files/"+fileID.String()+"/download", nil)
-	// deliberately NOT attaching authctx
 	w := httptest.NewRecorder()
 	r := fileTestRouter(t, h)
 	r.ServeHTTP(w, req)
@@ -595,10 +579,6 @@ func TestFileHandler_DownloadFile_Unauthorized_401(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
-// AC3 (modified: matches the rest of the files API, which 404s rather
-// than 403s for no-grant to avoid leaking existence). AC5/AC6: pending,
-// failed, and soft-deleted files all collapse to 404 at the service
-// boundary -- the handler just surfaces it.
 func TestFileHandler_DownloadFile_NotFound_404(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -628,13 +608,11 @@ func TestFileHandler_DownloadFile_NotFound_404(t *testing.T) {
 			r.ServeHTTP(w, req)
 
 			assert.Equal(t, http.StatusNotFound, w.Code)
-			assert.Empty(t, w.Header().Get("Location"),
-				"error path must not set a Location header")
+			assert.Empty(t, w.Header().Get("Location"))
 		})
 	}
 }
 
-// Bad UUID: oapi-codegen/chi reject before the service runs.
 func TestFileHandler_DownloadFile_BadUUID_400(t *testing.T) {
 	mockSvc := mock_handlers.NewMockFileService(t)
 	h := handlers.NewFileHandler(mockSvc, nil)
@@ -648,7 +626,6 @@ func TestFileHandler_DownloadFile_BadUUID_400(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
-// Service failures other than ErrNotFound (e.g. presigner blew up).
 func TestFileHandler_DownloadFile_ServiceError_500(t *testing.T) {
 	mockSvc := mock_handlers.NewMockFileService(t)
 	h := handlers.NewFileHandler(mockSvc, nil)

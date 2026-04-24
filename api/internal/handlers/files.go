@@ -214,14 +214,8 @@ func (h *FileHandler) UpdateFile(w http.ResponseWriter, r *http.Request, fileId 
 }
 
 // DownloadFile handles GET /api/files/{file_id}/download (ASK-205).
-// Emits a 302 with a freshly-minted presigned S3 GET URL in the
-// `Location` header. The service owns grants + state gating; the
-// handler is a thin wire adapter.
-//
-// We deliberately DO NOT echo the presigned URL in the body: the
-// whole point of this endpoint (vs. a `download_url` field on
-// FileResponse) is to keep the bearer-token-equivalent URL out of
-// JSON payloads that end up in logs / caches / downstream observers.
+// 302 with a presigned S3 GET URL in Location; service owns grants +
+// state gating. No body -- the presigned URL stays off the JSON surface.
 func (h *FileHandler) DownloadFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
 	viewerID, appErr := viewerIDFromContext(r)
 	if appErr != nil {
@@ -239,11 +233,9 @@ func (h *FileHandler) DownloadFile(w http.ResponseWriter, r *http.Request, fileI
 		return
 	}
 
+	// no-store on the redirect: Location points at a 15-min presigned
+	// URL, so a cached 302 after expiry would break downloads.
 	w.Header().Set("Location", url)
-	// No caching of the redirect -- the Location points at a 15-min
-	// presigned URL, so serving a cached 302 after expiry would break
-	// downloads. The presigned URL itself is what Garage serves with
-	// its own cache semantics; the redirect stays fresh.
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusFound)
 }
