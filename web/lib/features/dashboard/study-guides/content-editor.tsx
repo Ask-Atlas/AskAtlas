@@ -1,11 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
-
-import { ArticleRenderer } from "./article-renderer";
 import { TiptapEditor } from "./wysiwyg/editor";
 
 interface ContentEditorProps {
@@ -40,47 +34,15 @@ export function ContentEditor({
   className,
   allowedHosts,
 }: ContentEditorProps) {
-  const [tab, setTab] = useState<"write" | "preview">("write");
-  const hosts = resolveAllowedHosts(allowedHosts);
-
   return (
-    <Tabs
-      value={tab}
-      onValueChange={(v) => setTab(v as "write" | "preview")}
-      className={cn("flex flex-col gap-2", className)}
-    >
-      <TabsList className="self-start">
-        <TabsTrigger value="write" disabled={disabled}>
-          Write
-        </TabsTrigger>
-        <TabsTrigger value="preview" disabled={disabled}>
-          Preview
-        </TabsTrigger>
-      </TabsList>
-      <TabsContent value="write" className="m-0" onBlur={onBlur}>
-        <TiptapEditor
-          value={value}
-          onChange={onChange}
-          disabled={disabled}
-          placeholder={placeholder}
-          allowedHosts={hosts}
-        />
-      </TabsContent>
-      <TabsContent value="preview" className="m-0">
-        <div
-          className={cn(
-            "min-h-56 rounded-md border p-4",
-            value.trim() === "" &&
-              "text-muted-foreground flex items-center justify-center text-sm",
-          )}
-        >
-          {value.trim() === "" ? (
-            <span>Nothing to preview yet.</span>
-          ) : (
-            <ArticleRenderer content={value} />
-          )}
-        </div>
-      </TabsContent>
-    </Tabs>
+    <div className={className} onBlur={onBlur}>
+      <TiptapEditor
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        placeholder={placeholder}
+        allowedHosts={resolveAllowedHosts(allowedHosts)}
+      />
+    </div>
   );
 }
