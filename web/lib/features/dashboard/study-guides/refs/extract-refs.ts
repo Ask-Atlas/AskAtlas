@@ -7,7 +7,7 @@ export interface EntityRef {
 }
 
 const DIRECTIVE_RE =
-  /:{2,3}(sg|quiz|file|course)\{[^}]*\bid=(?:"([^"]+)"|'([^']+)'|([^\s}]+))[^}]*\}/gi;
+  /:{1,3}(sg|quiz|file|course)\{[^}]*\bid=(?:"([^"]+)"|'([^']+)'|([^\s}]+))[^}]*\}/gi;
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

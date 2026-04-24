@@ -241,13 +241,13 @@ export const EntityRefInlinePills: Story = {
     docs: {
       description: {
         story:
-          "Inline directives render as compact pills alongside prose.",
+          "Inline directives (single colon) render as compact pills alongside prose.",
       },
     },
   },
   args: {
     initialRefs: SAMPLE_REFS,
-    content: `Start with the ::sg{id="${SG_ID}"} primer, then take the ::quiz{id="${QUIZ_ID}"} for ::course{id="${COURSE_ID}"}. Reference: ::file{id="${FILE_ID}"}.`,
+    content: `Start with the :sg{id="${SG_ID}"} primer, then take the :quiz{id="${QUIZ_ID}"} for :course{id="${COURSE_ID}"}. Reference: :file{id="${FILE_ID}"}.`,
   },
 };
 

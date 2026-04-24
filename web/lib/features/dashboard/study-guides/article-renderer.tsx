@@ -27,13 +27,23 @@ interface ArticleRendererProps {
   initialRefs?: Record<string, RefSummary | null>;
 }
 
-const REF_TAG_NAMES = [
+const REF_BLOCK_TAGS = [
   "ask-sg-ref",
   "ask-quiz-ref",
   "ask-file-ref",
   "ask-course-ref",
-  "ask-callout",
 ] as const;
+const REF_INLINE_TAGS = [
+  "ask-sg-ref-inline",
+  "ask-quiz-ref-inline",
+  "ask-file-ref-inline",
+  "ask-course-ref-inline",
+] as const;
+const REF_TAG_NAMES = [...REF_BLOCK_TAGS, ...REF_INLINE_TAGS, "ask-callout"];
+
+const refAttrAllowlist = Object.fromEntries(
+  [...REF_BLOCK_TAGS, ...REF_INLINE_TAGS].map((tag) => [tag, ["id"]]),
+);
 
 const sanitizeSchema = {
   ...defaultSchema,
@@ -47,11 +57,8 @@ const sanitizeSchema = {
   attributes: {
     ...defaultSchema.attributes,
     "*": [...(defaultSchema.attributes?.["*"] ?? []), "className"],
-    "ask-sg-ref": ["id", "dataInline"],
-    "ask-quiz-ref": ["id", "dataInline"],
-    "ask-file-ref": ["id", "dataInline"],
-    "ask-course-ref": ["id", "dataInline"],
-    "ask-callout": ["dataCalloutType"],
+    ...refAttrAllowlist,
+    "ask-callout": ["data-callout-type"],
   },
 };
 
@@ -96,23 +103,26 @@ type RefCardComponent = (props: {
   inline?: boolean;
 }) => React.JSX.Element;
 
-function refTag(Card: RefCardComponent) {
+function refTag(Card: RefCardComponent, inline: boolean) {
   const Rendered = (props: Record<string, unknown>) => {
     const id = typeof props.id === "string" ? props.id : undefined;
-    const inline = props["data-inline"] === "1";
     if (!id) return null;
     return <Card id={id} inline={inline} />;
   };
   Rendered.displayName = "RefTag";
   return Rendered;
-};
+}
 
 const CalloutTag = (props: Record<string, unknown>) => {
   const type =
     typeof props["data-callout-type"] === "string"
       ? (props["data-callout-type"] as string)
       : undefined;
-  return <CalloutBlock type={type}>{props.children as React.ReactNode}</CalloutBlock>;
+  return (
+    <CalloutBlock type={type}>
+      {props.children as React.ReactNode}
+    </CalloutBlock>
+  );
 };
 
 const markdownComponents = {
@@ -132,9 +142,13 @@ const markdownComponents = {
       alt={typeof alt === "string" ? alt : undefined}
     />
   ),
-  "ask-sg-ref": refTag(StudyGuideRefCard),
-  "ask-quiz-ref": refTag(QuizRefCard),
-  "ask-file-ref": refTag(FileRefCard),
-  "ask-course-ref": refTag(CourseRefCard),
+  "ask-sg-ref": refTag(StudyGuideRefCard, false),
+  "ask-quiz-ref": refTag(QuizRefCard, false),
+  "ask-file-ref": refTag(FileRefCard, false),
+  "ask-course-ref": refTag(CourseRefCard, false),
+  "ask-sg-ref-inline": refTag(StudyGuideRefCard, true),
+  "ask-quiz-ref-inline": refTag(QuizRefCard, true),
+  "ask-file-ref-inline": refTag(FileRefCard, true),
+  "ask-course-ref-inline": refTag(CourseRefCard, true),
   "ask-callout": CalloutTag,
 } satisfies Components & Record<string, unknown>;

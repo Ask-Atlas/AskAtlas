@@ -24,11 +24,8 @@ function setEntityHast(node: AnyDirective, inline: boolean): boolean {
     return false;
   }
   const data = node.data ?? (node.data = {});
-  data.hName = `ask-${node.name}-ref`;
-  data.hProperties = {
-    id: id.toLowerCase(),
-    "data-inline": inline ? "1" : "0",
-  };
+  data.hName = inline ? `ask-${node.name}-ref-inline` : `ask-${node.name}-ref`;
+  data.hProperties = { id: id.toLowerCase() };
   return true;
 }
 
