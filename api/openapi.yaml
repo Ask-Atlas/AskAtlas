@@ -520,6 +520,44 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /refs/resolve:
+    post:
+      operationId: ResolveRefs
+      summary: Batch-resolve inline entity refs (ASK-208)
+      description: |
+        Given a list of `(type, id)` pairs, returns a compact summary
+        for each entity the viewer can see. Used by the study-guide
+        article renderer to hydrate `::sg{id}`, `::quiz{id}`,
+        `::file{id}`, and `::course{id}` directives.
+
+        Response is a map keyed by `"{type}:{id}"`. A `null` value
+        means the entity is deleted, invisible to the viewer, or
+        nonexistent. Refs the viewer can't see return `null` (not
+        403) so a study guide can legitimately reference a file a
+        reader doesn't have access to without raising an error.
+
+        Server dedupes on `(type, id)` before running the per-type
+        lookups; the request cap of 50 refs is generous for a single
+        article.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefsResolveRequest'
+      responses:
+        '200':
+          description: Resolved ref map (`null` for missing / invisible refs).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefsResolveResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /schools:
     get:
       operationId: ListSchools
@@ -2635,6 +2673,124 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    RefsResolveRequest:
+      type: object
+      description: |
+        Request body for POST /api/refs/resolve (ASK-208). `refs` is a
+        list of `(type, id)` pairs to hydrate. Bounded at 50 entries --
+        typical articles have 3-10 refs; the cap prevents accidental
+        N-squared fetches from an editor that didn't debounce.
+      required: [refs]
+      properties:
+        refs:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/RefsResolveRequestRef'
+    RefsResolveRequestRef:
+      type: object
+      required: [type, id]
+      properties:
+        type:
+          type: string
+          enum: [sg, quiz, file, course]
+        id:
+          type: string
+          format: uuid
+    RefsResolveResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: object
+          description: |
+            Map keyed by `"{type}:{id}"`. Value is a RefSummary for
+            visible entities or `null` for refs the viewer cannot see
+            (deleted, no grant, or nonexistent). The type discriminator
+            on the summary object lets clients narrow to per-type
+            fields (see RefSummary).
+          additionalProperties:
+            nullable: true
+            $ref: '#/components/schemas/RefSummary'
+    RefSummary:
+      type: object
+      description: |
+        Discriminated union. `type` picks which fields are populated;
+        fields for other types are absent.
+      required: [type, id]
+      properties:
+        type:
+          type: string
+          enum: [sg, quiz, file, course]
+        id:
+          type: string
+          format: uuid
+        # sg
+        title:
+          type: string
+          description: sg / quiz / course title.
+        course:
+          $ref: '#/components/schemas/RefCourseInfo'
+        quiz_count:
+          type: integer
+          description: sg only. Count of non-deleted quizzes on the guide.
+        is_recommended:
+          type: boolean
+          description: sg only.
+        # quiz
+        question_count:
+          type: integer
+          description: quiz only. Count of quiz_questions rows.
+        creator:
+          $ref: '#/components/schemas/RefCreatorInfo'
+        # file
+        name:
+          type: string
+          description: file only. Original filename.
+        size:
+          type: integer
+          format: int64
+          description: file only. Bytes.
+        mime_type:
+          type: string
+          description: file only.
+        status:
+          type: string
+          description: file only. `pending` / `complete` / `failed`.
+        # course
+        department:
+          type: string
+          description: course only. e.g. `CPTS`.
+        number:
+          type: string
+          description: course only. e.g. `322`.
+        school:
+          $ref: '#/components/schemas/RefSchoolInfo'
+    RefCourseInfo:
+      type: object
+      required: [department, number]
+      properties:
+        department:
+          type: string
+        number:
+          type: string
+    RefCreatorInfo:
+      type: object
+      required: [first_name, last_name]
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+    RefSchoolInfo:
+      type: object
+      required: [name, acronym]
+      properties:
+        name:
+          type: string
+        acronym:
+          type: string
     FileResponse:
       type: object
       description: Complete metadata payload describing an uploaded file

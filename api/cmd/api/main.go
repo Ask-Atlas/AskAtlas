@@ -27,6 +27,7 @@ import (
 	qstashclient "github.com/Ask-Atlas/AskAtlas/api/internal/qstash"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/quizzes"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/recents"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/refs"
 	s3client "github.com/Ask-Atlas/AskAtlas/api/internal/s3"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/schools"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/sessions"
@@ -123,6 +124,10 @@ func main() {
 	dashboardService := dashboard.NewService(dashboardRepo)
 	dashboardHandler := handlers.NewDashboardHandler(dashboardService)
 
+	refsRepo := refs.NewSQLCRepository(queries)
+	refsService := refs.NewService(refsRepo)
+	refsHandler := handlers.NewRefsHandler(refsService)
+
 	clerkAuth := middleware.ClerkAuth(userService)
 
 	r.Use(chiMiddleware.Timeout(60 * time.Second))
@@ -152,7 +157,7 @@ func main() {
 		},
 	}
 
-	compositeHandler := handlers.NewCompositeHandler(fileHandler, grantHandler, schoolsHandler, coursesHandler, studyGuidesHandler, quizzesHandler, sessionsHandler, recentsHandler, favoritesHandler, dashboardHandler)
+	compositeHandler := handlers.NewCompositeHandler(fileHandler, grantHandler, schoolsHandler, coursesHandler, studyGuidesHandler, quizzesHandler, sessionsHandler, recentsHandler, favoritesHandler, dashboardHandler, refsHandler)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(clerkAuth)

@@ -537,6 +537,10 @@ type Querier interface {
 	// Index used: idx_course_favorites_user_created
 	// (user_id, created_at, course_id).
 	ListCourseFavorites(ctx context.Context, arg ListCourseFavoritesParams) ([]ListCourseFavoritesRow, error)
+	// Compact summary for `::course{id}` refs. Courses are public; the
+	// only filter is the id list. School is joined in-line because the
+	// card renders department + number + school.
+	ListCourseRefSummaries(ctx context.Context, ids []pgtype.UUID) ([]ListCourseRefSummariesRow, error)
 	// Returns sections with a live member_count via LEFT JOIN (so sections
 	// with zero members still appear). Ordered most-recent term first using
 	// start_date when present, falling back to section_code. NULLS LAST keeps
@@ -585,6 +589,14 @@ type Querier interface {
 	// the user's rows after a PK lookup, which is acceptable. If
 	// favorite counts grow into thousands per user, add the index.
 	ListFileFavorites(ctx context.Context, arg ListFileFavoritesParams) ([]ListFileFavoritesRow, error)
+	// Compact summary for `::file{id}` refs. Grants-gated: owner + direct
+	// user grant + public sentinel. Mirrors the GetFileIfViewable
+	// visibility branches but fans out over an array of file IDs; course
+	// + study_guide grants are intentionally omitted here to match the
+	// GetFile handler convention (callers don't resolve viewer course /
+	// study-guide IDs upstream yet). Files the viewer can't see simply
+	// don't appear in the result set and surface as null refs.
+	ListFileRefSummaries(ctx context.Context, arg ListFileRefSummariesParams) ([]ListFileRefSummariesRow, error)
 	// Attached files for the guide detail payload. Privacy floor: no
 	// user_id, no s3_key, no checksum. The file list shows only what a
 	// viewer needs to see: what's attached, what type, and how big.
@@ -670,6 +682,11 @@ type Querier interface {
 	// uniqueness on sort_order). Returns reference_answer so the
 	// mapper can emit it as `correct_answer` on freeform questions.
 	ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]ListQuizQuestionsByQuizRow, error)
+	// Compact summary for `::quiz{id}` refs. Same "live parent guide +
+	// live creator + not soft-deleted" filter as GetQuizDetail so a
+	// hydration that races with a cascade-delete doesn't render an
+	// orphaned quiz.
+	ListQuizRefSummaries(ctx context.Context, ids []pgtype.UUID) ([]ListQuizRefSummariesRow, error)
 	// Lists every non-soft-deleted quiz attached to a study guide
 	// (ASK-136). Each row carries the privacy-floor creator payload
 	// (id + first_name + last_name only -- mirrors the studyguides
@@ -794,6 +811,16 @@ type Querier interface {
 	// Index used: idx_study_guide_favorites_user_created
 	// (user_id, created_at, study_guide_id).
 	ListStudyGuideFavorites(ctx context.Context, arg ListStudyGuideFavoritesParams) ([]ListStudyGuideFavoritesRow, error)
+	// Queries for the batch `POST /api/refs/resolve` endpoint (ASK-208).
+	// Each query returns the compact summary shape the frontend uses to
+	// render a ref card. Entities missing from the result (deleted,
+	// invisible to the viewer, or nonexistent) are absent from the rows;
+	// the service fills nulls into the response map.
+	// Compact summary for `::sg{id}` refs. Study guides are publicly
+	// viewable aside from the soft-delete invariant (same as
+	// GetStudyGuideDetail). The quiz_count subquery excludes soft-deleted
+	// quizzes so a ref to a guide whose only quiz was deleted shows 0.
+	ListStudyGuideRefSummaries(ctx context.Context, ids []pgtype.UUID) ([]ListStudyGuideRefSummariesRow, error)
 	ListStudyGuidesNewestAsc(ctx context.Context, arg ListStudyGuidesNewestAscParams) ([]ListStudyGuidesNewestAscRow, error)
 	ListStudyGuidesNewestDesc(ctx context.Context, arg ListStudyGuidesNewestDescParams) ([]ListStudyGuidesNewestDescRow, error)
 	ListStudyGuidesScoreAsc(ctx context.Context, arg ListStudyGuidesScoreAscParams) ([]ListStudyGuidesScoreAscRow, error)
