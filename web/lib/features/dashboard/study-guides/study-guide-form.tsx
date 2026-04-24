@@ -18,10 +18,8 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -120,21 +118,25 @@ export const StudyGuideForm = forwardRef<
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <form
+        onSubmit={form.handleSubmit(handleSubmit)}
+        className="flex flex-col"
+      >
         <FormField
           control={form.control}
           name="title"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Title</FormLabel>
+            <FormItem className="space-y-1">
               <FormControl>
                 <Input
-                  placeholder="e.g. CPTS 322 Midterm Review"
+                  placeholder="Untitled study guide"
                   autoComplete="off"
+                  aria-label="Title"
+                  className="!h-auto border-0 bg-transparent px-0 text-3xl font-bold leading-tight shadow-none placeholder:text-3xl placeholder:font-bold focus-visible:ring-0 dark:bg-transparent md:text-4xl md:placeholder:text-4xl"
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="px-0" />
             </FormItem>
           )}
         />
@@ -142,61 +144,52 @@ export const StudyGuideForm = forwardRef<
           control={form.control}
           name="content"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Content</FormLabel>
+            <FormItem className="space-y-1">
               <FormControl>
                 <ContentEditor
                   value={field.value}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
                   name={field.name}
-                  placeholder="Write your study guide in markdown… Paste an internal URL to embed a live card."
-                  rows={14}
+                  placeholder="Write your study guide — paste a study-guide / quiz / file / course URL to embed a live card."
                   disabled={isSubmitting}
+                  className="[&_.ProseMirror]:!border-0 [&_.ProseMirror]:!px-0 [&_.ProseMirror]:!min-h-[20rem]"
                 />
               </FormControl>
-              <FormDescription>
-                Markdown + GFM supported. Paste a study-guide / quiz / file /
-                course URL to embed a live reference card. Flip to Preview to
-                see the rendered article.
-              </FormDescription>
-              <FormMessage />
+              <FormMessage className="px-0" />
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="tags"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tags</FormLabel>
-              <FormControl>
-                <TagChipsInput
-                  value={field.value}
-                  onChange={field.onChange}
-                  disabled={isSubmitting}
-                />
-              </FormControl>
-              <FormDescription>
-                Type a tag and press Enter to add. Backspace on an empty input
-                removes the last tag. Used for search and recommendations.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" disabled={!isValid || isSubmitting}>
-            {submitLabel}
-          </Button>
+        <div className="mt-6 flex flex-col gap-3 border-t pt-4 md:flex-row md:items-center md:justify-between">
+          <FormField
+            control={form.control}
+            name="tags"
+            render={({ field }) => (
+              <FormItem className="flex-1 space-y-1">
+                <FormControl>
+                  <TagChipsInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    disabled={isSubmitting}
+                  />
+                </FormControl>
+                <FormMessage className="px-0" />
+              </FormItem>
+            )}
+          />
+          <div className="flex shrink-0 justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onCancel}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!isValid || isSubmitting}>
+              {submitLabel}
+            </Button>
+          </div>
         </div>
       </form>
     </Form>
