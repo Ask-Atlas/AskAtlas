@@ -144,6 +144,14 @@ test.describe("Study-guide grants lifecycle (single-token)", () => {
   }) => {
     // 1. Create a private study guide. The service auto-seeds a
     //    course grant so course members can still see it.
+    //
+    // sgID is declared BEFORE the try block and initialised to
+    // undefined so the finally can guard the cleanup DELETE. If
+    // the create POST fails or the response body has no `id`, we
+    // skip cleanup entirely -- calling `DELETE /api/study-guides/undefined`
+    // hits chi's 400 path but the 400 would mask any upstream
+    // failure we want to surface.
+    let sgID: string | undefined;
     const title = `ASK-211 e2e ${new Date().toISOString()}`;
     const createResp = await request.post(
       `/api/courses/${courseID}/study-guides`,
@@ -157,7 +165,8 @@ test.describe("Study-guide grants lifecycle (single-token)", () => {
     );
     expect(createResp.status()).toBe(201);
     const created = await createResp.json();
-    const sgID = created.id as string;
+    sgID = typeof created?.id === "string" ? created.id : undefined;
+    expect(sgID, "create response body has a string id").toBeTruthy();
     expect(created).toHaveProperty("visibility", "private");
 
     try {
@@ -224,8 +233,12 @@ test.describe("Study-guide grants lifecycle (single-token)", () => {
       expect(patched).toHaveProperty("visibility", "public");
     } finally {
       // 7. Cleanup -- soft-delete the fixture so we don't leave
-      //    stray rows on staging.
-      await request.delete(`/api/study-guides/${sgID}`);
+      //    stray rows on staging. Guarded on sgID so we don't
+      //    fire `DELETE /api/study-guides/undefined` when the
+      //    create POST failed before sgID was assigned.
+      if (sgID) {
+        await request.delete(`/api/study-guides/${sgID}`);
+      }
     }
   });
 });
