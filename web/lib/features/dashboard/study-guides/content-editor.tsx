@@ -1,29 +1,22 @@
 "use client";
 
-import {
-  forwardRef,
-  useCallback,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import type { ClipboardEvent, ChangeEvent, TextareaHTMLAttributes } from "react";
+import { useState } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 import { ArticleRenderer } from "./article-renderer";
-import { rewritePastedUrl } from "./paste-rewriter";
+import { TiptapEditor } from "./wysiwyg/editor";
 
-interface ContentEditorProps
-  extends Omit<
-    TextareaHTMLAttributes<HTMLTextAreaElement>,
-    "value" | "onChange"
-  > {
+interface ContentEditorProps {
   value: string;
   onChange: (next: string) => void;
+  onBlur?: () => void;
+  name?: string;
+  placeholder?: string;
+  rows?: number;
+  disabled?: boolean;
+  className?: string;
   allowedHosts?: string[];
 }
 
@@ -38,56 +31,17 @@ function resolveAllowedHosts(explicit?: string[]): string[] {
   return hosts;
 }
 
-export const ContentEditor = forwardRef<
-  HTMLTextAreaElement,
-  ContentEditorProps
->(function ContentEditor(
-  { value, onChange, allowedHosts, className, disabled, ...rest },
-  ref,
-) {
-  const internalRef = useRef<HTMLTextAreaElement>(null);
-  useImperativeHandle(ref, () => internalRef.current as HTMLTextAreaElement);
-
+export function ContentEditor({
+  value,
+  onChange,
+  onBlur,
+  placeholder,
+  disabled,
+  className,
+  allowedHosts,
+}: ContentEditorProps) {
   const [tab, setTab] = useState<"write" | "preview">("write");
-  const hosts = useMemo(() => resolveAllowedHosts(allowedHosts), [
-    allowedHosts,
-  ]);
-
-  const handlePaste = useCallback(
-    (e: ClipboardEvent<HTMLTextAreaElement>) => {
-      const pasted = e.clipboardData.getData("text/plain");
-      const rewrite = rewritePastedUrl(pasted, hosts);
-      if (!rewrite) return;
-      e.preventDefault();
-      const el = internalRef.current;
-      if (!el) return;
-      // execCommand lands in a single undo step so Ctrl+Z reverts
-      // the insertion as one operation.
-      const ok =
-        typeof document !== "undefined" &&
-        document.execCommand?.("insertText", false, rewrite.directive);
-      if (!ok) {
-        const start = el.selectionStart ?? value.length;
-        const end = el.selectionEnd ?? start;
-        const next =
-          value.slice(0, start) + rewrite.directive + value.slice(end);
-        onChange(next);
-        requestAnimationFrame(() => {
-          el.focus();
-          const pos = start + rewrite.directive.length;
-          el.setSelectionRange(pos, pos);
-        });
-      }
-    },
-    [hosts, onChange, value],
-  );
-
-  const handleChange = useCallback(
-    (e: ChangeEvent<HTMLTextAreaElement>) => {
-      onChange(e.target.value);
-    },
-    [onChange],
-  );
+  const hosts = resolveAllowedHosts(allowedHosts);
 
   return (
     <Tabs
@@ -103,14 +57,13 @@ export const ContentEditor = forwardRef<
           Preview
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="write" className="m-0">
-        <Textarea
-          {...rest}
-          ref={internalRef}
+      <TabsContent value="write" className="m-0" onBlur={onBlur}>
+        <TiptapEditor
           value={value}
-          onChange={handleChange}
-          onPaste={handlePaste}
+          onChange={onChange}
           disabled={disabled}
+          placeholder={placeholder}
+          allowedHosts={hosts}
         />
       </TabsContent>
       <TabsContent value="preview" className="m-0">
@@ -130,4 +83,4 @@ export const ContentEditor = forwardRef<
       </TabsContent>
     </Tabs>
   );
-});
+}
