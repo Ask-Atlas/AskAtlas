@@ -82,7 +82,14 @@ function makeStudyGuide(
 }
 
 async function typeTag(user: ReturnType<typeof userEvent.setup>, tag: string) {
-  const input = screen.getByRole("textbox", { name: /add a tag/i });
+  // The tag input collapses to a "+ Add tag" button when idle -- open
+  // it, type, submit, and the input keeps focus for rapid-add so the
+  // next call re-queries the textbox afresh.
+  const trigger = screen.queryByRole("button", { name: /add tag/i });
+  if (trigger) {
+    await user.click(trigger);
+  }
+  const input = screen.getByRole("textbox", { name: /new tag/i });
   await user.type(input, `${tag}{Enter}`);
 }
 
@@ -204,9 +211,8 @@ describe("StudyGuideForm / tag chips", () => {
     await typeTag(user, "midterm");
     await typeTag(user, "midterm");
     const group = screen.getByRole("group", { name: /tags/i });
-    // Only one chip; the duplicate Enter just clears the input.
     expect(within(group).getAllByText("midterm")).toHaveLength(1);
-    const input = screen.getByRole("textbox", { name: /add a tag/i });
+    const input = screen.getByRole("textbox", { name: /new tag/i });
     expect(input).toHaveValue("");
   });
 
@@ -238,7 +244,7 @@ describe("StudyGuideForm / tag chips", () => {
     );
     await typeTag(user, "midterm");
     await typeTag(user, "concurrency");
-    const input = screen.getByRole("textbox", { name: /add a tag/i });
+    const input = screen.getByRole("textbox", { name: /new tag/i });
     input.focus();
     await user.keyboard("{Backspace}");
     const group = screen.getByRole("group", { name: /tags/i });
@@ -255,11 +261,13 @@ describe("StudyGuideForm / tag chips", () => {
         onCancel={jest.fn()}
       />,
     );
-    const input = screen.getByRole("textbox", { name: /add a tag/i });
+    await user.click(screen.getByRole("button", { name: /add tags?/i }));
+    const input = screen.getByRole("textbox", { name: /new tag/i });
     await user.type(input, "   {Enter}");
     const group = screen.getByRole("group", { name: /tags/i });
-    // No chip was added.
-    expect(within(group).queryAllByRole("button")).toHaveLength(0);
+    // No chip was added -- the only button in the group is the
+    // reopened "+ Add tag" trigger.
+    expect(within(group).queryAllByRole("button", { name: /remove/i })).toHaveLength(0);
   });
 });
 
