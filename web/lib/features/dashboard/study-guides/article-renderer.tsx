@@ -106,7 +106,21 @@ type RefCardComponent = (props: {
 function refTag(Card: RefCardComponent, inline: boolean) {
   const Rendered = (props: Record<string, unknown>) => {
     const id = typeof props.id === "string" ? props.id : undefined;
-    if (!id) return null;
+    if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line no-console
+      console.debug("[refTag] received props", {
+        keys: Object.keys(props),
+        id,
+        allProps: props,
+      });
+    }
+    if (!id) {
+      return process.env.NODE_ENV !== "production" ? (
+        <span style={{ color: "red" }}>
+          [refTag got no id: keys={Object.keys(props).join(",")}]
+        </span>
+      ) : null;
+    }
     return <Card id={id} inline={inline} />;
   };
   Rendered.displayName = "RefTag";
