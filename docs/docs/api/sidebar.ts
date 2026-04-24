@@ -48,6 +48,12 @@ const sidebar: SidebarsConfig = {
         },
         {
           type: "doc",
+          id: "api/download-file",
+          label: "Get file contents via presigned redirect (ASK-205)",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
           id: "api/toggle-file-favorite",
           label: "Toggle the file favorite (ASK-130)",
           className: "api-method post",
@@ -75,6 +81,12 @@ const sidebar: SidebarsConfig = {
           id: "api/revoke-grant",
           label: "Revoke a permission on a file (ASK-125)",
           className: "api-method delete",
+        },
+        {
+          type: "doc",
+          id: "api/resolve-refs",
+          label: "Batch-resolve inline entity refs (ASK-208)",
+          className: "api-method post",
         },
         {
           type: "doc",
@@ -248,6 +260,24 @@ const sidebar: SidebarsConfig = {
           type: "doc",
           id: "api/remove-study-guide-vote",
           label: "Remove the authenticated user's vote on a study guide",
+          className: "api-method delete",
+        },
+        {
+          type: "doc",
+          id: "api/list-study-guide-grants",
+          label: "List permission grants on a study guide (ASK-211)",
+          className: "api-method get",
+        },
+        {
+          type: "doc",
+          id: "api/create-study-guide-grant",
+          label: "Grant a permission on a study guide (ASK-211)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "api/revoke-study-guide-grant",
+          label: "Revoke a permission on a study guide (ASK-211)",
           className: "api-method delete",
         },
         {

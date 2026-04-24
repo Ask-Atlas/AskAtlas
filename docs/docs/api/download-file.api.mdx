@@ -1,0 +1,80 @@
+---
+id: download-file
+title: "Get file contents via presigned redirect (ASK-205)"
+description: "Returns 302 with a freshly-minted presigned S3 GET URL in the"
+sidebar_label: "Get file contents via presigned redirect (ASK-205)"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV8Fu40YM/RViLk0A2XE2ycUtCmSxu0HaoAg2DnqIgnqsoa3ZjGe0JBXXNfzvBSXZcePsYk/NJSfLImeGfI9vRK5MqpCs+BQvnRmaD2kRQ7Lukw9oMuOQC/KVms3QfEapKTKcDN7BwksJFqaEXIZlb+6joIOKkP0sooObE7j4OILbz1fgI0iJeRxfpaI5aQwlWofUh1GJMKG0YCSYphDSgtUXCJ0nLARsdKDxcB71/WQpyNDawhKmlOaQJl/UkyWRnWEfrrcx6OGj0RV4zuPxGcx9rAX5ZyiCxyjc5hBSnPWCf0QHhFMkjAUyHGB/1ofxL34+A6bi13EeJ/YBHfgoCVhqt+zNau8Q5pYeXFrEQ3hArKBKPoqPM7ACUnoGFjsJmEeMrrE1Kc1QwELEBeyEmiLgI9ISCL/WyNLPYx4vyGqolhQUrrBQmHu9BqVHjwskmNcskBYNyjD1ASERlCm4PNoOKxir7xhmuhscJGp8q3oSfAGMGjGGwz4o7Qw+5nFcYXQ+zsZwBOOp9QGdPnKaSs9hQA2DxSod1JQFnA5OgVMeCxsCEkNh408CzrPCUXsuITcxCRBat8xNS15upokm3jmMuenn0WSmsmTnKEhshncrE+0czdBoXn95ZzLjtRQrK+VefWo11dF/rRFuby8/QJpuITGZUVQ9oTNDoRozw0WJc2uGKyPLSo9gIR9nJtOQ5lbM0NS1d2a9vtfFXKXIyOp/MninP8/F0UEt6Qd1cXB8pvY8jkZXh9/WwkY1nWh2JfEDcmggbVc2sW920+cfQYC8WT/H+fqFbPpmvV5n5nQw2IfmvXWbmjaZKVIUjKJutqqCb+M5+sLfCKpNaI/sG7HRWXL+H3SARIlgQxKwUF1ITapOKcpGjk9Hdd4uza2PrBVHegmKb9ktksOd45XAGZKioPVe8z5e68zMkdnO8EWbQ7E+8EspWee8hmTD9X9ieLaHIvtUvndtiNt4nk6/z4x4Cbr0vKo+apq6uOHleJ+X22hrKRMphG/EvBYxJ/vEfNrciW+svBYrp/us/JEEpqmOb1p5JVbOXvq4XEZBijYAIz0itbi8MfQaDDUBSpl0kJihNL2clGZojrQF46NV18Stj1w3ZujuDW1tr1dTUG9beaNNF2NRk5dlY3uPlpDOa93w7n7XfKNUtgntOm3TK0Uq0/V7+n/SOJmse/i06XV++3NkNAcfp6lZvsmRH84lWIbz60uTGY22rY3j/qA/UOirxDK3TV117eoFStuKd2XI8OjtThu4HXAOzm9+770bnB0+r7zVUwW/DV5vg9f/MHh1chH8W46qYH3U0m4kueqEfNeMYXoVDJ/msa2W7zNTJhZ1W60mlvGWwnqtr7/WSKri+8w8WvLKS6Np51mfnRlObWD8jgIOPnf30iF8f8p7MYnupY1L1a8Ntf4zmXnA5c5oub5fb0alJrrWel4UWMnOur2vid5F23vv4qNeIv8CQokXBg==
+sidebar_class_name: "get api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Get file contents via presigned redirect (ASK-205)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/files/{file_id}/download"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Returns 302 with a freshly-minted presigned S3 GET URL in the
+`Location` header. The browser follows the redirect and loads
+the bytes directly from object storage. Presigned URL TTL is
+15 minutes; clients with long-lived references (e.g. `<img src>`
+baked into study-guide markdown) keep pointing at this stable
+endpoint and get a new signed URL on every request.
+
+Grants are respected -- the viewer must own the file or hold
+a direct `view` grant (or the public sentinel). Files in
+`pending` / `failed` / soft-deleted states return 404 so
+callers can't distinguish "not ready" from "forbidden".
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./download-file.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./download-file.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./download-file.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      
