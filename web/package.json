@@ -19,6 +19,12 @@
     "@clerk/nextjs": "^6.37.4",
     "@clerk/themes": "^2.4.52",
     "@hookform/resolvers": "^5.2.2",
+    "@tiptap/core": "^3.22.4",
+    "@tiptap/extension-link": "^3.22.4",
+    "@tiptap/extension-placeholder": "^3.22.4",
+    "@tiptap/pm": "^3.22.4",
+    "@tiptap/react": "^3.22.4",
+    "@tiptap/starter-kit": "^3.22.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "embla-carousel-autoplay": "^8.6.0",
@@ -41,6 +47,7 @@
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
+    "tiptap-markdown": "^0.9.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

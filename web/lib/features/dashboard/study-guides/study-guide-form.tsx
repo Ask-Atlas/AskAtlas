@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { X } from "lucide-react";
+import { Tag, X } from "lucide-react";
 import {
   forwardRef,
   type ForwardedRef,
@@ -18,14 +18,13 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
-  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+
+import { ContentEditor } from "./content-editor";
 import type {
   CreateStudyGuideRequest,
   StudyGuideDetailResponse,
@@ -119,21 +118,25 @@ export const StudyGuideForm = forwardRef<
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      <form
+        onSubmit={form.handleSubmit(handleSubmit)}
+        className="flex flex-col"
+      >
         <FormField
           control={form.control}
           name="title"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Title</FormLabel>
+            <FormItem className="space-y-1">
               <FormControl>
                 <Input
-                  placeholder="e.g. CPTS 322 Midterm Review"
+                  placeholder="Untitled study guide"
                   autoComplete="off"
+                  aria-label="Title"
+                  className="!h-auto border-0 bg-transparent px-0 text-3xl font-bold leading-tight shadow-none placeholder:text-3xl placeholder:font-bold focus-visible:ring-0 dark:bg-transparent md:text-4xl md:placeholder:text-4xl"
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="px-0" />
             </FormItem>
           )}
         />
@@ -141,56 +144,59 @@ export const StudyGuideForm = forwardRef<
           control={form.control}
           name="content"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Content</FormLabel>
+            <FormItem className="space-y-1">
               <FormControl>
-                <Textarea
-                  placeholder="Write your study guide in markdown…"
-                  rows={14}
-                  {...field}
-                />
-              </FormControl>
-              <FormDescription>
-                Markdown supported. Rich editor + preview land with the
-                study-guide article renderer.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="tags"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tags</FormLabel>
-              <FormControl>
-                <TagChipsInput
+                <ContentEditor
                   value={field.value}
                   onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  name={field.name}
+                  placeholder="Write your study guide — paste a study-guide / quiz / file / course URL to embed a live card."
                   disabled={isSubmitting}
+                  className="[&_.ProseMirror]:!border-0 [&_.ProseMirror]:!px-0 [&_.ProseMirror]:!min-h-[20rem]"
                 />
               </FormControl>
-              <FormDescription>
-                Type a tag and press Enter to add. Backspace on an empty input
-                removes the last tag. Used for search and recommendations.
-              </FormDescription>
-              <FormMessage />
+              <FormMessage className="px-0" />
             </FormItem>
           )}
         />
-        <div className="flex justify-end gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" disabled={!isValid || isSubmitting}>
-            {submitLabel}
-          </Button>
+        <div className="mt-6 flex flex-col gap-3 border-t pt-4 md:flex-row md:items-start md:justify-between">
+          <FormField
+            control={form.control}
+            name="tags"
+            render={({ field }) => (
+              <FormItem className="w-full space-y-1 md:max-w-xl md:flex-1">
+                <FormControl>
+                  <div className="flex items-start gap-2">
+                    <Tag
+                      className="text-muted-foreground mt-2 size-4 shrink-0"
+                      aria-hidden
+                    />
+                    <TagChipsInput
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={isSubmitting}
+                      className="flex-1"
+                    />
+                  </div>
+                </FormControl>
+                <FormMessage className="px-0" />
+              </FormItem>
+            )}
+          />
+          <div className="flex shrink-0 justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onCancel}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!isValid || isSubmitting}>
+              {submitLabel}
+            </Button>
+          </div>
         </div>
       </form>
     </Form>
@@ -220,23 +226,38 @@ function TagChipsInput({
   disabled = false,
   className,
 }: TagChipsInputProps) {
+  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const commit = () => {
     const next = draft.trim().toLowerCase();
-    if (next === "") return;
-    if (value.includes(next)) {
+    if (next === "") {
       setDraft("");
+      setEditing(false);
       return;
     }
-    onChange([...value, next]);
+    if (!value.includes(next)) {
+      onChange([...value, next]);
+    }
     setDraft("");
+    // keep input focused for rapid-add flow
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
+
+  const cancel = () => {
+    setDraft("");
+    setEditing(false);
   };
 
   const remove = (tag: string) => {
     onChange(value.filter((existing) => existing !== tag));
-    inputRef.current?.focus();
+  };
+
+  const startEditing = () => {
+    if (disabled) return;
+    setEditing(true);
+    requestAnimationFrame(() => inputRef.current?.focus());
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -245,8 +266,11 @@ function TagChipsInput({
       commit();
       return;
     }
-    // Quality-of-life: backspace on empty input pops the last chip
-    // (matches the GitHub / Linear tag input convention).
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancel();
+      return;
+    }
     if (event.key === "Backspace" && draft === "" && value.length > 0) {
       event.preventDefault();
       remove(value[value.length - 1]!);
@@ -257,9 +281,8 @@ function TagChipsInput({
     <div
       role="group"
       aria-label="Tags"
-      onClick={() => inputRef.current?.focus()}
       className={cn(
-        "border-input focus-within:ring-ring flex flex-wrap items-center gap-1.5 rounded-md border bg-transparent px-2 py-1.5 focus-within:ring-2",
+        "flex flex-wrap items-center gap-1.5",
         disabled && "cursor-not-allowed opacity-60",
         className,
       )}
@@ -285,20 +308,30 @@ function TagChipsInput({
           </button>
         </Badge>
       ))}
-      <input
-        ref={inputRef}
-        type="text"
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onKeyDown={handleKeyDown}
-        onBlur={commit}
-        disabled={disabled}
-        placeholder={
-          value.length === 0 ? "e.g. midterm, concurrency" : undefined
-        }
-        aria-label="Add a tag"
-        className="placeholder:text-muted-foreground min-w-[120px] flex-1 bg-transparent py-0.5 text-sm outline-none disabled:cursor-not-allowed"
-      />
+      {editing ? (
+        <input
+          ref={inputRef}
+          type="text"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={commit}
+          disabled={disabled}
+          placeholder="Type a tag + Enter"
+          aria-label="New tag"
+          className="border-input focus-visible:ring-ring placeholder:text-muted-foreground inline-flex h-7 min-w-[140px] rounded-full border bg-transparent px-3 text-xs outline-none focus-visible:ring-2"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={startEditing}
+          disabled={disabled}
+          className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring inline-flex h-7 items-center gap-1 rounded-full border border-dashed px-3 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed"
+        >
+          <span aria-hidden>+</span>
+          {value.length === 0 ? "Add tags" : "Add tag"}
+        </button>
+      )}
     </div>
   );
 }
