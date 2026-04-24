@@ -18,7 +18,9 @@ function Probe({ type, id }: { type: "sg" | "quiz"; id: string }) {
   return (
     <div>
       <span data-testid="status">{status}</span>
-      <span data-testid="summary">{summary ? (summary.title ?? "") : "null"}</span>
+      <span data-testid="summary">
+        {summary ? (summary.title ?? "") : "null"}
+      </span>
     </div>
   );
 }
