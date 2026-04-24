@@ -47,11 +47,3 @@ func CursorNullUploadStatus[C any](c *C, get func(*C) *string) db.NullUploadStat
 	}
 	return NullUploadStatus(get(c))
 }
-
-// CursorNullMimeType creates a db.NullMimeType extracted from a paginated cursor.
-func CursorNullMimeType[C any](c *C, get func(*C) *string) db.NullMimeType {
-	if c == nil {
-		return db.NullMimeType{}
-	}
-	return NullMimeType(get(c))
-}

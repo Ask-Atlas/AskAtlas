@@ -1,0 +1,82 @@
+---
+id: create-grant
+title: "Grant a permission on a file (ASK-122)"
+description: "Creates a new file_grants row scoped to (file_id, grantee_type,"
+sidebar_label: "Grant a permission on a file (ASK-122)"
+hide_title: true
+hide_table_of_contents: true
+api: eJztWG1v2zYQ/isHfkoA2XlPVw8d4HbtkK1ogybBPsRGQIsni61EquQxqWf4vw9Hym+xF2RAgXyxPtiSSB7v7nnudMepsA06SdqaCyV64p1DSfiHk4ZEJhT63OmGRxdjHiQYfIBCV3g35okenH0An9sGFZCFvTikVQZxGPGOJg1mAzN/5KEGXa2919bsd+GzqSZAJUahYB8MOqjlBPK4YxLjuwMzMNclwlIMaA/3stJKEiqQY6mNpygot86hb6xR2oyB5KjC3sAEj85DYd2aZm/4dQa5Dc5jGk73GUijwFNQk7tx0Ar9wLBxhA4VjCagsEJCdScJLq7g083Hj/tx+cqSLrDKTRhVOh8Yj4a0wQpubi5+h8P26mz5mV9sIv7AuqGBKZyto3XJjsrab6GBhxLNpj2w57BxyBv6gRmIpAHIPEfvB2I/erMPKjSVzhdOBocUnPFwevga3llTVDqnX4FK1sKoxmpDoCx6+PT5emBC49FRFy4XYEKp0UmXlxPYS96B396AL6WLN/caH/ZB+4FBU1iXJzeySQ6l6nitEL4HdBp9BsYSlOiwOzAiE410skZC50XvdiqMrFH0REs1kQnNFG0klRu8ZQCC0d8DJrfbYsk1sq3hyTFAVmTC4fegHSrRIxcwEz4vsZaiNxXsXtETnpw2Y5GJwrpakuiJELQSs9kwLUZPb62a8IrHsnJrCA3xkGyS77U1B189qzrd3MqOvmK+GYtf0i4wsmqSGMuhwlyXybBxG8KN4wAnjZ6FrtJkmz1oQi16t4IZJFhZDgORiRVCi+EsE8sQfIZXMrEM9qc2ZXLwXkyWaDDTRwxns1VEbtdtWFNlbaNhJkhThetJrfWbmM2SWE4RPvnm+PCI/9b9HBe1eUiJnwZfP4G0VPc/8Hqmf+dR8Jy5T1Pg52K7kKbuRpNnSWs9fSfpyemc8DukaxSP2RFpsMwKzyTLmp5rWqzQqCVQokzLoNPDw03SvJUK2jTw8yhzRdIo6ZT+BxWgc9bBnL7gyYWcgkOoJeVlTAPLrdrZytb8fdzgWG7VKhG0IRyjYzA8SQp+K6w1ei/H2wmkkKSu/DaTpFKaVZLV5ZoOj2Q8BjWquNBnufsKOP2mec9mLnDZEsw3RgYqrWMX7oB5KWBONoH5YN1IK4Vmh8pLoXK6iconS1DYYHax8mKovN5EZV6Vw4OmEvLgHMa63dvgcvaiJNwB9jKAnW2rBi4MoTOyAo/uHl3yyw6hl0AoKkil5ZOOxsbqLHaMPXHAJaM/mLaV4+wgnTmw8IhaajqDq3iubLTgVs9jHpymSRx7i9Kh6wcWdztcHb5iJJM9q5MW1pVEjWi7TH4exUkia28+zIveP/++juUuM+TLsst8/0PWTYWb7d28i1st6MVJIX85K85PO2evjl51Ts/OjzujkyLvHOevz0+K83NZyPP12riXGrMZt9iFjXrPfeu/9amSHvqXFyIT7Ka04Kh72D2MzYH1VMvI57ZhTw2VXG19rJk3rXv9q786R8fH+49ZPl1Gy+4YancM9YLHUG1oEf6gg6aS2jDNY16YtrnkNrafnDp6j/pQz4mp5LzTuxXT6Uh6vHHVbMaveTtOJMNM3EunmSkxrSjt+V6JXiErj0/Exd6XNjPuw/8+8dpqVftSGm6J72UV+Elk4htOVk7eZnweVKJU6KLCafRdUqtznfru+eqND90sm6/o5zk29OTc4Ur6vvx8dc0psj1mq+PHSjjJJ0j8GzW10U0x88Z3U1FJMw7xAyWSTL7+Bd2dDpg=
+sidebar_class_name: "post api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Grant a permission on a file (ASK-122)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/files/{file_id}/grants"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Creates a new file_grants row scoped to (file_id, grantee_type,
+grantee_id, permission). Only the file owner may create grants.
+
+The grantee_id is validated against the corresponding table:
+users for grantee_type=user, courses for course, and study_guides
+(filtered by deleted_at IS NULL) for study_guide. The public
+sentinel UUID 00000000-0000-0000-0000-000000000000 is exempt
+from the users lookup when grantee_type=user (represents
+"public access").
+
+A duplicate grant returns 409 Conflict; this endpoint does NOT
+upsert. Permission hierarchy (delete >= share >= view) is
+enforced by the read-side queries, not here.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./create-grant.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./create-grant.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./create-grant.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

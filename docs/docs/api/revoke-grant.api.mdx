@@ -1,0 +1,75 @@
+---
+id: revoke-grant
+title: "Revoke a permission on a file (ASK-125)"
+description: "Removes the file_grants row matched by (file_id, grantee_type,"
+sidebar_label: "Revoke a permission on a file (ASK-125)"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV01v4zYQ/SvEnBJATpzE8ba6OV1vkbbYXeQDPdhGPBZHFjcSqSWpJF5D/70YSo7t2A2KYoFc4kNsaYbkm3kzzJslmJIsemX0pYQYrujB3NPvFrWHCCS5xKqSrcFWmAdywmckUpXT3ZzdnLDmURTok4ykmC3EQbApGYlgJ7rzi5KisV49sqkkWyjnlNGHR+KLzhfPuwrzqMmKAhfCBjBHY31FvrLaidNuTzxmpAWGQx/RCUk5eZKR6K1s2jRolJ43CMaanpTz7kgMMcnEwRYs8S+ohK/KnIRyAsdaKueVTnzjLDqdBhqfMH1Q9DgV0pATn7/ciARdgpKEN2LqMrQ0HWtjxbTBOT0aa4igRIsFebIO4tESNBYEMbR5gwgUp7tEn+1wcJORqLT6XpG4vb38KEy6Tpw3bcYEJgk5J1JrCojA0vdKWZIQe1tRBC7JqECIl8AZgBict0rPIYLU2AI9xFBVSkJdT5rF5PyFkQte8XKvxGhP2rMJyzJXSSil42+O0S53jzKzb5TsK61wipgZuRCpsev8YhPbvK3I0nK9ekWON91kcl88pKsC4hFUjiww2Mo6ggicr+Tibl4pSTCpI1jXwH/ISgTrMnntUC4MPouLIATMBQCTut5kZLQdwxaUrYMmEXjlc9ru0TZvUNfNtq402jW5Oe32+Gs7z2FRWyUhlF63u+t1gVK0vMNPo/jao5ZopfpBUpC1geQGr3DeVomvLK07d+Oo1luaApV2O0WQGLlJvtKe5mQ5OOfRV26XozqCgpzD+Z6iqRm3R5W7fSGhlIohYf51C8OLPV5yHCA+41mfvkHqoCyHHGZLZa97ssvLrcbKZ8ZyCt+JeStiznaJ+WTsTElJ+p2Vt2Jlz2X32XiRmkq/98obsXK+75/LpfZkNebCkX0g2+TlnaG3YCgA9Jlh4d/Kk6iRnTEcs+xyx8tWlNbHjdjn7QNvjXKtbM6+WCpgsegoqazyi2C7ILRkBxVvN5psmq+ZyyaiTafn+DLvS2h1Kj/PghNE7Y9PKz32x983wEFwjVytderwCYsyp12BuNKBm3IPzlL85Tzt9zrnH04+dHrn/dPO7CxNOqfJr/2ztN/HFPvbUixupF3NOj01Afcqu+5+4HN0YvD1EiLgNDULTo66R90gHY3zBYaKblX/VSvZN4YPYfRK9x4Mrv/snJyeH74s9OW6Yd4Hs582mLV14unJH5c5Ks2chSJfto0xCmMa90G8ntfa3phEkBnn2Wm5nKGjW5vXNb/+XpHlrphE8IBW4YzLZbQEqRz/lhCnmDt6heODq7bRD8X/mQH3Bta+RL3gYsW84ieI4J4WG+NozRNSRijJBsyN9bcGWeemGVtWq3eu7jparRgkCZX+Vd/JxoX0cfjX8GbITd+OnkW4gMEiT1X8N2A1IVfhLgnvlpCjnlfh0oVmV/78A6cu6k0=
+sidebar_class_name: "delete api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Revoke a permission on a file (ASK-125)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"delete"}
+  path={"/files/{file_id}/grants"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Removes the file_grants row matched by (file_id, grantee_type,
+grantee_id, permission). Only the file owner may revoke.
+Returns 204 when a row was deleted, 404 when no matching grant
+exists. Each (grantee_type, grantee_id, permission) tuple is a
+distinct grant -- revoking `view` does NOT cascade to `share`
+or `delete`.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./revoke-grant.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./revoke-grant.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./revoke-grant.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

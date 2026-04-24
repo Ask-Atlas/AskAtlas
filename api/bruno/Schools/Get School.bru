@@ -1,0 +1,16 @@
+meta {
+  name: Get School
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/schools/{{schoolId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Get a single school by ID
+
+}

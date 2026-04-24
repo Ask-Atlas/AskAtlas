@@ -1,0 +1,66 @@
+slug: cs106a-recursion-quiz
+study_guide_slug: cs106a-recursion
+title: "CS 106A — Recursion Quiz"
+description: "6 questions on base cases, recursive cases, and the call stack."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "What two pieces does every recursive function need?"
+    feedback_correct: "Correct — base case + recursive case."
+    feedback_incorrect: "Every recursion needs (a) a base case to terminate, (b) a recursive case that shrinks the input."
+    options:
+      - { text: "A loop and a counter", correct: false }
+      - { text: "A base case and a recursive case", correct: true }
+      - { text: "An accumulator and a return", correct: false }
+      - { text: "A class and a constructor", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "What error does Python raise when a recursive function never reaches its base case?"
+    feedback_correct: "Right — Python caps recursion depth and raises RecursionError."
+    feedback_incorrect: "Python tracks call depth; bust the limit (default 1000) and you get `RecursionError`."
+    options:
+      - { text: "StackOverflowError", correct: false }
+      - { text: "RecursionError", correct: true }
+      - { text: "MemoryError", correct: false }
+      - { text: "Nothing — it runs forever", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "Which of these `factorial` definitions is correct for n >= 0?"
+    feedback_correct: "Correct — `factorial(0)` returns 1, otherwise `n * factorial(n-1)`."
+    feedback_incorrect: "The base case must be `n == 0` returning 1. The recursive call must shrink toward 0."
+    options:
+      - { text: "`def f(n): return n * f(n-1)`  # no base case", correct: false }
+      - { text: "`def f(n): return 1 if n == 0 else n * f(n-1)`", correct: true }
+      - { text: "`def f(n): return f(n-1) * n if n > 0 else 0`  # base returns 0", correct: false }
+      - { text: "`def f(n): return n * f(n)`  # doesn't shrink", correct: false }
+
+  - slug: q4
+    type: true_false
+    text: "Every recursive algorithm can also be written iteratively (with loops + a stack)."
+    feedback_correct: "True — recursion and iteration are computationally equivalent."
+    feedback_incorrect: "It IS True. The choice between them is about clarity, not capability."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "Slicing a string inside a recursive call (e.g., `s[1:]`) creates a new string each time."
+    feedback_correct: "True — string slicing always allocates. For long strings that's an O(n^2) total cost."
+    feedback_incorrect: "It IS True. Indexing with `i` instead of slicing avoids the per-call allocation."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q6
+    type: multiple_choice
+    text: "What's the bug in `def length(lst): return 1 + length(lst[1:])`?"
+    feedback_correct: "Right — without a base case for the empty list, recursion never stops."
+    feedback_incorrect: "It's missing a base case. `length([])` should return 0, otherwise recursion is infinite."
+    options:
+      - { text: "Missing base case for the empty list", correct: true }
+      - { text: "`lst[1:]` is invalid Python syntax", correct: false }
+      - { text: "Should multiply, not add", correct: false }
+      - { text: "Recursive functions can't return numbers", correct: false }

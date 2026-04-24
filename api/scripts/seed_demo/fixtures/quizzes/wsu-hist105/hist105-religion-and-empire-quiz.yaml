@@ -1,0 +1,74 @@
+slug: hist105-religion-and-empire-quiz
+study_guide_slug: hist105-religion-and-empire
+title: "HIST 105 — Religion and Empire Quiz"
+description: "6 questions covering the Italian Renaissance, the Reformation as media event, and the imperial-religious order of the early modern period."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Whose 1860 book is the foundational secondary source for the modern conception of the Italian Renaissance?"
+    hint: "Swiss historian, Basel-based, controversial individualism thesis."
+    feedback_correct: "Correct — Jacob Burckhardt's *Civilization of the Renaissance in Italy* (1860)."
+    feedback_incorrect: "It's Burckhardt. Petrarch and Machiavelli are Renaissance-era primary sources, not nineteenth-century interpreters."
+    options:
+      - { text: "Niccolò Machiavelli", correct: false }
+      - { text: "Jacob Burckhardt", correct: true }
+      - { text: "Francesco Petrarch", correct: false }
+      - { text: "Leopold von Ranke", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "What technology most decisively distinguished the Reformation from earlier reform movements like Wycliffe's or Hus's?"
+    hint: "Mass-reproducible text in vernacular languages."
+    feedback_correct: "Right — the printing press scaled Luther's pamphlets in a way Wycliffe's manuscripts could not match."
+    feedback_incorrect: "It is the printing press. Wycliffe and Hus had similar grievances; what they lacked was Gutenberg's technology."
+    options:
+      - { text: "Gunpowder", correct: false }
+      - { text: "The printing press", correct: true }
+      - { text: "The astrolabe", correct: false }
+      - { text: "Double-entry bookkeeping", correct: false }
+
+  - slug: q3
+    type: true_false
+    text: "The Treaty of Westphalia (1648) is often described as the birth of the modern sovereign-state system."
+    feedback_correct: "Yes — that is the conventional historiographical claim, though some scholars argue it overstates how 'Westphalian' the post-1648 order actually was."
+    feedback_incorrect: "It is true that this is the conventional claim. (Whether it accurately describes 1648 is a live debate.)"
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q4
+    type: true_false
+    text: "Bartolomé de las Casas argued at the 1550–1551 Valladolid debate that Indigenous Americans lacked full humanity and could legitimately be enslaved."
+    feedback_correct: "Yes — Las Casas argued the OPPOSITE. Sepúlveda took the position that Indigenous peoples lacked full humanity. Las Casas defended their humanity and largely won the debate."
+    feedback_incorrect: "Las Casas argued the OPPOSITE — he defended the humanity of Indigenous peoples. Sepúlveda was the one taking the dehumanizing position."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q5
+    type: multiple_choice
+    text: "Which Mughal emperor (r. 1556–1605) is most associated with a millet-style policy of religious accommodation?"
+    hint: "His reign overlaps with Elizabeth I of England."
+    feedback_correct: "Correct — Akbar's policy of *sulh-i-kul* ('peace with all') extended a degree of religious accommodation across his empire."
+    feedback_incorrect: "It's Akbar (r. 1556–1605). Aurangzeb (later) reversed much of this policy."
+    options:
+      - { text: "Babur", correct: false }
+      - { text: "Akbar", correct: true }
+      - { text: "Shah Jahan", correct: false }
+      - { text: "Aurangzeb", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "In a short paragraph, explain why HIST 105 treats the Renaissance and Reformation as 'symptoms' of an underlying transformation rather than as two separate movements."
+    reference_answer: |
+      Both the Italian Renaissance (roughly 1300–1500) and the German
+      Reformation (from 1517) emerge from a common underlying shift in
+      how authority, knowledge, and identity were organized in Europe:
+      the rise of vernacular print, the recovery and reinterpretation of
+      classical texts, the growing economic clout of urban merchant
+      classes, and the increasing inability of a single Latin Church to
+      contain divergent regional politics. Treating them as one
+      transformation makes it easier to see why they overlap, why the
+      printing press matters to both, and why the wars of religion that
+      follow grow out of imperial-scale political competition rather
+      than purely theological dispute.

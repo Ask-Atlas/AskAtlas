@@ -1,0 +1,66 @@
+slug: cs161-dynamic-programming-quiz
+study_guide_slug: cs161-dynamic-programming
+title: "CS 161 — Dynamic Programming Quiz"
+description: "Six questions on DP recurrences, runtime analysis, and recognizing when DP applies."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "What is the running time of the standard 2D DP for edit distance between strings of lengths $m$ and $n$?"
+    options:
+      - { text: "$\\Theta(m + n)$", correct: false }
+      - { text: "$\\Theta(mn)$", correct: true }
+      - { text: "$\\Theta(mn \\log(mn))$", correct: false }
+      - { text: "$\\Theta((mn)^2)$", correct: false }
+    feedback_correct: "The DP table has $\\Theta(mn)$ cells, and each cell takes $\\Theta(1)$ work."
+    feedback_incorrect: "Table size is $(m+1)(n+1)$ and each cell is $\\Theta(1)$ — total $\\Theta(mn)$."
+  - slug: q2
+    type: true_false
+    text: "Memoization (top-down) and tabulation (bottom-up) always produce identical asymptotic running times."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+    feedback_correct: "If the dependency graph is sparse, memoization can avoid computing unreached cells, giving an asymptotic speedup."
+    feedback_incorrect: "Memoization computes only reached subproblems. On sparse dependency graphs, it can be asymptotically faster than tabulation."
+  - slug: q3
+    type: multiple_choice
+    text: "The 0/1 Knapsack DP runs in $\\Theta(nW)$ where $W$ is the capacity. Why is Knapsack still NP-hard?"
+    options:
+      - { text: "$\\Theta(nW)$ is exponential because $W$ can be arbitrarily large", correct: false }
+      - { text: "$W$ is encoded in $\\log W$ bits, so $\\Theta(nW)$ is exponential in input size", correct: true }
+      - { text: "The DP is incorrect for large $W$", correct: false }
+      - { text: "Knapsack is not actually NP-hard", correct: false }
+    feedback_correct: "Input size is $n + \\log W$ bits, but the DP's running time is exponential in $\\log W$. This is 'pseudo-polynomial' — polynomial in the value of $W$, exponential in its bit length."
+    feedback_incorrect: "Polynomial-time means polynomial in the bit length of the input. $W$ is encoded in $\\log W$ bits, so $nW$ is exponential in $\\log W$."
+  - slug: q4
+    type: multiple_choice
+    text: "Which of the following is the most reliable signal that a problem requires DP rather than greedy?"
+    options:
+      - { text: "The problem involves graphs", correct: false }
+      - { text: "The problem asks for a sorted output", correct: false }
+      - { text: "A small counterexample exists for every greedy strategy you try", correct: true }
+      - { text: "The input size is small", correct: false }
+    feedback_correct: "Greedy fails when local choices lead to suboptimal global outcomes — a small counterexample is the diagnostic."
+    feedback_incorrect: "Greedy correctness is a property of the problem, not its size or domain. The decisive test: can you find a counterexample to every greedy rule?"
+  - slug: q5
+    type: true_false
+    text: "Every problem with optimal substructure can be solved by dynamic programming in polynomial time."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+    feedback_correct: "Optimal substructure is necessary for DP, but if the state space is exponentially large (as in TSP), the DP is also exponential."
+    feedback_incorrect: "Optimal substructure is a structural property; it doesn't bound the state space. TSP has optimal substructure but the DP state is $\\Theta(2^n n)$."
+  - slug: q6
+    type: freeform
+    text: "Define the subproblem and recurrence for the Longest Increasing Subsequence (LIS) of an array $A[1..n]$. State the running time."
+    reference_answer: |
+      Subproblem: $L(i)$ = length of the longest strictly increasing subsequence ENDING AT POSITION $i$.
+
+      Recurrence: $L(i) = 1 + \max\{ L(j) : j < i \text{ and } A[j] < A[i] \}$, where $\max$ over an empty set is $0$.
+
+      Base case: $L(i) = 1$ when no valid $j$ exists.
+
+      Answer: $\max_{1 \leq i \leq n} L(i)$.
+
+      Running time: For each $i$, the inner loop scans $j = 1, \ldots, i-1$. Total work is $\Theta(n^2)$.
+
+      (A faster $\Theta(n \log n)$ algorithm exists using patience sorting + binary search, but the standard DP is $\Theta(n^2)$.)

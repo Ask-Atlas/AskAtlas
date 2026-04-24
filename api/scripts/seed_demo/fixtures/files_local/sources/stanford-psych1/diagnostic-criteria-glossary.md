@@ -1,0 +1,55 @@
+---
+slug: stanford-psych1-diagnostic-glossary
+title: "Abnormal Psychology: Diagnostic Criteria Glossary"
+mime: text/plain
+filename: diagnostic-glossary.txt
+course: stanford/psych1
+description: "Plain-text glossary of core abnormal-psychology terms drawn from DSM-5-TR, with researcher citations."
+author_role: bot
+---
+
+ABNORMAL PSYCHOLOGY — DIAGNOSTIC CRITERIA GLOSSARY
+Stanford PSYCH 1, Week 9 supplementary handout.
+
+This glossary defines terms students most often confuse on the final. Definitions follow the DSM-5-TR (American Psychiatric Association, 2022) unless otherwise noted. Treat this as a study reference, not a diagnostic tool.
+
+ABNORMALITY (4 Ds)
+The working heuristic Rosenhan and Seligman (1984) proposed: Deviance from statistical norms, Distress to self or others, Dysfunction in daily roles, and Danger. No single D is sufficient; clinicians weigh all four in context.
+
+ANXIETY DISORDERS
+A family of conditions marked by excessive fear (response to present threat) or anxiety (anticipation of future threat). Includes Generalized Anxiety Disorder (6+ months of uncontrollable worry), Panic Disorder (recurrent unexpected panic attacks), Specific Phobia, and Social Anxiety Disorder. Rates estimated at ~19% 12-month prevalence in US adults (Kessler et al., 2005, NCS-R).
+
+BIPOLAR I DISORDER
+At least one manic episode lasting 7+ days (or requiring hospitalization). Mania: inflated self-esteem, decreased need for sleep, pressured speech, flight of ideas, risky behavior. Kraepelin (1899) first separated "manic-depressive insanity" from dementia praecox.
+
+COMORBIDITY
+The simultaneous presence of two or more disorders in one individual. Depression + anxiety is the most common pairing (Kessler et al., 2005).
+
+DEPRESSION (MAJOR DEPRESSIVE DISORDER)
+5+ of 9 symptoms for 2+ weeks, including depressed mood or anhedonia, changes in sleep/appetite/weight, fatigue, worthlessness, concentration deficits, and suicidal ideation. Aaron Beck's (1967) cognitive triad: negative views of self, world, and future.
+
+DIATHESIS-STRESS MODEL
+Meehl (1962) framework: psychopathology emerges from a predisposing vulnerability (genetic, biological, or cognitive) activated by environmental stress. Central to modern models of schizophrenia and depression.
+
+DISSOCIATIVE IDENTITY DISORDER (DID)
+Two or more distinct personality states, with recurrent gaps in autobiographical memory. Controversial history; Spanos (1994) argued for a sociocognitive account, while Putnam (1989) emphasized trauma etiology.
+
+OBSESSIVE-COMPULSIVE DISORDER (OCD)
+Obsessions (intrusive thoughts) and/or compulsions (repetitive behaviors) that are time-consuming or impairing. Moved out of the Anxiety Disorders chapter in DSM-5. Responds to SSRIs and exposure-and-response-prevention therapy (Foa, 1996).
+
+POSITIVE vs NEGATIVE SYMPTOMS (Schizophrenia)
+Positive = additions to normal experience: hallucinations, delusions, disorganized speech. Negative = losses: flat affect, avolition, alogia. Tim Crow (1980) proposed Type I (positive-symptom) vs Type II (negative-symptom) subtypes.
+
+POSTTRAUMATIC STRESS DISORDER (PTSD)
+Intrusion, avoidance, negative cognitions/mood, and arousal changes for 1+ month following exposure to actual or threatened death, serious injury, or sexual violence. Moved from Anxiety Disorders to its own "Trauma- and Stressor-Related Disorders" chapter in DSM-5.
+
+SCHIZOPHRENIA
+2+ of the following for 1+ month, at least one being positive: delusions, hallucinations, disorganized speech, grossly disorganized/catatonic behavior, negative symptoms. Lifetime prevalence ~0.3–0.7% (Saha et al., 2005).
+
+STIGMA
+Negative stereotypes and discrimination directed at people with mental illness. Corrigan (2004) distinguishes public stigma from self-stigma; both reduce treatment-seeking.
+
+ROSENHAN (1973) "ON BEING SANE IN INSANE PLACES"
+Eight pseudo-patients feigned a single symptom to gain admission to psychiatric hospitals, then behaved normally. All were admitted; average stay 19 days. Catalyzed reform of diagnostic reliability and contributed to the development of DSM-III (1980).
+
+END OF GLOSSARY.

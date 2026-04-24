@@ -1,0 +1,55 @@
+meta {
+  name: Abandon Practice Session
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/api/sessions/{{sessionId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Hard-delete an in-progress practice session
+
+  Hard-deletes the session row and CASCADE-removes its
+  `practice_session_questions` snapshot rows and
+  `practice_answers` rows. Used by the practice player when a
+  user wants to start fresh on a quiz they previously started
+  but didn't finish.
+  
+  Only INCOMPLETE sessions (`completed_at IS NULL`) can be
+  abandoned. Completed sessions are historical records and
+  return 409. Deletion semantics are intentionally
+  asymmetric to GET /sessions/{id} (which returns historical
+  sessions even after parent soft-delete) -- a user
+  explicitly invoking DELETE on a completed session is
+  ambiguous enough to surface as an error rather than
+  silently destroy analytics data.
+  
+  Authorization: session-owner only (403 otherwise). 404
+  for missing sessions; the standard 404-beats-403 ordering
+  does NOT apply here because we have to load the row to
+  check ownership in the same locked SELECT, so we already
+  know the row exists by the time we'd return 403.
+  
+  Idempotency: NOT idempotent. A second DELETE on an
+  already-abandoned session returns 404, not 204. Callers
+  that want to "make sure it's gone" must tolerate 404 on
+  the second call.
+  
+  Race protection: SELECT FOR UPDATE on the session row
+  serializes against concurrent SubmitAnswer (ASK-137) and
+  CompleteSession (ASK-140). If the DELETE wins, a pending
+  SubmitAnswer either fails its own locked SELECT (404 from
+  sql.ErrNoRows on the gone row) or fails its insert with
+  an FK violation depending on commit timing -- both surface
+  as a clean error to the answer caller. If a concurrent
+  CompleteSession wins, our locked SELECT sees `completed_at`
+  set and we return 409.
+  
+  After abandoning, calling POST /quizzes/{quiz_id}/sessions
+  creates a fresh session (the partial unique index
+  previously held by the abandoned row is now free).
+}

@@ -1,0 +1,32 @@
+meta {
+  name: Create File
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/files
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "mime_type": "image/jpeg",
+    "name": "string",
+    "s3_key": "string",
+    "size": 0
+  }
+}
+
+docs {
+  # Create a file metadata record (ASK-105)
+
+  Creates a file metadata record in `pending` status. Called
+  by the Next.js server as the first step of the upload flow,
+  BEFORE the client uploads to S3 via a presigned URL the
+  Next.js server generates separately. The Go API never
+  touches S3 for uploads -- it only manages metadata records.
+  A subsequent PATCH /api/files/{id} transitions the record
+  from `pending` to `complete` or `failed`.
+}

@@ -1,0 +1,80 @@
+---
+id: attach-file
+title: "Attach a file to a study guide"
+description: "Links an already-uploaded file to a study guide. The file must"
+sidebar_label: "Attach a file to a study guide"
+hide_title: true
+hide_table_of_contents: true
+api: eJztWE1PG0kQ/SulvgDawZANe4ilHJxssiJaJSgB5cAgaE+XPRV6uifd1Xgdy/99VT1jMNjKZqNIXDj5oz/qVb33+muhfItBM3l3bNRQjZh1Vb8li6pQBmMVqJVGNVR/k7uOoB1oG1Cb+X5qrdcGDUzIIrAHDZGTmcM0kcEBnNbYNTUpcunGCH7m0MB4Dlwj3BDOMMDulfSJgxQxXJKBly/h3efTvvVqD7QzQK50V5E1pwgvYafyTWuRcecKZsQ1OA8GLQpOIAdt8NOAMQ5KV7pR4toH+pZTHIJ3touegQmeAJXklPMewAgEB8xqD8ZjLJ3zLN3uxkyRIxwdPofdgFMdjMUYwU9gViPXGKTjfDWidLkUsL+fx4dkEShCqeY+5bAZTpsY5j6FPCoXA7zrh8ZSFVLaNuANOgZL7prcFHyOJVjjDrSBbjQjdITEvZz40eEL8A5Mai1V0tqDiLpBuNqVOJdkio6yyxzskszeFbSaQukornjua4NmUDpVqFYH3SBjiGp4vlBON6iG6v4sqlAkkmk11xs6ElkkR18TwtnZ8Z9Su4zrTjqqUAG/Jgpo1JBDwkLFqsZGq+FC8bztAgZyU1WoiQ+NZjVUKZFRy2Vxi6lP8WfATDoD/DyKCxkcW+8iRun/++Ez+bgfXGx2V11VqMo7RsfSU7cdb+TdwZco3Reb4f34C1a8kdTHPjKMvZnDxAc4+fDpFA50Swe5zPudtg4W92lbHmT1HSz6yi0HpfuInIKLuSpfPDkIfrYT4RrnEX6DKmCGCEwNRtZNe2f7nVg6UXSDrI1mDbvCSwENNXgpCRQQ6RvuiSMo503eaWvn8P7DaenIVTbJ6tLrdkYBIda6RWgoBB/WMLEeW4RIrkLgmmLp0JnWk+POYRkmdgPEQQWIrVdED+C1thbzhJpLN9OOYZKs7VevFX4xbE0Mf73ZWksyy9LNaqpq6LF3AVcEd7NZitytWtm11Rwm1vvQeyvIaszUaWal3/+WW/HQfz8ypCuKudT83e5GM+4LveKtNUecr/lrw/1rc18Uiokt9nrvNpgGHa9UqpZLmfno8HDTIa+0AQmJkX+dPT6xdkYHQ9/QAIqUYOVViBxSxSkgNJqrWpbatVB9b+MbTS5uEFZ5g2vhRdRTDB09sndt1nlZqAZj1FPc2maQNdm4LSVtDHWGObmH4cEcDznLEG/x3EVfY2nUtm8kzVtetqxcZ073+yqaJ2Iei5jnW7YUH8ZkDLonVh6LlaNNVt57holP7skrj8bKi01WXns3sVT123GVQpATdsDoU6ikiprxibDHIeyPbaeBY8cYnLYQMdxg6OryxNBjMJQBcu3lzaD1+XSW71dD9f9uGBIzk9ndJlOwMoVuSckVKmKVAvE8t71CHTDIfV4Nzy/Wmz8JwV2a651uk66ZW9Xf3uT3OHdSRf/l7eqo++7zaT7kkpv4PHyVebwesdURRifHqlCCtlPMs8Hh4FAIkRI0Oqutv3x251zQ2x9HHmpvcafhp3eWp3cWOb312mX8hw9aq8mJzrI/Fr3VztW61VShhhv3sJyltKzuaheFqsWuw3O1WIx1xLNgl0v5+2vCIEa7KNSNDiQ36mw7Q1G+GzWcaBvxO8Ld/dgvKHvwQ288WzPs/9RuLk7TNskvVahrnG8+M8ljz6/E1z/7/ASwVX2XF8tC1agNhly9rnVUVdjy2riNbUqWs9sFVV5r1HL5L0ZwnSc=
+sidebar_class_name: "post api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Attach a file to a study guide"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/study-guides/{study_guide_id}/files/{file_id}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Links an already-uploaded file to a study guide. The file must
+be owned by the viewer (`files.user_id == JWT viewer`) and in
+`status = 'complete'` with no deletion in progress.
+
+Authorization: only the file owner can attach. A user who does
+not own the file gets 403 (regardless of whether they own the
+guide -- the rule is "you can only put your own files on
+guides", to prevent linking other users' private uploads).
+
+409 on duplicate -- the same `(file_id, study_guide_id)` pair
+is already attached.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./attach-file.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./attach-file.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./attach-file.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

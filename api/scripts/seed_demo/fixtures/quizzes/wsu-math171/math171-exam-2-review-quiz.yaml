@@ -1,0 +1,59 @@
+slug: math171-exam-2-review-quiz
+study_guide_slug: math171-exam-2-review
+title: "MATH 171 — Exam 2 Cumulative Quiz"
+description: "5 cumulative questions covering chain rule, implicit differentiation, integrals, and the FTC."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "What is $\\dfrac{d}{dx}\\left[\\sin(3x^2)\\right]$?"
+    hint: "Chain rule: outside derivative times inside derivative."
+    feedback_correct: "Right — outside derivative is $\\cos(3x^2)$, inside derivative is $6x$."
+    feedback_incorrect: "Apply the chain rule: $\\frac{d}{dx}[\\sin(u)] = \\cos(u) \\cdot u'$ with $u = 3x^2$."
+    options:
+      - { text: "$\\cos(3x^2)$", correct: false }
+      - { text: "$6x \\cos(3x^2)$", correct: true }
+      - { text: "$\\cos(6x)$", correct: false }
+      - { text: "$3 \\cos(x^2)$", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "If $x^2 + y^2 = 25$, what is $dy/dx$?"
+    hint: "Differentiate implicitly with respect to $x$."
+    feedback_correct: "Yes — $2x + 2y \\, dy/dx = 0$ gives $dy/dx = -x/y$."
+    feedback_incorrect: "Differentiate both sides: $2x + 2y \\, dy/dx = 0$, then solve."
+    options:
+      - { text: "$-x/y$", correct: true }
+      - { text: "$x/y$", correct: false }
+      - { text: "$-y/x$", correct: false }
+      - { text: "$-2x$", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "Evaluate $\\int_0^1 (3x^2 + e^x)\\, dx$."
+    hint: "Find an antiderivative term by term, then apply $F(1) - F(0)$."
+    feedback_correct: "Right — antiderivative $x^3 + e^x$, evaluated: $(1 + e) - (0 + 1) = e$."
+    feedback_incorrect: "Antiderivative is $x^3 + e^x$. Then $[x^3 + e^x]_0^1 = (1 + e) - (0 + 1) = e$."
+    options:
+      - { text: "$e + 1$", correct: false }
+      - { text: "$e$", correct: true }
+      - { text: "$e - 1$", correct: false }
+      - { text: "$1$", correct: false }
+
+  - slug: q4
+    type: true_false
+    text: "$\\dfrac{d}{dx} \\int_0^{x^3} \\cos(t)\\, dt = 3 x^2 \\cos(x^3)$."
+    feedback_correct: "Correct — by FTC Part 1 with the chain rule, $\\frac{d}{dx} \\int_0^{u(x)} f(t)\\,dt = f(u(x)) u'(x)$."
+    feedback_incorrect: "By FTC Part 1 + chain rule, the derivative is $\\cos(x^3) \\cdot 3x^2$, which is exactly the right-hand side."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q5
+    type: freeform
+    text: "Set up (do not solve) the optimization problem: a rectangular box with a square base and open top has volume $32$ in$^3$. Express the surface area as a function of the base side length $x$ alone."
+    reference_answer: |
+      Let $x$ be the base side length and $h$ the height.
+      Constraint: $x^2 h = 32 \Rightarrow h = 32 / x^2$.
+      Surface area (open top): one base + four sides.
+      $S = x^2 + 4 x h = x^2 + 4 x \cdot \dfrac{32}{x^2} = x^2 + \dfrac{128}{x}$.
+      Domain: $x > 0$. Minimising $S(x) = x^2 + 128/x$ would give the dimensions.

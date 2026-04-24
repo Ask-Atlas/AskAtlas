@@ -2,33 +2,60 @@
 package api
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
+	"github.com/getkin/kin-openapi/openapi3filter"
 )
 
+// BearerAuthFunc is an openapi3filter.AuthenticationFunc that asserts the
+// operation's security scheme is HTTP bearer and that an Authorization:
+// Bearer header is present. It does not verify the token.
+func BearerAuthFunc(_ context.Context, input *openapi3filter.AuthenticationInput) error {
+	scheme := input.SecurityScheme
+	if scheme == nil || scheme.Type != "http" || !strings.EqualFold(scheme.Scheme, "bearer") {
+		return fmt.Errorf("unsupported security scheme %q", input.SecuritySchemeName)
+	}
+	header := input.RequestValidationInput.Request.Header.Get("Authorization")
+	if header == "" {
+		return errors.New("missing Authorization header")
+	}
+	const prefix = "Bearer "
+	if len(header) <= len(prefix) || !strings.EqualFold(header[:len(prefix)], prefix) {
+		return errors.New("Authorization header must use Bearer scheme")
+	}
+	return nil
+}
+
 var paramErrorRegex = regexp.MustCompile(`^parameter "([^"]+)"(?: in [^ ]+)? has an error: (.+)$`)
+
+// bodyErrorRegex matches openapi3filter's request-body error format,
+// e.g. `request body has an error: ...: Error at "/grantee_type": <msg>`.
+// Captures the JSON pointer segment and the trailing message so we
+// can surface field-keyed details instead of a catch-all "validation".
+var bodyErrorRegex = regexp.MustCompile(`Error at "/([^"]+)": (.+)$`)
 
 // OAPIValidatorErrorHandler is a custom ErrorHandler for the OpenAPI request validator middleware.
 func OAPIValidatorErrorHandler(w http.ResponseWriter, message string, statusCode int) {
 	var details map[string]string
 	if statusCode == http.StatusBadRequest {
-		matches := paramErrorRegex.FindStringSubmatch(message)
-		if len(matches) == 3 {
-			details = map[string]string{}
-			field := matches[1]
-			errMsg := matches[2]
-			details[field] = errMsg
+		details = map[string]string{}
+		if matches := paramErrorRegex.FindStringSubmatch(message); len(matches) == 3 {
+			details[matches[1]] = matches[2]
+		} else if matches := bodyErrorRegex.FindStringSubmatch(message); len(matches) == 3 {
+			details[matches[1]] = matches[2]
 		} else {
-			details = map[string]string{}
 			details["validation"] = message
 		}
 	}
 
 	err := &apperrors.AppError{
 		Code:    statusCode,
-		Status:  http.StatusText(statusCode),
 		Message: "Invalid request parameters",
 		Details: details,
 	}
@@ -57,7 +84,6 @@ func OAPIStrictErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 
 	appErr := &apperrors.AppError{
 		Code:    http.StatusBadRequest,
-		Status:  http.StatusText(http.StatusBadRequest),
 		Message: "Invalid request parameters",
 		Details: details,
 	}

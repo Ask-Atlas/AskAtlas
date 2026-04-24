@@ -1,0 +1,27 @@
+meta {
+  name: Detach File
+  type: http
+  seq: 10
+}
+
+delete {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}/files/{{fileId}}
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Detach a file from a study guide
+
+  Removes the link between a file and a guide. Does NOT delete
+  the file itself -- a file may be attached to many guides /
+  courses.
+  
+  Dual-authz: viewer must be EITHER the file owner OR the
+  study guide creator. Broader than POST (which requires file
+  owner only) so a guide creator can curate their guide's
+  attached files without owning every file.
+  
+  404 covers both 'guide missing/deleted' and 'file not
+  attached to this guide'.
+}

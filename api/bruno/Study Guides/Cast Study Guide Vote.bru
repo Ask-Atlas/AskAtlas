@@ -1,0 +1,27 @@
+meta {
+  name: Cast Study Guide Vote
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}/votes
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "vote": "up"
+  }
+}
+
+docs {
+  # Cast or change a vote on a study guide
+
+  Upserts the authenticated user's vote on the guide. Same-direction
+  re-submits are no-ops; opposite-direction submits flip the vote.
+  Returns the post-upsert `vote_score` so the UI can update without
+  a refetch. Soft-deleted guides return 404. Creators may vote on
+  their own guides (no self-vote restriction).
+}

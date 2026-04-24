@@ -1,0 +1,1 @@
+{"parameters":[{"name":"quiz_id","in":"path","description":"The unique UUID of the quiz containing the question","required":true,"schema":{"type":"string","format":"uuid"}},{"name":"question_id","in":"path","description":"The unique UUID of the question to delete","required":true,"schema":{"type":"string","format":"uuid"}}]}

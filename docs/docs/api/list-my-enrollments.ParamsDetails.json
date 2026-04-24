@@ -1,0 +1,1 @@
+{"parameters":[{"name":"term","in":"query","description":"Exact-match term filter (e.g. \"Spring 2026\")","required":false,"schema":{"type":"string","maxLength":30}},{"name":"role","in":"query","description":"Filter to a specific course-member role","required":false,"schema":{"type":"string","enum":["student","ta","instructor"]}}]}

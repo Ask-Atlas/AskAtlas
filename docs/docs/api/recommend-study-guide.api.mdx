@@ -1,0 +1,84 @@
+---
+id: recommend-study-guide
+title: "Recommend a study guide"
+description: "Records that the authenticated user (an instructor or TA in the"
+sidebar_label: "Recommend a study guide"
+hide_title: true
+hide_table_of_contents: true
+api: eJztWN9vGzcM/lcIvSwBLk66dQ/1W9q1W4atLeoEe4iDmD7ROTV30pWikrmG//eBuovt2Gm7AgOCAXnyj6NIfvw+8iQtTGiJUVzwJ9YMzQcqQ9OQtyNJdv5rcpZMYSzFkl2rVr0N2whSoYBUBJikIi+uRCELKRLDHnpwPgqnUgJDYDg9BufVfOyv1O0PEcqQONI+8F3QmN3lxwNYpZKzU2sv7KZJaOwlZMuJi5erxWQnMEV7RYDedo83nl1O5xOoXRQIfuxXYcCSoKsHYz/2x0mqwO5zjjeEG0e3xNCkKFCFune5BjVRVBPBCXCoCZx6OIU/Xh+PTuHd29cQqVRHEGZrVCvQA/gt1Nb5K8Cx98EfUE03uXzZ2d4kSrLkZbKvVYuhoTt/EWygCG/fncK0DuV1Bwa7WAcHORYnTSjC2KCfw33X6uu2IqYVHV1GENNs5kqKY5Or8YEksY/w/OgFBA82tXUmGPYiNnRXnY0Kg1QudjDHfkqzwLSvCfEWj8gEPgg4S00bhLzAlEpMkfp0mLIliGsoCjYtNChCHDOxTAcrj1q/25BqC9HV5KWej/00NS04GYy9KUyLjA3pWjM8XxiPDZmh0drOL3Oml86awjiVdYtS7Wj9tCJI3n1KBGdnJ7/ckZk99AqSsIZoCsP0KTkma4bCiQoTy4oaNMOFkXnbRWfnr0xhZoEbFDM0KTlrlssLXRzb4CNFtf/x6Jl+7Dbfupo5MluyA1MYbRDyomuw7dhywR9+jLpwsZtImH6kUh5o7y4HmAY7h1lgeP9udAqH2LrDjPsg446Hi/t1XB5uMT1Yi0hrNmOKVT0/yPyqGreQhFto6xQ7Eax1xblnmhbLLBkvTua9Blt2N1jOYVaHwIBx7F+p78Cj1DTIc1WfD0ANurrQb2VNfH3p7H6vDtbhJ64r95Yqvk2Y0rU5X75d2lc9jjwiW5zXAfO8tIBdjSZlB2CiQsNNmQ1ghA2N/TZmGHVj4U9qpsQr7r6E/CHg/xLszHGUy66Fts2Xhanxy0+Xm21xbnLPbbjbXHxRGHFS6+r7ZGqMXjqXKF/N2KLQgU6Pncg7nb/F4L0QG6nc77q7KpvlUgM8Pzra7dOXqAr/lCjKf9eaI0Fvka37TBaIOegA7hnvXkuJSadlWeVXyzpUb21Dg87HHQmUwW7y5rzQFbGWPApKig8y3lCMePWwGrrXanwIElrrNCWs39/LYVszW9TlFFf5rKNvsHTctq8V5oqXB+bnmcf+NU/2iZjHIuanXWLeBJ46a8k/sfJYrDzfZeVtEJiF5J965dFYebHLyqvgZ7UrBW6dVFAmZt1FM8WQuNQqotATYY9D2M8P7QZOvBB7rCES3xB3dXli6DEYyglKFfS2ow15d5ZPfkPzfacbjZnJ7I6WiWt1ga0zepCLVCZ2Ms/PXhIysV4vmOH5xebjkRLcwdw0WoGuRFrTnyH19zQbmaL/8uZux/v7X6d5r+v8LOTld8jj9bHUGOH4/YkpjGbbKebZ4GhwpIRoCRrMautPx6u97v0DyLboFmvxPt0IPd0I/V9uhPrGEvpbDtsandcmyM276OdAf0rs54ApzPDLp8Z+FFwUptJRMjw3i8UUI51xvVzq358SsQ6Bi8LcIDucalueL4x1Ub9bM5xhHekrvbX3oR92+/D9l1EPou3/RK/n3Rusk/4yhbmm+e7l2PJiWZiK0BLnxDuj47KkVjaW77y9dMqt5qxeIJnl8h+w//9j
+sidebar_class_name: "post api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Recommend a study guide"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/study-guides/{study_guide_id}/recommendations"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Records that the authenticated user (an instructor or TA in the
+guide's course) recommends the guide. Recommendations contribute
+to the `is_recommended` badge and the `recommended_by` list on
+the guide detail.
+
+Authorization: viewer must hold the `instructor` or `ta` role in
+AT LEAST ONE section of the guide's course. Holding a
+non-elevated role (`student`) in some sections does NOT block
+the action -- the rule is "any elevated role somewhere in the
+course suffices".
+
+Returns 409 on duplicate (same viewer recommended this guide
+before) -- recommendations are not idempotent because the
+creation timestamp matters and re-recommending would silently
+bump it.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./recommend-study-guide.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./recommend-study-guide.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./recommend-study-guide.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

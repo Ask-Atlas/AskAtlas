@@ -27,24 +27,816 @@ const (
 	BearerAuthScopes = "BearerAuth.Scopes"
 )
 
+// Defines values for AttachResourceRequestType.
+const (
+	AttachResourceRequestTypeArticle AttachResourceRequestType = "article"
+	AttachResourceRequestTypeLink    AttachResourceRequestType = "link"
+	AttachResourceRequestTypePdf     AttachResourceRequestType = "pdf"
+	AttachResourceRequestTypeVideo   AttachResourceRequestType = "video"
+)
+
+// Valid indicates whether the value is a known member of the AttachResourceRequestType enum.
+func (e AttachResourceRequestType) Valid() bool {
+	switch e {
+	case AttachResourceRequestTypeArticle:
+		return true
+	case AttachResourceRequestTypeLink:
+		return true
+	case AttachResourceRequestTypePdf:
+		return true
+	case AttachResourceRequestTypeVideo:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CastVoteRequestVote.
+const (
+	CastVoteRequestVoteDown CastVoteRequestVote = "down"
+	CastVoteRequestVoteUp   CastVoteRequestVote = "up"
+)
+
+// Valid indicates whether the value is a known member of the CastVoteRequestVote enum.
+func (e CastVoteRequestVote) Valid() bool {
+	switch e {
+	case CastVoteRequestVoteDown:
+		return true
+	case CastVoteRequestVoteUp:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CastVoteResponseVote.
+const (
+	CastVoteResponseVoteDown CastVoteResponseVote = "down"
+	CastVoteResponseVoteUp   CastVoteResponseVote = "up"
+)
+
+// Valid indicates whether the value is a known member of the CastVoteResponseVote enum.
+func (e CastVoteResponseVote) Valid() bool {
+	switch e {
+	case CastVoteResponseVoteDown:
+		return true
+	case CastVoteResponseVoteUp:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CourseMemberResponseRole.
+const (
+	CourseMemberResponseRoleInstructor CourseMemberResponseRole = "instructor"
+	CourseMemberResponseRoleStudent    CourseMemberResponseRole = "student"
+	CourseMemberResponseRoleTa         CourseMemberResponseRole = "ta"
+)
+
+// Valid indicates whether the value is a known member of the CourseMemberResponseRole enum.
+func (e CourseMemberResponseRole) Valid() bool {
+	switch e {
+	case CourseMemberResponseRoleInstructor:
+		return true
+	case CourseMemberResponseRoleStudent:
+		return true
+	case CourseMemberResponseRoleTa:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateFileRequestMimeType.
+const (
+	CreateFileRequestMimeTypeApplicationepubZip                                                   CreateFileRequestMimeType = "application/epub+zip"
+	CreateFileRequestMimeTypeApplicationpdf                                                       CreateFileRequestMimeType = "application/pdf"
+	CreateFileRequestMimeTypeApplicationvndOpenxmlformatsOfficedocumentPresentationmlPresentation CreateFileRequestMimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+	CreateFileRequestMimeTypeApplicationvndOpenxmlformatsOfficedocumentWordprocessingmlDocument   CreateFileRequestMimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	CreateFileRequestMimeTypeImagejpeg                                                            CreateFileRequestMimeType = "image/jpeg"
+	CreateFileRequestMimeTypeImagepng                                                             CreateFileRequestMimeType = "image/png"
+	CreateFileRequestMimeTypeImagewebp                                                            CreateFileRequestMimeType = "image/webp"
+	CreateFileRequestMimeTypeTextplain                                                            CreateFileRequestMimeType = "text/plain"
+)
+
+// Valid indicates whether the value is a known member of the CreateFileRequestMimeType enum.
+func (e CreateFileRequestMimeType) Valid() bool {
+	switch e {
+	case CreateFileRequestMimeTypeApplicationepubZip:
+		return true
+	case CreateFileRequestMimeTypeApplicationpdf:
+		return true
+	case CreateFileRequestMimeTypeApplicationvndOpenxmlformatsOfficedocumentPresentationmlPresentation:
+		return true
+	case CreateFileRequestMimeTypeApplicationvndOpenxmlformatsOfficedocumentWordprocessingmlDocument:
+		return true
+	case CreateFileRequestMimeTypeImagejpeg:
+		return true
+	case CreateFileRequestMimeTypeImagepng:
+		return true
+	case CreateFileRequestMimeTypeImagewebp:
+		return true
+	case CreateFileRequestMimeTypeTextplain:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateGrantRequestGranteeType.
+const (
+	CreateGrantRequestGranteeTypeCourse     CreateGrantRequestGranteeType = "course"
+	CreateGrantRequestGranteeTypeStudyGuide CreateGrantRequestGranteeType = "study_guide"
+	CreateGrantRequestGranteeTypeUser       CreateGrantRequestGranteeType = "user"
+)
+
+// Valid indicates whether the value is a known member of the CreateGrantRequestGranteeType enum.
+func (e CreateGrantRequestGranteeType) Valid() bool {
+	switch e {
+	case CreateGrantRequestGranteeTypeCourse:
+		return true
+	case CreateGrantRequestGranteeTypeStudyGuide:
+		return true
+	case CreateGrantRequestGranteeTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateGrantRequestPermission.
+const (
+	CreateGrantRequestPermissionDelete CreateGrantRequestPermission = "delete"
+	CreateGrantRequestPermissionShare  CreateGrantRequestPermission = "share"
+	CreateGrantRequestPermissionView   CreateGrantRequestPermission = "view"
+)
+
+// Valid indicates whether the value is a known member of the CreateGrantRequestPermission enum.
+func (e CreateGrantRequestPermission) Valid() bool {
+	switch e {
+	case CreateGrantRequestPermissionDelete:
+		return true
+	case CreateGrantRequestPermissionShare:
+		return true
+	case CreateGrantRequestPermissionView:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateQuizQuestionType.
+const (
+	CreateQuizQuestionTypeFreeform       CreateQuizQuestionType = "freeform"
+	CreateQuizQuestionTypeMultipleChoice CreateQuizQuestionType = "multiple-choice"
+	CreateQuizQuestionTypeTrueFalse      CreateQuizQuestionType = "true-false"
+)
+
+// Valid indicates whether the value is a known member of the CreateQuizQuestionType enum.
+func (e CreateQuizQuestionType) Valid() bool {
+	switch e {
+	case CreateQuizQuestionTypeFreeform:
+		return true
+	case CreateQuizQuestionTypeMultipleChoice:
+		return true
+	case CreateQuizQuestionTypeTrueFalse:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CreateStudyGuideRequestVisibility.
+const (
+	CreateStudyGuideRequestVisibilityPrivate CreateStudyGuideRequestVisibility = "private"
+	CreateStudyGuideRequestVisibilityPublic  CreateStudyGuideRequestVisibility = "public"
+)
+
+// Valid indicates whether the value is a known member of the CreateStudyGuideRequestVisibility enum.
+func (e CreateStudyGuideRequestVisibility) Valid() bool {
+	switch e {
+	case CreateStudyGuideRequestVisibilityPrivate:
+		return true
+	case CreateStudyGuideRequestVisibilityPublic:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DashboardCourseSummaryRole.
+const (
+	DashboardCourseSummaryRoleInstructor DashboardCourseSummaryRole = "instructor"
+	DashboardCourseSummaryRoleStudent    DashboardCourseSummaryRole = "student"
+	DashboardCourseSummaryRoleTa         DashboardCourseSummaryRole = "ta"
+)
+
+// Valid indicates whether the value is a known member of the DashboardCourseSummaryRole enum.
+func (e DashboardCourseSummaryRole) Valid() bool {
+	switch e {
+	case DashboardCourseSummaryRoleInstructor:
+		return true
+	case DashboardCourseSummaryRoleStudent:
+		return true
+	case DashboardCourseSummaryRoleTa:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for EnrollmentResponseRole.
+const (
+	EnrollmentResponseRoleInstructor EnrollmentResponseRole = "instructor"
+	EnrollmentResponseRoleStudent    EnrollmentResponseRole = "student"
+	EnrollmentResponseRoleTa         EnrollmentResponseRole = "ta"
+)
+
+// Valid indicates whether the value is a known member of the EnrollmentResponseRole enum.
+func (e EnrollmentResponseRole) Valid() bool {
+	switch e {
+	case EnrollmentResponseRoleInstructor:
+		return true
+	case EnrollmentResponseRoleStudent:
+		return true
+	case EnrollmentResponseRoleTa:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FavoriteItemEntityType.
+const (
+	FavoriteItemEntityTypeCourse     FavoriteItemEntityType = "course"
+	FavoriteItemEntityTypeFile       FavoriteItemEntityType = "file"
+	FavoriteItemEntityTypeStudyGuide FavoriteItemEntityType = "study_guide"
+)
+
+// Valid indicates whether the value is a known member of the FavoriteItemEntityType enum.
+func (e FavoriteItemEntityType) Valid() bool {
+	switch e {
+	case FavoriteItemEntityTypeCourse:
+		return true
+	case FavoriteItemEntityTypeFile:
+		return true
+	case FavoriteItemEntityTypeStudyGuide:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MembershipCheckResponseRole.
+const (
+	MembershipCheckResponseRoleInstructor MembershipCheckResponseRole = "instructor"
+	MembershipCheckResponseRoleStudent    MembershipCheckResponseRole = "student"
+	MembershipCheckResponseRoleTa         MembershipCheckResponseRole = "ta"
+)
+
+// Valid indicates whether the value is a known member of the MembershipCheckResponseRole enum.
+func (e MembershipCheckResponseRole) Valid() bool {
+	switch e {
+	case MembershipCheckResponseRoleInstructor:
+		return true
+	case MembershipCheckResponseRoleStudent:
+		return true
+	case MembershipCheckResponseRoleTa:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MyStudyGuideSummaryVisibility.
+const (
+	MyStudyGuideSummaryVisibilityPrivate MyStudyGuideSummaryVisibility = "private"
+	MyStudyGuideSummaryVisibilityPublic  MyStudyGuideSummaryVisibility = "public"
+)
+
+// Valid indicates whether the value is a known member of the MyStudyGuideSummaryVisibility enum.
+func (e MyStudyGuideSummaryVisibility) Valid() bool {
+	switch e {
+	case MyStudyGuideSummaryVisibilityPrivate:
+		return true
+	case MyStudyGuideSummaryVisibilityPublic:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for QuizQuestionResponseType.
+const (
+	QuizQuestionResponseTypeFreeform       QuizQuestionResponseType = "freeform"
+	QuizQuestionResponseTypeMultipleChoice QuizQuestionResponseType = "multiple-choice"
+	QuizQuestionResponseTypeTrueFalse      QuizQuestionResponseType = "true-false"
+)
+
+// Valid indicates whether the value is a known member of the QuizQuestionResponseType enum.
+func (e QuizQuestionResponseType) Valid() bool {
+	switch e {
+	case QuizQuestionResponseTypeFreeform:
+		return true
+	case QuizQuestionResponseTypeMultipleChoice:
+		return true
+	case QuizQuestionResponseTypeTrueFalse:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecentItemEntityType.
+const (
+	RecentItemEntityTypeCourse     RecentItemEntityType = "course"
+	RecentItemEntityTypeFile       RecentItemEntityType = "file"
+	RecentItemEntityTypeStudyGuide RecentItemEntityType = "study_guide"
+)
+
+// Valid indicates whether the value is a known member of the RecentItemEntityType enum.
+func (e RecentItemEntityType) Valid() bool {
+	switch e {
+	case RecentItemEntityTypeCourse:
+		return true
+	case RecentItemEntityTypeFile:
+		return true
+	case RecentItemEntityTypeStudyGuide:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RefSummaryType.
+const (
+	RefSummaryTypeCourse RefSummaryType = "course"
+	RefSummaryTypeFile   RefSummaryType = "file"
+	RefSummaryTypeQuiz   RefSummaryType = "quiz"
+	RefSummaryTypeSg     RefSummaryType = "sg"
+)
+
+// Valid indicates whether the value is a known member of the RefSummaryType enum.
+func (e RefSummaryType) Valid() bool {
+	switch e {
+	case RefSummaryTypeCourse:
+		return true
+	case RefSummaryTypeFile:
+		return true
+	case RefSummaryTypeQuiz:
+		return true
+	case RefSummaryTypeSg:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RefsResolveRequestRefType.
+const (
+	RefsResolveRequestRefTypeCourse RefsResolveRequestRefType = "course"
+	RefsResolveRequestRefTypeFile   RefsResolveRequestRefType = "file"
+	RefsResolveRequestRefTypeQuiz   RefsResolveRequestRefType = "quiz"
+	RefsResolveRequestRefTypeSg     RefsResolveRequestRefType = "sg"
+)
+
+// Valid indicates whether the value is a known member of the RefsResolveRequestRefType enum.
+func (e RefsResolveRequestRefType) Valid() bool {
+	switch e {
+	case RefsResolveRequestRefTypeCourse:
+		return true
+	case RefsResolveRequestRefTypeFile:
+		return true
+	case RefsResolveRequestRefTypeQuiz:
+		return true
+	case RefsResolveRequestRefTypeSg:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ResourceSummaryType.
+const (
+	ResourceSummaryTypeArticle ResourceSummaryType = "article"
+	ResourceSummaryTypeLink    ResourceSummaryType = "link"
+	ResourceSummaryTypePdf     ResourceSummaryType = "pdf"
+	ResourceSummaryTypeVideo   ResourceSummaryType = "video"
+)
+
+// Valid indicates whether the value is a known member of the ResourceSummaryType enum.
+func (e ResourceSummaryType) Valid() bool {
+	switch e {
+	case ResourceSummaryTypeArticle:
+		return true
+	case ResourceSummaryTypeLink:
+		return true
+	case ResourceSummaryTypePdf:
+		return true
+	case ResourceSummaryTypeVideo:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RevokeGrantRequestGranteeType.
+const (
+	RevokeGrantRequestGranteeTypeCourse     RevokeGrantRequestGranteeType = "course"
+	RevokeGrantRequestGranteeTypeStudyGuide RevokeGrantRequestGranteeType = "study_guide"
+	RevokeGrantRequestGranteeTypeUser       RevokeGrantRequestGranteeType = "user"
+)
+
+// Valid indicates whether the value is a known member of the RevokeGrantRequestGranteeType enum.
+func (e RevokeGrantRequestGranteeType) Valid() bool {
+	switch e {
+	case RevokeGrantRequestGranteeTypeCourse:
+		return true
+	case RevokeGrantRequestGranteeTypeStudyGuide:
+		return true
+	case RevokeGrantRequestGranteeTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RevokeGrantRequestPermission.
+const (
+	RevokeGrantRequestPermissionDelete RevokeGrantRequestPermission = "delete"
+	RevokeGrantRequestPermissionShare  RevokeGrantRequestPermission = "share"
+	RevokeGrantRequestPermissionView   RevokeGrantRequestPermission = "view"
+)
+
+// Valid indicates whether the value is a known member of the RevokeGrantRequestPermission enum.
+func (e RevokeGrantRequestPermission) Valid() bool {
+	switch e {
+	case RevokeGrantRequestPermissionDelete:
+		return true
+	case RevokeGrantRequestPermissionShare:
+		return true
+	case RevokeGrantRequestPermissionView:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SectionMemberResponseRole.
+const (
+	SectionMemberResponseRoleInstructor SectionMemberResponseRole = "instructor"
+	SectionMemberResponseRoleStudent    SectionMemberResponseRole = "student"
+	SectionMemberResponseRoleTa         SectionMemberResponseRole = "ta"
+)
+
+// Valid indicates whether the value is a known member of the SectionMemberResponseRole enum.
+func (e SectionMemberResponseRole) Valid() bool {
+	switch e {
+	case SectionMemberResponseRoleInstructor:
+		return true
+	case SectionMemberResponseRoleStudent:
+		return true
+	case SectionMemberResponseRoleTa:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StudyGuideCreateGrantRequestGranteeType.
+const (
+	StudyGuideCreateGrantRequestGranteeTypeCourse StudyGuideCreateGrantRequestGranteeType = "course"
+	StudyGuideCreateGrantRequestGranteeTypeUser   StudyGuideCreateGrantRequestGranteeType = "user"
+)
+
+// Valid indicates whether the value is a known member of the StudyGuideCreateGrantRequestGranteeType enum.
+func (e StudyGuideCreateGrantRequestGranteeType) Valid() bool {
+	switch e {
+	case StudyGuideCreateGrantRequestGranteeTypeCourse:
+		return true
+	case StudyGuideCreateGrantRequestGranteeTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StudyGuideCreateGrantRequestPermission.
+const (
+	StudyGuideCreateGrantRequestPermissionDelete StudyGuideCreateGrantRequestPermission = "delete"
+	StudyGuideCreateGrantRequestPermissionShare  StudyGuideCreateGrantRequestPermission = "share"
+	StudyGuideCreateGrantRequestPermissionView   StudyGuideCreateGrantRequestPermission = "view"
+)
+
+// Valid indicates whether the value is a known member of the StudyGuideCreateGrantRequestPermission enum.
+func (e StudyGuideCreateGrantRequestPermission) Valid() bool {
+	switch e {
+	case StudyGuideCreateGrantRequestPermissionDelete:
+		return true
+	case StudyGuideCreateGrantRequestPermissionShare:
+		return true
+	case StudyGuideCreateGrantRequestPermissionView:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StudyGuideDetailResponseUserVote.
+const (
+	Down StudyGuideDetailResponseUserVote = "down"
+	Up   StudyGuideDetailResponseUserVote = "up"
+)
+
+// Valid indicates whether the value is a known member of the StudyGuideDetailResponseUserVote enum.
+func (e StudyGuideDetailResponseUserVote) Valid() bool {
+	switch e {
+	case Down:
+		return true
+	case Up:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StudyGuideDetailResponseVisibility.
+const (
+	StudyGuideDetailResponseVisibilityPrivate StudyGuideDetailResponseVisibility = "private"
+	StudyGuideDetailResponseVisibilityPublic  StudyGuideDetailResponseVisibility = "public"
+)
+
+// Valid indicates whether the value is a known member of the StudyGuideDetailResponseVisibility enum.
+func (e StudyGuideDetailResponseVisibility) Valid() bool {
+	switch e {
+	case StudyGuideDetailResponseVisibilityPrivate:
+		return true
+	case StudyGuideDetailResponseVisibilityPublic:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StudyGuideListItemResponseVisibility.
+const (
+	StudyGuideListItemResponseVisibilityPrivate StudyGuideListItemResponseVisibility = "private"
+	StudyGuideListItemResponseVisibilityPublic  StudyGuideListItemResponseVisibility = "public"
+)
+
+// Valid indicates whether the value is a known member of the StudyGuideListItemResponseVisibility enum.
+func (e StudyGuideListItemResponseVisibility) Valid() bool {
+	switch e {
+	case StudyGuideListItemResponseVisibilityPrivate:
+		return true
+	case StudyGuideListItemResponseVisibilityPublic:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StudyGuideRevokeGrantRequestGranteeType.
+const (
+	StudyGuideRevokeGrantRequestGranteeTypeCourse StudyGuideRevokeGrantRequestGranteeType = "course"
+	StudyGuideRevokeGrantRequestGranteeTypeUser   StudyGuideRevokeGrantRequestGranteeType = "user"
+)
+
+// Valid indicates whether the value is a known member of the StudyGuideRevokeGrantRequestGranteeType enum.
+func (e StudyGuideRevokeGrantRequestGranteeType) Valid() bool {
+	switch e {
+	case StudyGuideRevokeGrantRequestGranteeTypeCourse:
+		return true
+	case StudyGuideRevokeGrantRequestGranteeTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for StudyGuideRevokeGrantRequestPermission.
+const (
+	StudyGuideRevokeGrantRequestPermissionDelete StudyGuideRevokeGrantRequestPermission = "delete"
+	StudyGuideRevokeGrantRequestPermissionShare  StudyGuideRevokeGrantRequestPermission = "share"
+	StudyGuideRevokeGrantRequestPermissionView   StudyGuideRevokeGrantRequestPermission = "view"
+)
+
+// Valid indicates whether the value is a known member of the StudyGuideRevokeGrantRequestPermission enum.
+func (e StudyGuideRevokeGrantRequestPermission) Valid() bool {
+	switch e {
+	case StudyGuideRevokeGrantRequestPermissionDelete:
+		return true
+	case StudyGuideRevokeGrantRequestPermissionShare:
+		return true
+	case StudyGuideRevokeGrantRequestPermissionView:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateFileRequestStatus.
+const (
+	UpdateFileRequestStatusComplete UpdateFileRequestStatus = "complete"
+	UpdateFileRequestStatusFailed   UpdateFileRequestStatus = "failed"
+)
+
+// Valid indicates whether the value is a known member of the UpdateFileRequestStatus enum.
+func (e UpdateFileRequestStatus) Valid() bool {
+	switch e {
+	case UpdateFileRequestStatusComplete:
+		return true
+	case UpdateFileRequestStatusFailed:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UpdateStudyGuideRequestVisibility.
+const (
+	Private UpdateStudyGuideRequestVisibility = "private"
+	Public  UpdateStudyGuideRequestVisibility = "public"
+)
+
+// Valid indicates whether the value is a known member of the UpdateStudyGuideRequestVisibility enum.
+func (e UpdateStudyGuideRequestVisibility) Valid() bool {
+	switch e {
+	case Private:
+		return true
+	case Public:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListCoursesParamsSortBy.
+const (
+	ListCoursesParamsSortByCreatedAt  ListCoursesParamsSortBy = "created_at"
+	ListCoursesParamsSortByDepartment ListCoursesParamsSortBy = "department"
+	ListCoursesParamsSortByNumber     ListCoursesParamsSortBy = "number"
+	ListCoursesParamsSortByTitle      ListCoursesParamsSortBy = "title"
+)
+
+// Valid indicates whether the value is a known member of the ListCoursesParamsSortBy enum.
+func (e ListCoursesParamsSortBy) Valid() bool {
+	switch e {
+	case ListCoursesParamsSortByCreatedAt:
+		return true
+	case ListCoursesParamsSortByDepartment:
+		return true
+	case ListCoursesParamsSortByNumber:
+		return true
+	case ListCoursesParamsSortByTitle:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListCoursesParamsSortDir.
+const (
+	ListCoursesParamsSortDirAsc  ListCoursesParamsSortDir = "asc"
+	ListCoursesParamsSortDirDesc ListCoursesParamsSortDir = "desc"
+)
+
+// Valid indicates whether the value is a known member of the ListCoursesParamsSortDir enum.
+func (e ListCoursesParamsSortDir) Valid() bool {
+	switch e {
+	case ListCoursesParamsSortDirAsc:
+		return true
+	case ListCoursesParamsSortDirDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListSectionMembersParamsRole.
+const (
+	ListSectionMembersParamsRoleInstructor ListSectionMembersParamsRole = "instructor"
+	ListSectionMembersParamsRoleStudent    ListSectionMembersParamsRole = "student"
+	ListSectionMembersParamsRoleTa         ListSectionMembersParamsRole = "ta"
+)
+
+// Valid indicates whether the value is a known member of the ListSectionMembersParamsRole enum.
+func (e ListSectionMembersParamsRole) Valid() bool {
+	switch e {
+	case ListSectionMembersParamsRoleInstructor:
+		return true
+	case ListSectionMembersParamsRoleStudent:
+		return true
+	case ListSectionMembersParamsRoleTa:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListStudyGuidesParamsSortBy.
+const (
+	ListStudyGuidesParamsSortByNewest  ListStudyGuidesParamsSortBy = "newest"
+	ListStudyGuidesParamsSortByScore   ListStudyGuidesParamsSortBy = "score"
+	ListStudyGuidesParamsSortByUpdated ListStudyGuidesParamsSortBy = "updated"
+	ListStudyGuidesParamsSortByViews   ListStudyGuidesParamsSortBy = "views"
+)
+
+// Valid indicates whether the value is a known member of the ListStudyGuidesParamsSortBy enum.
+func (e ListStudyGuidesParamsSortBy) Valid() bool {
+	switch e {
+	case ListStudyGuidesParamsSortByNewest:
+		return true
+	case ListStudyGuidesParamsSortByScore:
+		return true
+	case ListStudyGuidesParamsSortByUpdated:
+		return true
+	case ListStudyGuidesParamsSortByViews:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListStudyGuidesParamsSortDir.
+const (
+	ListStudyGuidesParamsSortDirAsc  ListStudyGuidesParamsSortDir = "asc"
+	ListStudyGuidesParamsSortDirDesc ListStudyGuidesParamsSortDir = "desc"
+)
+
+// Valid indicates whether the value is a known member of the ListStudyGuidesParamsSortDir enum.
+func (e ListStudyGuidesParamsSortDir) Valid() bool {
+	switch e {
+	case ListStudyGuidesParamsSortDirAsc:
+		return true
+	case ListStudyGuidesParamsSortDirDesc:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListMyEnrollmentsParamsRole.
+const (
+	Instructor ListMyEnrollmentsParamsRole = "instructor"
+	Student    ListMyEnrollmentsParamsRole = "student"
+	Ta         ListMyEnrollmentsParamsRole = "ta"
+)
+
+// Valid indicates whether the value is a known member of the ListMyEnrollmentsParamsRole enum.
+func (e ListMyEnrollmentsParamsRole) Valid() bool {
+	switch e {
+	case Instructor:
+		return true
+	case Student:
+		return true
+	case Ta:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListFavoritesParamsEntityType.
+const (
+	ListFavoritesParamsEntityTypeCourse     ListFavoritesParamsEntityType = "course"
+	ListFavoritesParamsEntityTypeFile       ListFavoritesParamsEntityType = "file"
+	ListFavoritesParamsEntityTypeStudyGuide ListFavoritesParamsEntityType = "study_guide"
+)
+
+// Valid indicates whether the value is a known member of the ListFavoritesParamsEntityType enum.
+func (e ListFavoritesParamsEntityType) Valid() bool {
+	switch e {
+	case ListFavoritesParamsEntityTypeCourse:
+		return true
+	case ListFavoritesParamsEntityTypeFile:
+		return true
+	case ListFavoritesParamsEntityTypeStudyGuide:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListFilesParamsScope.
 const (
-	Accessible ListFilesParamsScope = "accessible"
-	Course     ListFilesParamsScope = "course"
-	Owned      ListFilesParamsScope = "owned"
-	StudyGuide ListFilesParamsScope = "study_guide"
+	ListFilesParamsScopeAccessible ListFilesParamsScope = "accessible"
+	ListFilesParamsScopeCourse     ListFilesParamsScope = "course"
+	ListFilesParamsScopeOwned      ListFilesParamsScope = "owned"
+	ListFilesParamsScopeStudyGuide ListFilesParamsScope = "study_guide"
 )
 
 // Valid indicates whether the value is a known member of the ListFilesParamsScope enum.
 func (e ListFilesParamsScope) Valid() bool {
 	switch e {
-	case Accessible:
+	case ListFilesParamsScopeAccessible:
 		return true
-	case Course:
+	case ListFilesParamsScopeCourse:
 		return true
-	case Owned:
+	case ListFilesParamsScopeOwned:
 		return true
-	case StudyGuide:
+	case ListFilesParamsScopeStudyGuide:
 		return true
 	default:
 		return false
@@ -53,19 +845,19 @@ func (e ListFilesParamsScope) Valid() bool {
 
 // Defines values for ListFilesParamsStatus.
 const (
-	Complete ListFilesParamsStatus = "complete"
-	Failed   ListFilesParamsStatus = "failed"
-	Pending  ListFilesParamsStatus = "pending"
+	ListFilesParamsStatusComplete ListFilesParamsStatus = "complete"
+	ListFilesParamsStatusFailed   ListFilesParamsStatus = "failed"
+	ListFilesParamsStatusPending  ListFilesParamsStatus = "pending"
 )
 
 // Valid indicates whether the value is a known member of the ListFilesParamsStatus enum.
 func (e ListFilesParamsStatus) Valid() bool {
 	switch e {
-	case Complete:
+	case ListFilesParamsStatusComplete:
 		return true
-	case Failed:
+	case ListFilesParamsStatusFailed:
 		return true
-	case Pending:
+	case ListFilesParamsStatusPending:
 		return true
 	default:
 		return false
@@ -74,22 +866,34 @@ func (e ListFilesParamsStatus) Valid() bool {
 
 // Defines values for ListFilesParamsMimeType.
 const (
-	Applicationpdf ListFilesParamsMimeType = "application/pdf"
-	Imagejpeg      ListFilesParamsMimeType = "image/jpeg"
-	Imagepng       ListFilesParamsMimeType = "image/png"
-	Imagewebp      ListFilesParamsMimeType = "image/webp"
+	ListFilesParamsMimeTypeApplicationepubZip                                                   ListFilesParamsMimeType = "application/epub+zip"
+	ListFilesParamsMimeTypeApplicationpdf                                                       ListFilesParamsMimeType = "application/pdf"
+	ListFilesParamsMimeTypeApplicationvndOpenxmlformatsOfficedocumentPresentationmlPresentation ListFilesParamsMimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+	ListFilesParamsMimeTypeApplicationvndOpenxmlformatsOfficedocumentWordprocessingmlDocument   ListFilesParamsMimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+	ListFilesParamsMimeTypeImagejpeg                                                            ListFilesParamsMimeType = "image/jpeg"
+	ListFilesParamsMimeTypeImagepng                                                             ListFilesParamsMimeType = "image/png"
+	ListFilesParamsMimeTypeImagewebp                                                            ListFilesParamsMimeType = "image/webp"
+	ListFilesParamsMimeTypeTextplain                                                            ListFilesParamsMimeType = "text/plain"
 )
 
 // Valid indicates whether the value is a known member of the ListFilesParamsMimeType enum.
 func (e ListFilesParamsMimeType) Valid() bool {
 	switch e {
-	case Applicationpdf:
+	case ListFilesParamsMimeTypeApplicationepubZip:
 		return true
-	case Imagejpeg:
+	case ListFilesParamsMimeTypeApplicationpdf:
 		return true
-	case Imagepng:
+	case ListFilesParamsMimeTypeApplicationvndOpenxmlformatsOfficedocumentPresentationmlPresentation:
 		return true
-	case Imagewebp:
+	case ListFilesParamsMimeTypeApplicationvndOpenxmlformatsOfficedocumentWordprocessingmlDocument:
+		return true
+	case ListFilesParamsMimeTypeImagejpeg:
+		return true
+	case ListFilesParamsMimeTypeImagepng:
+		return true
+	case ListFilesParamsMimeTypeImagewebp:
+		return true
+	case ListFilesParamsMimeTypeTextplain:
 		return true
 	default:
 		return false
@@ -98,28 +902,28 @@ func (e ListFilesParamsMimeType) Valid() bool {
 
 // Defines values for ListFilesParamsSortBy.
 const (
-	CreatedAt ListFilesParamsSortBy = "created_at"
-	MimeType  ListFilesParamsSortBy = "mime_type"
-	Name      ListFilesParamsSortBy = "name"
-	Size      ListFilesParamsSortBy = "size"
-	Status    ListFilesParamsSortBy = "status"
-	UpdatedAt ListFilesParamsSortBy = "updated_at"
+	ListFilesParamsSortByCreatedAt ListFilesParamsSortBy = "created_at"
+	ListFilesParamsSortByMimeType  ListFilesParamsSortBy = "mime_type"
+	ListFilesParamsSortByName      ListFilesParamsSortBy = "name"
+	ListFilesParamsSortBySize      ListFilesParamsSortBy = "size"
+	ListFilesParamsSortByStatus    ListFilesParamsSortBy = "status"
+	ListFilesParamsSortByUpdatedAt ListFilesParamsSortBy = "updated_at"
 )
 
 // Valid indicates whether the value is a known member of the ListFilesParamsSortBy enum.
 func (e ListFilesParamsSortBy) Valid() bool {
 	switch e {
-	case CreatedAt:
+	case ListFilesParamsSortByCreatedAt:
 		return true
-	case MimeType:
+	case ListFilesParamsSortByMimeType:
 		return true
-	case Name:
+	case ListFilesParamsSortByName:
 		return true
-	case Size:
+	case ListFilesParamsSortBySize:
 		return true
-	case Status:
+	case ListFilesParamsSortByStatus:
 		return true
-	case UpdatedAt:
+	case ListFilesParamsSortByUpdatedAt:
 		return true
 	default:
 		return false
@@ -144,12 +948,515 @@ func (e ListFilesParamsSortDir) Valid() bool {
 	}
 }
 
+// Defines values for ListMyStudyGuidesParamsSortBy.
+const (
+	ListMyStudyGuidesParamsSortByNewest  ListMyStudyGuidesParamsSortBy = "newest"
+	ListMyStudyGuidesParamsSortByTitle   ListMyStudyGuidesParamsSortBy = "title"
+	ListMyStudyGuidesParamsSortByUpdated ListMyStudyGuidesParamsSortBy = "updated"
+)
+
+// Valid indicates whether the value is a known member of the ListMyStudyGuidesParamsSortBy enum.
+func (e ListMyStudyGuidesParamsSortBy) Valid() bool {
+	switch e {
+	case ListMyStudyGuidesParamsSortByNewest:
+		return true
+	case ListMyStudyGuidesParamsSortByTitle:
+		return true
+	case ListMyStudyGuidesParamsSortByUpdated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListPracticeSessionsParamsStatus.
+const (
+	Active    ListPracticeSessionsParamsStatus = "active"
+	Completed ListPracticeSessionsParamsStatus = "completed"
+)
+
+// Valid indicates whether the value is a known member of the ListPracticeSessionsParamsStatus enum.
+func (e ListPracticeSessionsParamsStatus) Valid() bool {
+	switch e {
+	case Active:
+		return true
+	case Completed:
+		return true
+	default:
+		return false
+	}
+}
+
 // AppError Standardized error response structure matching application error domains
 type AppError struct {
 	Code    int                `json:"code"`
 	Details *map[string]string `json:"details,omitempty"`
 	Message string             `json:"message"`
 	Status  string             `json:"status"`
+}
+
+// AttachResourceRequest Request body for POST /api/study-guides/{study_guide_id}/resources.
+// `title` and `url` are required. `type` defaults to `link` when
+// omitted. URL must be http or https (validated server-side; the
+// openapi `format: uri` only checks general syntax).
+type AttachResourceRequest struct {
+	Description *string                    `json:"description,omitempty"`
+	Title       string                     `json:"title"`
+	Type        *AttachResourceRequestType `json:"type,omitempty"`
+	Url         string                     `json:"url"`
+}
+
+// AttachResourceRequestType defines model for AttachResourceRequest.Type.
+type AttachResourceRequestType string
+
+// CastVoteRequest Request body for POST /api/study-guides/{study_guide_id}/votes.
+// `vote` is the desired direction. Same-direction submits are
+// no-ops at the SQL layer (the upsert WHERE clause skips the row
+// modification when vote is unchanged).
+type CastVoteRequest struct {
+	Vote CastVoteRequestVote `json:"vote"`
+}
+
+// CastVoteRequestVote defines model for CastVoteRequest.Vote.
+type CastVoteRequestVote string
+
+// CastVoteResponse Response body for POST /api/study-guides/{study_guide_id}/votes.
+// Returns the post-upsert state so the UI can patch its local
+// vote_score without a follow-up GET.
+type CastVoteResponse struct {
+	Vote      CastVoteResponseVote `json:"vote"`
+	VoteScore int64                `json:"vote_score"`
+}
+
+// CastVoteResponseVote defines model for CastVoteResponse.Vote.
+type CastVoteResponseVote string
+
+// CompletedSessionResponse Returned by POST /api/sessions/{session_id}/complete
+// (ASK-140). Same shape as PracticeSessionResponse minus the
+// `answers` array (callers fetch them separately via
+// GET /api/sessions/{id}) and plus the server-computed
+// `score_percentage` field.
+//
+// `completed_at` is non-nullable here -- a successful response
+// always carries the freshly-set timestamp from the
+// completion UPDATE.
+//
+// `score_percentage` is `round((correct_answers /
+// total_questions) * 100)`, rounded to the nearest integer.
+// Always 0 when `total_questions` is 0 (avoids
+// division-by-zero on the theoretically unreachable
+// empty-quiz edge case).
+type CompletedSessionResponse struct {
+	CompletedAt     time.Time          `json:"completed_at"`
+	CorrectAnswers  int                `json:"correct_answers"`
+	Id              openapi_types.UUID `json:"id"`
+	QuizId          openapi_types.UUID `json:"quiz_id"`
+	ScorePercentage int                `json:"score_percentage"`
+	StartedAt       time.Time          `json:"started_at"`
+	TotalQuestions  int                `json:"total_questions"`
+}
+
+// CourseDetailResponse A course with its school summary and the full list of sections
+type CourseDetailResponse struct {
+	CreatedAt   time.Time          `json:"created_at"`
+	Department  string             `json:"department"`
+	Description *string            `json:"description,omitempty"`
+	Id          openapi_types.UUID `json:"id"`
+	Number      string             `json:"number"`
+
+	// School Compact school payload embedded inside other resources (courses, study guides)
+	School   SchoolSummary    `json:"school"`
+	Sections []SectionSummary `json:"sections"`
+	Title    string           `json:"title"`
+}
+
+// CourseMemberResponse A user's membership in a course section
+type CourseMemberResponse struct {
+	JoinedAt  time.Time                `json:"joined_at"`
+	Role      CourseMemberResponseRole `json:"role"`
+	SectionId openapi_types.UUID       `json:"section_id"`
+	UserId    openapi_types.UUID       `json:"user_id"`
+}
+
+// CourseMemberResponseRole defines model for CourseMemberResponse.Role.
+type CourseMemberResponseRole string
+
+// CourseResponse A course (e.g. CPTS 322) with its school summary embedded
+type CourseResponse struct {
+	CreatedAt   time.Time          `json:"created_at"`
+	Department  string             `json:"department"`
+	Description *string            `json:"description,omitempty"`
+	Id          openapi_types.UUID `json:"id"`
+	Number      string             `json:"number"`
+
+	// School Compact school payload embedded inside other resources (courses, study guides)
+	School SchoolSummary `json:"school"`
+	Title  string        `json:"title"`
+}
+
+// CreateFileRequest Payload to create a new file metadata record (ASK-105).
+// Caller (typically the Next.js server) generates the S3 key
+// and provides it here; the Go API never touches S3 for
+// uploads. The record is created in `pending` status; a
+// subsequent PATCH transitions it to `complete` or `failed`.
+type CreateFileRequest struct {
+	MimeType CreateFileRequestMimeType `json:"mime_type"`
+	Name     string                    `json:"name"`
+
+	// S3Key S3 object key generated by the caller. Stored as-is on
+	// the file record; the Go API does not validate this
+	// against S3.
+	S3Key string `json:"s3_key"`
+	Size  int64  `json:"size"`
+}
+
+// CreateFileRequestMimeType defines model for CreateFileRequest.MimeType.
+type CreateFileRequestMimeType string
+
+// CreateGrantRequest Request body for creating a file grant
+type CreateGrantRequest struct {
+	GranteeId   openapi_types.UUID            `json:"grantee_id"`
+	GranteeType CreateGrantRequestGranteeType `json:"grantee_type"`
+	Permission  CreateGrantRequestPermission  `json:"permission"`
+}
+
+// CreateGrantRequestGranteeType defines model for CreateGrantRequest.GranteeType.
+type CreateGrantRequestGranteeType string
+
+// CreateGrantRequestPermission defines model for CreateGrantRequest.Permission.
+type CreateGrantRequestPermission string
+
+// CreateQuizMCQOption A single option for a `multiple-choice` question on the create
+// request. Exactly one option per MCQ question must have
+// `is_correct: true`. The text is rendered to the student
+// verbatim; no normalization is applied server-side.
+type CreateQuizMCQOption struct {
+	IsCorrect bool   `json:"is_correct"`
+	Text      string `json:"text"`
+}
+
+// CreateQuizQuestion A single question on the create-quiz request. The `type` field
+// discriminates which other fields are meaningful:
+//   - `multiple-choice` -- requires `options`; ignores
+//     `correct_answer`.
+//   - `true-false` -- requires `correct_answer` as a boolean;
+//     ignores `options`.
+//   - `freeform` -- requires `correct_answer` as a non-empty
+//     string; ignores `options`.
+//
+// Cross-field validation is enforced by the service layer with
+// per-field 400 error details when the rules above are violated.
+type CreateQuizQuestion struct {
+	// CorrectAnswer For `true-false` questions this is a boolean; for `freeform`
+	// questions this is a non-empty string (max 500 chars).
+	// Ignored for `multiple-choice` questions (correctness is
+	// embedded in `options[].is_correct`).
+	CorrectAnswer     interface{}            `json:"correct_answer,omitempty"`
+	FeedbackCorrect   *string                `json:"feedback_correct,omitempty"`
+	FeedbackIncorrect *string                `json:"feedback_incorrect,omitempty"`
+	Hint              *string                `json:"hint,omitempty"`
+	Options           *[]CreateQuizMCQOption `json:"options,omitempty"`
+	Question          string                 `json:"question"`
+	SortOrder         *int                   `json:"sort_order,omitempty"`
+	Type              CreateQuizQuestionType `json:"type"`
+}
+
+// CreateQuizQuestionType defines model for CreateQuizQuestion.Type.
+type CreateQuizQuestionType string
+
+// CreateQuizRequest Request body for POST /api/study-guides/{study_guide_id}/quizzes.
+// The entire quiz (title + N questions + each question's options)
+// is created atomically. If any question fails validation, the
+// whole request is rejected and no rows are written.
+//
+// `creator_id` is set from the JWT; any value supplied here is
+// ignored (sending one is not an error to keep the wire shape
+// forgiving for frontend builders).
+type CreateQuizRequest struct {
+	Description *string              `json:"description,omitempty"`
+	Questions   []CreateQuizQuestion `json:"questions"`
+	Title       string               `json:"title"`
+}
+
+// CreateStudyGuideRequest Request body for POST /api/courses/{course_id}/study-guides.
+// Only `title` is required. Tags are normalized server-side
+// (trim + lowercase + dedupe); empty tags after trim are
+// rejected with 400. `creator_id` is set from the JWT and
+// ignored if supplied here.
+//
+// `visibility` is optional and defaults to `private`. Private
+// guides are visible only to the creator + grantees (direct
+// user grant or enrolled-course grant). A course-wide view
+// grant is auto-seeded on create so course members keep their
+// "visible to everyone in the course" ergonomics without a
+// follow-up POST /grants call (ASK-211).
+type CreateStudyGuideRequest struct {
+	Content     *string                            `json:"content,omitempty"`
+	Description *string                            `json:"description,omitempty"`
+	Tags        *[]string                          `json:"tags,omitempty"`
+	Title       string                             `json:"title"`
+	Visibility  *CreateStudyGuideRequestVisibility `json:"visibility,omitempty"`
+}
+
+// CreateStudyGuideRequestVisibility defines model for CreateStudyGuideRequest.Visibility.
+type CreateStudyGuideRequestVisibility string
+
+// CreatorSummary Compact user payload used as the `creator` of a study guide. Same
+// privacy floor as SectionMemberResponse -- no email, no clerk_id.
+type CreatorSummary struct {
+	FirstName string             `json:"first_name"`
+	Id        openapi_types.UUID `json:"id"`
+	LastName  string             `json:"last_name"`
+}
+
+// DashboardCourseSummary Compact course payload embedded in the dashboard's courses
+// section. Includes the viewer's role + the section term so
+// the home page can render "CPTS 322 (Spring 2026, student)"
+// without follow-up requests.
+type DashboardCourseSummary struct {
+	Department  string                     `json:"department"`
+	Id          openapi_types.UUID         `json:"id"`
+	Number      string                     `json:"number"`
+	Role        DashboardCourseSummaryRole `json:"role"`
+	SectionTerm string                     `json:"section_term"`
+	Title       string                     `json:"title"`
+}
+
+// DashboardCourseSummaryRole defines model for DashboardCourseSummary.Role.
+type DashboardCourseSummaryRole string
+
+// DashboardCoursesSection Enrollment summary block. `current_term` is null when the
+// viewer has no enrollments. `enrolled_count` is the number
+// of courses the viewer is enrolled in for the resolved
+// current term (NOT the lifetime enrollment total). `courses`
+// is capped at 10.
+type DashboardCoursesSection struct {
+	Courses       []DashboardCourseSummary `json:"courses"`
+	CurrentTerm   *string                  `json:"current_term"`
+	EnrolledCount int32                    `json:"enrolled_count"`
+}
+
+// DashboardFileSummary Compact file payload embedded in the dashboard's
+// files.recent array.
+type DashboardFileSummary struct {
+	Id        openapi_types.UUID `json:"id"`
+	MimeType  string             `json:"mime_type"`
+	Name      string             `json:"name"`
+	UpdatedAt time.Time          `json:"updated_at"`
+}
+
+// DashboardFilesSection File totals block. `total_count` and `total_size` exclude
+// files in any deletion lifecycle and only count files with
+// upload_status='complete'. `total_size` is bytes (int64).
+// `recent` is the 5 most recently updated complete files.
+type DashboardFilesSection struct {
+	Recent     []DashboardFileSummary `json:"recent"`
+	TotalCount int32                  `json:"total_count"`
+	TotalSize  int64                  `json:"total_size"`
+}
+
+// DashboardPracticeSection Practice stats block. `sessions_completed` counts only
+// sessions where `completed_at IS NOT NULL`.
+// `total_questions_answered` is the sum of submitted answers
+// across all completed sessions (from practice_answers, not
+// the snapshot total on practice_sessions). `overall_accuracy`
+// is the rounded percentage of correct/total across completed
+// sessions; 0 when no sessions are completed (NULLIF prevents
+// division by zero). `recent_sessions` is the 5 most recently
+// completed sessions.
+type DashboardPracticeSection struct {
+	OverallAccuracy        int32                     `json:"overall_accuracy"`
+	RecentSessions         []DashboardSessionSummary `json:"recent_sessions"`
+	SessionsCompleted      int32                     `json:"sessions_completed"`
+	TotalQuestionsAnswered int32                     `json:"total_questions_answered"`
+}
+
+// DashboardResponse Response envelope for GET /api/me/dashboard. All four
+// sections are always present (never null) so the frontend
+// can render the home page from a single response. Each
+// section's count fields are 0 and list fields are [] when
+// the viewer has no data in that area.
+type DashboardResponse struct {
+	// Courses Enrollment summary block. `current_term` is null when the
+	// viewer has no enrollments. `enrolled_count` is the number
+	// of courses the viewer is enrolled in for the resolved
+	// current term (NOT the lifetime enrollment total). `courses`
+	// is capped at 10.
+	Courses DashboardCoursesSection `json:"courses"`
+
+	// Files File totals block. `total_count` and `total_size` exclude
+	// files in any deletion lifecycle and only count files with
+	// upload_status='complete'. `total_size` is bytes (int64).
+	// `recent` is the 5 most recently updated complete files.
+	Files DashboardFilesSection `json:"files"`
+
+	// Practice Practice stats block. `sessions_completed` counts only
+	// sessions where `completed_at IS NOT NULL`.
+	// `total_questions_answered` is the sum of submitted answers
+	// across all completed sessions (from practice_answers, not
+	// the snapshot total on practice_sessions). `overall_accuracy`
+	// is the rounded percentage of correct/total across completed
+	// sessions; 0 when no sessions are completed (NULLIF prevents
+	// division by zero). `recent_sessions` is the 5 most recently
+	// completed sessions.
+	Practice DashboardPracticeSection `json:"practice"`
+
+	// StudyGuides Study-guide summary block. `created_count` excludes
+	// soft-deleted guides. `recent` is the 5 most recently
+	// updated guides the viewer created.
+	StudyGuides DashboardStudyGuidesSection `json:"study_guides"`
+}
+
+// DashboardSessionSummary Compact practice-session payload embedded in the dashboard's
+// practice.recent_sessions array. `score_percentage` is the
+// rounded per-session accuracy (0..100); `quiz_title` and
+// `study_guide_title` are de-normalized from the session's
+// quiz so the home page renders without follow-up GETs.
+type DashboardSessionSummary struct {
+	CompletedAt     time.Time          `json:"completed_at"`
+	Id              openapi_types.UUID `json:"id"`
+	QuizTitle       string             `json:"quiz_title"`
+	ScorePercentage int32              `json:"score_percentage"`
+	StudyGuideTitle string             `json:"study_guide_title"`
+}
+
+// DashboardStudyGuideSummary Compact study-guide payload embedded in the dashboard's
+// study_guides section. `course_department` + `course_number`
+// let the home page render a "CPTS 322 -- <title>" label.
+type DashboardStudyGuideSummary struct {
+	CourseDepartment string             `json:"course_department"`
+	CourseNumber     string             `json:"course_number"`
+	Id               openapi_types.UUID `json:"id"`
+	Title            string             `json:"title"`
+	UpdatedAt        time.Time          `json:"updated_at"`
+}
+
+// DashboardStudyGuidesSection Study-guide summary block. `created_count` excludes
+// soft-deleted guides. `recent` is the 5 most recently
+// updated guides the viewer created.
+type DashboardStudyGuidesSection struct {
+	CreatedCount int32                        `json:"created_count"`
+	Recent       []DashboardStudyGuideSummary `json:"recent"`
+}
+
+// EnrollmentCourseSummary Compact course payload embedded in an EnrollmentResponse
+type EnrollmentCourseSummary struct {
+	Department string             `json:"department"`
+	Id         openapi_types.UUID `json:"id"`
+	Number     string             `json:"number"`
+	Title      string             `json:"title"`
+}
+
+// EnrollmentResponse A single enrollment with embedded section, course, and school
+type EnrollmentResponse struct {
+	// Course Compact course payload embedded in an EnrollmentResponse
+	Course   EnrollmentCourseSummary `json:"course"`
+	JoinedAt time.Time               `json:"joined_at"`
+	Role     EnrollmentResponseRole  `json:"role"`
+
+	// School Compact school payload embedded in an EnrollmentResponse. Only id +
+	// acronym -- the full school summary is available via the course
+	// detail endpoint and would bloat the dashboard payload.
+	School EnrollmentSchoolSummary `json:"school"`
+
+	// Section Compact section payload embedded in an EnrollmentResponse
+	Section EnrollmentSectionSummary `json:"section"`
+}
+
+// EnrollmentResponseRole defines model for EnrollmentResponse.Role.
+type EnrollmentResponseRole string
+
+// EnrollmentSchoolSummary Compact school payload embedded in an EnrollmentResponse. Only id +
+// acronym -- the full school summary is available via the course
+// detail endpoint and would bloat the dashboard payload.
+type EnrollmentSchoolSummary struct {
+	Acronym string             `json:"acronym"`
+	Id      openapi_types.UUID `json:"id"`
+}
+
+// EnrollmentSectionSummary Compact section payload embedded in an EnrollmentResponse
+type EnrollmentSectionSummary struct {
+	Id             openapi_types.UUID `json:"id"`
+	InstructorName *string            `json:"instructor_name,omitempty"`
+	SectionCode    *string            `json:"section_code,omitempty"`
+	Term           string             `json:"term"`
+}
+
+// FavoriteCourseSummary Compact course payload embedded in a FavoriteItem when
+// `entity_type=course`. Mirrors the (department, number, title)
+// triple used elsewhere in the API.
+type FavoriteCourseSummary struct {
+	Department string             `json:"department"`
+	Id         openapi_types.UUID `json:"id"`
+	Number     string             `json:"number"`
+	Title      string             `json:"title"`
+}
+
+// FavoriteFileSummary Compact file payload embedded in a FavoriteItem when
+// `entity_type=file`. Same fields as RecentFileSummary -- a
+// separate schema so the favorites and recents endpoints can
+// evolve independently without one accidentally bloating the
+// other.
+type FavoriteFileSummary struct {
+	Id       openapi_types.UUID `json:"id"`
+	MimeType string             `json:"mime_type"`
+	Name     string             `json:"name"`
+}
+
+// FavoriteItem A single favorited item. Exactly one of `file`, `study_guide`,
+// or `course` is populated; the other two fields are absent
+// (not null) and `entity_type` declares which one. `entity_id`
+// mirrors the populated summary's `id` so callers can route
+// purely off the envelope without unpacking the per-type
+// payload.
+type FavoriteItem struct {
+	// Course Compact course payload embedded in a FavoriteItem when
+	// `entity_type=course`. Mirrors the (department, number, title)
+	// triple used elsewhere in the API.
+	Course      *FavoriteCourseSummary `json:"course,omitempty"`
+	EntityId    openapi_types.UUID     `json:"entity_id"`
+	EntityType  FavoriteItemEntityType `json:"entity_type"`
+	FavoritedAt time.Time              `json:"favorited_at"`
+
+	// File Compact file payload embedded in a FavoriteItem when
+	// `entity_type=file`. Same fields as RecentFileSummary -- a
+	// separate schema so the favorites and recents endpoints can
+	// evolve independently without one accidentally bloating the
+	// other.
+	File *FavoriteFileSummary `json:"file,omitempty"`
+
+	// StudyGuide Compact study-guide payload embedded in a FavoriteItem when
+	// `entity_type=study_guide`. Includes the parent course's
+	// department + number so the sidebar can render a
+	// "CPTS 322 -- <title>" label without a follow-up request.
+	StudyGuide *FavoriteStudyGuideSummary `json:"study_guide,omitempty"`
+}
+
+// FavoriteItemEntityType defines model for FavoriteItem.EntityType.
+type FavoriteItemEntityType string
+
+// FavoriteStudyGuideSummary Compact study-guide payload embedded in a FavoriteItem when
+// `entity_type=study_guide`. Includes the parent course's
+// department + number so the sidebar can render a
+// "CPTS 322 -- <title>" label without a follow-up request.
+type FavoriteStudyGuideSummary struct {
+	CourseDepartment string             `json:"course_department"`
+	CourseNumber     string             `json:"course_number"`
+	Id               openapi_types.UUID `json:"id"`
+	Title            string             `json:"title"`
+}
+
+// FileAttachmentResponse Response body for POST /api/study-guides/{study_guide_id}/files/{file_id}.
+// Returns the join row's keys + creation timestamp. The file's
+// own metadata (name, mime_type, size) is intentionally NOT
+// included -- the wire shape mirrors the join table since this
+// endpoint only creates the link, not the file. Callers that
+// want full file metadata can hit GET /api/study-guides/{id}
+// which includes the attached file list with privacy floor.
+type FileAttachmentResponse struct {
+	CreatedAt    time.Time          `json:"created_at"`
+	FileId       openapi_types.UUID `json:"file_id"`
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
 }
 
 // FileResponse Complete metadata payload describing an uploaded file
@@ -165,6 +1472,54 @@ type FileResponse struct {
 	UpdatedAt    time.Time          `json:"updated_at"`
 }
 
+// GrantResponse A file permission grant
+type GrantResponse struct {
+	CreatedAt   time.Time          `json:"created_at"`
+	FileId      openapi_types.UUID `json:"file_id"`
+	GrantedBy   openapi_types.UUID `json:"granted_by"`
+	GranteeId   openapi_types.UUID `json:"grantee_id"`
+	GranteeType string             `json:"grantee_type"`
+	Id          openapi_types.UUID `json:"id"`
+	Permission  string             `json:"permission"`
+}
+
+// GuideCourseSummary Compact course payload embedded in StudyGuideDetailResponse.
+// Mirrors EnrollmentCourseSummary but lives here separately so
+// the two surfaces can evolve independently.
+type GuideCourseSummary struct {
+	Department string             `json:"department"`
+	Id         openapi_types.UUID `json:"id"`
+	Number     string             `json:"number"`
+	Title      string             `json:"title"`
+}
+
+// ListCourseSectionsResponse Wrapper for GET /courses/{course_id}/sections. Single field
+// rather than a bare array so future fields (a filter echo,
+// cursor for pagination, aggregate counts) can be added
+// backwards-compatibly. Always emits `sections: []` (never
+// omitted or null) when the course has no matching sections.
+type ListCourseSectionsResponse struct {
+	Sections []SectionResponse `json:"sections"`
+}
+
+// ListCoursesResponse A paginated collection of courses
+type ListCoursesResponse struct {
+	Courses    []CourseResponse `json:"courses"`
+	HasMore    bool             `json:"has_more"`
+	NextCursor *string          `json:"next_cursor,omitempty"`
+}
+
+// ListFavoritesResponse Response envelope for GET /api/me/favorites. `favorites` is
+// always an array (empty when the user has none).
+// `next_cursor` is required and nullable so it renders as
+// explicit JSON null on the last page (the frontend can
+// check `=== null` instead of `=== undefined`).
+type ListFavoritesResponse struct {
+	Favorites  []FavoriteItem `json:"favorites"`
+	HasMore    bool           `json:"has_more"`
+	NextCursor *string        `json:"next_cursor"`
+}
+
 // ListFilesResponse A paginated collection of files
 type ListFilesResponse struct {
 	Files      []FileResponse `json:"files"`
@@ -172,8 +1527,763 @@ type ListFilesResponse struct {
 	NextCursor *string        `json:"next_cursor,omitempty"`
 }
 
+// ListMyEnrollmentsResponse All enrollments for the authenticated user
+type ListMyEnrollmentsResponse struct {
+	Enrollments []EnrollmentResponse `json:"enrollments"`
+}
+
+// ListMyStudyGuidesResponse Paginated envelope for GET /api/me/study-guides (ASK-131).
+// Includes soft-deleted guides authored by the viewer.
+type ListMyStudyGuidesResponse struct {
+	HasMore     bool                  `json:"has_more"`
+	NextCursor  *string               `json:"next_cursor"`
+	StudyGuides []MyStudyGuideSummary `json:"study_guides"`
+}
+
+// ListQuizzesResponse A non-paginated collection of quizzes for one study guide. The
+// spec deliberately omits pagination -- guides typically host
+// fewer than ten quizzes and the practice page renders them all
+// in one shot.
+type ListQuizzesResponse struct {
+	Quizzes []QuizListItemResponse `json:"quizzes"`
+}
+
+// ListRecentsResponse Response envelope for GET /api/me/recents. `recents` is always
+// an array (empty when the user has no view history). A struct
+// wrapper rather than a bare array so future additions (an
+// echoed `limit`, an aggregate `total_view_count`) can land
+// backwards-compatibly.
+type ListRecentsResponse struct {
+	Recents []RecentItem `json:"recents"`
+}
+
+// ListSchoolsResponse A paginated collection of schools
+type ListSchoolsResponse struct {
+	HasMore    bool             `json:"has_more"`
+	NextCursor *string          `json:"next_cursor,omitempty"`
+	Schools    []SchoolResponse `json:"schools"`
+}
+
+// ListSectionMembersResponse A paginated collection of section members
+type ListSectionMembersResponse struct {
+	HasMore    bool                    `json:"has_more"`
+	Members    []SectionMemberResponse `json:"members"`
+	NextCursor *string                 `json:"next_cursor,omitempty"`
+}
+
+// ListSessionsResponse A paginated list of the authenticated user's practice
+// sessions for a quiz (ASK-149). `next_cursor` is null on the
+// last page (always present on the wire -- the field is
+// required + nullable so codegen renders explicit `null`
+// instead of dropping the key); `has_more` is the explicit
+// boolean for client-side page-end detection so callers don't
+// have to inspect the cursor field.
+type ListSessionsResponse struct {
+	HasMore    bool                     `json:"has_more"`
+	NextCursor *string                  `json:"next_cursor"`
+	Sessions   []SessionSummaryResponse `json:"sessions"`
+}
+
+// ListStudyGuideGrantsResponse Collection of grants on a study guide. Sorted by created_at
+// DESC so the newest share surfaces first.
+type ListStudyGuideGrantsResponse struct {
+	Grants []StudyGuideGrantResponse `json:"grants"`
+}
+
+// ListStudyGuidesResponse A paginated collection of study guides for a course
+type ListStudyGuidesResponse struct {
+	HasMore     bool                         `json:"has_more"`
+	NextCursor  *string                      `json:"next_cursor,omitempty"`
+	StudyGuides []StudyGuideListItemResponse `json:"study_guides"`
+}
+
+// MembershipCheckResponse Per-section membership status for the authenticated user. `enrolled`
+// is always present; `role` and `joined_at` are non-null only when
+// `enrolled` is true. Both nullable fields are emitted as JSON null
+// (not omitted) so the frontend can safely destructure.
+type MembershipCheckResponse struct {
+	Enrolled bool                         `json:"enrolled"`
+	JoinedAt *time.Time                   `json:"joined_at"`
+	Role     *MembershipCheckResponseRole `json:"role"`
+}
+
+// MembershipCheckResponseRole defines model for MembershipCheckResponse.Role.
+type MembershipCheckResponseRole string
+
+// MyStudyGuideSummary Row shape for GET /api/me/study-guides (ASK-131). Same fields
+// as StudyGuideListItemResponse plus a nullable `deleted_at` so
+// the viewer can see (and eventually restore) their own
+// soft-deleted guides. Live guides render `deleted_at: null`;
+// soft-deleted guides render a timestamp.
+type MyStudyGuideSummary struct {
+	CourseId  openapi_types.UUID `json:"course_id"`
+	CreatedAt time.Time          `json:"created_at"`
+
+	// Creator Compact user payload used as the `creator` of a study guide. Same
+	// privacy floor as SectionMemberResponse -- no email, no clerk_id.
+	Creator CreatorSummary `json:"creator"`
+
+	// DeletedAt Null for live guides; a timestamp for soft-deleted ones.
+	// Required + nullable so the field is always present on the
+	// wire (the frontend can check `=== null` without worrying
+	// about an undefined case).
+	DeletedAt     *time.Time                    `json:"deleted_at"`
+	Description   *string                       `json:"description,omitempty"`
+	Id            openapi_types.UUID            `json:"id"`
+	IsRecommended bool                          `json:"is_recommended"`
+	QuizCount     int64                         `json:"quiz_count"`
+	Tags          []string                      `json:"tags"`
+	Title         string                        `json:"title"`
+	UpdatedAt     time.Time                     `json:"updated_at"`
+	ViewCount     int64                         `json:"view_count"`
+	Visibility    MyStudyGuideSummaryVisibility `json:"visibility"`
+	VoteScore     int64                         `json:"vote_score"`
+}
+
+// MyStudyGuideSummaryVisibility defines model for MyStudyGuideSummary.Visibility.
+type MyStudyGuideSummaryVisibility string
+
+// PracticeAnswerResponse A single answer submitted within a practice session.
+// `question_id`, `user_answer`, and `is_correct` are nullable:
+//   - `question_id` becomes NULL when the underlying quiz
+//     question is hard-deleted after the answer was submitted
+//     (ON DELETE SET NULL on `practice_answers.question_id`).
+//   - `user_answer` and `is_correct` track the schema's
+//     nullable columns; in practice, the submit-answer
+//     endpoint always writes non-null values.
+//
+// `verified` is true for server-validated answer types
+// (multiple-choice, true-false) and false for freeform answers
+// (string-match only).
+type PracticeAnswerResponse struct {
+	AnsweredAt time.Time           `json:"answered_at"`
+	IsCorrect  *bool               `json:"is_correct"`
+	QuestionId *openapi_types.UUID `json:"question_id"`
+	UserAnswer *string             `json:"user_answer"`
+	Verified   bool                `json:"verified"`
+}
+
+// PracticeSessionResponse A practice session row plus the answers submitted so far.
+// Returned by POST /api/quizzes/{quiz_id}/sessions on both the
+// 201 (created) and 200 (resumed) paths -- the wire shape is
+// identical, the status code distinguishes the two paths.
+//
+// `total_questions` is frozen at session-start time from the
+// snapshot count (COUNT of `practice_session_questions` rows).
+// Subsequent edits to the parent quiz do not change it.
+// `correct_answers` is the running count of submitted answers
+// with `is_correct = true`; the submit-answer endpoint
+// increments it.
+//
+// On a freshly-created session, `answers` is an empty array
+// (not null). On a resumed session, `answers` carries every
+// row submitted so far, ordered by `answered_at ASC`.
+type PracticeSessionResponse struct {
+	Answers        []PracticeAnswerResponse `json:"answers"`
+	CompletedAt    *time.Time               `json:"completed_at"`
+	CorrectAnswers int                      `json:"correct_answers"`
+	Id             openapi_types.UUID       `json:"id"`
+	QuizId         openapi_types.UUID       `json:"quiz_id"`
+	StartedAt      time.Time                `json:"started_at"`
+	TotalQuestions int                      `json:"total_questions"`
+}
+
+// QuizDetailResponse Full quiz payload returned by POST /api/study-guides/{id}/quizzes,
+// GET /api/quizzes/{quiz_id}, and PATCH /api/quizzes/{quiz_id}.
+// Includes the embedded study guide id, the creator (privacy
+// floor: id + first_name + last_name only), and every question
+// with its options and correct answer.
+type QuizDetailResponse struct {
+	CreatedAt time.Time `json:"created_at"`
+
+	// Creator Compact user payload used as the `creator` of a study guide. Same
+	// privacy floor as SectionMemberResponse -- no email, no clerk_id.
+	Creator      CreatorSummary         `json:"creator"`
+	Description  *string                `json:"description"`
+	Id           openapi_types.UUID     `json:"id"`
+	Questions    []QuizQuestionResponse `json:"questions"`
+	StudyGuideId openapi_types.UUID     `json:"study_guide_id"`
+	Title        string                 `json:"title"`
+	UpdatedAt    time.Time              `json:"updated_at"`
+}
+
+// QuizListItemResponse Compact quiz payload returned by GET /api/study-guides/{id}/quizzes.
+// Richer than QuizSummary (which embeds inside StudyGuideDetailResponse
+// and intentionally stays minimal): includes the creator (privacy
+// floor: id + first_name + last_name only), description, and
+// timestamps so the practice page can render the quiz card without
+// a follow-up GET on the quiz detail.
+type QuizListItemResponse struct {
+	CreatedAt time.Time `json:"created_at"`
+
+	// Creator Compact user payload used as the `creator` of a study guide. Same
+	// privacy floor as SectionMemberResponse -- no email, no clerk_id.
+	Creator       CreatorSummary     `json:"creator"`
+	Description   *string            `json:"description"`
+	Id            openapi_types.UUID `json:"id"`
+	QuestionCount int64              `json:"question_count"`
+	Title         string             `json:"title"`
+	UpdatedAt     time.Time          `json:"updated_at"`
+}
+
+// QuizQuestionResponse A single question on the quiz detail response. The `options`
+// array is present only on `multiple-choice` questions and lists
+// the option text in display order. `correct_answer` is the
+// text of the correct option for MCQ, the boolean for true-false,
+// and the reference answer string for freeform.
+type QuizQuestionResponse struct {
+	// CorrectAnswer The correct answer for this question. String for
+	// multiple-choice (the winning option's text) and freeform
+	// (the reference answer); boolean for true-false.
+	CorrectAnswer interface{} `json:"correct_answer,omitempty"`
+	Feedback      struct {
+		Correct   *string `json:"correct"`
+		Incorrect *string `json:"incorrect"`
+	} `json:"feedback"`
+	Hint      *string                  `json:"hint"`
+	Id        openapi_types.UUID       `json:"id"`
+	Options   *[]string                `json:"options,omitempty"`
+	Question  string                   `json:"question"`
+	SortOrder int                      `json:"sort_order"`
+	Type      QuizQuestionResponseType `json:"type"`
+}
+
+// QuizQuestionResponseType defines model for QuizQuestionResponse.Type.
+type QuizQuestionResponseType string
+
+// QuizSummary Compact quiz payload embedded in StudyGuideDetailResponse.
+// Privacy floor: id + title + question_count only. Creator id,
+// quiz content, and scoring config are intentionally absent --
+// the quiz detail endpoint (future ticket ASK-142) is the source
+// of truth for those.
+type QuizSummary struct {
+	Id            openapi_types.UUID `json:"id"`
+	QuestionCount int64              `json:"question_count"`
+	Title         string             `json:"title"`
+}
+
+// RecentCourseSummary Compact course payload embedded in a RecentItem when
+// `entity_type=course`. Mirrors the (department, number, title)
+// triple used elsewhere in the API.
+type RecentCourseSummary struct {
+	Department string             `json:"department"`
+	Id         openapi_types.UUID `json:"id"`
+	Number     string             `json:"number"`
+	Title      string             `json:"title"`
+}
+
+// RecentFileSummary Compact file payload embedded in a RecentItem when
+// `entity_type=file`. Only the fields the sidebar needs to render
+// a row label and an icon — full file metadata lives at
+// GET /api/files/{file_id}.
+type RecentFileSummary struct {
+	Id       openapi_types.UUID `json:"id"`
+	MimeType string             `json:"mime_type"`
+	Name     string             `json:"name"`
+}
+
+// RecentItem A single recent item. Exactly one of `file`, `study_guide`, or
+// `course` is populated; the other two fields are absent (not
+// null) and `entity_type` declares which one. `entity_id` mirrors
+// the populated summary's `id` so callers can route purely off
+// the envelope without unpacking the per-type payload.
+type RecentItem struct {
+	// Course Compact course payload embedded in a RecentItem when
+	// `entity_type=course`. Mirrors the (department, number, title)
+	// triple used elsewhere in the API.
+	Course     *RecentCourseSummary `json:"course,omitempty"`
+	EntityId   openapi_types.UUID   `json:"entity_id"`
+	EntityType RecentItemEntityType `json:"entity_type"`
+
+	// File Compact file payload embedded in a RecentItem when
+	// `entity_type=file`. Only the fields the sidebar needs to render
+	// a row label and an icon — full file metadata lives at
+	// GET /api/files/{file_id}.
+	File *RecentFileSummary `json:"file,omitempty"`
+
+	// StudyGuide Compact study-guide payload embedded in a RecentItem when
+	// `entity_type=study_guide`. Includes the parent course's
+	// department + number so the sidebar can render
+	// "CPTS 322 -- Binary Trees Cheat Sheet" without a follow-up
+	// request.
+	StudyGuide *RecentStudyGuideSummary `json:"study_guide,omitempty"`
+	ViewedAt   time.Time                `json:"viewed_at"`
+}
+
+// RecentItemEntityType defines model for RecentItem.EntityType.
+type RecentItemEntityType string
+
+// RecentStudyGuideSummary Compact study-guide payload embedded in a RecentItem when
+// `entity_type=study_guide`. Includes the parent course's
+// department + number so the sidebar can render
+// "CPTS 322 -- Binary Trees Cheat Sheet" without a follow-up
+// request.
+type RecentStudyGuideSummary struct {
+	CourseDepartment string             `json:"course_department"`
+	CourseNumber     string             `json:"course_number"`
+	Id               openapi_types.UUID `json:"id"`
+	Title            string             `json:"title"`
+}
+
+// RecommendationResponse Response body for POST /api/study-guides/{study_guide_id}/recommendations.
+// Returns the freshly-created recommendation row plus the
+// recommender's compact identity (same privacy floor as
+// CreatorSummary -- no email, no clerk_id).
+type RecommendationResponse struct {
+	CreatedAt time.Time `json:"created_at"`
+
+	// RecommendedBy Compact user payload used as the `creator` of a study guide. Same
+	// privacy floor as SectionMemberResponse -- no email, no clerk_id.
+	RecommendedBy CreatorSummary     `json:"recommended_by"`
+	StudyGuideId  openapi_types.UUID `json:"study_guide_id"`
+}
+
+// RefCourseInfo defines model for RefCourseInfo.
+type RefCourseInfo struct {
+	Department string `json:"department"`
+	Number     string `json:"number"`
+}
+
+// RefCreatorInfo defines model for RefCreatorInfo.
+type RefCreatorInfo struct {
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+}
+
+// RefSchoolInfo defines model for RefSchoolInfo.
+type RefSchoolInfo struct {
+	Acronym string `json:"acronym"`
+	Name    string `json:"name"`
+}
+
+// RefSummary Discriminated union. `type` picks which fields are populated;
+// fields for other types are absent.
+type RefSummary struct {
+	Course  *RefCourseInfo  `json:"course,omitempty"`
+	Creator *RefCreatorInfo `json:"creator,omitempty"`
+
+	// Department course only. e.g. `CPTS`.
+	Department *string            `json:"department,omitempty"`
+	Id         openapi_types.UUID `json:"id"`
+
+	// IsRecommended sg only.
+	IsRecommended *bool `json:"is_recommended,omitempty"`
+
+	// MimeType file only.
+	MimeType *string `json:"mime_type,omitempty"`
+
+	// Name file only. Original filename.
+	Name *string `json:"name,omitempty"`
+
+	// Number course only. e.g. `322`.
+	Number *string `json:"number,omitempty"`
+
+	// QuestionCount quiz only. Count of quiz_questions rows.
+	QuestionCount *int `json:"question_count,omitempty"`
+
+	// QuizCount sg only. Count of non-deleted quizzes on the guide.
+	QuizCount *int           `json:"quiz_count,omitempty"`
+	School    *RefSchoolInfo `json:"school,omitempty"`
+
+	// Size file only. Bytes.
+	Size *int64 `json:"size,omitempty"`
+
+	// Status file only. `pending` / `complete` / `failed`.
+	Status *string `json:"status,omitempty"`
+
+	// Title sg / quiz / course title.
+	Title *string        `json:"title,omitempty"`
+	Type  RefSummaryType `json:"type"`
+}
+
+// RefSummaryType defines model for RefSummary.Type.
+type RefSummaryType string
+
+// RefsResolveRequest Request body for POST /api/refs/resolve (ASK-208). `refs` is a
+// list of `(type, id)` pairs to hydrate. Bounded at 50 entries --
+// typical articles have 3-10 refs; the cap prevents accidental
+// N-squared fetches from an editor that didn't debounce.
+type RefsResolveRequest struct {
+	Refs []RefsResolveRequestRef `json:"refs"`
+}
+
+// RefsResolveRequestRef defines model for RefsResolveRequestRef.
+type RefsResolveRequestRef struct {
+	Id   openapi_types.UUID        `json:"id"`
+	Type RefsResolveRequestRefType `json:"type"`
+}
+
+// RefsResolveRequestRefType defines model for RefsResolveRequestRef.Type.
+type RefsResolveRequestRefType string
+
+// RefsResolveResponse defines model for RefsResolveResponse.
+type RefsResolveResponse struct {
+	// Results Map keyed by `"{type}:{id}"`. Value is a RefSummary for
+	// visible entities or `null` for refs the viewer cannot see
+	// (deleted, no grant, or nonexistent). The type discriminator
+	// on the summary object lets clients narrow to per-type
+	// fields (see RefSummary).
+	Results map[string]RefSummary `json:"results"`
+}
+
+// ResourceSummary Compact resource payload embedded in StudyGuideDetailResponse.
+// No creator or uploader info -- the study-guide detail caller
+// does not need to know who attached the resource.
+type ResourceSummary struct {
+	CreatedAt   time.Time           `json:"created_at"`
+	Description *string             `json:"description,omitempty"`
+	Id          openapi_types.UUID  `json:"id"`
+	Title       string              `json:"title"`
+	Type        ResourceSummaryType `json:"type"`
+	Url         string              `json:"url"`
+}
+
+// ResourceSummaryType defines model for ResourceSummary.Type.
+type ResourceSummaryType string
+
+// RevokeGrantRequest Request body for revoking a file grant
+type RevokeGrantRequest struct {
+	GranteeId   openapi_types.UUID            `json:"grantee_id"`
+	GranteeType RevokeGrantRequestGranteeType `json:"grantee_type"`
+	Permission  RevokeGrantRequestPermission  `json:"permission"`
+}
+
+// RevokeGrantRequestGranteeType defines model for RevokeGrantRequest.GranteeType.
+type RevokeGrantRequestGranteeType string
+
+// RevokeGrantRequestPermission defines model for RevokeGrantRequest.Permission.
+type RevokeGrantRequestPermission string
+
+// SchoolResponse A school (university or college)
+type SchoolResponse struct {
+	Acronym string  `json:"acronym"`
+	City    *string `json:"city,omitempty"`
+
+	// Country ISO 3166-1 alpha-2 country code
+	Country   *string            `json:"country,omitempty"`
+	CreatedAt time.Time          `json:"created_at"`
+	Domain    *string            `json:"domain,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
+	Name      string             `json:"name"`
+	State     *string            `json:"state,omitempty"`
+	Url       *string            `json:"url,omitempty"`
+}
+
+// SchoolSummary Compact school payload embedded inside other resources (courses, study guides)
+type SchoolSummary struct {
+	Acronym string  `json:"acronym"`
+	City    *string `json:"city,omitempty"`
+
+	// Country ISO 3166-1 alpha-2 country code
+	Country *string            `json:"country,omitempty"`
+	Id      openapi_types.UUID `json:"id"`
+	Name    string             `json:"name"`
+	State   *string            `json:"state,omitempty"`
+}
+
+// SectionMemberResponse Limited per-user payload returned by ListSectionMembers. Email
+// and clerk_id are intentionally NOT exposed -- any authenticated
+// user can list members of any section, so this is the privacy
+// floor for member identity.
+type SectionMemberResponse struct {
+	FirstName string                    `json:"first_name"`
+	JoinedAt  time.Time                 `json:"joined_at"`
+	LastName  string                    `json:"last_name"`
+	Role      SectionMemberResponseRole `json:"role"`
+	UserId    openapi_types.UUID        `json:"user_id"`
+}
+
+// SectionMemberResponseRole defines model for SectionMemberResponse.Role.
+type SectionMemberResponseRole string
+
+// SectionResponse Returned by GET /courses/{course_id}/sections (ASK-127).
+// Superset of SectionSummary -- adds `course_id` and
+// `created_at` so the dedicated sections endpoint payload is
+// self-describing (the inline sections in CourseDetailResponse
+// omit them because the parent course already carries the id).
+type SectionResponse struct {
+	CourseId       openapi_types.UUID `json:"course_id"`
+	CreatedAt      time.Time          `json:"created_at"`
+	Id             openapi_types.UUID `json:"id"`
+	InstructorName *string            `json:"instructor_name"`
+	MemberCount    int64              `json:"member_count"`
+	SectionCode    *string            `json:"section_code"`
+	Term           string             `json:"term"`
+}
+
+// SectionSummary A section of a course (term + instructor + roster size)
+type SectionSummary struct {
+	Id             openapi_types.UUID `json:"id"`
+	InstructorName *string            `json:"instructor_name,omitempty"`
+	MemberCount    int64              `json:"member_count"`
+	SectionCode    *string            `json:"section_code,omitempty"`
+	Term           string             `json:"term"`
+}
+
+// SessionDetailResponse Returned by GET /api/sessions/{session_id} (ASK-152). The
+// response shape is the union of PracticeSessionResponse +
+// a nullable score_percentage:
+//   - `score_percentage` is null while the session is
+//     in-progress (`completed_at` is null too) and an integer
+//     0-100 once the session is completed.
+//   - `answers` is identical to the PracticeSessionResponse
+//     field -- chronological list of submitted answers,
+//     with nullable question_id for answers whose underlying
+//     question was hard-deleted (ON DELETE SET NULL).
+//   - `completed_at` is nullable -- distinguishes in-progress
+//     from completed sessions on the wire.
+type SessionDetailResponse struct {
+	Answers         []PracticeAnswerResponse `json:"answers"`
+	CompletedAt     *time.Time               `json:"completed_at"`
+	CorrectAnswers  int                      `json:"correct_answers"`
+	Id              openapi_types.UUID       `json:"id"`
+	QuizId          openapi_types.UUID       `json:"quiz_id"`
+	ScorePercentage *int                     `json:"score_percentage"`
+	StartedAt       time.Time                `json:"started_at"`
+	TotalQuestions  int                      `json:"total_questions"`
+}
+
+// SessionSummaryResponse A compact session summary returned in
+// GET /api/quizzes/{quiz_id}/sessions (ASK-149) listings.
+// Distinct from SessionDetailResponse: there is no `answers`
+// array (callers fetch it via GET /api/sessions/{id}) and no
+// `quiz_id` (the listing is already scoped to a quiz).
+//
+// `score_percentage` is `null` while the session is in-progress
+// (`completed_at` is null too) and an integer 0-100 once the
+// session is completed -- same gating rule as
+// SessionDetailResponse.
+type SessionSummaryResponse struct {
+	CompletedAt     *time.Time         `json:"completed_at"`
+	CorrectAnswers  int                `json:"correct_answers"`
+	Id              openapi_types.UUID `json:"id"`
+	ScorePercentage *int               `json:"score_percentage"`
+	StartedAt       time.Time          `json:"started_at"`
+	TotalQuestions  int                `json:"total_questions"`
+}
+
+// StudyGuideCreateGrantRequest Request body for POST /api/study-guides/{study_guide_id}/grants
+// (ASK-211). Mirrors CreateGrantRequest but constrains
+// `grantee_type` to `user`/`course` since study guides cannot
+// grant access to other study guides.
+type StudyGuideCreateGrantRequest struct {
+	GranteeId   openapi_types.UUID                      `json:"grantee_id"`
+	GranteeType StudyGuideCreateGrantRequestGranteeType `json:"grantee_type"`
+	Permission  StudyGuideCreateGrantRequestPermission  `json:"permission"`
+}
+
+// StudyGuideCreateGrantRequestGranteeType defines model for StudyGuideCreateGrantRequest.GranteeType.
+type StudyGuideCreateGrantRequestGranteeType string
+
+// StudyGuideCreateGrantRequestPermission defines model for StudyGuideCreateGrantRequest.Permission.
+type StudyGuideCreateGrantRequestPermission string
+
+// StudyGuideDetailResponse Full study-guide payload for the detail endpoint. Includes
+// content (excluded from the list payload) plus the
+// authenticated user's own vote state and the nested
+// recommenders / quizzes / resources / files arrays.
+type StudyGuideDetailResponse struct {
+	Content *string `json:"content,omitempty"`
+
+	// Course Compact course payload embedded in StudyGuideDetailResponse.
+	// Mirrors EnrollmentCourseSummary but lives here separately so
+	// the two surfaces can evolve independently.
+	Course    GuideCourseSummary `json:"course"`
+	CreatedAt time.Time          `json:"created_at"`
+
+	// Creator Compact user payload used as the `creator` of a study guide. Same
+	// privacy floor as SectionMemberResponse -- no email, no clerk_id.
+	Creator       CreatorSummary                    `json:"creator"`
+	Description   *string                           `json:"description,omitempty"`
+	Files         []StudyGuideFileSummary           `json:"files"`
+	Id            openapi_types.UUID                `json:"id"`
+	IsRecommended bool                              `json:"is_recommended"`
+	Quizzes       []QuizSummary                     `json:"quizzes"`
+	RecommendedBy []CreatorSummary                  `json:"recommended_by"`
+	Resources     []ResourceSummary                 `json:"resources"`
+	Tags          []string                          `json:"tags"`
+	Title         string                            `json:"title"`
+	UpdatedAt     time.Time                         `json:"updated_at"`
+	UserVote      *StudyGuideDetailResponseUserVote `json:"user_vote"`
+	ViewCount     int64                             `json:"view_count"`
+
+	// Visibility Visibility of the guide (ASK-211). `private` guides are
+	// visible only to the creator + grantees; `public` guides
+	// are visible to every authenticated user.
+	Visibility StudyGuideDetailResponseVisibility `json:"visibility"`
+	VoteScore  int64                              `json:"vote_score"`
+}
+
+// StudyGuideDetailResponseUserVote defines model for StudyGuideDetailResponse.UserVote.
+type StudyGuideDetailResponseUserVote string
+
+// StudyGuideDetailResponseVisibility Visibility of the guide (ASK-211). `private` guides are
+// visible only to the creator + grantees; `public` guides
+// are visible to every authenticated user.
+type StudyGuideDetailResponseVisibility string
+
+// StudyGuideFileSummary Compact file payload embedded in StudyGuideDetailResponse.
+// Privacy floor: id + name + mime_type + size only. Owner,
+// s3_key, and checksum are intentionally absent.
+type StudyGuideFileSummary struct {
+	Id       openapi_types.UUID `json:"id"`
+	MimeType string             `json:"mime_type"`
+	Name     string             `json:"name"`
+	Size     int64              `json:"size"`
+}
+
+// StudyGuideGrantResponse A study-guide permission grant (ASK-211)
+type StudyGuideGrantResponse struct {
+	CreatedAt    time.Time          `json:"created_at"`
+	GrantedBy    openapi_types.UUID `json:"granted_by"`
+	GranteeId    openapi_types.UUID `json:"grantee_id"`
+	GranteeType  string             `json:"grantee_type"`
+	Id           openapi_types.UUID `json:"id"`
+	Permission   string             `json:"permission"`
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+}
+
+// StudyGuideListItemResponse A study guide as it appears in the list response. Excludes
+// `content` (only returned by the get-by-id endpoint) to keep the
+// list payload small. Per-row aggregates (`vote_score`,
+// `is_recommended`, `quiz_count`) are computed inline.
+type StudyGuideListItemResponse struct {
+	CourseId  openapi_types.UUID `json:"course_id"`
+	CreatedAt time.Time          `json:"created_at"`
+
+	// Creator Compact user payload used as the `creator` of a study guide. Same
+	// privacy floor as SectionMemberResponse -- no email, no clerk_id.
+	Creator       CreatorSummary                       `json:"creator"`
+	Description   *string                              `json:"description,omitempty"`
+	Id            openapi_types.UUID                   `json:"id"`
+	IsRecommended bool                                 `json:"is_recommended"`
+	QuizCount     int64                                `json:"quiz_count"`
+	Tags          []string                             `json:"tags"`
+	Title         string                               `json:"title"`
+	UpdatedAt     time.Time                            `json:"updated_at"`
+	ViewCount     int64                                `json:"view_count"`
+	Visibility    StudyGuideListItemResponseVisibility `json:"visibility"`
+	VoteScore     int64                                `json:"vote_score"`
+}
+
+// StudyGuideListItemResponseVisibility defines model for StudyGuideListItemResponse.Visibility.
+type StudyGuideListItemResponseVisibility string
+
+// StudyGuideRevokeGrantRequest Request body for DELETE /api/study-guides/{study_guide_id}/grants
+// (ASK-211).
+type StudyGuideRevokeGrantRequest struct {
+	GranteeId   openapi_types.UUID                      `json:"grantee_id"`
+	GranteeType StudyGuideRevokeGrantRequestGranteeType `json:"grantee_type"`
+	Permission  StudyGuideRevokeGrantRequestPermission  `json:"permission"`
+}
+
+// StudyGuideRevokeGrantRequestGranteeType defines model for StudyGuideRevokeGrantRequest.GranteeType.
+type StudyGuideRevokeGrantRequestGranteeType string
+
+// StudyGuideRevokeGrantRequestPermission defines model for StudyGuideRevokeGrantRequest.Permission.
+type StudyGuideRevokeGrantRequestPermission string
+
+// SubmitAnswerRequest Request body for POST /api/sessions/{session_id}/answers
+// (ASK-137). The client supplies only the question being
+// answered and the raw user input -- the backend is the sole
+// source of truth for `is_correct` and `verified` on the
+// response. Any extra fields a client sends (including
+// attempts to forge `is_correct` or `verified`) are silently
+// dropped by the Go JSON decoder because the
+// SubmitAnswerRequest struct has no fields for them; the
+// scoring path inside the service ignores client input
+// entirely on those two fields, so a forged value cannot
+// flow into the persisted row.
+//
+// Per-type expectations on `user_answer`:
+//   - `multiple-choice` -- the exact text of the chosen
+//     option (e.g. `"Sorted ascending"`). Comparison is
+//     byte-exact against the option's stored text.
+//   - `true-false` -- the lowercase string `"true"` or
+//     `"false"`. Anything else is a 400.
+//   - `freeform` -- the user's free-text response. Compared
+//     case-insensitively against the reference answer
+//     after trimming whitespace.
+type SubmitAnswerRequest struct {
+	QuestionId openapi_types.UUID `json:"question_id"`
+	UserAnswer string             `json:"user_answer"`
+}
+
+// ToggleFavoriteResponse Result of POST /api/files/{file_id}/favorite (ASK-130),
+// POST /api/me/study-guides/{study_guide_id}/favorite (ASK-156),
+// and POST /api/me/courses/{course_id}/favorite (ASK-157).
+// `favorited` reflects the resulting state -- true when the
+// toggle inserted a row, false when it deleted one.
+// `favorited_at` is the row timestamp when favorited=true and
+// explicit JSON null when favorited=false (so the frontend can
+// check `=== null` rather than `=== undefined`).
+type ToggleFavoriteResponse struct {
+	// Favorited True if the entity is now favorited, false if just unfavorited.
+	Favorited bool `json:"favorited"`
+
+	// FavoritedAt Timestamp when the favorite row was created. Null when unfavorited.
+	FavoritedAt *time.Time `json:"favorited_at"`
+}
+
+// UpdateFileRequest Partial update for a file. Both fields are optional but at
+// least one must be provided -- an empty body returns 400.
+// Only the provided fields are updated; unprovided fields are
+// left unchanged. Status transitions are restricted to
+// `pending -> complete` and `pending -> failed` (see endpoint
+// description).
+type UpdateFileRequest struct {
+	// Name New display name. Trimmed before validation.
+	Name *string `json:"name,omitempty"`
+
+	// Status New upload status. Only `complete` or `failed` are valid
+	// target states; the file must currently be `pending` for
+	// the transition to succeed.
+	Status *UpdateFileRequestStatus `json:"status,omitempty"`
+}
+
+// UpdateFileRequestStatus New upload status. Only `complete` or `failed` are valid
+// target states; the file must currently be `pending` for
+// the transition to succeed.
+type UpdateFileRequestStatus string
+
+// UpdateQuizRequest Request body for PATCH /api/quizzes/{quiz_id}. Both fields
+// are optional; absent fields preserve their current value.
+// At least one field must be provided -- an empty body `{}`
+// is rejected with 400.
+//
+// `description` supports an explicit JSON `null` to clear the
+// existing value (the only field on this endpoint with that
+// semantic; `title` cannot be cleared because the column is
+// NOT NULL on the underlying schema).
+type UpdateQuizRequest struct {
+	Description *string `json:"description,omitempty"`
+	Title       *string `json:"title,omitempty"`
+}
+
+// UpdateStudyGuideRequest Request body for PATCH /api/study-guides/{study_guide_id}.
+// All fields are optional; absent fields preserve their current
+// value. Tags, when provided, REPLACE all existing tags (no
+// merge) and are normalized server-side (trim + lowercase +
+// dedupe). At least one field must be provided -- an empty body
+// `{}` is rejected with 400. Supplying `visibility` flips the
+// guide between private and public (ASK-211); existing grants
+// are preserved either way.
+type UpdateStudyGuideRequest struct {
+	Content     *string                            `json:"content,omitempty"`
+	Description *string                            `json:"description,omitempty"`
+	Tags        *[]string                          `json:"tags,omitempty"`
+	Title       *string                            `json:"title,omitempty"`
+	Visibility  *UpdateStudyGuideRequestVisibility `json:"visibility,omitempty"`
+}
+
+// UpdateStudyGuideRequestVisibility defines model for UpdateStudyGuideRequest.Visibility.
+type UpdateStudyGuideRequestVisibility string
+
 // BadRequest Standardized error response structure matching application error domains
 type BadRequest = AppError
+
+// Conflict Standardized error response structure matching application error domains
+type Conflict = AppError
 
 // Forbidden Standardized error response structure matching application error domains
 type Forbidden = AppError
@@ -186,6 +2296,113 @@ type NotFound = AppError
 
 // Unauthorized Standardized error response structure matching application error domains
 type Unauthorized = AppError
+
+// ListCoursesParams defines parameters for ListCourses.
+type ListCoursesParams struct {
+	// SchoolId Filter by school UUID
+	SchoolId *openapi_types.UUID `form:"school_id,omitempty" json:"school_id,omitempty"`
+
+	// Department Exact department code match (case-insensitive, e.g. "CPTS")
+	Department *string `form:"department,omitempty" json:"department,omitempty"`
+
+	// Q Search term, matches against title (trigram), department, or number (case-insensitive)
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// SortBy Database column to sort the results by
+	SortBy *ListCoursesParamsSortBy `form:"sort_by,omitempty" json:"sort_by,omitempty"`
+
+	// SortDir Sorting direction (ascending or descending)
+	SortDir *ListCoursesParamsSortDir `form:"sort_dir,omitempty" json:"sort_dir,omitempty"`
+
+	// PageLimit Maximum number of courses to return per page
+	PageLimit *int `form:"page_limit,omitempty" json:"page_limit,omitempty"`
+
+	// Cursor Opaque pagination cursor token obtained from the previous response
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListCoursesParamsSortBy defines parameters for ListCourses.
+type ListCoursesParamsSortBy string
+
+// ListCoursesParamsSortDir defines parameters for ListCourses.
+type ListCoursesParamsSortDir string
+
+// ListCourseSectionsParams defines parameters for ListCourseSections.
+type ListCourseSectionsParams struct {
+	// Term Exact-match filter on the section's term (e.g. "Spring 2026")
+	Term *string `form:"term,omitempty" json:"term,omitempty"`
+}
+
+// ListSectionMembersParams defines parameters for ListSectionMembers.
+type ListSectionMembersParams struct {
+	// Role Filter to members with a specific role
+	Role *ListSectionMembersParamsRole `form:"role,omitempty" json:"role,omitempty"`
+
+	// Limit Maximum number of members to return per page
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque keyset cursor token from the previous page
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListSectionMembersParamsRole defines parameters for ListSectionMembers.
+type ListSectionMembersParamsRole string
+
+// ListStudyGuidesParams defines parameters for ListStudyGuides.
+type ListStudyGuidesParams struct {
+	// Q Case-insensitive partial match against title and tags
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// Tag Filter by exact tag (case-sensitive). Repeatable; multiple
+	// values are AND-matched (a guide must carry every supplied
+	// tag to be returned).
+	Tag *[]string `form:"tag,omitempty" json:"tag,omitempty"`
+
+	// SortBy Sort field
+	SortBy *ListStudyGuidesParamsSortBy `form:"sort_by,omitempty" json:"sort_by,omitempty"`
+
+	// SortDir Sort direction
+	SortDir *ListStudyGuidesParamsSortDir `form:"sort_dir,omitempty" json:"sort_dir,omitempty"`
+
+	// PageLimit Maximum number of guides per page
+	PageLimit *int `form:"page_limit,omitempty" json:"page_limit,omitempty"`
+
+	// Cursor Opaque keyset cursor token from the previous page
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListStudyGuidesParamsSortBy defines parameters for ListStudyGuides.
+type ListStudyGuidesParamsSortBy string
+
+// ListStudyGuidesParamsSortDir defines parameters for ListStudyGuides.
+type ListStudyGuidesParamsSortDir string
+
+// ListMyEnrollmentsParams defines parameters for ListMyEnrollments.
+type ListMyEnrollmentsParams struct {
+	// Term Exact-match term filter (e.g. "Spring 2026")
+	Term *string `form:"term,omitempty" json:"term,omitempty"`
+
+	// Role Filter to a specific course-member role
+	Role *ListMyEnrollmentsParamsRole `form:"role,omitempty" json:"role,omitempty"`
+}
+
+// ListMyEnrollmentsParamsRole defines parameters for ListMyEnrollments.
+type ListMyEnrollmentsParamsRole string
+
+// ListFavoritesParams defines parameters for ListFavorites.
+type ListFavoritesParams struct {
+	// EntityType Filter to a single entity type. Omit for all types.
+	EntityType *ListFavoritesParamsEntityType `form:"entity_type,omitempty" json:"entity_type,omitempty"`
+
+	// Limit Maximum number of favorites to return per page
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque pagination cursor from a previous response
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListFavoritesParamsEntityType defines parameters for ListFavorites.
+type ListFavoritesParamsEntityType string
 
 // ListFilesParams defines parameters for ListFiles.
 type ListFilesParams struct {
@@ -247,22 +2464,343 @@ type ListFilesParamsSortBy string
 // ListFilesParamsSortDir defines parameters for ListFiles.
 type ListFilesParamsSortDir string
 
+// ListRecentsParams defines parameters for ListRecents.
+type ListRecentsParams struct {
+	// Limit Maximum number of recent items to return
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListMyStudyGuidesParams defines parameters for ListMyStudyGuides.
+type ListMyStudyGuidesParams struct {
+	// CourseId Filter results to guides in this course.
+	CourseId *openapi_types.UUID `form:"course_id,omitempty" json:"course_id,omitempty"`
+
+	// SortBy Sort field
+	SortBy *ListMyStudyGuidesParamsSortBy `form:"sort_by,omitempty" json:"sort_by,omitempty"`
+
+	// Limit Maximum number of guides per page
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque keyset cursor token from the previous page
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListMyStudyGuidesParamsSortBy defines parameters for ListMyStudyGuides.
+type ListMyStudyGuidesParamsSortBy string
+
+// ListPracticeSessionsParams defines parameters for ListPracticeSessions.
+type ListPracticeSessionsParams struct {
+	// Status Filter by session status (active = incomplete; completed = finalised)
+	Status *ListPracticeSessionsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
+
+	// Limit Maximum number of sessions to return per page
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+
+	// Cursor Opaque pagination cursor token obtained from the previous response's next_cursor
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// ListPracticeSessionsParamsStatus defines parameters for ListPracticeSessions.
+type ListPracticeSessionsParamsStatus string
+
+// ListSchoolsParams defines parameters for ListSchools.
+type ListSchoolsParams struct {
+	// Q Search term, partial match against school name (trigram) or exact match against acronym (case-insensitive)
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// PageLimit Maximum number of schools to return per page
+	PageLimit *int `form:"page_limit,omitempty" json:"page_limit,omitempty"`
+
+	// Cursor Opaque pagination cursor token obtained from the previous response
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// CreateStudyGuideJSONRequestBody defines body for CreateStudyGuide for application/json ContentType.
+type CreateStudyGuideJSONRequestBody = CreateStudyGuideRequest
+
+// CreateFileJSONRequestBody defines body for CreateFile for application/json ContentType.
+type CreateFileJSONRequestBody = CreateFileRequest
+
+// UpdateFileJSONRequestBody defines body for UpdateFile for application/json ContentType.
+type UpdateFileJSONRequestBody = UpdateFileRequest
+
+// RevokeGrantJSONRequestBody defines body for RevokeGrant for application/json ContentType.
+type RevokeGrantJSONRequestBody = RevokeGrantRequest
+
+// CreateGrantJSONRequestBody defines body for CreateGrant for application/json ContentType.
+type CreateGrantJSONRequestBody = CreateGrantRequest
+
+// UpdateQuizJSONRequestBody defines body for UpdateQuiz for application/json ContentType.
+type UpdateQuizJSONRequestBody = UpdateQuizRequest
+
+// AddQuizQuestionJSONRequestBody defines body for AddQuizQuestion for application/json ContentType.
+type AddQuizQuestionJSONRequestBody = CreateQuizQuestion
+
+// ReplaceQuizQuestionJSONRequestBody defines body for ReplaceQuizQuestion for application/json ContentType.
+type ReplaceQuizQuestionJSONRequestBody = CreateQuizQuestion
+
+// ResolveRefsJSONRequestBody defines body for ResolveRefs for application/json ContentType.
+type ResolveRefsJSONRequestBody = RefsResolveRequest
+
+// SubmitPracticeAnswerJSONRequestBody defines body for SubmitPracticeAnswer for application/json ContentType.
+type SubmitPracticeAnswerJSONRequestBody = SubmitAnswerRequest
+
+// UpdateStudyGuideJSONRequestBody defines body for UpdateStudyGuide for application/json ContentType.
+type UpdateStudyGuideJSONRequestBody = UpdateStudyGuideRequest
+
+// RevokeStudyGuideGrantJSONRequestBody defines body for RevokeStudyGuideGrant for application/json ContentType.
+type RevokeStudyGuideGrantJSONRequestBody = StudyGuideRevokeGrantRequest
+
+// CreateStudyGuideGrantJSONRequestBody defines body for CreateStudyGuideGrant for application/json ContentType.
+type CreateStudyGuideGrantJSONRequestBody = StudyGuideCreateGrantRequest
+
+// CreateQuizJSONRequestBody defines body for CreateQuiz for application/json ContentType.
+type CreateQuizJSONRequestBody = CreateQuizRequest
+
+// AttachResourceJSONRequestBody defines body for AttachResource for application/json ContentType.
+type AttachResourceJSONRequestBody = AttachResourceRequest
+
+// CastStudyGuideVoteJSONRequestBody defines body for CastStudyGuideVote for application/json ContentType.
+type CastStudyGuideVoteJSONRequestBody = CastVoteRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// List and search courses
+	// (GET /courses)
+	ListCourses(w http.ResponseWriter, r *http.Request, params ListCoursesParams)
+	// Get a course detail with embedded sections
+	// (GET /courses/{course_id})
+	GetCourse(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID)
+	// List sections for a course
+	// (GET /courses/{course_id}/sections)
+	ListCourseSections(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, params ListCourseSectionsParams)
+	// List the members of a course section
+	// (GET /courses/{course_id}/sections/{section_id}/members)
+	ListSectionMembers(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID, params ListSectionMembersParams)
+	// Join a section as the authenticated user
+	// (POST /courses/{course_id}/sections/{section_id}/members)
+	JoinSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID)
+	// Leave a section as the authenticated user
+	// (DELETE /courses/{course_id}/sections/{section_id}/members/me)
+	LeaveSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID)
+	// Check the authenticated user's membership in a section
+	// (GET /courses/{course_id}/sections/{section_id}/members/me)
+	CheckMembership(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID)
+	// List study guides for a course
+	// (GET /courses/{course_id}/study-guides)
+	ListStudyGuides(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, params ListStudyGuidesParams)
+	// Create a study guide for a course
+	// (POST /courses/{course_id}/study-guides)
+	CreateStudyGuide(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID)
+	// Create a file metadata record (ASK-105)
+	// (POST /files)
+	CreateFile(w http.ResponseWriter, r *http.Request)
 	// Delete a file by ID
 	// (DELETE /files/{file_id})
 	DeleteFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
 	// Get a file by ID
 	// (GET /files/{file_id})
 	GetFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+	// Update file metadata and status (ASK-113)
+	// (PATCH /files/{file_id})
+	UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+	// Get file contents via presigned redirect (ASK-205)
+	// (GET /files/{file_id}/download)
+	DownloadFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+	// Toggle the file favorite (ASK-130)
+	// (POST /files/{file_id}/favorite)
+	ToggleFileFavorite(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+	// Revoke a permission on a file (ASK-125)
+	// (DELETE /files/{file_id}/grants)
+	RevokeGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+	// Grant a permission on a file (ASK-122)
+	// (POST /files/{file_id}/grants)
+	CreateGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+	// Record a file view (ASK-134)
+	// (POST /files/{file_id}/view)
+	RecordFileView(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID)
+	// List the authenticated user's section enrollments
+	// (GET /me/courses)
+	ListMyEnrollments(w http.ResponseWriter, r *http.Request, params ListMyEnrollmentsParams)
+	// Toggle the course favorite (ASK-157)
+	// (POST /me/courses/{course_id}/favorite)
+	ToggleCourseFavorite(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID)
+	// Aggregated dashboard data for the authenticated user
+	// (GET /me/dashboard)
+	ListDashboard(w http.ResponseWriter, r *http.Request)
+	// List the authenticated user's favorited items
+	// (GET /me/favorites)
+	ListFavorites(w http.ResponseWriter, r *http.Request, params ListFavoritesParams)
 	// List files for the current user
 	// (GET /me/files)
 	ListFiles(w http.ResponseWriter, r *http.Request, params ListFilesParams)
+	// List the authenticated user's most recently viewed items
+	// (GET /me/recents)
+	ListRecents(w http.ResponseWriter, r *http.Request, params ListRecentsParams)
+	// List study guides created by the authenticated user (ASK-131)
+	// (GET /me/study-guides)
+	ListMyStudyGuides(w http.ResponseWriter, r *http.Request, params ListMyStudyGuidesParams)
+	// Toggle the study guide favorite (ASK-156)
+	// (POST /me/study-guides/{study_guide_id}/favorite)
+	ToggleStudyGuideFavorite(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+	// Soft-delete a quiz
+	// (DELETE /quizzes/{quiz_id})
+	DeleteQuiz(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID)
+	// Get a quiz with all questions and correct answers
+	// (GET /quizzes/{quiz_id})
+	GetQuiz(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID)
+	// Update a quiz's metadata (title and/or description)
+	// (PATCH /quizzes/{quiz_id})
+	UpdateQuiz(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID)
+	// Add a question to an existing quiz
+	// (POST /quizzes/{quiz_id}/questions)
+	AddQuizQuestion(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID)
+	// Delete a question from a quiz (ASK-119)
+	// (DELETE /quizzes/{quiz_id}/questions/{question_id})
+	DeleteQuizQuestion(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID, questionId openapi_types.UUID)
+	// Replace a question in a quiz (ASK-108)
+	// (PUT /quizzes/{quiz_id}/questions/{question_id})
+	ReplaceQuizQuestion(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID, questionId openapi_types.UUID)
+	// List the authenticated user's practice sessions for a quiz
+	// (GET /quizzes/{quiz_id}/sessions)
+	ListPracticeSessions(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID, params ListPracticeSessionsParams)
+	// Start a new practice session or resume an existing incomplete one
+	// (POST /quizzes/{quiz_id}/sessions)
+	StartPracticeSession(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID)
+	// Batch-resolve inline entity refs (ASK-208)
+	// (POST /refs/resolve)
+	ResolveRefs(w http.ResponseWriter, r *http.Request)
+	// List and search schools
+	// (GET /schools)
+	ListSchools(w http.ResponseWriter, r *http.Request, params ListSchoolsParams)
+	// Get a single school by ID
+	// (GET /schools/{school_id})
+	GetSchool(w http.ResponseWriter, r *http.Request, schoolId openapi_types.UUID)
+	// Hard-delete an in-progress practice session
+	// (DELETE /sessions/{session_id})
+	AbandonPracticeSession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID)
+	// Get a practice session detail including all submitted answers
+	// (GET /sessions/{session_id})
+	GetPracticeSession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID)
+	// Submit an answer for one question in a practice session
+	// (POST /sessions/{session_id}/answers)
+	SubmitPracticeAnswer(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID)
+	// Mark a practice session as completed and return the score
+	// (POST /sessions/{session_id}/complete)
+	CompletePracticeSession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID)
+	// Soft-delete a study guide
+	// (DELETE /study-guides/{study_guide_id})
+	DeleteStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+	// Get a study guide detail
+	// (GET /study-guides/{study_guide_id})
+	GetStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+	// Update a study guide
+	// (PATCH /study-guides/{study_guide_id})
+	UpdateStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+	// Detach a file from a study guide
+	// (DELETE /study-guides/{study_guide_id}/files/{file_id})
+	DetachFile(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, fileId openapi_types.UUID)
+	// Attach a file to a study guide
+	// (POST /study-guides/{study_guide_id}/files/{file_id})
+	AttachFile(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, fileId openapi_types.UUID)
+	// Revoke a permission on a study guide (ASK-211)
+	// (DELETE /study-guides/{study_guide_id}/grants)
+	RevokeStudyGuideGrant(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+	// List permission grants on a study guide (ASK-211)
+	// (GET /study-guides/{study_guide_id}/grants)
+	ListStudyGuideGrants(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+	// Grant a permission on a study guide (ASK-211)
+	// (POST /study-guides/{study_guide_id}/grants)
+	CreateStudyGuideGrant(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+	// List quizzes attached to a study guide
+	// (GET /study-guides/{study_guide_id}/quizzes)
+	ListQuizzes(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+	// Create a quiz attached to a study guide
+	// (POST /study-guides/{study_guide_id}/quizzes)
+	CreateQuiz(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+	// Remove the authenticated user's recommendation on a study guide
+	// (DELETE /study-guides/{study_guide_id}/recommendations)
+	RemoveStudyGuideRecommendation(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+	// Recommend a study guide
+	// (POST /study-guides/{study_guide_id}/recommendations)
+	RecommendStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+	// Attach an external resource to a study guide
+	// (POST /study-guides/{study_guide_id}/resources)
+	AttachResource(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+	// Detach a resource from a study guide
+	// (DELETE /study-guides/{study_guide_id}/resources/{resource_id})
+	DetachResource(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, resourceId openapi_types.UUID)
+	// Remove the authenticated user's vote on a study guide
+	// (DELETE /study-guides/{study_guide_id}/votes)
+	RemoveStudyGuideVote(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
+	// Cast or change a vote on a study guide
+	// (POST /study-guides/{study_guide_id}/votes)
+	CastStudyGuideVote(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// List and search courses
+// (GET /courses)
+func (_ Unimplemented) ListCourses(w http.ResponseWriter, r *http.Request, params ListCoursesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a course detail with embedded sections
+// (GET /courses/{course_id})
+func (_ Unimplemented) GetCourse(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List sections for a course
+// (GET /courses/{course_id}/sections)
+func (_ Unimplemented) ListCourseSections(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, params ListCourseSectionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the members of a course section
+// (GET /courses/{course_id}/sections/{section_id}/members)
+func (_ Unimplemented) ListSectionMembers(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID, params ListSectionMembersParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Join a section as the authenticated user
+// (POST /courses/{course_id}/sections/{section_id}/members)
+func (_ Unimplemented) JoinSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Leave a section as the authenticated user
+// (DELETE /courses/{course_id}/sections/{section_id}/members/me)
+func (_ Unimplemented) LeaveSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Check the authenticated user's membership in a section
+// (GET /courses/{course_id}/sections/{section_id}/members/me)
+func (_ Unimplemented) CheckMembership(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List study guides for a course
+// (GET /courses/{course_id}/study-guides)
+func (_ Unimplemented) ListStudyGuides(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, params ListStudyGuidesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a study guide for a course
+// (POST /courses/{course_id}/study-guides)
+func (_ Unimplemented) CreateStudyGuide(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a file metadata record (ASK-105)
+// (POST /files)
+func (_ Unimplemented) CreateFile(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // Delete a file by ID
 // (DELETE /files/{file_id})
@@ -276,9 +2814,273 @@ func (_ Unimplemented) GetFile(w http.ResponseWriter, r *http.Request, fileId op
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Update file metadata and status (ASK-113)
+// (PATCH /files/{file_id})
+func (_ Unimplemented) UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get file contents via presigned redirect (ASK-205)
+// (GET /files/{file_id}/download)
+func (_ Unimplemented) DownloadFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Toggle the file favorite (ASK-130)
+// (POST /files/{file_id}/favorite)
+func (_ Unimplemented) ToggleFileFavorite(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Revoke a permission on a file (ASK-125)
+// (DELETE /files/{file_id}/grants)
+func (_ Unimplemented) RevokeGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Grant a permission on a file (ASK-122)
+// (POST /files/{file_id}/grants)
+func (_ Unimplemented) CreateGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record a file view (ASK-134)
+// (POST /files/{file_id}/view)
+func (_ Unimplemented) RecordFileView(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the authenticated user's section enrollments
+// (GET /me/courses)
+func (_ Unimplemented) ListMyEnrollments(w http.ResponseWriter, r *http.Request, params ListMyEnrollmentsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Toggle the course favorite (ASK-157)
+// (POST /me/courses/{course_id}/favorite)
+func (_ Unimplemented) ToggleCourseFavorite(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Aggregated dashboard data for the authenticated user
+// (GET /me/dashboard)
+func (_ Unimplemented) ListDashboard(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the authenticated user's favorited items
+// (GET /me/favorites)
+func (_ Unimplemented) ListFavorites(w http.ResponseWriter, r *http.Request, params ListFavoritesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List files for the current user
 // (GET /me/files)
 func (_ Unimplemented) ListFiles(w http.ResponseWriter, r *http.Request, params ListFilesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the authenticated user's most recently viewed items
+// (GET /me/recents)
+func (_ Unimplemented) ListRecents(w http.ResponseWriter, r *http.Request, params ListRecentsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List study guides created by the authenticated user (ASK-131)
+// (GET /me/study-guides)
+func (_ Unimplemented) ListMyStudyGuides(w http.ResponseWriter, r *http.Request, params ListMyStudyGuidesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Toggle the study guide favorite (ASK-156)
+// (POST /me/study-guides/{study_guide_id}/favorite)
+func (_ Unimplemented) ToggleStudyGuideFavorite(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Soft-delete a quiz
+// (DELETE /quizzes/{quiz_id})
+func (_ Unimplemented) DeleteQuiz(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a quiz with all questions and correct answers
+// (GET /quizzes/{quiz_id})
+func (_ Unimplemented) GetQuiz(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update a quiz's metadata (title and/or description)
+// (PATCH /quizzes/{quiz_id})
+func (_ Unimplemented) UpdateQuiz(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add a question to an existing quiz
+// (POST /quizzes/{quiz_id}/questions)
+func (_ Unimplemented) AddQuizQuestion(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a question from a quiz (ASK-119)
+// (DELETE /quizzes/{quiz_id}/questions/{question_id})
+func (_ Unimplemented) DeleteQuizQuestion(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID, questionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Replace a question in a quiz (ASK-108)
+// (PUT /quizzes/{quiz_id}/questions/{question_id})
+func (_ Unimplemented) ReplaceQuizQuestion(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID, questionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the authenticated user's practice sessions for a quiz
+// (GET /quizzes/{quiz_id}/sessions)
+func (_ Unimplemented) ListPracticeSessions(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID, params ListPracticeSessionsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Start a new practice session or resume an existing incomplete one
+// (POST /quizzes/{quiz_id}/sessions)
+func (_ Unimplemented) StartPracticeSession(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Batch-resolve inline entity refs (ASK-208)
+// (POST /refs/resolve)
+func (_ Unimplemented) ResolveRefs(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List and search schools
+// (GET /schools)
+func (_ Unimplemented) ListSchools(w http.ResponseWriter, r *http.Request, params ListSchoolsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a single school by ID
+// (GET /schools/{school_id})
+func (_ Unimplemented) GetSchool(w http.ResponseWriter, r *http.Request, schoolId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Hard-delete an in-progress practice session
+// (DELETE /sessions/{session_id})
+func (_ Unimplemented) AbandonPracticeSession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a practice session detail including all submitted answers
+// (GET /sessions/{session_id})
+func (_ Unimplemented) GetPracticeSession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Submit an answer for one question in a practice session
+// (POST /sessions/{session_id}/answers)
+func (_ Unimplemented) SubmitPracticeAnswer(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Mark a practice session as completed and return the score
+// (POST /sessions/{session_id}/complete)
+func (_ Unimplemented) CompletePracticeSession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Soft-delete a study guide
+// (DELETE /study-guides/{study_guide_id})
+func (_ Unimplemented) DeleteStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a study guide detail
+// (GET /study-guides/{study_guide_id})
+func (_ Unimplemented) GetStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Update a study guide
+// (PATCH /study-guides/{study_guide_id})
+func (_ Unimplemented) UpdateStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Detach a file from a study guide
+// (DELETE /study-guides/{study_guide_id}/files/{file_id})
+func (_ Unimplemented) DetachFile(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, fileId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Attach a file to a study guide
+// (POST /study-guides/{study_guide_id}/files/{file_id})
+func (_ Unimplemented) AttachFile(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, fileId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Revoke a permission on a study guide (ASK-211)
+// (DELETE /study-guides/{study_guide_id}/grants)
+func (_ Unimplemented) RevokeStudyGuideGrant(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List permission grants on a study guide (ASK-211)
+// (GET /study-guides/{study_guide_id}/grants)
+func (_ Unimplemented) ListStudyGuideGrants(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Grant a permission on a study guide (ASK-211)
+// (POST /study-guides/{study_guide_id}/grants)
+func (_ Unimplemented) CreateStudyGuideGrant(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List quizzes attached to a study guide
+// (GET /study-guides/{study_guide_id}/quizzes)
+func (_ Unimplemented) ListQuizzes(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a quiz attached to a study guide
+// (POST /study-guides/{study_guide_id}/quizzes)
+func (_ Unimplemented) CreateQuiz(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove the authenticated user's recommendation on a study guide
+// (DELETE /study-guides/{study_guide_id}/recommendations)
+func (_ Unimplemented) RemoveStudyGuideRecommendation(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Recommend a study guide
+// (POST /study-guides/{study_guide_id}/recommendations)
+func (_ Unimplemented) RecommendStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Attach an external resource to a study guide
+// (POST /study-guides/{study_guide_id}/resources)
+func (_ Unimplemented) AttachResource(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Detach a resource from a study guide
+// (DELETE /study-guides/{study_guide_id}/resources/{resource_id})
+func (_ Unimplemented) DetachResource(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, resourceId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove the authenticated user's vote on a study guide
+// (DELETE /study-guides/{study_guide_id}/votes)
+func (_ Unimplemented) RemoveStudyGuideVote(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Cast or change a vote on a study guide
+// (POST /study-guides/{study_guide_id}/votes)
+func (_ Unimplemented) CastStudyGuideVote(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -290,6 +3092,480 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// ListCourses operation middleware
+func (siw *ServerInterfaceWrapper) ListCourses(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCoursesParams
+
+	// ------------- Optional query parameter "school_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "school_id", r.URL.Query(), &params.SchoolId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "school_id", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "department" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "department", r.URL.Query(), &params.Department, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "department", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "sort_by" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort_by", r.URL.Query(), &params.SortBy, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort_by", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "sort_dir" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort_dir", r.URL.Query(), &params.SortDir, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort_dir", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "page_limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "page_limit", r.URL.Query(), &params.PageLimit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page_limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCourses(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCourse operation middleware
+func (siw *ServerInterfaceWrapper) GetCourse(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "course_id" -------------
+	var courseId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "course_id", chi.URLParam(r, "course_id"), &courseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "course_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCourse(w, r, courseId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCourseSections operation middleware
+func (siw *ServerInterfaceWrapper) ListCourseSections(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "course_id" -------------
+	var courseId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "course_id", chi.URLParam(r, "course_id"), &courseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "course_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCourseSectionsParams
+
+	// ------------- Optional query parameter "term" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "term", r.URL.Query(), &params.Term, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "term", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCourseSections(w, r, courseId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSectionMembers operation middleware
+func (siw *ServerInterfaceWrapper) ListSectionMembers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "course_id" -------------
+	var courseId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "course_id", chi.URLParam(r, "course_id"), &courseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "course_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "section_id" -------------
+	var sectionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "section_id", chi.URLParam(r, "section_id"), &sectionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "section_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSectionMembersParams
+
+	// ------------- Optional query parameter "role" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "role", r.URL.Query(), &params.Role, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSectionMembers(w, r, courseId, sectionId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// JoinSection operation middleware
+func (siw *ServerInterfaceWrapper) JoinSection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "course_id" -------------
+	var courseId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "course_id", chi.URLParam(r, "course_id"), &courseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "course_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "section_id" -------------
+	var sectionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "section_id", chi.URLParam(r, "section_id"), &sectionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "section_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.JoinSection(w, r, courseId, sectionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// LeaveSection operation middleware
+func (siw *ServerInterfaceWrapper) LeaveSection(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "course_id" -------------
+	var courseId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "course_id", chi.URLParam(r, "course_id"), &courseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "course_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "section_id" -------------
+	var sectionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "section_id", chi.URLParam(r, "section_id"), &sectionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "section_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.LeaveSection(w, r, courseId, sectionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CheckMembership operation middleware
+func (siw *ServerInterfaceWrapper) CheckMembership(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "course_id" -------------
+	var courseId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "course_id", chi.URLParam(r, "course_id"), &courseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "course_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "section_id" -------------
+	var sectionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "section_id", chi.URLParam(r, "section_id"), &sectionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "section_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CheckMembership(w, r, courseId, sectionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListStudyGuides operation middleware
+func (siw *ServerInterfaceWrapper) ListStudyGuides(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "course_id" -------------
+	var courseId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "course_id", chi.URLParam(r, "course_id"), &courseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "course_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListStudyGuidesParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "tag" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tag", r.URL.Query(), &params.Tag, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "sort_by" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort_by", r.URL.Query(), &params.SortBy, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort_by", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "sort_dir" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort_dir", r.URL.Query(), &params.SortDir, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort_dir", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "page_limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "page_limit", r.URL.Query(), &params.PageLimit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page_limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListStudyGuides(w, r, courseId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateStudyGuide operation middleware
+func (siw *ServerInterfaceWrapper) CreateStudyGuide(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "course_id" -------------
+	var courseId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "course_id", chi.URLParam(r, "course_id"), &courseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "course_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateStudyGuide(w, r, courseId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateFile operation middleware
+func (siw *ServerInterfaceWrapper) CreateFile(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateFile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // DeleteFile operation middleware
 func (siw *ServerInterfaceWrapper) DeleteFile(w http.ResponseWriter, r *http.Request) {
@@ -344,6 +3620,333 @@ func (siw *ServerInterfaceWrapper) GetFile(w http.ResponseWriter, r *http.Reques
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetFile(w, r, fileId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateFile operation middleware
+func (siw *ServerInterfaceWrapper) UpdateFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "file_id" -------------
+	var fileId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file_id", chi.URLParam(r, "file_id"), &fileId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateFile(w, r, fileId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadFile operation middleware
+func (siw *ServerInterfaceWrapper) DownloadFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "file_id" -------------
+	var fileId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file_id", chi.URLParam(r, "file_id"), &fileId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadFile(w, r, fileId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ToggleFileFavorite operation middleware
+func (siw *ServerInterfaceWrapper) ToggleFileFavorite(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "file_id" -------------
+	var fileId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file_id", chi.URLParam(r, "file_id"), &fileId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ToggleFileFavorite(w, r, fileId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeGrant operation middleware
+func (siw *ServerInterfaceWrapper) RevokeGrant(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "file_id" -------------
+	var fileId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file_id", chi.URLParam(r, "file_id"), &fileId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeGrant(w, r, fileId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateGrant operation middleware
+func (siw *ServerInterfaceWrapper) CreateGrant(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "file_id" -------------
+	var fileId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file_id", chi.URLParam(r, "file_id"), &fileId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateGrant(w, r, fileId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordFileView operation middleware
+func (siw *ServerInterfaceWrapper) RecordFileView(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "file_id" -------------
+	var fileId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file_id", chi.URLParam(r, "file_id"), &fileId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordFileView(w, r, fileId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMyEnrollments operation middleware
+func (siw *ServerInterfaceWrapper) ListMyEnrollments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMyEnrollmentsParams
+
+	// ------------- Optional query parameter "term" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "term", r.URL.Query(), &params.Term, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "term", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "role" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "role", r.URL.Query(), &params.Role, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "role", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMyEnrollments(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ToggleCourseFavorite operation middleware
+func (siw *ServerInterfaceWrapper) ToggleCourseFavorite(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "course_id" -------------
+	var courseId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "course_id", chi.URLParam(r, "course_id"), &courseId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "course_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ToggleCourseFavorite(w, r, courseId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListDashboard operation middleware
+func (siw *ServerInterfaceWrapper) ListDashboard(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListDashboard(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListFavorites operation middleware
+func (siw *ServerInterfaceWrapper) ListFavorites(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListFavoritesParams
+
+	// ------------- Optional query parameter "entity_type" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "entity_type", r.URL.Query(), &params.EntityType, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListFavorites(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -490,6 +4093,1167 @@ func (siw *ServerInterfaceWrapper) ListFiles(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// ListRecents operation middleware
+func (siw *ServerInterfaceWrapper) ListRecents(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListRecentsParams
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListRecents(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMyStudyGuides operation middleware
+func (siw *ServerInterfaceWrapper) ListMyStudyGuides(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMyStudyGuidesParams
+
+	// ------------- Optional query parameter "course_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "course_id", r.URL.Query(), &params.CourseId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "course_id", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "sort_by" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "sort_by", r.URL.Query(), &params.SortBy, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sort_by", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMyStudyGuides(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ToggleStudyGuideFavorite operation middleware
+func (siw *ServerInterfaceWrapper) ToggleStudyGuideFavorite(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ToggleStudyGuideFavorite(w, r, studyGuideId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteQuiz operation middleware
+func (siw *ServerInterfaceWrapper) DeleteQuiz(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "quiz_id" -------------
+	var quizId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "quiz_id", chi.URLParam(r, "quiz_id"), &quizId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "quiz_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteQuiz(w, r, quizId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetQuiz operation middleware
+func (siw *ServerInterfaceWrapper) GetQuiz(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "quiz_id" -------------
+	var quizId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "quiz_id", chi.URLParam(r, "quiz_id"), &quizId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "quiz_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetQuiz(w, r, quizId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateQuiz operation middleware
+func (siw *ServerInterfaceWrapper) UpdateQuiz(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "quiz_id" -------------
+	var quizId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "quiz_id", chi.URLParam(r, "quiz_id"), &quizId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "quiz_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateQuiz(w, r, quizId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddQuizQuestion operation middleware
+func (siw *ServerInterfaceWrapper) AddQuizQuestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "quiz_id" -------------
+	var quizId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "quiz_id", chi.URLParam(r, "quiz_id"), &quizId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "quiz_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddQuizQuestion(w, r, quizId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteQuizQuestion operation middleware
+func (siw *ServerInterfaceWrapper) DeleteQuizQuestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "quiz_id" -------------
+	var quizId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "quiz_id", chi.URLParam(r, "quiz_id"), &quizId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "quiz_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "question_id" -------------
+	var questionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "question_id", chi.URLParam(r, "question_id"), &questionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "question_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteQuizQuestion(w, r, quizId, questionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReplaceQuizQuestion operation middleware
+func (siw *ServerInterfaceWrapper) ReplaceQuizQuestion(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "quiz_id" -------------
+	var quizId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "quiz_id", chi.URLParam(r, "quiz_id"), &quizId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "quiz_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "question_id" -------------
+	var questionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "question_id", chi.URLParam(r, "question_id"), &questionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "question_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReplaceQuizQuestion(w, r, quizId, questionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListPracticeSessions operation middleware
+func (siw *ServerInterfaceWrapper) ListPracticeSessions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "quiz_id" -------------
+	var quizId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "quiz_id", chi.URLParam(r, "quiz_id"), &quizId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "quiz_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListPracticeSessionsParams
+
+	// ------------- Optional query parameter "status" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "status", r.URL.Query(), &params.Status, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "status", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListPracticeSessions(w, r, quizId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartPracticeSession operation middleware
+func (siw *ServerInterfaceWrapper) StartPracticeSession(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "quiz_id" -------------
+	var quizId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "quiz_id", chi.URLParam(r, "quiz_id"), &quizId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "quiz_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartPracticeSession(w, r, quizId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ResolveRefs operation middleware
+func (siw *ServerInterfaceWrapper) ResolveRefs(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResolveRefs(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListSchools operation middleware
+func (siw *ServerInterfaceWrapper) ListSchools(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListSchoolsParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "page_limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "page_limit", r.URL.Query(), &params.PageLimit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "page_limit", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListSchools(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSchool operation middleware
+func (siw *ServerInterfaceWrapper) GetSchool(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "school_id" -------------
+	var schoolId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "school_id", chi.URLParam(r, "school_id"), &schoolId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "school_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSchool(w, r, schoolId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AbandonPracticeSession operation middleware
+func (siw *ServerInterfaceWrapper) AbandonPracticeSession(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "session_id" -------------
+	var sessionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "session_id", chi.URLParam(r, "session_id"), &sessionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "session_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AbandonPracticeSession(w, r, sessionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetPracticeSession operation middleware
+func (siw *ServerInterfaceWrapper) GetPracticeSession(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "session_id" -------------
+	var sessionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "session_id", chi.URLParam(r, "session_id"), &sessionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "session_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPracticeSession(w, r, sessionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SubmitPracticeAnswer operation middleware
+func (siw *ServerInterfaceWrapper) SubmitPracticeAnswer(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "session_id" -------------
+	var sessionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "session_id", chi.URLParam(r, "session_id"), &sessionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "session_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitPracticeAnswer(w, r, sessionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CompletePracticeSession operation middleware
+func (siw *ServerInterfaceWrapper) CompletePracticeSession(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "session_id" -------------
+	var sessionId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "session_id", chi.URLParam(r, "session_id"), &sessionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "session_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompletePracticeSession(w, r, sessionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteStudyGuide operation middleware
+func (siw *ServerInterfaceWrapper) DeleteStudyGuide(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteStudyGuide(w, r, studyGuideId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetStudyGuide operation middleware
+func (siw *ServerInterfaceWrapper) GetStudyGuide(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetStudyGuide(w, r, studyGuideId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateStudyGuide operation middleware
+func (siw *ServerInterfaceWrapper) UpdateStudyGuide(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateStudyGuide(w, r, studyGuideId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DetachFile operation middleware
+func (siw *ServerInterfaceWrapper) DetachFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "file_id" -------------
+	var fileId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file_id", chi.URLParam(r, "file_id"), &fileId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DetachFile(w, r, studyGuideId, fileId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AttachFile operation middleware
+func (siw *ServerInterfaceWrapper) AttachFile(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "file_id" -------------
+	var fileId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "file_id", chi.URLParam(r, "file_id"), &fileId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "file_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AttachFile(w, r, studyGuideId, fileId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RevokeStudyGuideGrant operation middleware
+func (siw *ServerInterfaceWrapper) RevokeStudyGuideGrant(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RevokeStudyGuideGrant(w, r, studyGuideId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListStudyGuideGrants operation middleware
+func (siw *ServerInterfaceWrapper) ListStudyGuideGrants(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListStudyGuideGrants(w, r, studyGuideId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateStudyGuideGrant operation middleware
+func (siw *ServerInterfaceWrapper) CreateStudyGuideGrant(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateStudyGuideGrant(w, r, studyGuideId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListQuizzes operation middleware
+func (siw *ServerInterfaceWrapper) ListQuizzes(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListQuizzes(w, r, studyGuideId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateQuiz operation middleware
+func (siw *ServerInterfaceWrapper) CreateQuiz(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateQuiz(w, r, studyGuideId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveStudyGuideRecommendation operation middleware
+func (siw *ServerInterfaceWrapper) RemoveStudyGuideRecommendation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveStudyGuideRecommendation(w, r, studyGuideId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecommendStudyGuide operation middleware
+func (siw *ServerInterfaceWrapper) RecommendStudyGuide(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecommendStudyGuide(w, r, studyGuideId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AttachResource operation middleware
+func (siw *ServerInterfaceWrapper) AttachResource(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AttachResource(w, r, studyGuideId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DetachResource operation middleware
+func (siw *ServerInterfaceWrapper) DetachResource(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "resource_id" -------------
+	var resourceId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "resource_id", chi.URLParam(r, "resource_id"), &resourceId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "resource_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DetachResource(w, r, studyGuideId, resourceId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveStudyGuideVote operation middleware
+func (siw *ServerInterfaceWrapper) RemoveStudyGuideVote(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveStudyGuideVote(w, r, studyGuideId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CastStudyGuideVote operation middleware
+func (siw *ServerInterfaceWrapper) CastStudyGuideVote(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+
+	// ------------- Path parameter "study_guide_id" -------------
+	var studyGuideId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "study_guide_id", chi.URLParam(r, "study_guide_id"), &studyGuideId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "study_guide_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CastStudyGuideVote(w, r, studyGuideId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -604,19 +5368,183 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/courses", wrapper.ListCourses)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/courses/{course_id}", wrapper.GetCourse)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/courses/{course_id}/sections", wrapper.ListCourseSections)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/courses/{course_id}/sections/{section_id}/members", wrapper.ListSectionMembers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/courses/{course_id}/sections/{section_id}/members", wrapper.JoinSection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/courses/{course_id}/sections/{section_id}/members/me", wrapper.LeaveSection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/courses/{course_id}/sections/{section_id}/members/me", wrapper.CheckMembership)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/courses/{course_id}/study-guides", wrapper.ListStudyGuides)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/courses/{course_id}/study-guides", wrapper.CreateStudyGuide)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/files", wrapper.CreateFile)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/files/{file_id}", wrapper.DeleteFile)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/files/{file_id}", wrapper.GetFile)
 	})
 	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/files/{file_id}", wrapper.UpdateFile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/files/{file_id}/download", wrapper.DownloadFile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/files/{file_id}/favorite", wrapper.ToggleFileFavorite)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/files/{file_id}/grants", wrapper.RevokeGrant)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/files/{file_id}/grants", wrapper.CreateGrant)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/files/{file_id}/view", wrapper.RecordFileView)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/courses", wrapper.ListMyEnrollments)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/courses/{course_id}/favorite", wrapper.ToggleCourseFavorite)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/dashboard", wrapper.ListDashboard)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/favorites", wrapper.ListFavorites)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/files", wrapper.ListFiles)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/recents", wrapper.ListRecents)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/study-guides", wrapper.ListMyStudyGuides)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/study-guides/{study_guide_id}/favorite", wrapper.ToggleStudyGuideFavorite)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/quizzes/{quiz_id}", wrapper.DeleteQuiz)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/quizzes/{quiz_id}", wrapper.GetQuiz)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/quizzes/{quiz_id}", wrapper.UpdateQuiz)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/quizzes/{quiz_id}/questions", wrapper.AddQuizQuestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/quizzes/{quiz_id}/questions/{question_id}", wrapper.DeleteQuizQuestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/quizzes/{quiz_id}/questions/{question_id}", wrapper.ReplaceQuizQuestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/quizzes/{quiz_id}/sessions", wrapper.ListPracticeSessions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/quizzes/{quiz_id}/sessions", wrapper.StartPracticeSession)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/refs/resolve", wrapper.ResolveRefs)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/schools", wrapper.ListSchools)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/schools/{school_id}", wrapper.GetSchool)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/sessions/{session_id}", wrapper.AbandonPracticeSession)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/sessions/{session_id}", wrapper.GetPracticeSession)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/sessions/{session_id}/answers", wrapper.SubmitPracticeAnswer)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/sessions/{session_id}/complete", wrapper.CompletePracticeSession)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/study-guides/{study_guide_id}", wrapper.DeleteStudyGuide)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/study-guides/{study_guide_id}", wrapper.GetStudyGuide)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/study-guides/{study_guide_id}", wrapper.UpdateStudyGuide)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/study-guides/{study_guide_id}/files/{file_id}", wrapper.DetachFile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/study-guides/{study_guide_id}/files/{file_id}", wrapper.AttachFile)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/study-guides/{study_guide_id}/grants", wrapper.RevokeStudyGuideGrant)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/study-guides/{study_guide_id}/grants", wrapper.ListStudyGuideGrants)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/study-guides/{study_guide_id}/grants", wrapper.CreateStudyGuideGrant)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/study-guides/{study_guide_id}/quizzes", wrapper.ListQuizzes)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/study-guides/{study_guide_id}/quizzes", wrapper.CreateQuiz)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/study-guides/{study_guide_id}/recommendations", wrapper.RemoveStudyGuideRecommendation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/study-guides/{study_guide_id}/recommendations", wrapper.RecommendStudyGuide)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/study-guides/{study_guide_id}/resources", wrapper.AttachResource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/study-guides/{study_guide_id}/resources/{resource_id}", wrapper.DetachResource)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/study-guides/{study_guide_id}/votes", wrapper.RemoveStudyGuideVote)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/study-guides/{study_guide_id}/votes", wrapper.CastStudyGuideVote)
 	})
 
 	return r
 }
 
 type BadRequestJSONResponse AppError
+
+type ConflictJSONResponse AppError
 
 type ForbiddenJSONResponse AppError
 
@@ -625,6 +5553,554 @@ type InternalServerErrorJSONResponse AppError
 type NotFoundJSONResponse AppError
 
 type UnauthorizedJSONResponse AppError
+
+type ListCoursesRequestObject struct {
+	Params ListCoursesParams
+}
+
+type ListCoursesResponseObject interface {
+	VisitListCoursesResponse(w http.ResponseWriter) error
+}
+
+type ListCourses200JSONResponse ListCoursesResponse
+
+func (response ListCourses200JSONResponse) VisitListCoursesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCourses400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListCourses400JSONResponse) VisitListCoursesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCourses401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListCourses401JSONResponse) VisitListCoursesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCourses500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListCourses500JSONResponse) VisitListCoursesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCourseRequestObject struct {
+	CourseId openapi_types.UUID `json:"course_id"`
+}
+
+type GetCourseResponseObject interface {
+	VisitGetCourseResponse(w http.ResponseWriter) error
+}
+
+type GetCourse200JSONResponse CourseDetailResponse
+
+func (response GetCourse200JSONResponse) VisitGetCourseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCourse400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetCourse400JSONResponse) VisitGetCourseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCourse401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetCourse401JSONResponse) VisitGetCourseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCourse404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetCourse404JSONResponse) VisitGetCourseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetCourse500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response GetCourse500JSONResponse) VisitGetCourseResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCourseSectionsRequestObject struct {
+	CourseId openapi_types.UUID `json:"course_id"`
+	Params   ListCourseSectionsParams
+}
+
+type ListCourseSectionsResponseObject interface {
+	VisitListCourseSectionsResponse(w http.ResponseWriter) error
+}
+
+type ListCourseSections200JSONResponse ListCourseSectionsResponse
+
+func (response ListCourseSections200JSONResponse) VisitListCourseSectionsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCourseSections400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListCourseSections400JSONResponse) VisitListCourseSectionsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCourseSections401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListCourseSections401JSONResponse) VisitListCourseSectionsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCourseSections404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListCourseSections404JSONResponse) VisitListCourseSectionsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListCourseSections500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListCourseSections500JSONResponse) VisitListCourseSectionsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListSectionMembersRequestObject struct {
+	CourseId  openapi_types.UUID `json:"course_id"`
+	SectionId openapi_types.UUID `json:"section_id"`
+	Params    ListSectionMembersParams
+}
+
+type ListSectionMembersResponseObject interface {
+	VisitListSectionMembersResponse(w http.ResponseWriter) error
+}
+
+type ListSectionMembers200JSONResponse ListSectionMembersResponse
+
+func (response ListSectionMembers200JSONResponse) VisitListSectionMembersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListSectionMembers400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListSectionMembers400JSONResponse) VisitListSectionMembersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListSectionMembers401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListSectionMembers401JSONResponse) VisitListSectionMembersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListSectionMembers404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListSectionMembers404JSONResponse) VisitListSectionMembersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListSectionMembers500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListSectionMembers500JSONResponse) VisitListSectionMembersResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type JoinSectionRequestObject struct {
+	CourseId  openapi_types.UUID `json:"course_id"`
+	SectionId openapi_types.UUID `json:"section_id"`
+}
+
+type JoinSectionResponseObject interface {
+	VisitJoinSectionResponse(w http.ResponseWriter) error
+}
+
+type JoinSection201JSONResponse CourseMemberResponse
+
+func (response JoinSection201JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type JoinSection400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response JoinSection400JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type JoinSection401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response JoinSection401JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type JoinSection404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response JoinSection404JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type JoinSection409JSONResponse struct{ ConflictJSONResponse }
+
+func (response JoinSection409JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type JoinSection500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response JoinSection500JSONResponse) VisitJoinSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LeaveSectionRequestObject struct {
+	CourseId  openapi_types.UUID `json:"course_id"`
+	SectionId openapi_types.UUID `json:"section_id"`
+}
+
+type LeaveSectionResponseObject interface {
+	VisitLeaveSectionResponse(w http.ResponseWriter) error
+}
+
+type LeaveSection204Response struct {
+}
+
+func (response LeaveSection204Response) VisitLeaveSectionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type LeaveSection400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response LeaveSection400JSONResponse) VisitLeaveSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LeaveSection401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response LeaveSection401JSONResponse) VisitLeaveSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LeaveSection404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response LeaveSection404JSONResponse) VisitLeaveSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type LeaveSection500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response LeaveSection500JSONResponse) VisitLeaveSectionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CheckMembershipRequestObject struct {
+	CourseId  openapi_types.UUID `json:"course_id"`
+	SectionId openapi_types.UUID `json:"section_id"`
+}
+
+type CheckMembershipResponseObject interface {
+	VisitCheckMembershipResponse(w http.ResponseWriter) error
+}
+
+type CheckMembership200JSONResponse MembershipCheckResponse
+
+func (response CheckMembership200JSONResponse) VisitCheckMembershipResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CheckMembership400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CheckMembership400JSONResponse) VisitCheckMembershipResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CheckMembership401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CheckMembership401JSONResponse) VisitCheckMembershipResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CheckMembership404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CheckMembership404JSONResponse) VisitCheckMembershipResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CheckMembership500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response CheckMembership500JSONResponse) VisitCheckMembershipResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListStudyGuidesRequestObject struct {
+	CourseId openapi_types.UUID `json:"course_id"`
+	Params   ListStudyGuidesParams
+}
+
+type ListStudyGuidesResponseObject interface {
+	VisitListStudyGuidesResponse(w http.ResponseWriter) error
+}
+
+type ListStudyGuides200JSONResponse ListStudyGuidesResponse
+
+func (response ListStudyGuides200JSONResponse) VisitListStudyGuidesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListStudyGuides400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListStudyGuides400JSONResponse) VisitListStudyGuidesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListStudyGuides401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListStudyGuides401JSONResponse) VisitListStudyGuidesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListStudyGuides404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListStudyGuides404JSONResponse) VisitListStudyGuidesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListStudyGuides500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListStudyGuides500JSONResponse) VisitListStudyGuidesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateStudyGuideRequestObject struct {
+	CourseId openapi_types.UUID `json:"course_id"`
+	Body     *CreateStudyGuideJSONRequestBody
+}
+
+type CreateStudyGuideResponseObject interface {
+	VisitCreateStudyGuideResponse(w http.ResponseWriter) error
+}
+
+type CreateStudyGuide201JSONResponse StudyGuideDetailResponse
+
+func (response CreateStudyGuide201JSONResponse) VisitCreateStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateStudyGuide400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateStudyGuide400JSONResponse) VisitCreateStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateStudyGuide401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateStudyGuide401JSONResponse) VisitCreateStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateStudyGuide404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateStudyGuide404JSONResponse) VisitCreateStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateStudyGuide500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response CreateStudyGuide500JSONResponse) VisitCreateStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateFileRequestObject struct {
+	Body *CreateFileJSONRequestBody
+}
+
+type CreateFileResponseObject interface {
+	VisitCreateFileResponse(w http.ResponseWriter) error
+}
+
+type CreateFile201JSONResponse FileResponse
+
+func (response CreateFile201JSONResponse) VisitCreateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateFile400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateFile400JSONResponse) VisitCreateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateFile401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateFile401JSONResponse) VisitCreateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateFile500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response CreateFile500JSONResponse) VisitCreateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
 
 type DeleteFileRequestObject struct {
 	FileId openapi_types.UUID `json:"file_id"`
@@ -735,6 +6211,570 @@ func (response GetFile500JSONResponse) VisitGetFileResponse(w http.ResponseWrite
 	return json.NewEncoder(w).Encode(response)
 }
 
+type UpdateFileRequestObject struct {
+	FileId openapi_types.UUID `json:"file_id"`
+	Body   *UpdateFileJSONRequestBody
+}
+
+type UpdateFileResponseObject interface {
+	VisitUpdateFileResponse(w http.ResponseWriter) error
+}
+
+type UpdateFile200JSONResponse FileResponse
+
+func (response UpdateFile200JSONResponse) VisitUpdateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateFile400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateFile400JSONResponse) VisitUpdateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateFile401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateFile401JSONResponse) VisitUpdateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateFile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateFile403JSONResponse) VisitUpdateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateFile404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateFile404JSONResponse) VisitUpdateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateFile500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response UpdateFile500JSONResponse) VisitUpdateFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DownloadFileRequestObject struct {
+	FileId openapi_types.UUID `json:"file_id"`
+}
+
+type DownloadFileResponseObject interface {
+	VisitDownloadFileResponse(w http.ResponseWriter) error
+}
+
+type DownloadFile302ResponseHeaders struct {
+	Location string
+}
+
+type DownloadFile302Response struct {
+	Headers DownloadFile302ResponseHeaders
+}
+
+func (response DownloadFile302Response) VisitDownloadFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Location", fmt.Sprint(response.Headers.Location))
+	w.WriteHeader(302)
+	return nil
+}
+
+type DownloadFile400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DownloadFile400JSONResponse) VisitDownloadFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DownloadFile401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DownloadFile401JSONResponse) VisitDownloadFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DownloadFile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DownloadFile403JSONResponse) VisitDownloadFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DownloadFile404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DownloadFile404JSONResponse) VisitDownloadFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DownloadFile500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response DownloadFile500JSONResponse) VisitDownloadFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ToggleFileFavoriteRequestObject struct {
+	FileId openapi_types.UUID `json:"file_id"`
+}
+
+type ToggleFileFavoriteResponseObject interface {
+	VisitToggleFileFavoriteResponse(w http.ResponseWriter) error
+}
+
+type ToggleFileFavorite200JSONResponse ToggleFavoriteResponse
+
+func (response ToggleFileFavorite200JSONResponse) VisitToggleFileFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ToggleFileFavorite400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ToggleFileFavorite400JSONResponse) VisitToggleFileFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ToggleFileFavorite401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ToggleFileFavorite401JSONResponse) VisitToggleFileFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ToggleFileFavorite404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ToggleFileFavorite404JSONResponse) VisitToggleFileFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ToggleFileFavorite500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ToggleFileFavorite500JSONResponse) VisitToggleFileFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevokeGrantRequestObject struct {
+	FileId openapi_types.UUID `json:"file_id"`
+	Body   *RevokeGrantJSONRequestBody
+}
+
+type RevokeGrantResponseObject interface {
+	VisitRevokeGrantResponse(w http.ResponseWriter) error
+}
+
+type RevokeGrant204Response struct {
+}
+
+func (response RevokeGrant204Response) VisitRevokeGrantResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RevokeGrant400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RevokeGrant400JSONResponse) VisitRevokeGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevokeGrant401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RevokeGrant401JSONResponse) VisitRevokeGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevokeGrant403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RevokeGrant403JSONResponse) VisitRevokeGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevokeGrant404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RevokeGrant404JSONResponse) VisitRevokeGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevokeGrant500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response RevokeGrant500JSONResponse) VisitRevokeGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateGrantRequestObject struct {
+	FileId openapi_types.UUID `json:"file_id"`
+	Body   *CreateGrantJSONRequestBody
+}
+
+type CreateGrantResponseObject interface {
+	VisitCreateGrantResponse(w http.ResponseWriter) error
+}
+
+type CreateGrant201JSONResponse GrantResponse
+
+func (response CreateGrant201JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateGrant400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateGrant400JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateGrant401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateGrant401JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateGrant403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateGrant403JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateGrant404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateGrant404JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateGrant409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateGrant409JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateGrant500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response CreateGrant500JSONResponse) VisitCreateGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RecordFileViewRequestObject struct {
+	FileId openapi_types.UUID `json:"file_id"`
+}
+
+type RecordFileViewResponseObject interface {
+	VisitRecordFileViewResponse(w http.ResponseWriter) error
+}
+
+type RecordFileView204Response struct {
+}
+
+func (response RecordFileView204Response) VisitRecordFileViewResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RecordFileView400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RecordFileView400JSONResponse) VisitRecordFileViewResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RecordFileView401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RecordFileView401JSONResponse) VisitRecordFileViewResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RecordFileView404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RecordFileView404JSONResponse) VisitRecordFileViewResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RecordFileView500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response RecordFileView500JSONResponse) VisitRecordFileViewResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListMyEnrollmentsRequestObject struct {
+	Params ListMyEnrollmentsParams
+}
+
+type ListMyEnrollmentsResponseObject interface {
+	VisitListMyEnrollmentsResponse(w http.ResponseWriter) error
+}
+
+type ListMyEnrollments200JSONResponse ListMyEnrollmentsResponse
+
+func (response ListMyEnrollments200JSONResponse) VisitListMyEnrollmentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListMyEnrollments400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListMyEnrollments400JSONResponse) VisitListMyEnrollmentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListMyEnrollments401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListMyEnrollments401JSONResponse) VisitListMyEnrollmentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListMyEnrollments500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListMyEnrollments500JSONResponse) VisitListMyEnrollmentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ToggleCourseFavoriteRequestObject struct {
+	CourseId openapi_types.UUID `json:"course_id"`
+}
+
+type ToggleCourseFavoriteResponseObject interface {
+	VisitToggleCourseFavoriteResponse(w http.ResponseWriter) error
+}
+
+type ToggleCourseFavorite200JSONResponse ToggleFavoriteResponse
+
+func (response ToggleCourseFavorite200JSONResponse) VisitToggleCourseFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ToggleCourseFavorite400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ToggleCourseFavorite400JSONResponse) VisitToggleCourseFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ToggleCourseFavorite401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ToggleCourseFavorite401JSONResponse) VisitToggleCourseFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ToggleCourseFavorite404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ToggleCourseFavorite404JSONResponse) VisitToggleCourseFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ToggleCourseFavorite500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ToggleCourseFavorite500JSONResponse) VisitToggleCourseFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListDashboardRequestObject struct {
+}
+
+type ListDashboardResponseObject interface {
+	VisitListDashboardResponse(w http.ResponseWriter) error
+}
+
+type ListDashboard200JSONResponse DashboardResponse
+
+func (response ListDashboard200JSONResponse) VisitListDashboardResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListDashboard401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListDashboard401JSONResponse) VisitListDashboardResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListDashboard500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListDashboard500JSONResponse) VisitListDashboardResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListFavoritesRequestObject struct {
+	Params ListFavoritesParams
+}
+
+type ListFavoritesResponseObject interface {
+	VisitListFavoritesResponse(w http.ResponseWriter) error
+}
+
+type ListFavorites200JSONResponse ListFavoritesResponse
+
+func (response ListFavorites200JSONResponse) VisitListFavoritesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListFavorites400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListFavorites400JSONResponse) VisitListFavoritesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListFavorites401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListFavorites401JSONResponse) VisitListFavoritesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListFavorites500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListFavorites500JSONResponse) VisitListFavoritesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 type ListFilesRequestObject struct {
 	Params ListFilesParams
 }
@@ -781,17 +6821,2227 @@ func (response ListFiles500JSONResponse) VisitListFilesResponse(w http.ResponseW
 	return json.NewEncoder(w).Encode(response)
 }
 
+type ListRecentsRequestObject struct {
+	Params ListRecentsParams
+}
+
+type ListRecentsResponseObject interface {
+	VisitListRecentsResponse(w http.ResponseWriter) error
+}
+
+type ListRecents200JSONResponse ListRecentsResponse
+
+func (response ListRecents200JSONResponse) VisitListRecentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListRecents400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListRecents400JSONResponse) VisitListRecentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListRecents401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListRecents401JSONResponse) VisitListRecentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListRecents500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListRecents500JSONResponse) VisitListRecentsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListMyStudyGuidesRequestObject struct {
+	Params ListMyStudyGuidesParams
+}
+
+type ListMyStudyGuidesResponseObject interface {
+	VisitListMyStudyGuidesResponse(w http.ResponseWriter) error
+}
+
+type ListMyStudyGuides200JSONResponse ListMyStudyGuidesResponse
+
+func (response ListMyStudyGuides200JSONResponse) VisitListMyStudyGuidesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListMyStudyGuides400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListMyStudyGuides400JSONResponse) VisitListMyStudyGuidesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListMyStudyGuides401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListMyStudyGuides401JSONResponse) VisitListMyStudyGuidesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListMyStudyGuides500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListMyStudyGuides500JSONResponse) VisitListMyStudyGuidesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ToggleStudyGuideFavoriteRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+}
+
+type ToggleStudyGuideFavoriteResponseObject interface {
+	VisitToggleStudyGuideFavoriteResponse(w http.ResponseWriter) error
+}
+
+type ToggleStudyGuideFavorite200JSONResponse ToggleFavoriteResponse
+
+func (response ToggleStudyGuideFavorite200JSONResponse) VisitToggleStudyGuideFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ToggleStudyGuideFavorite400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ToggleStudyGuideFavorite400JSONResponse) VisitToggleStudyGuideFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ToggleStudyGuideFavorite401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ToggleStudyGuideFavorite401JSONResponse) VisitToggleStudyGuideFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ToggleStudyGuideFavorite404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ToggleStudyGuideFavorite404JSONResponse) VisitToggleStudyGuideFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ToggleStudyGuideFavorite500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ToggleStudyGuideFavorite500JSONResponse) VisitToggleStudyGuideFavoriteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteQuizRequestObject struct {
+	QuizId openapi_types.UUID `json:"quiz_id"`
+}
+
+type DeleteQuizResponseObject interface {
+	VisitDeleteQuizResponse(w http.ResponseWriter) error
+}
+
+type DeleteQuiz204Response struct {
+}
+
+func (response DeleteQuiz204Response) VisitDeleteQuizResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteQuiz401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteQuiz401JSONResponse) VisitDeleteQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteQuiz403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteQuiz403JSONResponse) VisitDeleteQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteQuiz404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteQuiz404JSONResponse) VisitDeleteQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteQuiz500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response DeleteQuiz500JSONResponse) VisitDeleteQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetQuizRequestObject struct {
+	QuizId openapi_types.UUID `json:"quiz_id"`
+}
+
+type GetQuizResponseObject interface {
+	VisitGetQuizResponse(w http.ResponseWriter) error
+}
+
+type GetQuiz200JSONResponse QuizDetailResponse
+
+func (response GetQuiz200JSONResponse) VisitGetQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetQuiz401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetQuiz401JSONResponse) VisitGetQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetQuiz404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetQuiz404JSONResponse) VisitGetQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetQuiz500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response GetQuiz500JSONResponse) VisitGetQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateQuizRequestObject struct {
+	QuizId openapi_types.UUID `json:"quiz_id"`
+	Body   *UpdateQuizJSONRequestBody
+}
+
+type UpdateQuizResponseObject interface {
+	VisitUpdateQuizResponse(w http.ResponseWriter) error
+}
+
+type UpdateQuiz200JSONResponse QuizDetailResponse
+
+func (response UpdateQuiz200JSONResponse) VisitUpdateQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateQuiz400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateQuiz400JSONResponse) VisitUpdateQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateQuiz401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateQuiz401JSONResponse) VisitUpdateQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateQuiz403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateQuiz403JSONResponse) VisitUpdateQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateQuiz404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateQuiz404JSONResponse) VisitUpdateQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateQuiz500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response UpdateQuiz500JSONResponse) VisitUpdateQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddQuizQuestionRequestObject struct {
+	QuizId openapi_types.UUID `json:"quiz_id"`
+	Body   *AddQuizQuestionJSONRequestBody
+}
+
+type AddQuizQuestionResponseObject interface {
+	VisitAddQuizQuestionResponse(w http.ResponseWriter) error
+}
+
+type AddQuizQuestion201JSONResponse QuizQuestionResponse
+
+func (response AddQuizQuestion201JSONResponse) VisitAddQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddQuizQuestion400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response AddQuizQuestion400JSONResponse) VisitAddQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddQuizQuestion401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AddQuizQuestion401JSONResponse) VisitAddQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddQuizQuestion403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response AddQuizQuestion403JSONResponse) VisitAddQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddQuizQuestion404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AddQuizQuestion404JSONResponse) VisitAddQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AddQuizQuestion500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response AddQuizQuestion500JSONResponse) VisitAddQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteQuizQuestionRequestObject struct {
+	QuizId     openapi_types.UUID `json:"quiz_id"`
+	QuestionId openapi_types.UUID `json:"question_id"`
+}
+
+type DeleteQuizQuestionResponseObject interface {
+	VisitDeleteQuizQuestionResponse(w http.ResponseWriter) error
+}
+
+type DeleteQuizQuestion204Response struct {
+}
+
+func (response DeleteQuizQuestion204Response) VisitDeleteQuizQuestionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteQuizQuestion400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteQuizQuestion400JSONResponse) VisitDeleteQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteQuizQuestion401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteQuizQuestion401JSONResponse) VisitDeleteQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteQuizQuestion403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteQuizQuestion403JSONResponse) VisitDeleteQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteQuizQuestion404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteQuizQuestion404JSONResponse) VisitDeleteQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteQuizQuestion500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response DeleteQuizQuestion500JSONResponse) VisitDeleteQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplaceQuizQuestionRequestObject struct {
+	QuizId     openapi_types.UUID `json:"quiz_id"`
+	QuestionId openapi_types.UUID `json:"question_id"`
+	Body       *ReplaceQuizQuestionJSONRequestBody
+}
+
+type ReplaceQuizQuestionResponseObject interface {
+	VisitReplaceQuizQuestionResponse(w http.ResponseWriter) error
+}
+
+type ReplaceQuizQuestion200JSONResponse QuizQuestionResponse
+
+func (response ReplaceQuizQuestion200JSONResponse) VisitReplaceQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplaceQuizQuestion400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ReplaceQuizQuestion400JSONResponse) VisitReplaceQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplaceQuizQuestion401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ReplaceQuizQuestion401JSONResponse) VisitReplaceQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplaceQuizQuestion403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ReplaceQuizQuestion403JSONResponse) VisitReplaceQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplaceQuizQuestion404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ReplaceQuizQuestion404JSONResponse) VisitReplaceQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ReplaceQuizQuestion500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ReplaceQuizQuestion500JSONResponse) VisitReplaceQuizQuestionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListPracticeSessionsRequestObject struct {
+	QuizId openapi_types.UUID `json:"quiz_id"`
+	Params ListPracticeSessionsParams
+}
+
+type ListPracticeSessionsResponseObject interface {
+	VisitListPracticeSessionsResponse(w http.ResponseWriter) error
+}
+
+type ListPracticeSessions200JSONResponse ListSessionsResponse
+
+func (response ListPracticeSessions200JSONResponse) VisitListPracticeSessionsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListPracticeSessions400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListPracticeSessions400JSONResponse) VisitListPracticeSessionsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListPracticeSessions401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListPracticeSessions401JSONResponse) VisitListPracticeSessionsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListPracticeSessions404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListPracticeSessions404JSONResponse) VisitListPracticeSessionsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListPracticeSessions500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListPracticeSessions500JSONResponse) VisitListPracticeSessionsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type StartPracticeSessionRequestObject struct {
+	QuizId openapi_types.UUID `json:"quiz_id"`
+}
+
+type StartPracticeSessionResponseObject interface {
+	VisitStartPracticeSessionResponse(w http.ResponseWriter) error
+}
+
+type StartPracticeSession200JSONResponse PracticeSessionResponse
+
+func (response StartPracticeSession200JSONResponse) VisitStartPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type StartPracticeSession201JSONResponse PracticeSessionResponse
+
+func (response StartPracticeSession201JSONResponse) VisitStartPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type StartPracticeSession400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response StartPracticeSession400JSONResponse) VisitStartPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type StartPracticeSession401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response StartPracticeSession401JSONResponse) VisitStartPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type StartPracticeSession404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response StartPracticeSession404JSONResponse) VisitStartPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type StartPracticeSession500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response StartPracticeSession500JSONResponse) VisitStartPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ResolveRefsRequestObject struct {
+	Body *ResolveRefsJSONRequestBody
+}
+
+type ResolveRefsResponseObject interface {
+	VisitResolveRefsResponse(w http.ResponseWriter) error
+}
+
+type ResolveRefs200JSONResponse RefsResolveResponse
+
+func (response ResolveRefs200JSONResponse) VisitResolveRefsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ResolveRefs400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ResolveRefs400JSONResponse) VisitResolveRefsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ResolveRefs401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ResolveRefs401JSONResponse) VisitResolveRefsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ResolveRefs500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ResolveRefs500JSONResponse) VisitResolveRefsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListSchoolsRequestObject struct {
+	Params ListSchoolsParams
+}
+
+type ListSchoolsResponseObject interface {
+	VisitListSchoolsResponse(w http.ResponseWriter) error
+}
+
+type ListSchools200JSONResponse ListSchoolsResponse
+
+func (response ListSchools200JSONResponse) VisitListSchoolsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListSchools400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response ListSchools400JSONResponse) VisitListSchoolsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListSchools401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListSchools401JSONResponse) VisitListSchoolsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListSchools500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListSchools500JSONResponse) VisitListSchoolsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetSchoolRequestObject struct {
+	SchoolId openapi_types.UUID `json:"school_id"`
+}
+
+type GetSchoolResponseObject interface {
+	VisitGetSchoolResponse(w http.ResponseWriter) error
+}
+
+type GetSchool200JSONResponse SchoolResponse
+
+func (response GetSchool200JSONResponse) VisitGetSchoolResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetSchool400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetSchool400JSONResponse) VisitGetSchoolResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetSchool401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetSchool401JSONResponse) VisitGetSchoolResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetSchool404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetSchool404JSONResponse) VisitGetSchoolResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetSchool500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response GetSchool500JSONResponse) VisitGetSchoolResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AbandonPracticeSessionRequestObject struct {
+	SessionId openapi_types.UUID `json:"session_id"`
+}
+
+type AbandonPracticeSessionResponseObject interface {
+	VisitAbandonPracticeSessionResponse(w http.ResponseWriter) error
+}
+
+type AbandonPracticeSession204Response struct {
+}
+
+func (response AbandonPracticeSession204Response) VisitAbandonPracticeSessionResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type AbandonPracticeSession400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response AbandonPracticeSession400JSONResponse) VisitAbandonPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AbandonPracticeSession401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AbandonPracticeSession401JSONResponse) VisitAbandonPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AbandonPracticeSession403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response AbandonPracticeSession403JSONResponse) VisitAbandonPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AbandonPracticeSession404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AbandonPracticeSession404JSONResponse) VisitAbandonPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AbandonPracticeSession409JSONResponse struct{ ConflictJSONResponse }
+
+func (response AbandonPracticeSession409JSONResponse) VisitAbandonPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AbandonPracticeSession500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response AbandonPracticeSession500JSONResponse) VisitAbandonPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPracticeSessionRequestObject struct {
+	SessionId openapi_types.UUID `json:"session_id"`
+}
+
+type GetPracticeSessionResponseObject interface {
+	VisitGetPracticeSessionResponse(w http.ResponseWriter) error
+}
+
+type GetPracticeSession200JSONResponse SessionDetailResponse
+
+func (response GetPracticeSession200JSONResponse) VisitGetPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPracticeSession400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetPracticeSession400JSONResponse) VisitGetPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPracticeSession401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetPracticeSession401JSONResponse) VisitGetPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPracticeSession403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response GetPracticeSession403JSONResponse) VisitGetPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPracticeSession404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetPracticeSession404JSONResponse) VisitGetPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetPracticeSession500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response GetPracticeSession500JSONResponse) VisitGetPracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubmitPracticeAnswerRequestObject struct {
+	SessionId openapi_types.UUID `json:"session_id"`
+	Body      *SubmitPracticeAnswerJSONRequestBody
+}
+
+type SubmitPracticeAnswerResponseObject interface {
+	VisitSubmitPracticeAnswerResponse(w http.ResponseWriter) error
+}
+
+type SubmitPracticeAnswer201JSONResponse PracticeAnswerResponse
+
+func (response SubmitPracticeAnswer201JSONResponse) VisitSubmitPracticeAnswerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubmitPracticeAnswer400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response SubmitPracticeAnswer400JSONResponse) VisitSubmitPracticeAnswerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubmitPracticeAnswer401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SubmitPracticeAnswer401JSONResponse) VisitSubmitPracticeAnswerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubmitPracticeAnswer403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response SubmitPracticeAnswer403JSONResponse) VisitSubmitPracticeAnswerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubmitPracticeAnswer404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response SubmitPracticeAnswer404JSONResponse) VisitSubmitPracticeAnswerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubmitPracticeAnswer409JSONResponse struct{ ConflictJSONResponse }
+
+func (response SubmitPracticeAnswer409JSONResponse) VisitSubmitPracticeAnswerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type SubmitPracticeAnswer500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response SubmitPracticeAnswer500JSONResponse) VisitSubmitPracticeAnswerResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CompletePracticeSessionRequestObject struct {
+	SessionId openapi_types.UUID `json:"session_id"`
+}
+
+type CompletePracticeSessionResponseObject interface {
+	VisitCompletePracticeSessionResponse(w http.ResponseWriter) error
+}
+
+type CompletePracticeSession200JSONResponse CompletedSessionResponse
+
+func (response CompletePracticeSession200JSONResponse) VisitCompletePracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CompletePracticeSession400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CompletePracticeSession400JSONResponse) VisitCompletePracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CompletePracticeSession401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CompletePracticeSession401JSONResponse) VisitCompletePracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CompletePracticeSession403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CompletePracticeSession403JSONResponse) VisitCompletePracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CompletePracticeSession404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CompletePracticeSession404JSONResponse) VisitCompletePracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CompletePracticeSession409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CompletePracticeSession409JSONResponse) VisitCompletePracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CompletePracticeSession500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response CompletePracticeSession500JSONResponse) VisitCompletePracticeSessionResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteStudyGuideRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+}
+
+type DeleteStudyGuideResponseObject interface {
+	VisitDeleteStudyGuideResponse(w http.ResponseWriter) error
+}
+
+type DeleteStudyGuide204Response struct {
+}
+
+func (response DeleteStudyGuide204Response) VisitDeleteStudyGuideResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DeleteStudyGuide400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DeleteStudyGuide400JSONResponse) VisitDeleteStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteStudyGuide401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DeleteStudyGuide401JSONResponse) VisitDeleteStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteStudyGuide403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DeleteStudyGuide403JSONResponse) VisitDeleteStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteStudyGuide404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DeleteStudyGuide404JSONResponse) VisitDeleteStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DeleteStudyGuide500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response DeleteStudyGuide500JSONResponse) VisitDeleteStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetStudyGuideRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+}
+
+type GetStudyGuideResponseObject interface {
+	VisitGetStudyGuideResponse(w http.ResponseWriter) error
+}
+
+type GetStudyGuide200JSONResponse StudyGuideDetailResponse
+
+func (response GetStudyGuide200JSONResponse) VisitGetStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetStudyGuide400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response GetStudyGuide400JSONResponse) VisitGetStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetStudyGuide401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetStudyGuide401JSONResponse) VisitGetStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetStudyGuide404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response GetStudyGuide404JSONResponse) VisitGetStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type GetStudyGuide500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response GetStudyGuide500JSONResponse) VisitGetStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateStudyGuideRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+	Body         *UpdateStudyGuideJSONRequestBody
+}
+
+type UpdateStudyGuideResponseObject interface {
+	VisitUpdateStudyGuideResponse(w http.ResponseWriter) error
+}
+
+type UpdateStudyGuide200JSONResponse StudyGuideDetailResponse
+
+func (response UpdateStudyGuide200JSONResponse) VisitUpdateStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateStudyGuide400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response UpdateStudyGuide400JSONResponse) VisitUpdateStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateStudyGuide401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateStudyGuide401JSONResponse) VisitUpdateStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateStudyGuide403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response UpdateStudyGuide403JSONResponse) VisitUpdateStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateStudyGuide404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response UpdateStudyGuide404JSONResponse) VisitUpdateStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type UpdateStudyGuide500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response UpdateStudyGuide500JSONResponse) VisitUpdateStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DetachFileRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+	FileId       openapi_types.UUID `json:"file_id"`
+}
+
+type DetachFileResponseObject interface {
+	VisitDetachFileResponse(w http.ResponseWriter) error
+}
+
+type DetachFile204Response struct {
+}
+
+func (response DetachFile204Response) VisitDetachFileResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DetachFile400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DetachFile400JSONResponse) VisitDetachFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DetachFile401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DetachFile401JSONResponse) VisitDetachFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DetachFile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DetachFile403JSONResponse) VisitDetachFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DetachFile404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DetachFile404JSONResponse) VisitDetachFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DetachFile500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response DetachFile500JSONResponse) VisitDetachFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AttachFileRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+	FileId       openapi_types.UUID `json:"file_id"`
+}
+
+type AttachFileResponseObject interface {
+	VisitAttachFileResponse(w http.ResponseWriter) error
+}
+
+type AttachFile201JSONResponse FileAttachmentResponse
+
+func (response AttachFile201JSONResponse) VisitAttachFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AttachFile400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response AttachFile400JSONResponse) VisitAttachFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AttachFile401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AttachFile401JSONResponse) VisitAttachFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AttachFile403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response AttachFile403JSONResponse) VisitAttachFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AttachFile404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AttachFile404JSONResponse) VisitAttachFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AttachFile409JSONResponse struct{ ConflictJSONResponse }
+
+func (response AttachFile409JSONResponse) VisitAttachFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AttachFile500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response AttachFile500JSONResponse) VisitAttachFileResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevokeStudyGuideGrantRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+	Body         *RevokeStudyGuideGrantJSONRequestBody
+}
+
+type RevokeStudyGuideGrantResponseObject interface {
+	VisitRevokeStudyGuideGrantResponse(w http.ResponseWriter) error
+}
+
+type RevokeStudyGuideGrant204Response struct {
+}
+
+func (response RevokeStudyGuideGrant204Response) VisitRevokeStudyGuideGrantResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RevokeStudyGuideGrant400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RevokeStudyGuideGrant400JSONResponse) VisitRevokeStudyGuideGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevokeStudyGuideGrant401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RevokeStudyGuideGrant401JSONResponse) VisitRevokeStudyGuideGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevokeStudyGuideGrant403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RevokeStudyGuideGrant403JSONResponse) VisitRevokeStudyGuideGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevokeStudyGuideGrant404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RevokeStudyGuideGrant404JSONResponse) VisitRevokeStudyGuideGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RevokeStudyGuideGrant500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response RevokeStudyGuideGrant500JSONResponse) VisitRevokeStudyGuideGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListStudyGuideGrantsRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+}
+
+type ListStudyGuideGrantsResponseObject interface {
+	VisitListStudyGuideGrantsResponse(w http.ResponseWriter) error
+}
+
+type ListStudyGuideGrants200JSONResponse ListStudyGuideGrantsResponse
+
+func (response ListStudyGuideGrants200JSONResponse) VisitListStudyGuideGrantsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListStudyGuideGrants401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListStudyGuideGrants401JSONResponse) VisitListStudyGuideGrantsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListStudyGuideGrants403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response ListStudyGuideGrants403JSONResponse) VisitListStudyGuideGrantsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListStudyGuideGrants404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListStudyGuideGrants404JSONResponse) VisitListStudyGuideGrantsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListStudyGuideGrants500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListStudyGuideGrants500JSONResponse) VisitListStudyGuideGrantsResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateStudyGuideGrantRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+	Body         *CreateStudyGuideGrantJSONRequestBody
+}
+
+type CreateStudyGuideGrantResponseObject interface {
+	VisitCreateStudyGuideGrantResponse(w http.ResponseWriter) error
+}
+
+type CreateStudyGuideGrant201JSONResponse StudyGuideGrantResponse
+
+func (response CreateStudyGuideGrant201JSONResponse) VisitCreateStudyGuideGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateStudyGuideGrant400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateStudyGuideGrant400JSONResponse) VisitCreateStudyGuideGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateStudyGuideGrant401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateStudyGuideGrant401JSONResponse) VisitCreateStudyGuideGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateStudyGuideGrant403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response CreateStudyGuideGrant403JSONResponse) VisitCreateStudyGuideGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateStudyGuideGrant404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateStudyGuideGrant404JSONResponse) VisitCreateStudyGuideGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateStudyGuideGrant409JSONResponse struct{ ConflictJSONResponse }
+
+func (response CreateStudyGuideGrant409JSONResponse) VisitCreateStudyGuideGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateStudyGuideGrant500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response CreateStudyGuideGrant500JSONResponse) VisitCreateStudyGuideGrantResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListQuizzesRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+}
+
+type ListQuizzesResponseObject interface {
+	VisitListQuizzesResponse(w http.ResponseWriter) error
+}
+
+type ListQuizzes200JSONResponse ListQuizzesResponse
+
+func (response ListQuizzes200JSONResponse) VisitListQuizzesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListQuizzes401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListQuizzes401JSONResponse) VisitListQuizzesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListQuizzes404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response ListQuizzes404JSONResponse) VisitListQuizzesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type ListQuizzes500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response ListQuizzes500JSONResponse) VisitListQuizzesResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateQuizRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+	Body         *CreateQuizJSONRequestBody
+}
+
+type CreateQuizResponseObject interface {
+	VisitCreateQuizResponse(w http.ResponseWriter) error
+}
+
+type CreateQuiz201JSONResponse QuizDetailResponse
+
+func (response CreateQuiz201JSONResponse) VisitCreateQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateQuiz400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CreateQuiz400JSONResponse) VisitCreateQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateQuiz401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateQuiz401JSONResponse) VisitCreateQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateQuiz404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CreateQuiz404JSONResponse) VisitCreateQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CreateQuiz500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response CreateQuiz500JSONResponse) VisitCreateQuizResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveStudyGuideRecommendationRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+}
+
+type RemoveStudyGuideRecommendationResponseObject interface {
+	VisitRemoveStudyGuideRecommendationResponse(w http.ResponseWriter) error
+}
+
+type RemoveStudyGuideRecommendation204Response struct {
+}
+
+func (response RemoveStudyGuideRecommendation204Response) VisitRemoveStudyGuideRecommendationResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveStudyGuideRecommendation400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RemoveStudyGuideRecommendation400JSONResponse) VisitRemoveStudyGuideRecommendationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveStudyGuideRecommendation401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RemoveStudyGuideRecommendation401JSONResponse) VisitRemoveStudyGuideRecommendationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveStudyGuideRecommendation403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RemoveStudyGuideRecommendation403JSONResponse) VisitRemoveStudyGuideRecommendationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveStudyGuideRecommendation404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RemoveStudyGuideRecommendation404JSONResponse) VisitRemoveStudyGuideRecommendationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveStudyGuideRecommendation500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response RemoveStudyGuideRecommendation500JSONResponse) VisitRemoveStudyGuideRecommendationResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RecommendStudyGuideRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+}
+
+type RecommendStudyGuideResponseObject interface {
+	VisitRecommendStudyGuideResponse(w http.ResponseWriter) error
+}
+
+type RecommendStudyGuide201JSONResponse RecommendationResponse
+
+func (response RecommendStudyGuide201JSONResponse) VisitRecommendStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RecommendStudyGuide400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RecommendStudyGuide400JSONResponse) VisitRecommendStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RecommendStudyGuide401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RecommendStudyGuide401JSONResponse) VisitRecommendStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RecommendStudyGuide403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response RecommendStudyGuide403JSONResponse) VisitRecommendStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RecommendStudyGuide404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RecommendStudyGuide404JSONResponse) VisitRecommendStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RecommendStudyGuide409JSONResponse struct{ ConflictJSONResponse }
+
+func (response RecommendStudyGuide409JSONResponse) VisitRecommendStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RecommendStudyGuide500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response RecommendStudyGuide500JSONResponse) VisitRecommendStudyGuideResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AttachResourceRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+	Body         *AttachResourceJSONRequestBody
+}
+
+type AttachResourceResponseObject interface {
+	VisitAttachResourceResponse(w http.ResponseWriter) error
+}
+
+type AttachResource201JSONResponse ResourceSummary
+
+func (response AttachResource201JSONResponse) VisitAttachResourceResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AttachResource400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response AttachResource400JSONResponse) VisitAttachResourceResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AttachResource401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response AttachResource401JSONResponse) VisitAttachResourceResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AttachResource404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response AttachResource404JSONResponse) VisitAttachResourceResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AttachResource409JSONResponse struct{ ConflictJSONResponse }
+
+func (response AttachResource409JSONResponse) VisitAttachResourceResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type AttachResource500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response AttachResource500JSONResponse) VisitAttachResourceResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DetachResourceRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+	ResourceId   openapi_types.UUID `json:"resource_id"`
+}
+
+type DetachResourceResponseObject interface {
+	VisitDetachResourceResponse(w http.ResponseWriter) error
+}
+
+type DetachResource204Response struct {
+}
+
+func (response DetachResource204Response) VisitDetachResourceResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type DetachResource400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response DetachResource400JSONResponse) VisitDetachResourceResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DetachResource401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response DetachResource401JSONResponse) VisitDetachResourceResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DetachResource403JSONResponse struct{ ForbiddenJSONResponse }
+
+func (response DetachResource403JSONResponse) VisitDetachResourceResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DetachResource404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response DetachResource404JSONResponse) VisitDetachResourceResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type DetachResource500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response DetachResource500JSONResponse) VisitDetachResourceResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveStudyGuideVoteRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+}
+
+type RemoveStudyGuideVoteResponseObject interface {
+	VisitRemoveStudyGuideVoteResponse(w http.ResponseWriter) error
+}
+
+type RemoveStudyGuideVote204Response struct {
+}
+
+func (response RemoveStudyGuideVote204Response) VisitRemoveStudyGuideVoteResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type RemoveStudyGuideVote400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response RemoveStudyGuideVote400JSONResponse) VisitRemoveStudyGuideVoteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveStudyGuideVote401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response RemoveStudyGuideVote401JSONResponse) VisitRemoveStudyGuideVoteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveStudyGuideVote404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response RemoveStudyGuideVote404JSONResponse) VisitRemoveStudyGuideVoteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type RemoveStudyGuideVote500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response RemoveStudyGuideVote500JSONResponse) VisitRemoveStudyGuideVoteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CastStudyGuideVoteRequestObject struct {
+	StudyGuideId openapi_types.UUID `json:"study_guide_id"`
+	Body         *CastStudyGuideVoteJSONRequestBody
+}
+
+type CastStudyGuideVoteResponseObject interface {
+	VisitCastStudyGuideVoteResponse(w http.ResponseWriter) error
+}
+
+type CastStudyGuideVote200JSONResponse CastVoteResponse
+
+func (response CastStudyGuideVote200JSONResponse) VisitCastStudyGuideVoteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CastStudyGuideVote400JSONResponse struct{ BadRequestJSONResponse }
+
+func (response CastStudyGuideVote400JSONResponse) VisitCastStudyGuideVoteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CastStudyGuideVote401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CastStudyGuideVote401JSONResponse) VisitCastStudyGuideVoteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CastStudyGuideVote404JSONResponse struct{ NotFoundJSONResponse }
+
+func (response CastStudyGuideVote404JSONResponse) VisitCastStudyGuideVoteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
+type CastStudyGuideVote500JSONResponse struct {
+	InternalServerErrorJSONResponse
+}
+
+func (response CastStudyGuideVote500JSONResponse) VisitCastStudyGuideVoteResponse(w http.ResponseWriter) error {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+
+	return json.NewEncoder(w).Encode(response)
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// List and search courses
+	// (GET /courses)
+	ListCourses(ctx context.Context, request ListCoursesRequestObject) (ListCoursesResponseObject, error)
+	// Get a course detail with embedded sections
+	// (GET /courses/{course_id})
+	GetCourse(ctx context.Context, request GetCourseRequestObject) (GetCourseResponseObject, error)
+	// List sections for a course
+	// (GET /courses/{course_id}/sections)
+	ListCourseSections(ctx context.Context, request ListCourseSectionsRequestObject) (ListCourseSectionsResponseObject, error)
+	// List the members of a course section
+	// (GET /courses/{course_id}/sections/{section_id}/members)
+	ListSectionMembers(ctx context.Context, request ListSectionMembersRequestObject) (ListSectionMembersResponseObject, error)
+	// Join a section as the authenticated user
+	// (POST /courses/{course_id}/sections/{section_id}/members)
+	JoinSection(ctx context.Context, request JoinSectionRequestObject) (JoinSectionResponseObject, error)
+	// Leave a section as the authenticated user
+	// (DELETE /courses/{course_id}/sections/{section_id}/members/me)
+	LeaveSection(ctx context.Context, request LeaveSectionRequestObject) (LeaveSectionResponseObject, error)
+	// Check the authenticated user's membership in a section
+	// (GET /courses/{course_id}/sections/{section_id}/members/me)
+	CheckMembership(ctx context.Context, request CheckMembershipRequestObject) (CheckMembershipResponseObject, error)
+	// List study guides for a course
+	// (GET /courses/{course_id}/study-guides)
+	ListStudyGuides(ctx context.Context, request ListStudyGuidesRequestObject) (ListStudyGuidesResponseObject, error)
+	// Create a study guide for a course
+	// (POST /courses/{course_id}/study-guides)
+	CreateStudyGuide(ctx context.Context, request CreateStudyGuideRequestObject) (CreateStudyGuideResponseObject, error)
+	// Create a file metadata record (ASK-105)
+	// (POST /files)
+	CreateFile(ctx context.Context, request CreateFileRequestObject) (CreateFileResponseObject, error)
 	// Delete a file by ID
 	// (DELETE /files/{file_id})
 	DeleteFile(ctx context.Context, request DeleteFileRequestObject) (DeleteFileResponseObject, error)
 	// Get a file by ID
 	// (GET /files/{file_id})
 	GetFile(ctx context.Context, request GetFileRequestObject) (GetFileResponseObject, error)
+	// Update file metadata and status (ASK-113)
+	// (PATCH /files/{file_id})
+	UpdateFile(ctx context.Context, request UpdateFileRequestObject) (UpdateFileResponseObject, error)
+	// Get file contents via presigned redirect (ASK-205)
+	// (GET /files/{file_id}/download)
+	DownloadFile(ctx context.Context, request DownloadFileRequestObject) (DownloadFileResponseObject, error)
+	// Toggle the file favorite (ASK-130)
+	// (POST /files/{file_id}/favorite)
+	ToggleFileFavorite(ctx context.Context, request ToggleFileFavoriteRequestObject) (ToggleFileFavoriteResponseObject, error)
+	// Revoke a permission on a file (ASK-125)
+	// (DELETE /files/{file_id}/grants)
+	RevokeGrant(ctx context.Context, request RevokeGrantRequestObject) (RevokeGrantResponseObject, error)
+	// Grant a permission on a file (ASK-122)
+	// (POST /files/{file_id}/grants)
+	CreateGrant(ctx context.Context, request CreateGrantRequestObject) (CreateGrantResponseObject, error)
+	// Record a file view (ASK-134)
+	// (POST /files/{file_id}/view)
+	RecordFileView(ctx context.Context, request RecordFileViewRequestObject) (RecordFileViewResponseObject, error)
+	// List the authenticated user's section enrollments
+	// (GET /me/courses)
+	ListMyEnrollments(ctx context.Context, request ListMyEnrollmentsRequestObject) (ListMyEnrollmentsResponseObject, error)
+	// Toggle the course favorite (ASK-157)
+	// (POST /me/courses/{course_id}/favorite)
+	ToggleCourseFavorite(ctx context.Context, request ToggleCourseFavoriteRequestObject) (ToggleCourseFavoriteResponseObject, error)
+	// Aggregated dashboard data for the authenticated user
+	// (GET /me/dashboard)
+	ListDashboard(ctx context.Context, request ListDashboardRequestObject) (ListDashboardResponseObject, error)
+	// List the authenticated user's favorited items
+	// (GET /me/favorites)
+	ListFavorites(ctx context.Context, request ListFavoritesRequestObject) (ListFavoritesResponseObject, error)
 	// List files for the current user
 	// (GET /me/files)
 	ListFiles(ctx context.Context, request ListFilesRequestObject) (ListFilesResponseObject, error)
+	// List the authenticated user's most recently viewed items
+	// (GET /me/recents)
+	ListRecents(ctx context.Context, request ListRecentsRequestObject) (ListRecentsResponseObject, error)
+	// List study guides created by the authenticated user (ASK-131)
+	// (GET /me/study-guides)
+	ListMyStudyGuides(ctx context.Context, request ListMyStudyGuidesRequestObject) (ListMyStudyGuidesResponseObject, error)
+	// Toggle the study guide favorite (ASK-156)
+	// (POST /me/study-guides/{study_guide_id}/favorite)
+	ToggleStudyGuideFavorite(ctx context.Context, request ToggleStudyGuideFavoriteRequestObject) (ToggleStudyGuideFavoriteResponseObject, error)
+	// Soft-delete a quiz
+	// (DELETE /quizzes/{quiz_id})
+	DeleteQuiz(ctx context.Context, request DeleteQuizRequestObject) (DeleteQuizResponseObject, error)
+	// Get a quiz with all questions and correct answers
+	// (GET /quizzes/{quiz_id})
+	GetQuiz(ctx context.Context, request GetQuizRequestObject) (GetQuizResponseObject, error)
+	// Update a quiz's metadata (title and/or description)
+	// (PATCH /quizzes/{quiz_id})
+	UpdateQuiz(ctx context.Context, request UpdateQuizRequestObject) (UpdateQuizResponseObject, error)
+	// Add a question to an existing quiz
+	// (POST /quizzes/{quiz_id}/questions)
+	AddQuizQuestion(ctx context.Context, request AddQuizQuestionRequestObject) (AddQuizQuestionResponseObject, error)
+	// Delete a question from a quiz (ASK-119)
+	// (DELETE /quizzes/{quiz_id}/questions/{question_id})
+	DeleteQuizQuestion(ctx context.Context, request DeleteQuizQuestionRequestObject) (DeleteQuizQuestionResponseObject, error)
+	// Replace a question in a quiz (ASK-108)
+	// (PUT /quizzes/{quiz_id}/questions/{question_id})
+	ReplaceQuizQuestion(ctx context.Context, request ReplaceQuizQuestionRequestObject) (ReplaceQuizQuestionResponseObject, error)
+	// List the authenticated user's practice sessions for a quiz
+	// (GET /quizzes/{quiz_id}/sessions)
+	ListPracticeSessions(ctx context.Context, request ListPracticeSessionsRequestObject) (ListPracticeSessionsResponseObject, error)
+	// Start a new practice session or resume an existing incomplete one
+	// (POST /quizzes/{quiz_id}/sessions)
+	StartPracticeSession(ctx context.Context, request StartPracticeSessionRequestObject) (StartPracticeSessionResponseObject, error)
+	// Batch-resolve inline entity refs (ASK-208)
+	// (POST /refs/resolve)
+	ResolveRefs(ctx context.Context, request ResolveRefsRequestObject) (ResolveRefsResponseObject, error)
+	// List and search schools
+	// (GET /schools)
+	ListSchools(ctx context.Context, request ListSchoolsRequestObject) (ListSchoolsResponseObject, error)
+	// Get a single school by ID
+	// (GET /schools/{school_id})
+	GetSchool(ctx context.Context, request GetSchoolRequestObject) (GetSchoolResponseObject, error)
+	// Hard-delete an in-progress practice session
+	// (DELETE /sessions/{session_id})
+	AbandonPracticeSession(ctx context.Context, request AbandonPracticeSessionRequestObject) (AbandonPracticeSessionResponseObject, error)
+	// Get a practice session detail including all submitted answers
+	// (GET /sessions/{session_id})
+	GetPracticeSession(ctx context.Context, request GetPracticeSessionRequestObject) (GetPracticeSessionResponseObject, error)
+	// Submit an answer for one question in a practice session
+	// (POST /sessions/{session_id}/answers)
+	SubmitPracticeAnswer(ctx context.Context, request SubmitPracticeAnswerRequestObject) (SubmitPracticeAnswerResponseObject, error)
+	// Mark a practice session as completed and return the score
+	// (POST /sessions/{session_id}/complete)
+	CompletePracticeSession(ctx context.Context, request CompletePracticeSessionRequestObject) (CompletePracticeSessionResponseObject, error)
+	// Soft-delete a study guide
+	// (DELETE /study-guides/{study_guide_id})
+	DeleteStudyGuide(ctx context.Context, request DeleteStudyGuideRequestObject) (DeleteStudyGuideResponseObject, error)
+	// Get a study guide detail
+	// (GET /study-guides/{study_guide_id})
+	GetStudyGuide(ctx context.Context, request GetStudyGuideRequestObject) (GetStudyGuideResponseObject, error)
+	// Update a study guide
+	// (PATCH /study-guides/{study_guide_id})
+	UpdateStudyGuide(ctx context.Context, request UpdateStudyGuideRequestObject) (UpdateStudyGuideResponseObject, error)
+	// Detach a file from a study guide
+	// (DELETE /study-guides/{study_guide_id}/files/{file_id})
+	DetachFile(ctx context.Context, request DetachFileRequestObject) (DetachFileResponseObject, error)
+	// Attach a file to a study guide
+	// (POST /study-guides/{study_guide_id}/files/{file_id})
+	AttachFile(ctx context.Context, request AttachFileRequestObject) (AttachFileResponseObject, error)
+	// Revoke a permission on a study guide (ASK-211)
+	// (DELETE /study-guides/{study_guide_id}/grants)
+	RevokeStudyGuideGrant(ctx context.Context, request RevokeStudyGuideGrantRequestObject) (RevokeStudyGuideGrantResponseObject, error)
+	// List permission grants on a study guide (ASK-211)
+	// (GET /study-guides/{study_guide_id}/grants)
+	ListStudyGuideGrants(ctx context.Context, request ListStudyGuideGrantsRequestObject) (ListStudyGuideGrantsResponseObject, error)
+	// Grant a permission on a study guide (ASK-211)
+	// (POST /study-guides/{study_guide_id}/grants)
+	CreateStudyGuideGrant(ctx context.Context, request CreateStudyGuideGrantRequestObject) (CreateStudyGuideGrantResponseObject, error)
+	// List quizzes attached to a study guide
+	// (GET /study-guides/{study_guide_id}/quizzes)
+	ListQuizzes(ctx context.Context, request ListQuizzesRequestObject) (ListQuizzesResponseObject, error)
+	// Create a quiz attached to a study guide
+	// (POST /study-guides/{study_guide_id}/quizzes)
+	CreateQuiz(ctx context.Context, request CreateQuizRequestObject) (CreateQuizResponseObject, error)
+	// Remove the authenticated user's recommendation on a study guide
+	// (DELETE /study-guides/{study_guide_id}/recommendations)
+	RemoveStudyGuideRecommendation(ctx context.Context, request RemoveStudyGuideRecommendationRequestObject) (RemoveStudyGuideRecommendationResponseObject, error)
+	// Recommend a study guide
+	// (POST /study-guides/{study_guide_id}/recommendations)
+	RecommendStudyGuide(ctx context.Context, request RecommendStudyGuideRequestObject) (RecommendStudyGuideResponseObject, error)
+	// Attach an external resource to a study guide
+	// (POST /study-guides/{study_guide_id}/resources)
+	AttachResource(ctx context.Context, request AttachResourceRequestObject) (AttachResourceResponseObject, error)
+	// Detach a resource from a study guide
+	// (DELETE /study-guides/{study_guide_id}/resources/{resource_id})
+	DetachResource(ctx context.Context, request DetachResourceRequestObject) (DetachResourceResponseObject, error)
+	// Remove the authenticated user's vote on a study guide
+	// (DELETE /study-guides/{study_guide_id}/votes)
+	RemoveStudyGuideVote(ctx context.Context, request RemoveStudyGuideVoteRequestObject) (RemoveStudyGuideVoteResponseObject, error)
+	// Cast or change a vote on a study guide
+	// (POST /study-guides/{study_guide_id}/votes)
+	CastStudyGuideVote(ctx context.Context, request CastStudyGuideVoteRequestObject) (CastStudyGuideVoteResponseObject, error)
 }
 
 type StrictHandlerFunc = strictnethttp.StrictHTTPHandlerFunc
@@ -821,6 +9071,285 @@ type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
 	options     StrictHTTPServerOptions
+}
+
+// ListCourses operation middleware
+func (sh *strictHandler) ListCourses(w http.ResponseWriter, r *http.Request, params ListCoursesParams) {
+	var request ListCoursesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCourses(ctx, request.(ListCoursesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCourses")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCoursesResponseObject); ok {
+		if err := validResponse.VisitListCoursesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetCourse operation middleware
+func (sh *strictHandler) GetCourse(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID) {
+	var request GetCourseRequestObject
+
+	request.CourseId = courseId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetCourse(ctx, request.(GetCourseRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetCourse")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetCourseResponseObject); ok {
+		if err := validResponse.VisitGetCourseResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListCourseSections operation middleware
+func (sh *strictHandler) ListCourseSections(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, params ListCourseSectionsParams) {
+	var request ListCourseSectionsRequestObject
+
+	request.CourseId = courseId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListCourseSections(ctx, request.(ListCourseSectionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListCourseSections")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListCourseSectionsResponseObject); ok {
+		if err := validResponse.VisitListCourseSectionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListSectionMembers operation middleware
+func (sh *strictHandler) ListSectionMembers(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID, params ListSectionMembersParams) {
+	var request ListSectionMembersRequestObject
+
+	request.CourseId = courseId
+	request.SectionId = sectionId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSectionMembers(ctx, request.(ListSectionMembersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSectionMembers")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSectionMembersResponseObject); ok {
+		if err := validResponse.VisitListSectionMembersResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// JoinSection operation middleware
+func (sh *strictHandler) JoinSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID) {
+	var request JoinSectionRequestObject
+
+	request.CourseId = courseId
+	request.SectionId = sectionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.JoinSection(ctx, request.(JoinSectionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "JoinSection")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(JoinSectionResponseObject); ok {
+		if err := validResponse.VisitJoinSectionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// LeaveSection operation middleware
+func (sh *strictHandler) LeaveSection(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID) {
+	var request LeaveSectionRequestObject
+
+	request.CourseId = courseId
+	request.SectionId = sectionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.LeaveSection(ctx, request.(LeaveSectionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "LeaveSection")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(LeaveSectionResponseObject); ok {
+		if err := validResponse.VisitLeaveSectionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CheckMembership operation middleware
+func (sh *strictHandler) CheckMembership(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, sectionId openapi_types.UUID) {
+	var request CheckMembershipRequestObject
+
+	request.CourseId = courseId
+	request.SectionId = sectionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CheckMembership(ctx, request.(CheckMembershipRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CheckMembership")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CheckMembershipResponseObject); ok {
+		if err := validResponse.VisitCheckMembershipResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListStudyGuides operation middleware
+func (sh *strictHandler) ListStudyGuides(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID, params ListStudyGuidesParams) {
+	var request ListStudyGuidesRequestObject
+
+	request.CourseId = courseId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListStudyGuides(ctx, request.(ListStudyGuidesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListStudyGuides")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListStudyGuidesResponseObject); ok {
+		if err := validResponse.VisitListStudyGuidesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateStudyGuide operation middleware
+func (sh *strictHandler) CreateStudyGuide(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID) {
+	var request CreateStudyGuideRequestObject
+
+	request.CourseId = courseId
+
+	var body CreateStudyGuideJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateStudyGuide(ctx, request.(CreateStudyGuideRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateStudyGuide")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateStudyGuideResponseObject); ok {
+		if err := validResponse.VisitCreateStudyGuideResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateFile operation middleware
+func (sh *strictHandler) CreateFile(w http.ResponseWriter, r *http.Request) {
+	var request CreateFileRequestObject
+
+	var body CreateFileJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateFile(ctx, request.(CreateFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateFileResponseObject); ok {
+		if err := validResponse.VisitCreateFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
 }
 
 // DeleteFile operation middleware
@@ -875,6 +9404,285 @@ func (sh *strictHandler) GetFile(w http.ResponseWriter, r *http.Request, fileId 
 	}
 }
 
+// UpdateFile operation middleware
+func (sh *strictHandler) UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	var request UpdateFileRequestObject
+
+	request.FileId = fileId
+
+	var body UpdateFileJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateFile(ctx, request.(UpdateFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateFileResponseObject); ok {
+		if err := validResponse.VisitUpdateFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DownloadFile operation middleware
+func (sh *strictHandler) DownloadFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	var request DownloadFileRequestObject
+
+	request.FileId = fileId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DownloadFile(ctx, request.(DownloadFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DownloadFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DownloadFileResponseObject); ok {
+		if err := validResponse.VisitDownloadFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ToggleFileFavorite operation middleware
+func (sh *strictHandler) ToggleFileFavorite(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	var request ToggleFileFavoriteRequestObject
+
+	request.FileId = fileId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ToggleFileFavorite(ctx, request.(ToggleFileFavoriteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ToggleFileFavorite")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ToggleFileFavoriteResponseObject); ok {
+		if err := validResponse.VisitToggleFileFavoriteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RevokeGrant operation middleware
+func (sh *strictHandler) RevokeGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	var request RevokeGrantRequestObject
+
+	request.FileId = fileId
+
+	var body RevokeGrantJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RevokeGrant(ctx, request.(RevokeGrantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RevokeGrant")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RevokeGrantResponseObject); ok {
+		if err := validResponse.VisitRevokeGrantResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateGrant operation middleware
+func (sh *strictHandler) CreateGrant(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	var request CreateGrantRequestObject
+
+	request.FileId = fileId
+
+	var body CreateGrantJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateGrant(ctx, request.(CreateGrantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateGrant")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateGrantResponseObject); ok {
+		if err := validResponse.VisitCreateGrantResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RecordFileView operation middleware
+func (sh *strictHandler) RecordFileView(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	var request RecordFileViewRequestObject
+
+	request.FileId = fileId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RecordFileView(ctx, request.(RecordFileViewRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RecordFileView")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RecordFileViewResponseObject); ok {
+		if err := validResponse.VisitRecordFileViewResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListMyEnrollments operation middleware
+func (sh *strictHandler) ListMyEnrollments(w http.ResponseWriter, r *http.Request, params ListMyEnrollmentsParams) {
+	var request ListMyEnrollmentsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMyEnrollments(ctx, request.(ListMyEnrollmentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMyEnrollments")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMyEnrollmentsResponseObject); ok {
+		if err := validResponse.VisitListMyEnrollmentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ToggleCourseFavorite operation middleware
+func (sh *strictHandler) ToggleCourseFavorite(w http.ResponseWriter, r *http.Request, courseId openapi_types.UUID) {
+	var request ToggleCourseFavoriteRequestObject
+
+	request.CourseId = courseId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ToggleCourseFavorite(ctx, request.(ToggleCourseFavoriteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ToggleCourseFavorite")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ToggleCourseFavoriteResponseObject); ok {
+		if err := validResponse.VisitToggleCourseFavoriteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListDashboard operation middleware
+func (sh *strictHandler) ListDashboard(w http.ResponseWriter, r *http.Request) {
+	var request ListDashboardRequestObject
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListDashboard(ctx, request.(ListDashboardRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListDashboard")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListDashboardResponseObject); ok {
+		if err := validResponse.VisitListDashboardResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListFavorites operation middleware
+func (sh *strictHandler) ListFavorites(w http.ResponseWriter, r *http.Request, params ListFavoritesParams) {
+	var request ListFavoritesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListFavorites(ctx, request.(ListFavoritesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListFavorites")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListFavoritesResponseObject); ok {
+		if err := validResponse.VisitListFavoritesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // ListFiles operation middleware
 func (sh *strictHandler) ListFiles(w http.ResponseWriter, r *http.Request, params ListFilesParams) {
 	var request ListFilesRequestObject
@@ -901,34 +9709,1451 @@ func (sh *strictHandler) ListFiles(w http.ResponseWriter, r *http.Request, param
 	}
 }
 
+// ListRecents operation middleware
+func (sh *strictHandler) ListRecents(w http.ResponseWriter, r *http.Request, params ListRecentsParams) {
+	var request ListRecentsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListRecents(ctx, request.(ListRecentsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListRecents")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListRecentsResponseObject); ok {
+		if err := validResponse.VisitListRecentsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListMyStudyGuides operation middleware
+func (sh *strictHandler) ListMyStudyGuides(w http.ResponseWriter, r *http.Request, params ListMyStudyGuidesParams) {
+	var request ListMyStudyGuidesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMyStudyGuides(ctx, request.(ListMyStudyGuidesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMyStudyGuides")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMyStudyGuidesResponseObject); ok {
+		if err := validResponse.VisitListMyStudyGuidesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ToggleStudyGuideFavorite operation middleware
+func (sh *strictHandler) ToggleStudyGuideFavorite(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	var request ToggleStudyGuideFavoriteRequestObject
+
+	request.StudyGuideId = studyGuideId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ToggleStudyGuideFavorite(ctx, request.(ToggleStudyGuideFavoriteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ToggleStudyGuideFavorite")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ToggleStudyGuideFavoriteResponseObject); ok {
+		if err := validResponse.VisitToggleStudyGuideFavoriteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteQuiz operation middleware
+func (sh *strictHandler) DeleteQuiz(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID) {
+	var request DeleteQuizRequestObject
+
+	request.QuizId = quizId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteQuiz(ctx, request.(DeleteQuizRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteQuiz")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteQuizResponseObject); ok {
+		if err := validResponse.VisitDeleteQuizResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetQuiz operation middleware
+func (sh *strictHandler) GetQuiz(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID) {
+	var request GetQuizRequestObject
+
+	request.QuizId = quizId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetQuiz(ctx, request.(GetQuizRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetQuiz")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetQuizResponseObject); ok {
+		if err := validResponse.VisitGetQuizResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateQuiz operation middleware
+func (sh *strictHandler) UpdateQuiz(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID) {
+	var request UpdateQuizRequestObject
+
+	request.QuizId = quizId
+
+	var body UpdateQuizJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateQuiz(ctx, request.(UpdateQuizRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateQuiz")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateQuizResponseObject); ok {
+		if err := validResponse.VisitUpdateQuizResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AddQuizQuestion operation middleware
+func (sh *strictHandler) AddQuizQuestion(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID) {
+	var request AddQuizQuestionRequestObject
+
+	request.QuizId = quizId
+
+	var body AddQuizQuestionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AddQuizQuestion(ctx, request.(AddQuizQuestionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AddQuizQuestion")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AddQuizQuestionResponseObject); ok {
+		if err := validResponse.VisitAddQuizQuestionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteQuizQuestion operation middleware
+func (sh *strictHandler) DeleteQuizQuestion(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID, questionId openapi_types.UUID) {
+	var request DeleteQuizQuestionRequestObject
+
+	request.QuizId = quizId
+	request.QuestionId = questionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteQuizQuestion(ctx, request.(DeleteQuizQuestionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteQuizQuestion")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteQuizQuestionResponseObject); ok {
+		if err := validResponse.VisitDeleteQuizQuestionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ReplaceQuizQuestion operation middleware
+func (sh *strictHandler) ReplaceQuizQuestion(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID, questionId openapi_types.UUID) {
+	var request ReplaceQuizQuestionRequestObject
+
+	request.QuizId = quizId
+	request.QuestionId = questionId
+
+	var body ReplaceQuizQuestionJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ReplaceQuizQuestion(ctx, request.(ReplaceQuizQuestionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReplaceQuizQuestion")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ReplaceQuizQuestionResponseObject); ok {
+		if err := validResponse.VisitReplaceQuizQuestionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListPracticeSessions operation middleware
+func (sh *strictHandler) ListPracticeSessions(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID, params ListPracticeSessionsParams) {
+	var request ListPracticeSessionsRequestObject
+
+	request.QuizId = quizId
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListPracticeSessions(ctx, request.(ListPracticeSessionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListPracticeSessions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListPracticeSessionsResponseObject); ok {
+		if err := validResponse.VisitListPracticeSessionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// StartPracticeSession operation middleware
+func (sh *strictHandler) StartPracticeSession(w http.ResponseWriter, r *http.Request, quizId openapi_types.UUID) {
+	var request StartPracticeSessionRequestObject
+
+	request.QuizId = quizId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.StartPracticeSession(ctx, request.(StartPracticeSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "StartPracticeSession")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(StartPracticeSessionResponseObject); ok {
+		if err := validResponse.VisitStartPracticeSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ResolveRefs operation middleware
+func (sh *strictHandler) ResolveRefs(w http.ResponseWriter, r *http.Request) {
+	var request ResolveRefsRequestObject
+
+	var body ResolveRefsJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ResolveRefs(ctx, request.(ResolveRefsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ResolveRefs")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ResolveRefsResponseObject); ok {
+		if err := validResponse.VisitResolveRefsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListSchools operation middleware
+func (sh *strictHandler) ListSchools(w http.ResponseWriter, r *http.Request, params ListSchoolsParams) {
+	var request ListSchoolsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListSchools(ctx, request.(ListSchoolsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListSchools")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListSchoolsResponseObject); ok {
+		if err := validResponse.VisitListSchoolsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetSchool operation middleware
+func (sh *strictHandler) GetSchool(w http.ResponseWriter, r *http.Request, schoolId openapi_types.UUID) {
+	var request GetSchoolRequestObject
+
+	request.SchoolId = schoolId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetSchool(ctx, request.(GetSchoolRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetSchool")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetSchoolResponseObject); ok {
+		if err := validResponse.VisitGetSchoolResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AbandonPracticeSession operation middleware
+func (sh *strictHandler) AbandonPracticeSession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
+	var request AbandonPracticeSessionRequestObject
+
+	request.SessionId = sessionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AbandonPracticeSession(ctx, request.(AbandonPracticeSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AbandonPracticeSession")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AbandonPracticeSessionResponseObject); ok {
+		if err := validResponse.VisitAbandonPracticeSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetPracticeSession operation middleware
+func (sh *strictHandler) GetPracticeSession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
+	var request GetPracticeSessionRequestObject
+
+	request.SessionId = sessionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetPracticeSession(ctx, request.(GetPracticeSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetPracticeSession")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetPracticeSessionResponseObject); ok {
+		if err := validResponse.VisitGetPracticeSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// SubmitPracticeAnswer operation middleware
+func (sh *strictHandler) SubmitPracticeAnswer(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
+	var request SubmitPracticeAnswerRequestObject
+
+	request.SessionId = sessionId
+
+	var body SubmitPracticeAnswerJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.SubmitPracticeAnswer(ctx, request.(SubmitPracticeAnswerRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SubmitPracticeAnswer")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(SubmitPracticeAnswerResponseObject); ok {
+		if err := validResponse.VisitSubmitPracticeAnswerResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CompletePracticeSession operation middleware
+func (sh *strictHandler) CompletePracticeSession(w http.ResponseWriter, r *http.Request, sessionId openapi_types.UUID) {
+	var request CompletePracticeSessionRequestObject
+
+	request.SessionId = sessionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CompletePracticeSession(ctx, request.(CompletePracticeSessionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CompletePracticeSession")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CompletePracticeSessionResponseObject); ok {
+		if err := validResponse.VisitCompletePracticeSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DeleteStudyGuide operation middleware
+func (sh *strictHandler) DeleteStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	var request DeleteStudyGuideRequestObject
+
+	request.StudyGuideId = studyGuideId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteStudyGuide(ctx, request.(DeleteStudyGuideRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteStudyGuide")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DeleteStudyGuideResponseObject); ok {
+		if err := validResponse.VisitDeleteStudyGuideResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// GetStudyGuide operation middleware
+func (sh *strictHandler) GetStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	var request GetStudyGuideRequestObject
+
+	request.StudyGuideId = studyGuideId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.GetStudyGuide(ctx, request.(GetStudyGuideRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetStudyGuide")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(GetStudyGuideResponseObject); ok {
+		if err := validResponse.VisitGetStudyGuideResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// UpdateStudyGuide operation middleware
+func (sh *strictHandler) UpdateStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	var request UpdateStudyGuideRequestObject
+
+	request.StudyGuideId = studyGuideId
+
+	var body UpdateStudyGuideJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateStudyGuide(ctx, request.(UpdateStudyGuideRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateStudyGuide")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(UpdateStudyGuideResponseObject); ok {
+		if err := validResponse.VisitUpdateStudyGuideResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DetachFile operation middleware
+func (sh *strictHandler) DetachFile(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, fileId openapi_types.UUID) {
+	var request DetachFileRequestObject
+
+	request.StudyGuideId = studyGuideId
+	request.FileId = fileId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DetachFile(ctx, request.(DetachFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DetachFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DetachFileResponseObject); ok {
+		if err := validResponse.VisitDetachFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AttachFile operation middleware
+func (sh *strictHandler) AttachFile(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, fileId openapi_types.UUID) {
+	var request AttachFileRequestObject
+
+	request.StudyGuideId = studyGuideId
+	request.FileId = fileId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AttachFile(ctx, request.(AttachFileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AttachFile")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AttachFileResponseObject); ok {
+		if err := validResponse.VisitAttachFileResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RevokeStudyGuideGrant operation middleware
+func (sh *strictHandler) RevokeStudyGuideGrant(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	var request RevokeStudyGuideGrantRequestObject
+
+	request.StudyGuideId = studyGuideId
+
+	var body RevokeStudyGuideGrantJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RevokeStudyGuideGrant(ctx, request.(RevokeStudyGuideGrantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RevokeStudyGuideGrant")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RevokeStudyGuideGrantResponseObject); ok {
+		if err := validResponse.VisitRevokeStudyGuideGrantResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListStudyGuideGrants operation middleware
+func (sh *strictHandler) ListStudyGuideGrants(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	var request ListStudyGuideGrantsRequestObject
+
+	request.StudyGuideId = studyGuideId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListStudyGuideGrants(ctx, request.(ListStudyGuideGrantsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListStudyGuideGrants")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListStudyGuideGrantsResponseObject); ok {
+		if err := validResponse.VisitListStudyGuideGrantsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateStudyGuideGrant operation middleware
+func (sh *strictHandler) CreateStudyGuideGrant(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	var request CreateStudyGuideGrantRequestObject
+
+	request.StudyGuideId = studyGuideId
+
+	var body CreateStudyGuideGrantJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateStudyGuideGrant(ctx, request.(CreateStudyGuideGrantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateStudyGuideGrant")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateStudyGuideGrantResponseObject); ok {
+		if err := validResponse.VisitCreateStudyGuideGrantResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListQuizzes operation middleware
+func (sh *strictHandler) ListQuizzes(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	var request ListQuizzesRequestObject
+
+	request.StudyGuideId = studyGuideId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListQuizzes(ctx, request.(ListQuizzesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListQuizzes")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListQuizzesResponseObject); ok {
+		if err := validResponse.VisitListQuizzesResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateQuiz operation middleware
+func (sh *strictHandler) CreateQuiz(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	var request CreateQuizRequestObject
+
+	request.StudyGuideId = studyGuideId
+
+	var body CreateQuizJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateQuiz(ctx, request.(CreateQuizRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateQuiz")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateQuizResponseObject); ok {
+		if err := validResponse.VisitCreateQuizResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveStudyGuideRecommendation operation middleware
+func (sh *strictHandler) RemoveStudyGuideRecommendation(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	var request RemoveStudyGuideRecommendationRequestObject
+
+	request.StudyGuideId = studyGuideId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveStudyGuideRecommendation(ctx, request.(RemoveStudyGuideRecommendationRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveStudyGuideRecommendation")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveStudyGuideRecommendationResponseObject); ok {
+		if err := validResponse.VisitRemoveStudyGuideRecommendationResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RecommendStudyGuide operation middleware
+func (sh *strictHandler) RecommendStudyGuide(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	var request RecommendStudyGuideRequestObject
+
+	request.StudyGuideId = studyGuideId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RecommendStudyGuide(ctx, request.(RecommendStudyGuideRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RecommendStudyGuide")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RecommendStudyGuideResponseObject); ok {
+		if err := validResponse.VisitRecommendStudyGuideResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// AttachResource operation middleware
+func (sh *strictHandler) AttachResource(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	var request AttachResourceRequestObject
+
+	request.StudyGuideId = studyGuideId
+
+	var body AttachResourceJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.AttachResource(ctx, request.(AttachResourceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "AttachResource")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(AttachResourceResponseObject); ok {
+		if err := validResponse.VisitAttachResourceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// DetachResource operation middleware
+func (sh *strictHandler) DetachResource(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID, resourceId openapi_types.UUID) {
+	var request DetachResourceRequestObject
+
+	request.StudyGuideId = studyGuideId
+	request.ResourceId = resourceId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.DetachResource(ctx, request.(DetachResourceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DetachResource")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(DetachResourceResponseObject); ok {
+		if err := validResponse.VisitDetachResourceResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// RemoveStudyGuideVote operation middleware
+func (sh *strictHandler) RemoveStudyGuideVote(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	var request RemoveStudyGuideVoteRequestObject
+
+	request.StudyGuideId = studyGuideId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.RemoveStudyGuideVote(ctx, request.(RemoveStudyGuideVoteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RemoveStudyGuideVote")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(RemoveStudyGuideVoteResponseObject); ok {
+		if err := validResponse.VisitRemoveStudyGuideVoteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CastStudyGuideVote operation middleware
+func (sh *strictHandler) CastStudyGuideVote(w http.ResponseWriter, r *http.Request, studyGuideId openapi_types.UUID) {
+	var request CastStudyGuideVoteRequestObject
+
+	request.StudyGuideId = studyGuideId
+
+	var body CastStudyGuideVoteJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CastStudyGuideVote(ctx, request.(CastStudyGuideVoteRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CastStudyGuideVote")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CastStudyGuideVoteResponseObject); ok {
+		if err := validResponse.VisitCastStudyGuideVoteResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

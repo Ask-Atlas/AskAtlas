@@ -11,11 +11,669 @@ import (
 )
 
 type Querier interface {
+	// Existence probe used by POST /api/me/courses/{course_id}/favorite
+	// (ASK-157). Courses do not support soft-delete, so existence is the
+	// only condition. Returns sql.ErrNoRows when missing.
+	CheckCourseExists(ctx context.Context, courseID pgtype.UUID) (int32, error)
+	// Existence probe used by POST /api/files/{file_id}/favorite (ASK-130).
+	// Returns sql.ErrNoRows when the file is missing or in any deletion
+	// lifecycle state -- both map to 404 per the spec ("file not found
+	// or soft-deleted"). The favorite toggle only requires the file to
+	// exist; favoriting is intentionally permission-less per the spec
+	// ("any authenticated user can favorite any non-deleted file").
+	CheckFileExists(ctx context.Context, fileID pgtype.UUID) (int32, error)
+	// Returns TRUE when the question_id is part of this session's
+	// frozen practice_session_questions snapshot. Used by ASK-137 to
+	// enforce the spec's "question must be in this session's
+	// snapshot" rule (400 otherwise -- the user can only answer
+	// questions that were in the quiz at session-start time).
+	CheckQuestionInSessionSnapshot(ctx context.Context, arg CheckQuestionInSessionSnapshotParams) (bool, error)
+	// Practice session queries (ASK-128 start/resume).
+	//
+	// The StartPracticeSession service flow stitches these together:
+	//   1. CheckQuizLiveForSession  -- 404 dispatch (quiz live + parent live)
+	//   2. DeleteStaleIncompleteSessions -- hard-delete this user's
+	//      incomplete session for this quiz if started_at > 7 days ago
+	//   3. FindIncompleteSession -- if found, hydrate + return 200 (resume)
+	//   4. CountQuizQuestions (reused from ASK-115) -- snapshot count
+	//   5. Inside InTx:
+	//        a. InsertPracticeSessionIfAbsent -- ON CONFLICT DO NOTHING
+	//           backed by the partial unique index added in
+	//           20260419083647_add_practice_sessions_partial_unique_index.
+	//           Returns 0 rows on race -> service falls back to step 3.
+	//        b. SnapshotQuizQuestions -- bulk insert practice_session_questions
+	//           rows from quiz_questions
+	//   6. ListSessionAnswers -- for the resume response (empty array on
+	//      newly-created sessions because no answers exist yet)
+	// Returns TRUE when both the quiz row AND its parent study guide are
+	// live (deleted_at IS NULL on both). The service uses this as the
+	// 404 gate before any writes -- a soft-deleted quiz, a quiz under a
+	// soft-deleted guide, and a missing quiz all return FALSE here, which
+	// the service maps to a single 404 response so the caller cannot
+	// distinguish them (info-leak prevention).
+	CheckQuizLiveForSession(ctx context.Context, quizID pgtype.UUID) (bool, error)
+	// Existence probe used by POST /api/me/study-guides/{study_guide_id}/favorite
+	// (ASK-156). Returns sql.ErrNoRows when missing or soft-deleted.
+	// Same rationale as CheckFileExists -- favoriting is permission-less.
+	CheckStudyGuideExists(ctx context.Context, studyGuideID pgtype.UUID) (int32, error)
+	// Grantee-existence probe for ASK-122 when grantee_type='user'.
+	// Returns sql.ErrNoRows when the referenced user does not exist;
+	// the service maps this to a 400 VALIDATION_ERROR ("no user with
+	// this ID") rather than 404. The public sentinel UUID
+	// 00000000-0000-0000-0000-000000000000 is handled in the service
+	// layer (skipped before this query ever runs).
+	CheckUserExists(ctx context.Context, userID pgtype.UUID) (int32, error)
+	// Recomputes the guide's vote_score from study_guide_votes. Returned
+	// as int64 to match the wire shape on CastVoteResponse. Run after
+	// the upsert in the same logical request so the response reflects the
+	// post-mutation state.
+	ComputeGuideVoteScore(ctx context.Context, studyGuideID pgtype.UUID) (int64, error)
+	// Count of all questions on a quiz. Used by AddQuizQuestion (ASK-115)
+	// to enforce the per-quiz 100-question cap inside the same
+	// transaction as the insert, so two concurrent adds at the boundary
+	// can't both squeeze through. Also doubles as the default
+	// sort_order resolution (a new question lands at index = current
+	// count when the caller doesn't supply an explicit value).
+	CountQuizQuestions(ctx context.Context, quizID pgtype.UUID) (int64, error)
+	// Per-spec: total_questions_answered is the number of submitted
+	// answers across completed sessions, NOT the snapshot total from
+	// practice_sessions.total_questions. Computed via a join on
+	// practice_answers since that's where actual submissions live.
+	CountUserAnsweredQuestions(ctx context.Context, viewerID pgtype.UUID) (int64, error)
+	// =============================================================================
+	// Study-guides section: count + recent (5).
+	// =============================================================================
+	// Number of non-deleted study guides the viewer created. Filters
+	// deleted_at IS NULL because the home page should never surface a
+	// count that includes recently-deleted guides.
+	CountUserStudyGuides(ctx context.Context, viewerID pgtype.UUID) (int64, error)
+	// Single-row existence probe used by join/leave to disambiguate the
+	// "Course not found" 404 from the "Section not found" 404 the spec
+	// requires (see ASK-132 / ASK-138).
+	CourseExists(ctx context.Context, id pgtype.UUID) (bool, error)
+	// Single-row probe used by the list handler to disambiguate "course
+	// missing" (404) from "course exists but has no guides" (200 empty
+	// array). Separate from courses.CourseExists only because sqlc-generated
+	// queriers are per-file; the predicate is identical.
+	CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error)
+	// Removes the (file_id, study_guide_id) join row. Returns rows-
+	// affected so the service can detect the concurrency-race case
+	// (0 rows = a parallel detach already removed it, still maps to
+	// 404 to match the get-then-delete contract). The file row is
+	// preserved -- it may be attached to other guides + courses, and
+	// the spec explicitly forbids cascading the file delete from a
+	// single detach.
+	DeleteGuideFile(ctx context.Context, arg DeleteGuideFileParams) (int64, error)
+	// Removes the join row only. The resources row is preserved -- it
+	// may be attached to other guides + courses, and the spec
+	// explicitly forbids cascading the resource delete from a single
+	// detach. Returns rows-affected so the service can detect
+	// already-detached races (0 rows -> 404) vs success (1 row -> nil).
+	DeleteGuideResource(ctx context.Context, arg DeleteGuideResourceParams) (int64, error)
+	// Wipe all answer options for one question for ASK-108. Used inside
+	// the ReplaceQuestion transaction between the existence/ownership
+	// probe and the new InsertQuizAnswerOption rows -- the delete +
+	// insert pair is the PUT semantics for the question's option set.
+	DeleteQuizAnswerOptionsByQuestion(ctx context.Context, questionID pgtype.UUID) error
+	// Hard-delete a single question for DELETE /api/quizzes/{quiz_id}/questions/{question_id}
+	// (ASK-119). The composite WHERE clause guards against a question
+	// being deleted from the wrong quiz (defense in depth -- the
+	// service has already validated quiz_id ownership but the WHERE
+	// enforces it at the SQL boundary). Returns rows-affected so the
+	// service can surface a phantom 0-row case as 404.
+	//
+	// CASCADE: quiz_answer_options have ON DELETE CASCADE from
+	// quiz_questions so option rows are auto-removed.
+	// SET NULL: practice_session_questions.question_id +
+	// practice_answers.question_id have ON DELETE SET NULL so historical
+	// session data is preserved with a NULL question reference.
+	DeleteQuizQuestion(ctx context.Context, arg DeleteQuizQuestionParams) (int64, error)
+	// Hard-deletes a practice session by id (ASK-144). The CASCADE
+	// foreign keys on practice_session_questions and practice_answers
+	// ensure the snapshot rows and answer rows are removed in the
+	// same statement.
+	//
+	// Blind by id only -- the service has already verified ownership
+	// + completed_at IS NULL inside the same tx via
+	// LockSessionForCompletion + the FOR UPDATE row lock. By the
+	// time this runs, the only legitimate outcome is "row deleted".
+	// :execrows lets the service double-check the rows-affected
+	// count (defense-in-depth) and surface a 500 on the
+	// vanishingly-rare 0-rows path (would mean another tx slipped
+	// in and deleted between our lock and this DELETE -- which is
+	// ruled out by the FOR UPDATE row lock under READ COMMITTED,
+	// but the check is cheap and self-documenting).
+	DeleteSessionByID(ctx context.Context, id pgtype.UUID) (int64, error)
+	// Hard-deletes this user's incomplete session for this quiz when it
+	// has been sitting around longer than the caller-supplied stale
+	// threshold. CASCADE deletes the attached practice_session_questions
+	// and practice_answers rows.
+	//
+	// The threshold is a Go-side constant (sessions.StaleSessionAge,
+	// currently 7 days) passed in as seconds so the policy lives in
+	// exactly one place. Multiplying by `interval '1 second'` lets us
+	// pass a plain integer instead of a Postgres interval value, which
+	// keeps the sqlc-generated Go signature simple.
+	//
+	// Scoped per (user_id, quiz_id): we don't want a global cleanup job
+	// here -- the spec wants stale-cleanup to run on the start-session
+	// path so a user explicitly choosing to start fresh sees a clean
+	// slate without waiting for a background job. Other users' stale
+	// sessions on this same quiz are left alone (they'll be cleaned up
+	// the next time THEY hit start-session).
+	//
+	// The partial unique index makes this idempotent -- at most one row
+	// can match the WHERE clause, so DELETE is a no-op when there's no
+	// stale session, and a single-row DELETE otherwise.
+	DeleteStaleIncompleteSessions(ctx context.Context, arg DeleteStaleIncompleteSessionsParams) error
+	// Hard-delete the (viewer, guide) recommendation row. Returns the
+	// rows-affected count so the service can distinguish "viewer never
+	// recommended this guide" (0 rows -> 404 'Recommendation not found')
+	// from a successful delete (1 row -> 204). The guide-existence +
+	// role gate runs FIRST in the service so 'Study guide not found' /
+	// 403 win over 'Recommendation not found' when applicable.
+	DeleteStudyGuideRecommendation(ctx context.Context, arg DeleteStudyGuideRecommendationParams) (int64, error)
+	// Hard-delete the (viewer, guide) vote row (ASK-141). Returns the
+	// rows-affected count so the service can distinguish "no existing
+	// vote" (0 rows -> 404 'Vote not found') from a successful delete
+	// (1 row -> 204). The guide-existence check happens BEFORE this
+	// runs in the service so a missing guide doesn't leak through as
+	// "vote not found".
+	DeleteStudyGuideVote(ctx context.Context, arg DeleteStudyGuideVoteParams) (int64, error)
+	// Resume probe -- returns this user's current in-progress session for
+	// the quiz, if any. The partial unique index on
+	// (user_id, quiz_id) WHERE completed_at IS NULL guarantees AT MOST
+	// one row matches, so LIMIT 1 is belt-and-suspenders.
+	//
+	// Returns sql.ErrNoRows when no incomplete session exists; the
+	// service treats that as the "create new" signal.
+	FindIncompleteSession(ctx context.Context, arg FindIncompleteSessionParams) (FindIncompleteSessionRow, error)
+	// Returns the text of the option marked is_correct for an MCQ or
+	// TF question. Used by ASK-137 to compare against user_answer:
+	//   * multiple-choice -- exact string equality with this text
+	//   * true-false -- this text is "True" or "False" (the canonical
+	//     labels written by the create-quiz path); the service maps
+	//     it to a boolean and compares against the user's parsed
+	//     "true"/"false" input.
+	// Returns sql.ErrNoRows if no option is marked correct, which
+	// the service treats as a data-integrity 500 (write-side
+	// validation should have prevented it).
+	GetCorrectOptionText(ctx context.Context, questionID pgtype.UUID) (string, error)
+	GetCourse(ctx context.Context, id pgtype.UUID) (GetCourseRow, error)
 	// Fetches a file only if it belongs to the given user and has not been soft-deleted.
 	// Returns sql.ErrNoRows if not found or already in a deletion state.
 	GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) (GetFileByOwnerRow, error)
+	// File-side gate for AttachFile (ASK-121). Returns the file's
+	// ownership + status fields so the service can choose 403 (not
+	// owner) vs 404 (missing / not 'complete' / soft-deleted) without
+	// a second round trip. Filters NOTHING -- the service inspects
+	// status + deleted_at + deletion_status to decide vs returning
+	// pre-filtered for "is the row attachable" since the messages
+	// differ (403 vs 404) and we want to give the right one.
+	//
+	// The columns mirror files.GetFileByOwner -- this is intentional;
+	// the cross-package read keeps the service layer aware of file
+	// ownership without reaching into the files package.
+	GetFileForAttach(ctx context.Context, id pgtype.UUID) (GetFileForAttachRow, error)
+	// Existence + state probe used by PATCH /api/files/{file_id} (ASK-113).
+	// Returns the row's user_id and current status so the service can:
+	//   * 404 when the row is missing or in any deletion state.
+	//   * 403 when the caller is not the owner (returned row's user_id mismatch).
+	//   * Validate status transitions (only pending -> complete / failed allowed).
+	// Soft-deleted files are filtered out here so they always map to 404,
+	// regardless of caller -- matching the spec's "Resource not found" rule.
+	GetFileForUpdate(ctx context.Context, fileID pgtype.UUID) (GetFileForUpdateRow, error)
 	GetFileIfViewable(ctx context.Context, arg GetFileIfViewableParams) (File, error)
+	// Lookup for DetachResource (ASK-116). Returns the attached_by user
+	// on the join row so the service can run the dual-authz check
+	// (viewer is guide creator OR viewer is attached_by). sql.ErrNoRows
+	// maps to 'Resource attachment not found' 404 -- the resource may
+	// exist but isn't attached to THIS guide.
+	GetGuideResourceAttacher(ctx context.Context, arg GetGuideResourceAttacherParams) (pgtype.UUID, error)
+	// Single-row membership lookup powering the per-section
+	// enrolled/not-enrolled probe (ASK-148). Returns sql.ErrNoRows when the
+	// viewer is not a member; the service translates that into the 200
+	// {enrolled:false} response, NOT a 404.
+	GetMembership(ctx context.Context, arg GetMembershipParams) (GetMembershipRow, error)
+	// Locked SELECT used at the start of DeleteQuiz (ASK-102) and
+	// UpdateQuiz (ASK-153). SELECT FOR UPDATE prevents two concurrent
+	// mutators from racing on the same row -- one wins with 204/200,
+	// the other sees the post-mutation state in its tx snapshot and
+	// returns 404. Filters NOTHING -- the service inspects deleted_at
+	// + creator_id to choose 404 vs 403 vs proceed (mirrors
+	// studyguides.GetStudyGuideByIDForUpdate).
+	GetQuizByIDForUpdate(ctx context.Context, id pgtype.UUID) (GetQuizByIDForUpdateRow, error)
+	// Load the quiz row + privacy-floor creator info for the detail
+	// payload. The study guide is NOT joined back -- the caller already
+	// knows the study_guide_id (it's in the URL on POST and on the
+	// quiz row itself). Excludes soft-deleted quizzes (deleted_at IS
+	// NULL), soft-deleted creators (u.deleted_at IS NULL), and
+	// soft-deleted parent guides (sg.deleted_at IS NULL) so a hydration
+	// that races with a parent-cascade soft-delete reports 'not found'
+	// rather than rendering an orphaned quiz.
+	GetQuizDetail(ctx context.Context, id pgtype.UUID) (GetQuizDetailRow, error)
+	// Locked SELECT used by UpdateQuiz (ASK-153). Like
+	// GetQuizByIDForUpdate but also joins to the parent study guide
+	// so the service can enforce the "parent guide must be live"
+	// gate (AC6) inside the same transaction without a second round
+	// trip. Locks ONLY the quiz row (FOR UPDATE OF q) -- the parent
+	// guide is read-only at this site and we don't want to hold a
+	// write lock on it for the duration of the quiz update.
+	//
+	// Filters NOTHING -- the service inspects the four fields to
+	// choose 404 (missing quiz / deleted quiz / deleted guide) vs
+	// 403 (not creator) vs proceed.
+	GetQuizForUpdateWithParentStatus(ctx context.Context, id pgtype.UUID) (GetQuizForUpdateWithParentStatusRow, error)
+	// Hydrates a single question row by id. Used by AddQuizQuestion
+	// (ASK-115) to project the freshly-inserted row onto the
+	// QuizQuestionResponse wire shape after the tx commits. Mirrors
+	// the field selection of ListQuizQuestionsByQuiz so the same Go
+	// mapper (mapQuestion) can consume both row types.
+	GetQuizQuestionByID(ctx context.Context, id pgtype.UUID) (GetQuizQuestionByIDRow, error)
+	// Existence + ownership probe used by ASK-108 + ASK-119. Returns the
+	// question's parent quiz_id so the service can:
+	//   * 404 when the row is missing (sql.ErrNoRows).
+	//   * 404 when the question exists under a sibling quiz (the URL's
+	//     quiz_id != the returned quiz_id) -- prevents a leak between
+	//     siblings.
+	// Kept separate from GetQuizQuestionByID because that query is
+	// shape-shared with ListQuizQuestionsByQuizRow via a struct
+	// conversion in hydrateQuestion -- adding a column there would
+	// break that conversion.
+	GetQuizQuestionQuizID(ctx context.Context, id pgtype.UUID) (GetQuizQuestionQuizIDRow, error)
+	// Lookup pair for UpsertResource above. Returns the resources row
+	// the viewer owns for this URL; always succeeds because the upsert
+	// runs immediately before this in the same tx (either the INSERT
+	// wrote the row or it was already there).
+	GetResourceByCreatorURL(ctx context.Context, arg GetResourceByCreatorURLParams) (GetResourceByCreatorURLRow, error)
+	GetSchool(ctx context.Context, id pgtype.UUID) (School, error)
+	// Reads a session row by id. Used by GetPracticeSession (ASK-152)
+	// to render the session detail. Unlike LockSessionForCompletion
+	// this does NOT FOR UPDATE -- it's a pure read so concurrent
+	// writers (SubmitAnswer, CompleteSession) shouldn't block.
+	//
+	// Returns ALL session fields so the service can build the wire
+	// response (including the nullable completed_at the score
+	// calculator gates on).
+	//
+	// No parent quiz / study_guide deletion check: sessions are
+	// historical data and remain accessible even after the parent
+	// quiz or guide is soft-deleted (ASK-152 spec AC6 + technical
+	// note: "sessions must remain accessible even after the quiz is
+	// removed").
+	GetSessionByID(ctx context.Context, id pgtype.UUID) (PracticeSession, error)
+	// Locks the session row and returns ownership + completion state
+	// for the answer-submit endpoint (ASK-137). FOR UPDATE serializes
+	// against a concurrent SessionComplete (ASK-140 future) so the
+	// answer either commits before the completion (recorded) or
+	// after (rejected with 409). Filters NOTHING -- the service
+	// inspects user_id + completed_at to choose 404 / 403 / 409 /
+	// proceed.
+	GetSessionForAnswerSubmission(ctx context.Context, id pgtype.UUID) (GetSessionForAnswerSubmissionRow, error)
+	// Locked SELECT used at the start of DeleteStudyGuide. SELECT FOR
+	// UPDATE prevents concurrent deletes from racing on the same guide
+	// (one wins with 204, the other sees the row already-deleted in its
+	// transaction's snapshot and returns 404). Filters NOTHING -- the
+	// service inspects deleted_at + creator_id to choose 404 vs 403 vs
+	// proceed.
+	GetStudyGuideByIDForUpdate(ctx context.Context, id pgtype.UUID) (GetStudyGuideByIDForUpdateRow, error)
+	// Creator-only probe for the grants handler. Returns sql.ErrNoRows
+	// when the guide doesn't exist or is soft-deleted (both -> 404 at the
+	// handler). Returns the creator_id so the service can compare against
+	// the JWT viewer_id (-> 403 on mismatch) before running grant writes.
+	// Separate from GetStudyGuideByIDForUpdate so this path stays
+	// non-locking (the grants CRUD doesn't need row-level locking).
+	GetStudyGuideCreator(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error)
+	// The detail endpoint's main query (ASK-114). Returns the guide's own
+	// columns + a compact course payload + a compact creator payload
+	// + two inline aggregates as subqueries:
+	//   * vote_score    -- SUM(up/down votes)
+	//   * is_recommended -- EXISTS in study_guide_recommendations
+	//
+	// The viewer's own vote (user_vote) ships in a separate query
+	// (GetUserVoteForGuide) because sqlc does not infer nullable output
+	// columns from LEFT JOIN / subquery expressions on enum-typed columns
+	// -- it reads the schema's NOT NULL constraint and types the output
+	// non-nullable. An extra round trip is cheaper than fighting sqlc's
+	// type inference; the PRD's "batching as separate queries" guidance
+	// explicitly allows it.
+	//
+	// Soft-delete invariants:
+	//   * sg.deleted_at IS NULL  -- excludes deleted guides (→ 404)
+	//   * u.deleted_at IS NULL   -- creator must be live (ASK-143 convention)
+	//
+	// Privacy floor: no email, no clerk_id. Creator exposes only
+	// id/first_name/last_name.
+	GetStudyGuideDetail(ctx context.Context, arg GetStudyGuideDetailParams) (GetStudyGuideDetailRow, error)
+	// =============================================================================
+	// Files section: aggregate stats + recent files.
+	// =============================================================================
+	// Total count + total bytes of complete (non-deletion-lifecycle)
+	// files the viewer owns. Filters status='complete' because pending
+	// and failed uploads aren't user-facing storage.
+	GetUserFileStats(ctx context.Context, viewerID pgtype.UUID) (GetUserFileStatsRow, error)
 	GetUserIDByClerkID(ctx context.Context, clerkID string) (pgtype.UUID, error)
+	// =============================================================================
+	// Practice section: aggregate stats + answer count + recent sessions.
+	// =============================================================================
+	// One-shot aggregate over completed sessions: count + sum(correct)
+	// + sum(total). The accuracy percentage is computed in Go as
+	// ROUND(100 * total_correct / NULLIF(total_questions, 0)) so we
+	// can avoid a SQL CASE/COALESCE that would shadow the divide-by-
+	// zero behavior. COALESCE on the SUMs returns 0 (not NULL) when
+	// the user has no completed sessions -- the spec requires zeros
+	// in that case rather than nulls.
+	GetUserPracticeStats(ctx context.Context, viewerID pgtype.UUID) (GetUserPracticeStatsRow, error)
+	// Returns the viewer's own vote on the guide, or sql.ErrNoRows when
+	// the viewer has not voted. The service maps ErrNoRows to a nil
+	// user_vote in the response (JSON null, not omitted).
+	GetUserVoteForGuide(ctx context.Context, arg GetUserVoteForGuideParams) (VoteDirection, error)
+	// Live-presence probe used by both vote endpoints. Returns TRUE only
+	// when the guide row exists AND is not soft-deleted. The vote service
+	// gates on this before the upsert/delete so a missing-or-deleted
+	// guide returns 404 with a clear message rather than e.g. trampling
+	// through to the SQL layer and surfacing a generic FK error.
+	GuideExistsAndLive(ctx context.Context, id pgtype.UUID) (bool, error)
+	// Quizzes write + read queries (ASK-150 / ASK-136).
+	//
+	// The create flow is wrapped in a single InTx in the service layer:
+	// InsertQuiz -> N x InsertQuizQuestion -> M x InsertQuizAnswerOption.
+	// A failure at any step rolls everything back, so a partial quiz can
+	// never be observed by another reader.
+	//
+	// The post-insert hydration runs OUTSIDE the transaction (commit
+	// happens first) using GetQuizDetail + ListQuizQuestionsByQuiz +
+	// ListQuizAnswerOptionsByQuiz. The two-list fan-out matches the
+	// studyguides detail pattern -- mapping options back onto questions
+	// happens in Go because pgx returns flat rowsets and the question
+	// count is small (<=100 per quiz).
+	//
+	// Privacy floor on the creator payload mirrors studyguides: id +
+	// first_name + last_name only. No email, no clerk_id.
+	// Live-presence probe for the create-quiz endpoint. Returns TRUE
+	// only when the guide row exists AND is not soft-deleted. The
+	// studyguides package has an identical query (GuideExistsAndLive);
+	// duplicated here so the quizzes service can stay decoupled from
+	// the studyguides Repository interface (sqlc generates queriers
+	// per package -- both call the same row but live in different
+	// generated method tables).
+	GuideExistsAndLiveForQuizzes(ctx context.Context, id pgtype.UUID) (bool, error)
+	// Lookup for DetachFile (ASK-124). Returns TRUE when the (file,
+	// guide) join row exists. Used as the 404 short-circuit before the
+	// delete fires -- we want a clean 'File attachment not found' rather
+	// than relying on DeleteGuideFile :execrows which can't distinguish
+	// 'never existed' from 'concurrent detach happened first'.
+	GuideFileAttached(ctx context.Context, arg GuideFileAttachedParams) (bool, error)
+	// Bumps practice_sessions.correct_answers by 1. Called only when
+	// the inserted answer was correct (ASK-137 AC8). Wrapped in the
+	// same tx as InsertPracticeAnswer so a failure rolls back the
+	// answer row too -- the counter and the underlying answer can
+	// never disagree.
+	IncrementSessionCorrectAnswers(ctx context.Context, id pgtype.UUID) error
+	InsertFile(ctx context.Context, arg InsertFileParams) (File, error)
+	// Inserts a new file_grants row for POST /api/files/{file_id}/grants
+	// (ASK-122). Plain INSERT -- no ON CONFLICT DO UPDATE because the
+	// spec requires returning 409 Conflict on a duplicate (not silently
+	// updating granted_by). A unique-key violation (sqlstate 23505)
+	// propagates up as a pgx PgError; the service translates it to
+	// apperrors.ErrConflict so the handler emits a 409.
+	InsertFileGrant(ctx context.Context, arg InsertFileGrantParams) (FileGrant, error)
+	// Append-only analytics row for POST /api/files/{file_id}/view (ASK-134).
+	// Each call inserts a fresh row -- no dedup, no upsert. The viewed_at
+	// column defaults to now() so the wall-clock stamp lives at the DB
+	// layer, not the client. id defaults to gen_random_uuid().
+	//
+	// Existence of the parent file is gated by the service via
+	// GetFileForUpdate before this call -- this query trusts inputs.
+	InsertFileView(ctx context.Context, arg InsertFileViewParams) error
+	// Creates the (file_id, study_guide_id) join row. Uses ON CONFLICT
+	// DO NOTHING + RETURNING so a duplicate attach surfaces as
+	// sql.ErrNoRows in Go, which the service maps to a 409 'File is
+	// already attached to this study guide'. Same pattern as
+	// recommendations + JoinSection.
+	//
+	// No attached_by column on this join table (unlike
+	// study_guide_resources) -- file ownership is determined from
+	// files.user_id instead, and the dual-authz check on detach
+	// compares against guide.creator_id + file.user_id.
+	InsertGuideFile(ctx context.Context, arg InsertGuideFileParams) (pgtype.Timestamptz, error)
+	// Creates the (resource_id, study_guide_id, attached_by) join row.
+	// The PK is (resource_id, study_guide_id) so a same-resource-and-guide
+	// duplicate raises a unique_violation -- but the user-facing 409
+	// conflict on a duplicate URL is detected EARLIER by
+	// URLAlreadyAttachedToGuide (which catches across resource rows
+	// with the same URL but different creators). This INSERT's PK
+	// failure mode is the narrow concurrency-race: two attachers slip
+	// through the pre-check between query 1 and query 4.
+	InsertGuideResource(ctx context.Context, arg InsertGuideResourceParams) error
+	// Records the user's answer with the backend-determined
+	// is_correct + verified flags (ASK-137). The unique constraint
+	// uq_practice_answers_session_question on (session_id,
+	// question_id) catches duplicate submissions; the service
+	// detects the unique-violation pgconn error and surfaces a
+	// typed 400 with details {"question_id": "already answered"}.
+	//
+	// Returns the persisted columns so the handler can render the
+	// PracticeAnswerResponse without a re-fetch.
+	InsertPracticeAnswer(ctx context.Context, arg InsertPracticeAnswerParams) (InsertPracticeAnswerRow, error)
+	// Race-safe insert backed by the partial unique index from migration
+	// 20260419083647. ON CONFLICT DO NOTHING means a concurrent start by
+	// the same user on the same quiz collapses to "no row inserted"
+	// (sqlc returns sql.ErrNoRows for the :one annotation), and the
+	// service catches that and falls back to FindIncompleteSession.
+	//
+	// total_questions is intentionally NOT supplied here -- the column
+	// defaults to 0 and is set to the authoritative snapshot row count
+	// by SnapshotQuizQuestionsAndUpdateCount in the same tx. This
+	// avoids the race window that existed when total_questions was
+	// pre-computed via CountQuizQuestions and could disagree with the
+	// actual snapshot row count under concurrent quiz edits at
+	// READ COMMITTED isolation (gemini + copilot PR #153 feedback).
+	//
+	// The losing request never touches the quiz_questions snapshot --
+	// the winner already created it.
+	InsertPracticeSessionIfAbsent(ctx context.Context, arg InsertPracticeSessionIfAbsentParams) (InsertPracticeSessionIfAbsentRow, error)
+	// Insert a new quiz row. Returns the columns the service needs to
+	// build the QuizDetailResponse without an extra round trip on the
+	// write side -- the read-side hydration still happens via
+	// GetQuizDetail because the creator's first_name + last_name come
+	// from a join to users (and would inflate this RETURNING clause).
+	InsertQuiz(ctx context.Context, arg InsertQuizParams) (InsertQuizRow, error)
+	// Insert one option row. The service has already validated that
+	// exactly one option per MCQ has is_correct=true; for true-false
+	// questions the service synthesises two options (`True` + `False`)
+	// with the matching is_correct flag.
+	InsertQuizAnswerOption(ctx context.Context, arg InsertQuizAnswerOptionParams) error
+	// Insert a single question row. reference_answer is only meaningful
+	// for `freeform` questions; the service passes NULL for the other
+	// two types. sort_order is required (the service sets a stable
+	// value -- either the user-supplied integer or the array index).
+	InsertQuizQuestion(ctx context.Context, arg InsertQuizQuestionParams) (pgtype.UUID, error)
+	// Study guide list queries (ASK-104).
+	//
+	// Every ListStudyGuides* variant uses the same CTE structure so the
+	// per-row aggregates (vote_score, is_recommended, quiz_count) are
+	// computed once and can be referenced from the outer WHERE clause
+	// (e.g. for the score-sorted cursor predicate). The CTE pattern also
+	// keeps the 8 named variants near-identical apart from ORDER BY + the
+	// cursor predicate, which makes future maintenance (e.g. adding a new
+	// sort field) a mechanical edit.
+	//
+	// Soft-delete invariants enforced everywhere:
+	//   * sg.deleted_at IS NULL       — excludes guides marked for deletion
+	//   * u.deleted_at IS NULL        — excludes guides authored by a
+	//                                   soft-deleted user; matches the
+	//                                   convention established by ASK-143's
+	//                                   section roster (a soft-deleted user
+	//                                   disappears from public surfaces)
+	//   * quizzes.deleted_at IS NULL  — quiz_count excludes deleted quizzes
+	//
+	// Privacy floor on the creator payload: only id + first_name + last_name
+	// are selected. No email, no clerk_id -- same rule as
+	// SectionMemberResponse in ASK-143.
+	// Insert a new guide and return all the columns the service needs to
+	// construct the StudyGuideDetail response without an extra round trip.
+	// The course preflight (in service.go) gates on AssertCourseExists so
+	// the FK violation is unreachable in normal flow; the FK still acts
+	// as a backstop if a course is hard-deleted between preflight + insert.
+	InsertStudyGuide(ctx context.Context, arg InsertStudyGuideParams) (InsertStudyGuideRow, error)
+	// ============================================================================
+	// Study-guide grants (ASK-211). Parallel to file_grants. The study_guide_grants
+	// table lives in migration 20260424192951 (ASK-207 phase 1); these queries
+	// add the CRUD surface.
+	// ============================================================================
+	// Creates a row for POST /study-guides/{id}/grants. Plain INSERT -- no
+	// ON CONFLICT DO UPDATE because the spec requires 409 CONFLICT on a
+	// duplicate (mirrors file_grants). A unique-key violation (sqlstate
+	// 23505) propagates as a pgx PgError and is translated to
+	// apperrors.ErrConflict at the service layer.
+	//
+	// The CHECK constraint `grantee_type IN ('user', 'course')` lives on
+	// the table; the service re-validates grantee_type defensively so a
+	// clean 400 surfaces before the DB round trip.
+	InsertStudyGuideGrant(ctx context.Context, arg InsertStudyGuideGrantParams) (StudyGuideGrant, error)
+	// Inserts the (study_guide_id, recommended_by) row and returns the
+	// created_at PLUS the recommender's privacy-floor identity
+	// (first_name + last_name) via a CTE join to users. One round trip
+	// builds the entire RecommendationResponse payload; without the
+	// CTE the service would need a second SELECT against users just to
+	// pull the recommender's name.
+	//
+	// The (study_guide_id, recommended_by) PK from the schema makes a
+	// duplicate insert raise unique_violation (Postgres SQLSTATE 23505),
+	// which the service catches and maps to apperrors.ErrConflict (409).
+	InsertStudyGuideRecommendation(ctx context.Context, arg InsertStudyGuideRecommendationParams) (InsertStudyGuideRecommendationRow, error)
+	// Adds the user to the section as a 'student'. ON CONFLICT DO NOTHING
+	// keeps duplicate joins atomic (no PK violation surfacing) and concurrency
+	// safe; the service layer treats an empty result as the 409 "Already a
+	// member of this section" case.
+	JoinSection(ctx context.Context, arg JoinSectionParams) (CourseMember, error)
+	// Hard-deletes the membership row. RETURNING lets the service detect a
+	// no-op delete (sql.ErrNoRows) and map it to the 404 "Not a member of
+	// this section" response.
+	LeaveSection(ctx context.Context, arg LeaveSectionParams) (pgtype.UUID, error)
+	// Per-viewer course favorites (ASK-151). Joins courses for the
+	// (department, number, title) triple. No soft-delete filter --
+	// the courses table does not support soft-delete.
+	//
+	// Index used: idx_course_favorites_user_created
+	// (user_id, created_at, course_id).
+	ListCourseFavorites(ctx context.Context, arg ListCourseFavoritesParams) ([]ListCourseFavoritesRow, error)
+	// Compact summary for `::course{id}` refs. Courses are public; the
+	// only filter is the id list. School is joined in-line because the
+	// card renders department + number + school.
+	ListCourseRefSummaries(ctx context.Context, ids []pgtype.UUID) ([]ListCourseRefSummariesRow, error)
+	// Returns sections with a live member_count via LEFT JOIN (so sections
+	// with zero members still appear). Ordered most-recent term first using
+	// start_date when present, falling back to section_code. NULLS LAST keeps
+	// sections without a known start_date at the bottom.
+	ListCourseSections(ctx context.Context, courseID pgtype.UUID) ([]ListCourseSectionsRow, error)
+	ListCoursesCreatedAtAsc(ctx context.Context, arg ListCoursesCreatedAtAscParams) ([]ListCoursesCreatedAtAscRow, error)
+	ListCoursesCreatedAtDesc(ctx context.Context, arg ListCoursesCreatedAtDescParams) ([]ListCoursesCreatedAtDescRow, error)
+	// All ListCourses* variants share the same WHERE template
+	// (school_id, department, q filters + sort-specific cursor) and only
+	// differ in ORDER BY direction and the cursor field shape. This mirrors
+	// the per-sort-variant pattern in files.sql -- sqlc cannot parameterize
+	// ORDER BY, so each direction gets its own named query.
+	//
+	// The default sort (by department) uses a composite (department, number, id)
+	// cursor because (department) alone is not unique; the other sort fields
+	// use a simpler (field, id) cursor since the field is paired with the
+	// primary key as a tiebreaker.
+	ListCoursesDepartmentAsc(ctx context.Context, arg ListCoursesDepartmentAscParams) ([]ListCoursesDepartmentAscRow, error)
+	ListCoursesDepartmentDesc(ctx context.Context, arg ListCoursesDepartmentDescParams) ([]ListCoursesDepartmentDescRow, error)
+	ListCoursesNumberAsc(ctx context.Context, arg ListCoursesNumberAscParams) ([]ListCoursesNumberAscRow, error)
+	ListCoursesNumberDesc(ctx context.Context, arg ListCoursesNumberDescParams) ([]ListCoursesNumberDescRow, error)
+	ListCoursesTitleAsc(ctx context.Context, arg ListCoursesTitleAscParams) ([]ListCoursesTitleAscRow, error)
+	ListCoursesTitleDesc(ctx context.Context, arg ListCoursesTitleDescParams) ([]ListCoursesTitleDescRow, error)
+	// =============================================================================
+	// Courses section: enrollment list capped at 10 for the resolved term.
+	// =============================================================================
+	// Returns the viewer's enrollments for the resolved current term,
+	// capped at 10. The dashboard cares about course-level info plus
+	// the viewer's role in that section (TAs, instructors render
+	// differently in the UI). joined_at DESC, id DESC for a stable
+	// order across calls.
+	ListEnrolledCoursesForTerm(ctx context.Context, arg ListEnrolledCoursesForTermParams) ([]ListEnrolledCoursesForTermRow, error)
+	// Per-viewer file favorites (ASK-151). Joins file_favorites onto
+	// files so the row carries name + mime_type without a follow-up
+	// GET. Filters f.deletion_status IS NULL to exclude files in any
+	// deletion lifecycle (mirrors every other files.sql query).
+	//
+	// Ordered by ff.created_at DESC, file_id DESC for a strict total
+	// order over the favorites table (created_at alone isn't unique
+	// under load, file_id is the tiebreaker).
+	//
+	// Index used: PK (user_id, file_id). The PK isn't a covering index
+	// for ORDER BY created_at -- file_favorites in the existing schema
+	// has no idx_file_favorites_user_created index. At MVP scale (a
+	// single user's favorites) the planner does an in-memory sort over
+	// the user's rows after a PK lookup, which is acceptable. If
+	// favorite counts grow into thousands per user, add the index.
+	ListFileFavorites(ctx context.Context, arg ListFileFavoritesParams) ([]ListFileFavoritesRow, error)
+	// Compact summary for `::file{id}` refs. Grants-gated: owner + direct
+	// user grant + public sentinel. Mirrors the GetFileIfViewable
+	// visibility branches but fans out over an array of file IDs; course
+	// + study_guide grants are intentionally omitted here to match the
+	// GetFile handler convention (callers don't resolve viewer course /
+	// study-guide IDs upstream yet). Files the viewer can't see simply
+	// don't appear in the result set and surface as null refs.
+	ListFileRefSummaries(ctx context.Context, arg ListFileRefSummariesParams) ([]ListFileRefSummariesRow, error)
+	// Attached files for the guide detail payload. Privacy floor: no
+	// user_id, no s3_key, no checksum. The file list shows only what a
+	// viewer needs to see: what's attached, what type, and how big.
+	//
+	// Filters f.status = 'complete' so files mid-upload (pending) or
+	// failed don't surface in the guide detail -- a frontend that tried
+	// to download such a file would get a broken link. Only successfully
+	// uploaded files are visible to non-owners; the upload author's own
+	// file list (via the files endpoints) shows all statuses so they can
+	// retry or remove.
+	ListGuideFiles(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideFilesRow, error)
+	// Non-deleted quizzes for the guide + question_count per quiz. The
+	// LEFT JOIN ensures quizzes with zero questions still appear with
+	// question_count = 0.
+	ListGuideQuizzesWithQuestionCount(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideQuizzesWithQuestionCountRow, error)
+	// Recommenders list for the guide detail payload. Same privacy floor
+	// as CreatorSummary -- id + first_name + last_name only. Excludes
+	// recommenders whose user record is soft-deleted.
+	ListGuideRecommenders(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideRecommendersRow, error)
+	// Attached resources for the guide detail payload. No creator info
+	// in the SELECT list -- the caller doesn't need to know who attached
+	// the resource.
+	ListGuideResources(ctx context.Context, studyGuideID pgtype.UUID) ([]ListGuideResourcesRow, error)
+	// Returns every section a user is enrolled in with the compact
+	// course + school payload the dashboard renders. Optional term + role
+	// filters use sqlc.narg so the WHERE branch short-circuits when
+	// they're absent. Sort is fixed: most-recent term first (lexicographic
+	// "Spring 2026" > "Fall 2025" is acceptable for MVP per the spec),
+	// then department + number for stable in-term ordering.
+	ListMyEnrollments(ctx context.Context, arg ListMyEnrollmentsParams) ([]ListMyEnrollmentsRow, error)
+	// created_at DESC variant (ASK-131). Same shape + filters as
+	// ListMyStudyGuidesUpdated; the cursor comparison uses created_at.
+	ListMyStudyGuidesNewest(ctx context.Context, arg ListMyStudyGuidesNewestParams) ([]ListMyStudyGuidesNewestRow, error)
+	// title ASC variant (ASK-131). Case-insensitive via LOWER(title).
+	// Cursor: (lower(title), id) keyset for stable pagination across
+	// duplicate titles.
+	ListMyStudyGuidesTitle(ctx context.Context, arg ListMyStudyGuidesTitleParams) ([]ListMyStudyGuidesTitleRow, error)
+	// Per-creator study-guide list for GET /api/me/study-guides (ASK-131).
+	// Differences vs ListStudyGuides*:
+	//   * Scoped by creator_id (the JWT viewer), not course_id.
+	//   * Optional course_id narg -- when present, filter to that course;
+	//     when null, return across all courses.
+	//   * NO `sg.deleted_at IS NULL` filter -- the spec explicitly
+	//     requires soft-deleted guides to surface so the owner can see
+	//     (and eventually restore) them. The response includes a
+	//     `deleted_at` column for the frontend to render a "Deleted"
+	//     badge. The creator's own deleted_at still filters (a soft-
+	//     deleted user's content stays hidden everywhere).
+	//   * Single direction per sort variant (updated DESC only -- the
+	//     spec doesn't expose a sort_dir here; the shape is simpler).
+	//
+	// Keyset cursor: (updated_at, id) DESC matches the ORDER BY so the
+	// "(updated_at, id) < cursor" clause advances past the last visible
+	// row. id is always the tiebreaker.
+	ListMyStudyGuidesUpdated(ctx context.Context, arg ListMyStudyGuidesUpdatedParams) ([]ListMyStudyGuidesUpdatedRow, error)
 	ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFilesCreatedAscParams) ([]ListOwnedFilesCreatedAscRow, error)
 	ListOwnedFilesCreatedDesc(ctx context.Context, arg ListOwnedFilesCreatedDescParams) ([]ListOwnedFilesCreatedDescRow, error)
 	ListOwnedFilesMimeAsc(ctx context.Context, arg ListOwnedFilesMimeAscParams) ([]ListOwnedFilesMimeAscRow, error)
@@ -28,15 +686,493 @@ type Querier interface {
 	ListOwnedFilesStatusDesc(ctx context.Context, arg ListOwnedFilesStatusDescParams) ([]ListOwnedFilesStatusDescRow, error)
 	ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFilesUpdatedAscParams) ([]ListOwnedFilesUpdatedAscRow, error)
 	ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFilesUpdatedDescParams) ([]ListOwnedFilesUpdatedDescRow, error)
+	// All answer options for one question, ordered by sort_order then
+	// id. Used by AddQuizQuestion (ASK-115) to attach the freshly-
+	// inserted option rows to the question on the response. The
+	// single-question scope keeps the read narrow -- no need to load
+	// every option on the parent quiz when the caller only wants the
+	// new question.
+	ListQuizAnswerOptionsByQuestion(ctx context.Context, questionID pgtype.UUID) ([]QuizAnswerOption, error)
+	// All answer options for every question in a quiz, ordered by
+	// question_id then sort_order then id. The mapper groups by
+	// question_id in Go to attach options to their parent question.
+	// The triple-key ordering keeps the option list deterministic.
+	ListQuizAnswerOptionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]QuizAnswerOption, error)
+	// All questions for a quiz, ordered by sort_order then id (the id
+	// tiebreaker keeps the response deterministic when two questions
+	// happen to share a sort_order -- the spec doesn't enforce
+	// uniqueness on sort_order). Returns reference_answer so the
+	// mapper can emit it as `correct_answer` on freeform questions.
+	ListQuizQuestionsByQuiz(ctx context.Context, quizID pgtype.UUID) ([]ListQuizQuestionsByQuizRow, error)
+	// Compact summary for `::quiz{id}` refs. Same "live parent guide +
+	// live creator + not soft-deleted" filter as GetQuizDetail so a
+	// hydration that races with a cascade-delete doesn't render an
+	// orphaned quiz.
+	ListQuizRefSummaries(ctx context.Context, ids []pgtype.UUID) ([]ListQuizRefSummariesRow, error)
+	// Lists every non-soft-deleted quiz attached to a study guide
+	// (ASK-136). Each row carries the privacy-floor creator payload
+	// (id + first_name + last_name only -- mirrors the studyguides
+	// surface) plus a server-computed question_count via LEFT JOIN +
+	// COUNT, so a quiz with zero questions still surfaces with a 0
+	// count rather than being silently dropped by an INNER JOIN.
+	//
+	// Soft-delete invariants:
+	//   * q.deleted_at IS NULL  -- excludes soft-deleted quizzes
+	//                              (AC3: studyguide with mixed live +
+	//                              deleted quizzes only returns the live
+	//                              ones)
+	//   * u.deleted_at IS NULL  -- excludes quizzes whose creator's user
+	//                              record was soft-deleted (matches the
+	//                              ASK-143 convention used by
+	//                              GetStudyGuideDetail)
+	//
+	// The parent study guide's deleted_at is checked separately by the
+	// service via GuideExistsAndLiveForQuizzes BEFORE this query runs --
+	// a missing or soft-deleted guide returns 404 even when this query
+	// would have returned an empty array. Keeps the 404 vs 200-empty
+	// distinction crisp.
+	//
+	// Order: created_at DESC with id DESC as the deterministic
+	// tiebreaker (the spec calls for "newest first"). The id tiebreaker
+	// prevents a flaky test on a Postgres that happens to insert two
+	// rows in the same microsecond.
+	ListQuizzesByStudyGuide(ctx context.Context, studyGuideID pgtype.UUID) ([]ListQuizzesByStudyGuideRow, error)
+	// Per-viewer recent courses (ASK-145). Joins courses for the
+	// (department, number, title) triple. No soft-delete filter --
+	// the courses table does not support soft-delete.
+	//
+	// Index used: idx_course_last_viewed_user_viewed
+	// (user_id, viewed_at, course_id).
+	ListRecentCourses(ctx context.Context, arg ListRecentCoursesParams) ([]ListRecentCoursesRow, error)
+	// Per-viewer recent files (ASK-145). Joins file_last_viewed onto files
+	// so the row carries the display payload (name + mime_type) the
+	// sidebar needs without a follow-up GET. Filters
+	// f.deletion_status IS NULL to exclude files in any deletion lifecycle
+	// (pending_deletion or deleted) -- mirrors the same predicate every
+	// other files.sql query uses.
+	//
+	// Index used: idx_file_last_viewed_user_viewed_file
+	// (user_id, viewed_at, file_id).
+	ListRecentFiles(ctx context.Context, arg ListRecentFilesParams) ([]ListRecentFilesRow, error)
+	// Per-viewer recent study guides (ASK-145). Joins study_guides for
+	// title and the parent course's department + number so the sidebar
+	// can render "CPTS 322 -- Binary Trees Cheat Sheet" without a
+	// follow-up request. Filters sg.deleted_at IS NULL because the
+	// recents widget should never surface the user's own deleted guides
+	// (the my-guides endpoint is the place to view/restore those).
+	//
+	// Index used: idx_study_guide_last_viewed_user_viewed
+	// (user_id, viewed_at, study_guide_id).
+	ListRecentStudyGuides(ctx context.Context, arg ListRecentStudyGuidesParams) ([]ListRecentStudyGuidesRow, error)
+	// 5 most recently updated complete files the viewer owns.
+	ListRecentUserFiles(ctx context.Context, arg ListRecentUserFilesParams) ([]ListRecentUserFilesRow, error)
+	// 5 most recently completed sessions. Joins quiz + study_guide so
+	// each row carries the labels the home page needs (no follow-up
+	// GETs). score_percentage is computed in Go from total_questions
+	// + correct_answers (consistent with the overall_accuracy formula).
+	ListRecentUserSessions(ctx context.Context, arg ListRecentUserSessionsParams) ([]ListRecentUserSessionsRow, error)
+	// 5 most recently updated guides the viewer created. Joins courses
+	// so the UI can render "<dept> <num> -- <title>" inline. Sorted by
+	// updated_at DESC for the home-page "recently updated" affordance.
+	ListRecentUserStudyGuides(ctx context.Context, arg ListRecentUserStudyGuidesParams) ([]ListRecentUserStudyGuidesRow, error)
+	ListSchools(ctx context.Context, arg ListSchoolsParams) ([]School, error)
+	// Returns the section roster joined against users for first/last name.
+	// Privacy floor: SELECT lists ONLY the five fields exposed in the
+	// SectionMemberResponse schema (user_id, first_name, last_name, role,
+	// joined_at). DO NOT add email, clerk_id, or any other user column to
+	// this list -- the endpoint is reachable by any authenticated user.
+	//
+	// Soft-deleted users (users.deleted_at IS NOT NULL) are excluded -- the
+	// codebase's soft-delete convention is enforced by the partial indexes
+	// idx_users_deleted_at and idx_users_active_email. A user's soft-delete
+	// is the signal that they want to disappear from the product, so they
+	// must not surface in a public-by-design roster. The cursor still
+	// advances past them in the (joined_at, user_id) keyset, so removing
+	// them mid-iteration just shrinks the page rather than skipping live
+	// members.
+	//
+	// Optional role filter via sqlc.narg short-circuits when absent. Keyset
+	// pagination on (joined_at, user_id) -- joined_at alone isn't unique
+	// (multiple users can join in the same second on a busy section), so
+	// user_id is the tiebreaker that keeps the keyset a strict total order.
+	ListSectionMembers(ctx context.Context, arg ListSectionMembersParams) ([]ListSectionMembersRow, error)
+	// Dedicated sections endpoint for ASK-127 -- distinct from the
+	// inline ListCourseSections (used by GetCourse) because:
+	//   * Optional exact-match term filter via sqlc.narg.
+	//   * Returns course_id and created_at (the inline payload omits
+	//     them because the parent course already carries the id and
+	//     created_at is irrelevant to the inline render).
+	//   * Different ORDER BY: term DESC, section_code ASC -- sorts
+	//     terms in DESCENDING LEXICOGRAPHIC order per the ASK-127
+	//     spec, with section codes ascending within a term. NOT
+	//     chronological: "Spring 2026" sorts before "Fall 2026"
+	//     because S<F false but in DESC order alphabetic decides;
+	//     "Summer 2025" sorts before "Spring 2025" alphabetically
+	//     (Su>Sp). Acceptable per the spec. The inline
+	//     ListCourseSections query sorts by start_date DESC for
+	//     the chronological course-detail UI instead.
+	//
+	// LEFT JOIN keeps zero-member sections in the result set; COUNT
+	// is wrapped in a GROUP BY cs.id so member_count is per-section,
+	// not a global aggregate.
+	ListSectionsForCourse(ctx context.Context, arg ListSectionsForCourseParams) ([]ListSectionsForCourseRow, error)
+	// All answers submitted in a session, ordered by answered_at ASC so
+	// the response renders them in the order the user produced them.
+	// Used by the resume path to populate the `answers` array in
+	// PracticeSessionResponse. Returns an empty slice (not nil) for
+	// freshly-created sessions where no answers exist yet -- the
+	// mapper renders that as `[]` rather than `null` per spec.
+	ListSessionAnswers(ctx context.Context, sessionID pgtype.UUID) ([]ListSessionAnswersRow, error)
+	// Per-viewer study-guide favorites (ASK-151). Joins study_guides
+	// for title and the parent course's department + number so the
+	// sidebar can render a "CPTS 322 -- <title>" label without a
+	// follow-up request. Filters sg.deleted_at IS NULL because the
+	// favorites widget should never surface the user's own deleted
+	// guides.
+	//
+	// Index used: idx_study_guide_favorites_user_created
+	// (user_id, created_at, study_guide_id).
+	ListStudyGuideFavorites(ctx context.Context, arg ListStudyGuideFavoritesParams) ([]ListStudyGuideFavoritesRow, error)
+	// Returns every grant on a guide for GET /study-guides/{id}/grants.
+	// No visibility filter here -- the handler gates on creator-only
+	// BEFORE this query runs (a non-creator can't list the grants on
+	// someone else's guide). Sorted by created_at DESC so newest
+	// shares surface first; id is the stable tiebreaker.
+	ListStudyGuideGrants(ctx context.Context, studyGuideID pgtype.UUID) ([]StudyGuideGrant, error)
+	// Queries for the batch `POST /api/refs/resolve` endpoint (ASK-208).
+	// Each query returns the compact summary shape the frontend uses to
+	// render a ref card. Entities missing from the result (deleted,
+	// invisible to the viewer, or nonexistent) are absent from the rows;
+	// the service fills nulls into the response map.
+	// Compact summary for `::sg{id}` refs. Grants-gated (ASK-211): a ref
+	// hydrates only when the viewer can see the guide under the same
+	// visibility rules as GetStudyGuideDetail -- public, creator, direct
+	// user grant, or course grant via enrollment. Guides the viewer can't
+	// see simply don't appear in the result set and surface as null refs
+	// on the wire (the service layer handles the map lookup). The
+	// quiz_count subquery excludes soft-deleted quizzes so a ref to a
+	// guide whose only quiz was deleted shows 0.
+	ListStudyGuideRefSummaries(ctx context.Context, arg ListStudyGuideRefSummariesParams) ([]ListStudyGuideRefSummariesRow, error)
+	ListStudyGuidesNewestAsc(ctx context.Context, arg ListStudyGuidesNewestAscParams) ([]ListStudyGuidesNewestAscRow, error)
+	ListStudyGuidesNewestDesc(ctx context.Context, arg ListStudyGuidesNewestDescParams) ([]ListStudyGuidesNewestDescRow, error)
+	ListStudyGuidesScoreAsc(ctx context.Context, arg ListStudyGuidesScoreAscParams) ([]ListStudyGuidesScoreAscRow, error)
+	// Default sort. Multi-column keyset on (vote_score, view_count,
+	// updated_at, id) -- each column after vote_score is a tiebreaker for
+	// the previous one; id is the final strict-total-order tiebreaker.
+	ListStudyGuidesScoreDesc(ctx context.Context, arg ListStudyGuidesScoreDescParams) ([]ListStudyGuidesScoreDescRow, error)
+	ListStudyGuidesUpdatedAsc(ctx context.Context, arg ListStudyGuidesUpdatedAscParams) ([]ListStudyGuidesUpdatedAscRow, error)
+	ListStudyGuidesUpdatedDesc(ctx context.Context, arg ListStudyGuidesUpdatedDescParams) ([]ListStudyGuidesUpdatedDescRow, error)
+	ListStudyGuidesViewsAsc(ctx context.Context, arg ListStudyGuidesViewsAscParams) ([]ListStudyGuidesViewsAscRow, error)
+	ListStudyGuidesViewsDesc(ctx context.Context, arg ListStudyGuidesViewsDescParams) ([]ListStudyGuidesViewsDescRow, error)
+	// Cursor-paginated keyset list of the authenticated user's
+	// practice sessions for one quiz (ASK-149). Sorted by
+	// (started_at DESC, id DESC) so newest attempts appear first;
+	// id is the deterministic tie-breaker on the (vanishingly rare)
+	// case of two sessions sharing started_at to the microsecond.
+	//
+	// Filters:
+	//   * Scoped to (user_id, quiz_id). The handler/service
+	//     anchors user_id on the JWT so users cannot list each
+	//     other's sessions even if they spoof the path param.
+	//   * status_filter optional:
+	//       NULL       -- both active + completed (interleaved by started_at)
+	//       'active'   -- completed_at IS NULL  (in-progress only)
+	//       'completed'-- completed_at IS NOT NULL (finalised only)
+	//   * Keyset cursor (cursor_started_at + cursor_id) is the
+	//     started_at + id of the LAST row from the previous page.
+	//     Both nullable args MUST be set together; the service
+	//     decodes them as a pair from the opaque base64 cursor and
+	//     never sends one without the other. The query enforces
+	//     the pair invariant defensively in SQL (see the WHERE
+	//     clause below) so a half-set cursor surfaces as a clear
+	//     error rather than a mysteriously empty page (Postgres
+	//     tuple comparison against NULL evaluates to NULL, which
+	//     filters every row out). copilot PR #158 feedback.
+	//
+	// Pagination: the service passes page_limit = caller_limit + 1
+	// so it can detect has_more without an extra COUNT query --
+	// if more than caller_limit rows come back, the extra row is
+	// trimmed and has_more=true.
+	//
+	// No parent quiz / study_guide deletion check inline here: the
+	// service gates the call with CheckQuizLiveForSession before
+	// invoking this query. A deleted parent surfaces as 404 before
+	// this list query runs, so a stale "list" call against a
+	// soft-deleted quiz cannot leak rows. (CheckQuizLiveForSession
+	// is itself a DB query -- the "no DB hit" path is from the
+	// application logic perspective, not the literal HTTP layer.)
+	ListUserSessionsForQuiz(ctx context.Context, arg ListUserSessionsForQuizParams) ([]ListUserSessionsForQuizRow, error)
+	// Locks the session row and returns ALL fields the
+	// CompleteSession endpoint (ASK-140) needs to assemble its
+	// response. FOR UPDATE serializes against a concurrent
+	// SubmitAnswer (ASK-137 also FOR UPDATEs the session row), so
+	// the spec's "answer-vs-complete race -> first commit wins"
+	// semantics fall out naturally:
+	//   * answer wins -> complete sees correct_answers updated
+	//   * complete wins -> answer's locked SELECT sees completed_at
+	//     set and returns 409
+	//
+	// Returns sql.ErrNoRows when the session doesn't exist; the
+	// service maps that to 404. The presence of completed_at on the
+	// returned row drives the 409-vs-proceed decision.
+	LockSessionForCompletion(ctx context.Context, id pgtype.UUID) (PracticeSession, error)
 	// Called by the cleanup job handler once S3 deletion is confirmed.
 	MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
+	// Sets completed_at = now() and returns the timestamp the row
+	// now carries. The service uses the returned timestamp to
+	// assemble the response without a re-fetch (the rest of the
+	// session fields were captured by LockSessionForCompletion in
+	// the same tx, so they don't need to round-trip again).
+	//
+	// This is a blind UPDATE: the service has already verified
+	// ownership + completed_at IS NULL inside the same tx via
+	// LockSessionForCompletion + the FOR UPDATE row lock. By the
+	// time this runs, the only legitimate outcome is "row updated".
+	MarkSessionCompleted(ctx context.Context, id pgtype.UUID) (pgtype.Timestamptz, error)
+	// Partial update for ASK-113. Each updatable column uses
+	// COALESCE(narg, current) so a nil arg means "leave alone" and a
+	// non-nil arg means "replace". The CTE returns the post-update row
+	// joined with file_favorites + file_last_viewed so the handler can
+	// emit a complete FileResponse without a follow-up SELECT.
+	//
+	// The service is responsible for:
+	//   * 404 / 403 gating (via GetFileForUpdate before this call).
+	//   * The at-least-one-field rule (an empty body is a 400 before SQL).
+	//   * Status transition validation (only pending -> complete / failed).
+	// Defense-in-depth: the WHERE clause re-asserts owner + non-deleted so
+	// a concurrent DELETE between GetFileForUpdate and this UPDATE yields
+	// sql.ErrNoRows -> 404 instead of a phantom write.
+	PatchFile(ctx context.Context, arg PatchFileParams) (PatchFileRow, error)
+	// Dashboard queries (ASK-155). Each section of GET /api/me/dashboard
+	// has 1-2 dedicated queries; the service orchestrates the ~10 queries
+	// in parallel-equivalent fan-out and assembles the response.
+	// =============================================================================
+	// Current-term resolution waterfall (3 attempts).
+	// =============================================================================
+	// Step 1 of the current-term waterfall: find the term whose section
+	// window contains today. If multiple terms overlap (rare), use the
+	// one with the latest end_date.
+	ResolveCurrentTermActive(ctx context.Context, viewerID pgtype.UUID) (string, error)
+	// Step 2 of the waterfall: nothing is active right now (e.g.,
+	// between semesters). Pick the term whose latest end_date is
+	// closest to today but in the past.
+	ResolveCurrentTermLastEnded(ctx context.Context, viewerID pgtype.UUID) (string, error)
+	// Step 3 of the waterfall: no sections have dates at all (e.g.,
+	// newly seeded data). Fall back to lexicographic order, which
+	// matches the convention "Spring 2026" > "Fall 2025" alphabetically.
+	ResolveCurrentTermLexLatest(ctx context.Context, viewerID pgtype.UUID) (string, error)
+	// Deletes a file grant matching the exact composite key for DELETE
+	// /api/files/{file_id}/grants (ASK-125). Returns the rows-affected
+	// count so the service can distinguish "grant exists and was
+	// deleted" (1 row -> 204) from "no matching grant" (0 rows -> 404).
+	// The spec requires 404 when the grant is missing -- this replaces
+	// the previous idempotent no-op behavior.
+	RevokeFileGrant(ctx context.Context, arg RevokeFileGrantParams) (int64, error)
+	// Deletes the exact composite-key row for DELETE
+	// /study-guides/{id}/grants. Returns rows-affected so the service can
+	// distinguish "grant exists and was deleted" (1 row -> 204) from "no
+	// matching grant" (0 rows -> 404). Spec parity with file_grants: not
+	// idempotent.
+	RevokeStudyGuideGrant(ctx context.Context, arg RevokeStudyGuideGrantParams) (int64, error)
+	// Verifies the section exists AND belongs to the supplied course. A
+	// section UUID that targets a different course is treated as not found
+	// to avoid leaking the existence of unrelated sections via the URL path.
+	SectionInCourseExists(ctx context.Context, arg SectionInCourseExistsParams) (bool, error)
 	// Records the QStash message ID after publishing the async cleanup job.
 	SetFileDeletionJobID(ctx context.Context, arg SetFileDeletionJobIDParams) error
+	// Atomic snapshot + total_questions fix-up. Inserts one
+	// practice_session_questions row per current quiz_questions row in
+	// a single CTE, then updates the session's total_questions to the
+	// count of rows actually inserted. Returns the new total_questions
+	// so the caller can sync its in-memory session state.
+	//
+	// The single-statement CTE eliminates the race that existed in the
+	// prior two-step approach (CountQuizQuestions sets total_questions
+	// on insert, then a separate SnapshotQuizQuestions writes the
+	// snapshot). Under Postgres' default READ COMMITTED isolation each
+	// statement gets its own snapshot, so a concurrent quiz edit
+	// between count and snapshot could leave the two out of sync.
+	// Within a single CTE statement, both reads share the same
+	// statement-level snapshot, so the count and the snapshot are
+	// guaranteed identical (gemini + copilot PR #153 feedback).
+	//
+	// Subsequent edits to the quiz do not retroactively affect this
+	// snapshot:
+	//   * New questions added AFTER this statement are not in the snapshot.
+	//   * Deleted questions trigger ON DELETE SET NULL on
+	//     practice_session_questions.question_id -- the snapshot row
+	//     persists with question_id = NULL so total_questions stays
+	//     stable.
+	SnapshotQuizQuestionsAndUpdateCount(ctx context.Context, arg SnapshotQuizQuestionsAndUpdateCountParams) (int32, error)
 	// Marks a file as pending deletion. Only applies if the file is owned by the caller
 	// and has not already entered a deletion state (idempotency-safe).
 	SoftDeleteFile(ctx context.Context, arg SoftDeleteFileParams) (int64, error)
+	// Set deleted_at = now() on the quiz. The service has already
+	// verified the row exists, isn't already deleted, and the viewer
+	// is the creator -- so this is a blind UPDATE. No cascade: practice
+	// sessions, questions, and answer options are preserved per the
+	// ASK-102 spec ("preserve historical practice data; the quiz
+	// simply becomes invisible to list/detail endpoints").
+	SoftDeleteQuiz(ctx context.Context, id pgtype.UUID) error
+	// Application-level cascade: soft-delete every non-deleted quiz on
+	// the guide. WHERE deleted_at IS NULL preserves the deleted_at
+	// timestamp on quizzes that were already soft-deleted before the
+	// guide was -- the spec explicitly requires that an already-deleted
+	// quiz's deleted_at is NOT updated by this cascade.
+	SoftDeleteQuizzesForGuide(ctx context.Context, studyGuideID pgtype.UUID) error
+	// Set deleted_at = now() on the guide. The service has already
+	// verified the row exists, isn't already deleted, and the viewer is
+	// the creator -- so this is a blind UPDATE. The DeleteStudyGuide
+	// transaction wraps this + SoftDeleteQuizzesForGuide.
+	SoftDeleteStudyGuide(ctx context.Context, id pgtype.UUID) error
 	SoftDeleteUserByClerkID(ctx context.Context, clerkID string) (int64, error)
+	// Same shape as ToggleFileFavorite, against course_favorites
+	// (ASK-157).
+	ToggleCourseFavorite(ctx context.Context, arg ToggleCourseFavoriteParams) (ToggleCourseFavoriteRow, error)
+	// Toggles file_favorites for (user, file) (ASK-130). The CTE deletes
+	// any existing row first, then inserts only when the delete found
+	// nothing -- one round trip, no read-modify-write race. The spec
+	// treats concurrent toggles as deterministic per request: PostgreSQL
+	// serializes them via row locks on file_favorites' PK.
+	//
+	// Returns:
+	//   * favorited     = true  + favorited_at = NOW()  when the row was
+	//                     newly inserted (state flipped to favorited).
+	//   * favorited     = false + favorited_at = NULL   when the row was
+	//                     deleted (state flipped to unfavorited).
+	//
+	// Existence of the parent file is gated by CheckFileExists upstream
+	// so this query trusts its inputs; it never touches the files table.
+	ToggleFileFavorite(ctx context.Context, arg ToggleFileFavoriteParams) (ToggleFileFavoriteRow, error)
+	// Same shape as ToggleFileFavorite, against study_guide_favorites
+	// (ASK-156).
+	ToggleStudyGuideFavorite(ctx context.Context, arg ToggleStudyGuideFavoriteParams) (ToggleStudyGuideFavoriteRow, error)
+	// Bumps quizzes.updated_at = now() without touching any other
+	// column. Called by AddQuizQuestion (ASK-115) so the quiz row's
+	// modified-time reflects the structural change. Kept as a focused
+	// single-column UPDATE rather than reusing the broader UpdateQuiz
+	// query so a future AddQuizQuestion review can spot the intent at
+	// a glance and so a CASE expression with both args nil isn't
+	// relied on as the "no-op write that bumps updated_at" path.
+	TouchQuizUpdatedAt(ctx context.Context, id pgtype.UUID) error
+	// Pre-flight conflict check for AttachResource (ASK-111). Returns
+	// TRUE when ANY resource with this URL is already attached to the
+	// given guide -- regardless of who created the resource row. Lets
+	// the service short-circuit to 409 BEFORE the resource upsert, so a
+	// duplicate attempt doesn't create or touch a resources row only to
+	// discard it on the join PK violation.
+	//
+	// Why "regardless of creator": the join PK is (resource_id,
+	// study_guide_id), so two distinct resource rows (different creators
+	// but same URL) could both attach to the same guide without raising
+	// the join PK constraint. The spec treats that as a duplicate URL
+	// on the guide -- this query enforces the no-duplicate-URLs-per-guide
+	// contract at the application layer.
+	URLAlreadyAttachedToGuide(ctx context.Context, arg URLAlreadyAttachedToGuideParams) (bool, error)
+	UpdateFileStatus(ctx context.Context, arg UpdateFileStatusParams) error
+	// Partial update for ASK-153. The title column uses the standard
+	// COALESCE(narg, current) pattern -- nil means "leave alone".
+	//
+	// Description uses a CASE expression because COALESCE can't
+	// distinguish "field absent in the request" from "field
+	// explicitly null in the request" (both encode as SQL NULL once
+	// they reach the query layer). The handler resolves the
+	// tri-state, sets `clear_description` true on an explicit
+	// `description: null` body, and the service drives both args
+	// accordingly:
+	//   * clear_description=false                 -> column unchanged
+	//   * clear_description=true, description=NULL -> column cleared
+	//   * clear_description=true, description="x"  -> column set to "x"
+	//
+	// The service is responsible for 404 / 403 gating before this
+	// query runs (via GetQuizForUpdateWithParentStatus). updated_at
+	// is bumped to now() on every successful call -- the at-least-
+	// one-field rule is enforced in Go so this query is never
+	// reached for an empty PATCH.
+	UpdateQuiz(ctx context.Context, arg UpdateQuizParams) error
+	// Full replace of a single question row for PUT /api/quizzes/{quiz_id}/questions/{question_id}
+	// (ASK-108). The handler/service has already validated the type +
+	// per-type fields. ALL columns are written explicitly (PUT
+	// semantics): a freeform replacement passes a non-NULL trimmed
+	// string for reference_answer; an MCQ/TF replacement passes NULL
+	// so the column is cleared. Hint + feedback columns follow the same
+	// "narg means SQL NULL when absent" convention used by InsertQuizQuestion.
+	// updated_at is bumped to now() so the row reflects the structural change.
+	//
+	// Existence + ownership are gated by GetQuizForUpdateWithParentStatus
+	// (creator check) and GetQuizQuestionByID (quiz_id match) BEFORE
+	// this UPDATE runs, so it trusts inputs.
+	UpdateQuizQuestion(ctx context.Context, arg UpdateQuizQuestionParams) error
+	// Partial update for ASK-129. Each updatable column uses COALESCE(narg,
+	// current) so a nil arg from Go means "leave this column alone" and a
+	// non-nil arg means "replace with the supplied value". The service is
+	// responsible for:
+	//   * 404 / 403 gating (via GetStudyGuideByIDForUpdate before this).
+	//   * Validating the at-least-one-field rule (an empty body is a 400
+	//     before this query runs).
+	//   * Tag normalization (trim + lowercase + dedupe) -- the array
+	//     written here is the final canonical form.
+	//
+	// The service runs the locked SELECT + this UPDATE in a single
+	// transaction so a concurrent delete can't slip in between. updated_at
+	// is bumped to now() on every successful call (the UPDATE sees at
+	// least the updated_at change even when every other narg is NULL,
+	// which matches the spec's "updated_at reflects the latest" guarantee
+	// but also means a no-op PATCH still bumps updated_at -- the service's
+	// empty-body 400 check prevents that case from reaching SQL).
+	UpdateStudyGuide(ctx context.Context, arg UpdateStudyGuideParams) error
 	UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
+	// Per-(user, file) most-recent-view timestamp for POST /api/files/{file_id}/view
+	// (ASK-134). Powers the recents sidebar (ASK-145). The PK is
+	// (user_id, file_id) so a repeat view by the same user is a write to
+	// the same row -- viewed_at gets bumped to now(). On the first view
+	// the INSERT path runs; on every subsequent view the ON CONFLICT
+	// branch fires.
+	UpsertFileLastViewed(ctx context.Context, arg UpsertFileLastViewedParams) error
+	// Inserts a new resources row for the (creator_id, url) pair. The
+	// ON CONFLICT DO NOTHING preserves the existing row's title /
+	// description / type when the viewer has used this URL before -- a
+	// silent overwrite would mutate state visible to the resource's
+	// other attachments (the same row may be attached to other guides
+	// + courses).
+	//
+	// Paired with GetResourceByCreatorURL: the service runs both calls
+	// in sequence, then uses the SELECT'd row regardless of whether the
+	// INSERT actually wrote.
+	UpsertResource(ctx context.Context, arg UpsertResourceParams) error
+	// Cast or change a vote (ASK-139). Inserts a new (user_id,
+	// study_guide_id, vote) row when the viewer has not voted, or
+	// updates the existing row's vote when the direction changes. Same-
+	// direction re-submits hit the WHERE clause on the DO UPDATE branch
+	// and become a true no-op (no row touched, no trigger fired,
+	// updated_at preserved). The (user_id, study_guide_id) PK from the
+	// schema is what makes ON CONFLICT resolve correctly.
+	UpsertStudyGuideVote(ctx context.Context, arg UpsertStudyGuideVoteParams) error
+	// Combined live-presence + role-gate probe for the recommend
+	// endpoints (ASK-147 + ASK-101). Returns one row when the viewer
+	// holds instructor or ta role in AT LEAST ONE section of the guide's
+	// course AND the guide is live (not soft-deleted).
+	//
+	// Returns three booleans so the service can distinguish 404 from
+	// 403 with a single round trip:
+	//   * guide_exists  -- guide row present AND deleted_at IS NULL
+	//   * has_role      -- viewer is instructor/ta in some section
+	//                      of the guide's course (ignored if guide
+	//                      doesn't exist)
+	//
+	// Combining the two checks into a single query (rather than two
+	// sequential calls) keeps the recommend hot path at one DB round
+	// trip for the gate; the actual insert/delete is the second.
+	//
+	// NULL-semantics note: when the guide doesn't exist, the inner
+	// `guide` CTE returns 0 rows, so `(SELECT course_id FROM guide)` is
+	// NULL, and `cs.course_id = NULL` is always FALSE (not NULL-equal).
+	// That makes `has_role` correctly false for missing guides without
+	// needing a separate WHERE EXISTS guard. The service short-circuits
+	// on !guide_exists before inspecting has_role, so the two booleans
+	// are independent by contract even though they correlate in this
+	// edge case.
+	ViewerCanRecommendForGuide(ctx context.Context, arg ViewerCanRecommendForGuideParams) (ViewerCanRecommendForGuideRow, error)
 }
 
 var _ Querier = (*Queries)(nil)

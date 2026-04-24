@@ -1,0 +1,66 @@
+meta {
+  name: Create Quiz
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}/quizzes
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "description": "string",
+    "questions": [
+      {
+        "correct_answer": null,
+        "feedback_correct": "string",
+        "feedback_incorrect": "string",
+        "hint": "string",
+        "options": [
+          {
+            "is_correct": false,
+            "text": "string"
+          }
+        ],
+        "question": "string",
+        "sort_order": 0,
+        "type": "multiple-choice"
+      }
+    ],
+    "title": "string"
+  }
+}
+
+docs {
+  # Create a quiz attached to a study guide
+
+  Creates a new quiz with all of its questions and answer options
+  in a single atomic request. The frontend quiz builder submits the
+  entire quiz at once: if any question fails validation, nothing is
+  created (the entire write runs in one transaction).
+  
+  Authorization: any authenticated user can create a quiz on any
+  study guide. AskAtlas explicitly encourages collaborative quiz
+  contribution; ownership of the underlying guide is not required.
+  `creator_id` is set from the JWT and any value supplied in the
+  body is ignored.
+  
+  Per-question validation:
+    * `multiple-choice` -- 2-10 options. Each option has `text`
+      (1-500 chars) and `is_correct` (boolean). Exactly one option
+      must have `is_correct: true`. The request's `correct_answer`
+      field is ignored on MCQ.
+    * `true-false` -- `correct_answer` MUST be a boolean. The API
+      internally creates two `quiz_answer_options` rows (`True`
+      and `False`) with the matching `is_correct` flag.
+    * `freeform` -- `correct_answer` MUST be a non-empty string
+      (max 500 chars). Stored as `quiz_questions.reference_answer`.
+      No `quiz_answer_options` rows are created.
+  
+  The response mirrors GET /quizzes/{quiz_id} (future ticket) so
+  the frontend can render the freshly-created quiz without a
+  follow-up GET.
+}

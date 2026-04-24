@@ -1,0 +1,1 @@
+{"parameters":[{"name":"study_guide_id","in":"path","description":"The unique UUID of the study guide to recommend","required":true,"schema":{"type":"string","format":"uuid"}}]}

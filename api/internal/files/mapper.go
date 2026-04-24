@@ -16,7 +16,7 @@ type sharedRow struct {
 	UserID       pgtype.UUID
 	Name         string
 	Size         int64
-	MimeType     db.MimeType
+	MimeType     string
 	Status       db.UploadStatus
 	CreatedAt    pgtype.Timestamptz
 	UpdatedAt    pgtype.Timestamptz
@@ -110,6 +110,65 @@ func sharedFromMimeAsc(r db.ListOwnedFilesMimeAscRow) sharedRow {
 }
 func sharedFromMimeDesc(r db.ListOwnedFilesMimeDescRow) sharedRow {
 	return sharedRow{r.ID, r.UserID, r.Name, r.Size, r.MimeType, r.Status, r.CreatedAt, r.UpdatedAt, r.FavoritedAt, r.LastViewedAt}
+}
+
+// mapGrantRow converts a database FileGrant into the domain Grant model.
+func mapGrantRow(r db.FileGrant) (Grant, error) {
+	id, err := utils.PgxToGoogleUUID(r.ID)
+	if err != nil {
+		return Grant{}, fmt.Errorf("mapGrantRow: ID: %w", err)
+	}
+	fileID, err := utils.PgxToGoogleUUID(r.FileID)
+	if err != nil {
+		return Grant{}, fmt.Errorf("mapGrantRow: FileID: %w", err)
+	}
+	granteeID, err := utils.PgxToGoogleUUID(r.GranteeID)
+	if err != nil {
+		return Grant{}, fmt.Errorf("mapGrantRow: GranteeID: %w", err)
+	}
+	grantedBy, err := utils.PgxToGoogleUUID(r.GrantedBy)
+	if err != nil {
+		return Grant{}, fmt.Errorf("mapGrantRow: GrantedBy: %w", err)
+	}
+
+	return Grant{
+		ID:          id,
+		FileID:      fileID,
+		GranteeType: string(r.GranteeType),
+		GranteeID:   granteeID,
+		Permission:  string(r.Permission),
+		GrantedBy:   grantedBy,
+		CreatedAt:   r.CreatedAt.Time,
+	}, nil
+}
+
+// mapPatchFileRow converts a PatchFile CTE RETURNING row into the
+// domain File model. Includes favorited_at + last_viewed_at because
+// PATCH /api/files/{file_id} (ASK-113) reuses the FileResponse shape
+// from GET, where those fields appear as nullable timestamps populated
+// from the (viewer, file) join.
+func mapPatchFileRow(r db.PatchFileRow) (File, error) {
+	id, err := utils.PgxToGoogleUUID(r.ID)
+	if err != nil {
+		return File{}, fmt.Errorf("mapPatchFileRow: ID: %w", err)
+	}
+	userID, err := utils.PgxToGoogleUUID(r.UserID)
+	if err != nil {
+		return File{}, fmt.Errorf("mapPatchFileRow: UserID: %w", err)
+	}
+
+	return File{
+		ID:           id,
+		UserID:       userID,
+		Name:         r.Name,
+		Size:         r.Size,
+		MimeType:     string(r.MimeType),
+		Status:       string(r.Status),
+		CreatedAt:    r.CreatedAt.Time,
+		UpdatedAt:    r.UpdatedAt.Time,
+		FavoritedAt:  utils.TimestamptzPtr(r.FavoritedAt),
+		LastViewedAt: utils.TimestamptzPtr(r.LastViewedAt),
+	}, nil
 }
 
 // mapDBFile converts a database File model into the domain File standard model.

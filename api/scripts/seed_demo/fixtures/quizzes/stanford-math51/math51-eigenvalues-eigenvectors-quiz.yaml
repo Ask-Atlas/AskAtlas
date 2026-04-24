@@ -1,0 +1,67 @@
+slug: math51-eigenvalues-eigenvectors-quiz
+study_guide_slug: math51-eigenvalues-eigenvectors
+title: "MATH 51 — Eigenvalues and Eigenvectors Quiz"
+description: "6 questions on the characteristic polynomial, eigenspaces, and diagonalization."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Which equation defines $\\lambda$ as an eigenvalue of $A$, with eigenvector $\\mathbf{v} \\neq \\mathbf{0}$?"
+    hint: "Eigenvectors are stretched (not rotated) by $A$."
+    feedback_correct: "Right — that is the defining equation of an eigenpair."
+    feedback_incorrect: "An eigenvector satisfies $A \\mathbf{v} = \\lambda \\mathbf{v}$ — it is only stretched by $A$, not rotated."
+    options:
+      - { text: "$A \\mathbf{v} = \\lambda \\mathbf{v}$ with $\\mathbf{v} \\neq \\mathbf{0}$", correct: true }
+      - { text: "$A \\mathbf{v} = \\lambda$", correct: false }
+      - { text: "$A \\mathbf{v} = \\mathbf{v} + \\lambda$", correct: false }
+      - { text: "$\\det(A) = \\lambda$", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "What is the characteristic polynomial of $A = \\begin{pmatrix} 4 & -2 \\\\ 1 & 1 \\end{pmatrix}$?"
+    hint: "Expand $\\det(A - \\lambda I)$."
+    feedback_correct: "Yes — $(4-\\lambda)(1-\\lambda) - (-2)(1) = \\lambda^2 - 5\\lambda + 6$."
+    feedback_incorrect: "Expand $\\det\\begin{pmatrix} 4-\\lambda & -2 \\\\ 1 & 1-\\lambda \\end{pmatrix}$ carefully — the off-diagonal product has a sign."
+    options:
+      - { text: "$\\lambda^2 - 5\\lambda + 6$", correct: true }
+      - { text: "$\\lambda^2 - 5\\lambda + 4$", correct: false }
+      - { text: "$\\lambda^2 + 5\\lambda + 6$", correct: false }
+      - { text: "$\\lambda^2 - 3\\lambda + 6$", correct: false }
+
+  - slug: q3
+    type: true_false
+    text: "Every $n \\times n$ matrix is diagonalizable."
+    feedback_correct: "Correct — matrices like $\\begin{pmatrix}0 & 1 \\\\ 0 & 0\\end{pmatrix}$ are not diagonalizable because their geometric multiplicity is smaller than their algebraic multiplicity."
+    feedback_incorrect: "$\\begin{pmatrix}0 & 1 \\\\ 0 & 0\\end{pmatrix}$ has eigenvalue $0$ with algebraic multiplicity 2 but geometric multiplicity 1 — so it is NOT diagonalizable."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q4
+    type: multiple_choice
+    text: "If a $3\\times 3$ matrix has eigenvalues $1, 2, 3$, what is its determinant?"
+    hint: "$\\det A$ equals the product of the eigenvalues (with multiplicity)."
+    feedback_correct: "Right — $\\det A = 1 \\cdot 2 \\cdot 3 = 6$."
+    feedback_incorrect: "The product (not the sum) of the eigenvalues equals the determinant."
+    options:
+      - { text: "$6$", correct: true }
+      - { text: "$1$", correct: false }
+      - { text: "$3$", correct: false }
+      - { text: "$0$", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "If $\\mathbf{v}$ is an eigenvector of $A$ with eigenvalue $\\lambda$, then $A^2 \\mathbf{v} = \\lambda^2 \\mathbf{v}$."
+    feedback_correct: "Right — apply $A$ twice: $A^2 \\mathbf{v} = A(A\\mathbf{v}) = A(\\lambda \\mathbf{v}) = \\lambda (A\\mathbf{v}) = \\lambda^2 \\mathbf{v}$."
+    feedback_incorrect: "$A^2 \\mathbf{v} = A(A\\mathbf{v}) = A(\\lambda \\mathbf{v}) = \\lambda^2 \\mathbf{v}$ — the eigenvalue squares as well."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "Explain in one or two sentences why $\\det A = \\lambda_1 \\lambda_2 \\cdots \\lambda_n$ for an $n \\times n$ matrix $A$ (counting algebraic multiplicities)."
+    reference_answer: |
+      The characteristic polynomial $p_A(\lambda) = \det(A - \lambda I)$
+      factors over the complex numbers as
+      $p_A(\lambda) = (-1)^n (\lambda - \lambda_1)(\lambda - \lambda_2)\cdots(\lambda - \lambda_n)$.
+      Plugging in $\lambda = 0$ gives $\det(A) = \lambda_1 \lambda_2 \cdots \lambda_n$.

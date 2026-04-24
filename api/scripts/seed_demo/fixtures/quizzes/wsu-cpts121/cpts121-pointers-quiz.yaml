@@ -1,0 +1,57 @@
+slug: cpts121-pointers-quiz
+study_guide_slug: cpts121-pointers-cheatsheet
+title: "CPTS 121 — Pointers Quiz"
+description: "5 questions covering pointer basics, dereferencing, and common bugs."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "What does `int *p = NULL;` do?"
+    hint: "Think about the value vs the address."
+    feedback_correct: "Right — `p` is a pointer to int initialised to the null address."
+    feedback_incorrect: "`p` is the pointer itself; `*p` would be the dereference."
+    options:
+      - { text: "Declares an int variable and sets its value to NULL", correct: false }
+      - { text: "Declares a pointer to int initialised to NULL", correct: true }
+      - { text: "Dereferences NULL into `p`", correct: false }
+      - { text: "Allocates one int on the heap and zeroes it", correct: false }
+
+  - slug: q2
+    type: true_false
+    text: "Dereferencing a NULL pointer in C is undefined behavior."
+    feedback_correct: "Yep — the C standard does not require any specific behavior."
+    feedback_incorrect: "It IS undefined behavior. Most platforms segfault, but the standard makes no promise."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "Inside a function `void f(int arr[])`, what does `sizeof(arr)` return?"
+    hint: "Arrays decay to pointers when passed to functions."
+    feedback_correct: "Correct — the parameter is really `int *arr`, so `sizeof` is the pointer size."
+    feedback_incorrect: "Arrays decay to pointers at function boundaries; the original length is lost."
+    options:
+      - { text: "The number of elements in the original array", correct: false }
+      - { text: "The number of bytes in the original array", correct: false }
+      - { text: "The size of `int *` on this platform (typically 4 or 8 bytes)", correct: true }
+      - { text: "A compile-time error — `sizeof` doesn't work on parameters", correct: false }
+
+  - slug: q4
+    type: freeform
+    text: "Briefly describe what happens when `free(p)` is called twice on the same pointer."
+    reference_answer: |
+      Double-free — undefined behavior. The heap allocator may corrupt its
+      internal bookkeeping, crash on the second call, or appear to succeed
+      while leaving the heap in an inconsistent state. Defensive practice is
+      to set `p = NULL` immediately after `free(p)`, since `free(NULL)` is
+      a guaranteed no-op.
+
+  - slug: q5
+    type: freeform
+    text: "Why is `scanf(\"%d\", n)` (where `n` is an `int`) a bug, and what's the fix?"
+    reference_answer: |
+      `scanf` always writes through a pointer. `n` is an int — passing it
+      directly causes `scanf` to interpret the int's value as a memory
+      address and write to whatever's there, which is almost always a
+      segfault or memory corruption. The fix is to pass the address:
+      `scanf("%d", &n)`.

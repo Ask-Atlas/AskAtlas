@@ -1,0 +1,27 @@
+meta {
+  name: Remove Study Guide Recommendation
+  type: http
+  seq: 11
+}
+
+delete {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}/recommendations
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Remove the authenticated user's recommendation on a study guide
+
+  Hard-deletes the (viewer, guide) row in
+  `study_guide_recommendations`. Authorization mirrors the POST
+  side: viewer must currently hold instructor/TA in the guide's
+  course (a former TA who lost the role can't manage their old
+  recommendations -- the policy is "current elevated-role users
+  only").
+  
+  404 covers BOTH "guide missing/deleted" and "viewer never
+  recommended this guide" -- by design, since the desired end
+  state is "no recommendation from viewer", which is reached in
+  either case from the caller's point of view.
+}

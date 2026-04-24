@@ -1,0 +1,66 @@
+slug: cs106a-list-comprehensions-quiz
+study_guide_slug: cs106a-list-comprehensions
+title: "CS 106A — List Comprehensions Quiz"
+description: "6 questions on syntax, conditional filters, and the if-placement rule."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "What does `[x * 2 for x in range(3)]` evaluate to?"
+    feedback_correct: "Right — `range(3)` is 0, 1, 2; doubled gives 0, 2, 4."
+    feedback_incorrect: "`range(3)` produces 0, 1, 2. Multiplying each by 2 yields `[0, 2, 4]`."
+    options:
+      - { text: "[0, 2, 4]", correct: true }
+      - { text: "[0, 1, 2]", correct: false }
+      - { text: "[2, 4, 6]", correct: false }
+      - { text: "TypeError", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "Which comprehension keeps only the positive numbers from `nums`?"
+    feedback_correct: "Correct — `if` after `for` filters elements."
+    feedback_incorrect: "Use `[n for n in nums if n > 0]`. The `if/else` form would TRANSFORM elements, not filter them."
+    options:
+      - { text: "`[n for n in nums if n > 0]`", correct: true }
+      - { text: "`[n if n > 0 for n in nums]`", correct: false }
+      - { text: "`[n if n > 0 else 0 for n in nums]`", correct: false }
+      - { text: "`[for n in nums where n > 0]`", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "Which comprehension transforms each negative number to 0 and leaves positives alone?"
+    hint: "This is a TRANSFORM, not a filter. Position of `if` matters."
+    feedback_correct: "Correct — conditional EXPRESSION goes BEFORE the `for` clause."
+    feedback_incorrect: "The `if/else` conditional expression goes BEFORE `for`. The other forms either filter or are syntax errors."
+    options:
+      - { text: "`[n for n in nums if n > 0]`", correct: false }
+      - { text: "`[n if n > 0 else 0 for n in nums]`", correct: true }
+      - { text: "`[n for n in nums if n > 0 else 0]`", correct: false }
+      - { text: "`[else 0 if n > 0 for n in nums]`", correct: false }
+
+  - slug: q4
+    type: true_false
+    text: "Wrapping a comprehension in parentheses (e.g. `(x*x for x in xs)`) creates a generator instead of a list."
+    feedback_correct: "True — parentheses produce a lazy generator expression."
+    feedback_incorrect: "It IS True. Generator expressions are lazy and don't materialise the full sequence in memory."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "Dict comprehensions use `{}` and the `key: value` form, e.g., `{w: len(w) for w in words}`."
+    feedback_correct: "True — `{}` with `key: value` builds a dict."
+    feedback_incorrect: "It IS True. The same `{}` braces with just expressions (no colon) build a set instead."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "Rewrite this loop as a list comprehension: `out = []` then `for x in nums: if x > 0: out.append(x*x)`."
+    reference_answer: |
+      `[x * x for x in nums if x > 0]`
+
+      The transform `x * x` is the expression, `for x in nums` is the
+      iteration clause, and `if x > 0` is the filter that keeps only
+      positive values.

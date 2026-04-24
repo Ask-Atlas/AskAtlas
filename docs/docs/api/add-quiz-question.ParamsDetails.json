@@ -1,0 +1,1 @@
+{"parameters":[{"name":"quiz_id","in":"path","description":"The unique UUID of the quiz to add a question to","required":true,"schema":{"type":"string","format":"uuid"}}]}

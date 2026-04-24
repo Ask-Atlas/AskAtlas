@@ -1,0 +1,14 @@
+# uv-managed virtualenv
+.venv/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+
+# Phase 4 download cache (URL → SHA-256 lookup) — not yet active, but reserved.
+.cache/

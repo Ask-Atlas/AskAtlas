@@ -1,0 +1,67 @@
+slug: math171-limits-and-continuity-quiz
+study_guide_slug: math171-limits-and-continuity
+title: "MATH 171 — Limits and Continuity Quiz"
+description: "6 questions on limit laws, one-sided limits, the squeeze theorem, and continuity."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Evaluate $\\lim_{x \\to 3} \\dfrac{x^2 - 9}{x - 3}$."
+    hint: "Direct substitution gives $0/0$. Try factoring the numerator."
+    feedback_correct: "Right — factor as $(x-3)(x+3)$ and cancel."
+    feedback_incorrect: "Factor: $x^2 - 9 = (x-3)(x+3)$, then cancel the $(x-3)$."
+    options:
+      - { text: "$0$", correct: false }
+      - { text: "$3$", correct: false }
+      - { text: "$6$", correct: true }
+      - { text: "Limit does not exist", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "Compute $\\lim_{x \\to \\infty} \\dfrac{2x^3 + x}{5x^3 - 4}$."
+    hint: "Compare the leading degrees of numerator and denominator."
+    feedback_correct: "Same degree, so the limit is the ratio of leading coefficients: $2/5$."
+    feedback_incorrect: "Both numerator and denominator have degree 3 — divide both by $x^3$ to see the limit."
+    options:
+      - { text: "$0$", correct: false }
+      - { text: "$2/5$", correct: true }
+      - { text: "$5/2$", correct: false }
+      - { text: "$\\infty$", correct: false }
+
+  - slug: q3
+    type: true_false
+    text: "If $\\lim_{x \\to a^-} f(x) = 3$ and $\\lim_{x \\to a^+} f(x) = 5$, then $\\lim_{x \\to a} f(x)$ exists."
+    feedback_correct: "Correct — the two-sided limit exists only when both one-sided limits agree."
+    feedback_incorrect: "The two one-sided limits disagree (3 vs 5), so the two-sided limit does not exist."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q4
+    type: true_false
+    text: "If $f$ is continuous on $[1, 4]$ with $f(1) = -2$ and $f(4) = 7$, then there exists $c \\in (1, 4)$ with $f(c) = 0$."
+    feedback_correct: "Yes — this is the Intermediate Value Theorem applied with $N = 0$."
+    feedback_incorrect: "By the Intermediate Value Theorem, since $0$ lies between $-2$ and $7$, such a $c$ must exist."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q5
+    type: multiple_choice
+    text: "Which of the following is NOT one of the three conditions for $f$ to be continuous at $x = a$?"
+    hint: "Recall: defined, limit exists, and they agree."
+    feedback_correct: "Right — $f'(a)$ existing is differentiability, a stronger condition than continuity."
+    feedback_incorrect: "The three required conditions are: $f(a)$ defined, $\\lim_{x\\to a} f(x)$ exists, and they are equal."
+    options:
+      - { text: "$f(a)$ is defined", correct: false }
+      - { text: "$\\lim_{x \\to a} f(x)$ exists", correct: false }
+      - { text: "$\\lim_{x \\to a} f(x) = f(a)$", correct: false }
+      - { text: "$f'(a)$ exists", correct: true }
+
+  - slug: q6
+    type: freeform
+    text: "Use the squeeze theorem to evaluate $\\lim_{x \\to 0} x^2 \\sin(1/x)$, and briefly justify."
+    reference_answer: |
+      The limit equals $0$. Since $-1 \le \sin(1/x) \le 1$ for all $x \ne 0$,
+      multiplying by $x^2 \ge 0$ gives $-x^2 \le x^2 \sin(1/x) \le x^2$.
+      Both $\lim_{x \to 0} (-x^2) = 0$ and $\lim_{x \to 0} x^2 = 0$, so by the
+      squeeze theorem the middle expression also has limit $0$.

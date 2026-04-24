@@ -1,0 +1,27 @@
+vars {
+  baseUrl: https://staging-api.askatlas.ai
+  ~authToken: REPLACE_ME_WITH_A_CLERK_STAGING_JWT
+  fileId: 00000000-0000-0000-0000-000000000000
+  studyGuideId: 00000000-0000-0000-0000-000000000000
+  quizId: 00000000-0000-0000-0000-000000000000
+  questionId: 00000000-0000-0000-0000-000000000000
+  sessionId: 00000000-0000-0000-0000-000000000000
+  courseId: 00000000-0000-0000-0000-000000000000
+  schoolId: 00000000-0000-0000-0000-000000000000
+  resourceId: 00000000-0000-0000-0000-000000000000
+  sectionId: 00000000-0000-0000-0000-000000000000
+}
+
+vars:secret [
+  authToken
+]
+
+docs {
+  # Staging environment
+
+  Set `authToken` to a Clerk JWT valid against the staging tenant.
+  Every path-param UUID defaults to NIL so an accidental send hits
+  404, not a real row. Use this env for smoke-testing PR branches
+  after `gh workflow run api-deployments.yml --ref <branch>
+  -f environment=stage`.
+}

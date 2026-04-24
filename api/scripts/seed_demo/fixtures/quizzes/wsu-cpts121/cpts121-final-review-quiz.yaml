@@ -1,0 +1,85 @@
+slug: cpts121-final-review-quiz
+study_guide_slug: cpts121-final-review
+title: "CPTS 121 — Final Exam Review Quiz"
+description: "6 cumulative questions across pointers, dynamic memory, structs, and file I/O."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Given `int arr[5] = {10, 20, 30, 40, 50}; int *p = arr;`, what does `*(p + 3)` evaluate to?"
+    hint: "Pointer arithmetic and array indexing are equivalent: `p[i] == *(p + i)`."
+    feedback_correct: "Right — `*(p + 3)` is the same as `arr[3]`, which is `40`."
+    feedback_incorrect: "`p + 3` advances the pointer by 3 ints. Dereferencing it gives `arr[3]`, which is `40`."
+    options:
+      - { text: "`30`", correct: false }
+      - { text: "`40`", correct: true }
+      - { text: "`50`", correct: false }
+      - { text: "Undefined behavior — out of bounds", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "Which of these is a memory leak?"
+    hint: "Look for an allocation whose only reference is overwritten before `free`."
+    feedback_correct: "Right — overwriting `a` with `b` discards the only pointer to the first allocation."
+    feedback_incorrect: "Reassigning a pointer that holds the only reference to a heap block leaks that block."
+    options:
+      - { text: "`int *a = malloc(N); free(a); a = NULL;`", correct: false }
+      - { text: "`int *a = malloc(N); int *b = malloc(N); a = b; free(a);`", correct: true }
+      - { text: "`int *a = calloc(N, sizeof(int)); free(a);`", correct: false }
+      - { text: "`int *a = NULL; free(a);`", correct: false }
+
+  - slug: q3
+    type: true_false
+    text: "Looping `while (!feof(f)) { fscanf(f, ...); }` is the recommended way to read a file in CPTS 121."
+    feedback_correct: "Right — `feof` only becomes true *after* a failed read, causing one extra stale iteration. Loop on the read function's return value instead."
+    feedback_incorrect: "It is not recommended. Loop on `fscanf`'s return value (e.g. `while (fscanf(f, \"%d\", &x) == 1)`) — `feof` is set only after a failed read."
+    options:
+      - { text: "True", correct: false }
+      - { text: "False", correct: true }
+
+  - slug: q4
+    type: multiple_choice
+    text: "Which `<stdio.h>` function should you reach for when reading a line of text from a file with a fixed-size buffer?"
+    hint: "Avoid `gets`. Pick the one that takes a buffer length."
+    feedback_correct: "Right — `fgets` reads at most `size - 1` bytes and always NUL-terminates. `gets` is gone in C11 for a reason."
+    feedback_incorrect: "Use `fgets`. `gets` has no length cap and was removed in C11."
+    options:
+      - { text: "`gets`", correct: false }
+      - { text: "`fread`", correct: false }
+      - { text: "`fgets`", correct: true }
+      - { text: "`scanf`", correct: false }
+
+  - slug: q5
+    type: true_false
+    text: "When passed to a function, a struct is copied (the function receives its own value)."
+    feedback_correct: "Yes — pass-by-value applies to structs just like to ints. Pass a pointer if you want the function to mutate the caller's struct."
+    feedback_incorrect: "It is. Pass `&s` and accept a pointer parameter if the function should mutate the caller's struct."
+    options:
+      - { text: "True", correct: true }
+      - { text: "False", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "Read this snippet and identify every bug:\n\n```c\nint *make_array(int n) {\n    int *arr = malloc(n * sizeof(int));\n    for (int i = 0; i <= n; i += 1) {\n        arr[i] = i;\n    }\n    return arr;\n}\n```"
+    reference_answer: |
+      Three issues:
+
+      1. **Off-by-one write.** The loop runs `i = 0..n`, writing
+         `arr[n]` which is one past the end of an `n`-element array.
+         Use `i < n`.
+      2. **No `NULL` check on `malloc`.** If `malloc` fails, `arr` is
+         `NULL` and the very first `arr[i] = i` is a `NULL` deref.
+         Add `if (arr == NULL) return NULL;`.
+      3. **Caller responsibility for `free` is implicit.** Document
+         that the returned pointer must be `free`-d by the caller, or
+         the function leaks for every call.
+
+      A correct version:
+
+          int *make_array(int n) {
+              int *arr = malloc((size_t)n * sizeof(*arr));
+              if (arr == NULL) return NULL;
+              for (int i = 0; i < n; i += 1) {
+                  arr[i] = i;
+              }
+              return arr;
+          }

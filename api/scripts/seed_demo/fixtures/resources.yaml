@@ -1,0 +1,57 @@
+# Phase 1a smoke fixture — 5 external resources spanning the 4 resource_type
+# enum values (link, video, article, pdf).
+
+- slug: smoke-yt-cs50-pointers
+  title: "CS50 — Pointers and Memory"
+  url: https://www.youtube.com/watch?v=XISnO2YhnsY
+  type: video
+  description: "Harvard CS50's classic walk through pointers."
+  attached_to:
+    courses:
+      - wsu/cpts121
+    study_guides: []
+  owner_role: bot
+
+- slug: smoke-wiki-bigo-notation
+  title: "Big O notation — Wikipedia"
+  url: https://en.wikipedia.org/wiki/Big_O_notation
+  type: article
+  description: "Reference article on asymptotic analysis."
+  attached_to:
+    courses:
+      - stanford/cs161
+    study_guides: []
+  owner_role: bot
+
+- slug: smoke-stanford-cs106a-handouts
+  title: "Stanford CS 106A — handouts and assignments"
+  url: https://web.stanford.edu/class/cs106a/
+  type: link
+  description: "Course landing page with weekly handouts."
+  attached_to:
+    courses:
+      - stanford/cs106a
+    study_guides: []
+  owner_role: bot
+
+- slug: smoke-arxiv-attention-abstract
+  title: "Attention Is All You Need — abstract"
+  url: https://arxiv.org/abs/1706.03762
+  type: link
+  description: "arXiv landing page for the Vaswani et al. transformer paper."
+  attached_to:
+    courses:
+      - stanford/cs161
+    study_guides: []
+  owner_role: bot
+
+- slug: smoke-openstax-calc-pdf-resource
+  title: "OpenStax — Calculus Volume 1 (PDF)"
+  url: https://openstax.org/details/books/calculus-volume-1
+  type: pdf
+  description: "OpenStax Calculus Volume 1, free CC-BY textbook landing page."
+  attached_to:
+    courses:
+      - wsu/math171
+    study_guides: []
+  owner_role: bot

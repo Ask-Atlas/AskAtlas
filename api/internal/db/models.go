@@ -11,6 +11,49 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type CourseRole string
+
+const (
+	CourseRoleStudent    CourseRole = "student"
+	CourseRoleInstructor CourseRole = "instructor"
+	CourseRoleTa         CourseRole = "ta"
+)
+
+func (e *CourseRole) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CourseRole(s)
+	case string:
+		*e = CourseRole(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CourseRole: %T", src)
+	}
+	return nil
+}
+
+type NullCourseRole struct {
+	CourseRole CourseRole `json:"course_role"`
+	Valid      bool       `json:"valid"` // Valid is true if CourseRole is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCourseRole) Scan(value interface{}) error {
+	if value == nil {
+		ns.CourseRole, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CourseRole.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCourseRole) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CourseRole), nil
+}
+
 type FileDeletionStatus string
 
 const (
@@ -96,50 +139,6 @@ func (ns NullGranteeType) Value() (driver.Value, error) {
 	return string(ns.GranteeType), nil
 }
 
-type MimeType string
-
-const (
-	MimeTypeImageJpeg      MimeType = "image/jpeg"
-	MimeTypeImagePng       MimeType = "image/png"
-	MimeTypeImageWebp      MimeType = "image/webp"
-	MimeTypeApplicationPdf MimeType = "application/pdf"
-)
-
-func (e *MimeType) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = MimeType(s)
-	case string:
-		*e = MimeType(s)
-	default:
-		return fmt.Errorf("unsupported scan type for MimeType: %T", src)
-	}
-	return nil
-}
-
-type NullMimeType struct {
-	MimeType MimeType `json:"mime_type"`
-	Valid    bool     `json:"valid"` // Valid is true if MimeType is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullMimeType) Scan(value interface{}) error {
-	if value == nil {
-		ns.MimeType, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.MimeType.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullMimeType) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.MimeType), nil
-}
-
 type Permission string
 
 const (
@@ -181,6 +180,135 @@ func (ns NullPermission) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.Permission), nil
+}
+
+type QuestionType string
+
+const (
+	QuestionTypeMultipleChoice QuestionType = "multiple_choice"
+	QuestionTypeTrueFalse      QuestionType = "true_false"
+	QuestionTypeFreeform       QuestionType = "freeform"
+)
+
+func (e *QuestionType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = QuestionType(s)
+	case string:
+		*e = QuestionType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for QuestionType: %T", src)
+	}
+	return nil
+}
+
+type NullQuestionType struct {
+	QuestionType QuestionType `json:"question_type"`
+	Valid        bool         `json:"valid"` // Valid is true if QuestionType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullQuestionType) Scan(value interface{}) error {
+	if value == nil {
+		ns.QuestionType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.QuestionType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullQuestionType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.QuestionType), nil
+}
+
+type ResourceType string
+
+const (
+	ResourceTypeLink    ResourceType = "link"
+	ResourceTypeVideo   ResourceType = "video"
+	ResourceTypeArticle ResourceType = "article"
+	ResourceTypePdf     ResourceType = "pdf"
+)
+
+func (e *ResourceType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ResourceType(s)
+	case string:
+		*e = ResourceType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ResourceType: %T", src)
+	}
+	return nil
+}
+
+type NullResourceType struct {
+	ResourceType ResourceType `json:"resource_type"`
+	Valid        bool         `json:"valid"` // Valid is true if ResourceType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullResourceType) Scan(value interface{}) error {
+	if value == nil {
+		ns.ResourceType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ResourceType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullResourceType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ResourceType), nil
+}
+
+type StudyGuideVisibility string
+
+const (
+	StudyGuideVisibilityPrivate StudyGuideVisibility = "private"
+	StudyGuideVisibilityPublic  StudyGuideVisibility = "public"
+)
+
+func (e *StudyGuideVisibility) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = StudyGuideVisibility(s)
+	case string:
+		*e = StudyGuideVisibility(s)
+	default:
+		return fmt.Errorf("unsupported scan type for StudyGuideVisibility: %T", src)
+	}
+	return nil
+}
+
+type NullStudyGuideVisibility struct {
+	StudyGuideVisibility StudyGuideVisibility `json:"study_guide_visibility"`
+	Valid                bool                 `json:"valid"` // Valid is true if StudyGuideVisibility is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullStudyGuideVisibility) Scan(value interface{}) error {
+	if value == nil {
+		ns.StudyGuideVisibility, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.StudyGuideVisibility.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullStudyGuideVisibility) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.StudyGuideVisibility), nil
 }
 
 type UploadStatus string
@@ -226,12 +354,109 @@ func (ns NullUploadStatus) Value() (driver.Value, error) {
 	return string(ns.UploadStatus), nil
 }
 
+type VoteDirection string
+
+const (
+	VoteDirectionUp   VoteDirection = "up"
+	VoteDirectionDown VoteDirection = "down"
+)
+
+func (e *VoteDirection) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = VoteDirection(s)
+	case string:
+		*e = VoteDirection(s)
+	default:
+		return fmt.Errorf("unsupported scan type for VoteDirection: %T", src)
+	}
+	return nil
+}
+
+type NullVoteDirection struct {
+	VoteDirection VoteDirection `json:"vote_direction"`
+	Valid         bool          `json:"valid"` // Valid is true if VoteDirection is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullVoteDirection) Scan(value interface{}) error {
+	if value == nil {
+		ns.VoteDirection, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.VoteDirection.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullVoteDirection) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.VoteDirection), nil
+}
+
+type Course struct {
+	ID          pgtype.UUID        `json:"id"`
+	SchoolID    pgtype.UUID        `json:"school_id"`
+	Department  string             `json:"department"`
+	Number      string             `json:"number"`
+	Title       string             `json:"title"`
+	Description pgtype.Text        `json:"description"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CourseFavorite struct {
+	UserID    pgtype.UUID        `json:"user_id"`
+	CourseID  pgtype.UUID        `json:"course_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type CourseFile struct {
+	FileID    pgtype.UUID        `json:"file_id"`
+	CourseID  pgtype.UUID        `json:"course_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type CourseLastViewed struct {
+	UserID   pgtype.UUID        `json:"user_id"`
+	CourseID pgtype.UUID        `json:"course_id"`
+	ViewedAt pgtype.Timestamptz `json:"viewed_at"`
+}
+
+type CourseMember struct {
+	UserID    pgtype.UUID        `json:"user_id"`
+	SectionID pgtype.UUID        `json:"section_id"`
+	Role      CourseRole         `json:"role"`
+	JoinedAt  pgtype.Timestamptz `json:"joined_at"`
+}
+
+type CourseResource struct {
+	ResourceID pgtype.UUID        `json:"resource_id"`
+	CourseID   pgtype.UUID        `json:"course_id"`
+	AttachedBy pgtype.UUID        `json:"attached_by"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+}
+
+type CourseSection struct {
+	ID             pgtype.UUID        `json:"id"`
+	CourseID       pgtype.UUID        `json:"course_id"`
+	Term           string             `json:"term"`
+	SectionCode    pgtype.Text        `json:"section_code"`
+	InstructorName pgtype.Text        `json:"instructor_name"`
+	StartDate      pgtype.Date        `json:"start_date"`
+	EndDate        pgtype.Date        `json:"end_date"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
 type File struct {
 	ID             pgtype.UUID            `json:"id"`
 	UserID         pgtype.UUID            `json:"user_id"`
 	S3Key          string                 `json:"s3_key"`
 	Name           string                 `json:"name"`
-	MimeType       MimeType               `json:"mime_type"`
+	MimeType       string                 `json:"mime_type"`
 	Size           int64                  `json:"size"`
 	Checksum       pgtype.Text            `json:"checksum"`
 	Status         UploadStatus           `json:"status"`
@@ -270,6 +495,156 @@ type FileView struct {
 	FileID   pgtype.UUID        `json:"file_id"`
 	UserID   pgtype.UUID        `json:"user_id"`
 	ViewedAt pgtype.Timestamptz `json:"viewed_at"`
+}
+
+type PracticeAnswer struct {
+	ID         pgtype.UUID        `json:"id"`
+	SessionID  pgtype.UUID        `json:"session_id"`
+	QuestionID pgtype.UUID        `json:"question_id"`
+	UserAnswer pgtype.Text        `json:"user_answer"`
+	IsCorrect  pgtype.Bool        `json:"is_correct"`
+	Verified   bool               `json:"verified"`
+	AnsweredAt pgtype.Timestamptz `json:"answered_at"`
+}
+
+type PracticeSession struct {
+	ID             pgtype.UUID        `json:"id"`
+	UserID         pgtype.UUID        `json:"user_id"`
+	QuizID         pgtype.UUID        `json:"quiz_id"`
+	StartedAt      pgtype.Timestamptz `json:"started_at"`
+	CompletedAt    pgtype.Timestamptz `json:"completed_at"`
+	TotalQuestions int32              `json:"total_questions"`
+	CorrectAnswers int32              `json:"correct_answers"`
+}
+
+type PracticeSessionQuestion struct {
+	ID         pgtype.UUID `json:"id"`
+	SessionID  pgtype.UUID `json:"session_id"`
+	QuestionID pgtype.UUID `json:"question_id"`
+	SortOrder  int32       `json:"sort_order"`
+}
+
+type Quiz struct {
+	ID           pgtype.UUID        `json:"id"`
+	StudyGuideID pgtype.UUID        `json:"study_guide_id"`
+	CreatorID    pgtype.UUID        `json:"creator_id"`
+	Title        string             `json:"title"`
+	Description  pgtype.Text        `json:"description"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type QuizAnswerOption struct {
+	ID         pgtype.UUID `json:"id"`
+	QuestionID pgtype.UUID `json:"question_id"`
+	Text       string      `json:"text"`
+	IsCorrect  bool        `json:"is_correct"`
+	SortOrder  int32       `json:"sort_order"`
+}
+
+type QuizQuestion struct {
+	ID                pgtype.UUID        `json:"id"`
+	QuizID            pgtype.UUID        `json:"quiz_id"`
+	Type              QuestionType       `json:"type"`
+	QuestionText      string             `json:"question_text"`
+	Hint              pgtype.Text        `json:"hint"`
+	FeedbackCorrect   pgtype.Text        `json:"feedback_correct"`
+	FeedbackIncorrect pgtype.Text        `json:"feedback_incorrect"`
+	ReferenceAnswer   pgtype.Text        `json:"reference_answer"`
+	IsProtected       bool               `json:"is_protected"`
+	SortOrder         int32              `json:"sort_order"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Resource struct {
+	ID          pgtype.UUID        `json:"id"`
+	CreatorID   pgtype.UUID        `json:"creator_id"`
+	Title       string             `json:"title"`
+	Url         string             `json:"url"`
+	Description pgtype.Text        `json:"description"`
+	Type        ResourceType       `json:"type"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type School struct {
+	ID        pgtype.UUID        `json:"id"`
+	Name      string             `json:"name"`
+	Acronym   string             `json:"acronym"`
+	Domain    pgtype.Text        `json:"domain"`
+	Url       pgtype.Text        `json:"url"`
+	City      pgtype.Text        `json:"city"`
+	State     pgtype.Text        `json:"state"`
+	Country   pgtype.Text        `json:"country"`
+	IpedsID   pgtype.Text        `json:"ipeds_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type StudyGuide struct {
+	ID          pgtype.UUID          `json:"id"`
+	CourseID    pgtype.UUID          `json:"course_id"`
+	CreatorID   pgtype.UUID          `json:"creator_id"`
+	Title       string               `json:"title"`
+	Description pgtype.Text          `json:"description"`
+	Content     pgtype.Text          `json:"content"`
+	Tags        []string             `json:"tags"`
+	ViewCount   int32                `json:"view_count"`
+	CreatedAt   pgtype.Timestamptz   `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz   `json:"updated_at"`
+	DeletedAt   pgtype.Timestamptz   `json:"deleted_at"`
+	Visibility  StudyGuideVisibility `json:"visibility"`
+}
+
+type StudyGuideFavorite struct {
+	UserID       pgtype.UUID        `json:"user_id"`
+	StudyGuideID pgtype.UUID        `json:"study_guide_id"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type StudyGuideFile struct {
+	FileID       pgtype.UUID        `json:"file_id"`
+	StudyGuideID pgtype.UUID        `json:"study_guide_id"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type StudyGuideGrant struct {
+	ID           pgtype.UUID        `json:"id"`
+	StudyGuideID pgtype.UUID        `json:"study_guide_id"`
+	GranteeType  GranteeType        `json:"grantee_type"`
+	GranteeID    pgtype.UUID        `json:"grantee_id"`
+	Permission   Permission         `json:"permission"`
+	GrantedBy    pgtype.UUID        `json:"granted_by"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type StudyGuideLastViewed struct {
+	UserID       pgtype.UUID        `json:"user_id"`
+	StudyGuideID pgtype.UUID        `json:"study_guide_id"`
+	ViewedAt     pgtype.Timestamptz `json:"viewed_at"`
+}
+
+type StudyGuideRecommendation struct {
+	StudyGuideID  pgtype.UUID        `json:"study_guide_id"`
+	RecommendedBy pgtype.UUID        `json:"recommended_by"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
+type StudyGuideResource struct {
+	ResourceID   pgtype.UUID        `json:"resource_id"`
+	StudyGuideID pgtype.UUID        `json:"study_guide_id"`
+	AttachedBy   pgtype.UUID        `json:"attached_by"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type StudyGuideVote struct {
+	UserID       pgtype.UUID        `json:"user_id"`
+	StudyGuideID pgtype.UUID        `json:"study_guide_id"`
+	Vote         VoteDirection      `json:"vote"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type User struct {

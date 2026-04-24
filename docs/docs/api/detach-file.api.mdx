@@ -1,0 +1,80 @@
+---
+id: detach-file
+title: "Detach a file from a study guide"
+description: "Removes the link between a file and a guide. Does NOT delete"
+sidebar_label: "Detach a file from a study guide"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV99v2zYQ/lcO95IWUGx3y168pwRxsQxDEyQO9mAbBS2eLTYSqZBHZ66h/704Snac2hiGbkAwIE+Wdby7735R323Q1eQVG2evNA7xkljlxUdTEmaoKeTe1CLEId5S5VYUgAuC0tgHmBM/EVlQsDAlgbIaFCyj0dSDS0cBPl2PQVNJTFMrWumY4UDlAk5Pt3qVWsOcQLF4Jg3soFJ23VoK0J/a3EUfKPSmdmovoypPVeTi6xBWhp7IQxUDi4XR1fi30S3sPLknSx6u05upDRx1ZxRyT4qd78GFd0qTBy6UhZvruzG8eypMXoCnx2g8hWRpaltTzpbr9xDcNsytHciVhTx6xSS+jG/FJ2Fqd1GJnQBPhgsXWaAZuwRakV8nUYrtbHAGuVuRDzB3XMBJ66UyIRi77Lep1Ccp0ycpROt4zwc74MKEzntvajHDWnlVEZMPOJxs0KqKcIgpGZ/Tuc9GY4ZGKlwrLg7KPi4IojWPkeD+/uoS3CJleC+dmGGXLo1D9pEyDHlBlcLhBnldtw69sUvMcOF8pRiHGKPR2DTZDpME9INgUi7YgU7d+6/wzEQ51M4GCnL+p8GZ/LyEIfPROSP9K1gHWx2YO73uYZPh2WBwqHihdGotCowZ5s4yWZZjqq5Lk6c57H8JcnZzCNrNv1DOB0m5Y2W18tp8JQ3kvfPPcAL7mHP0MmacF9J0e66609pVytgg3eLlOmDTxp47TXvujWVakpfgAiuO4TCfTYYVhaCWdFQmKTNlOBaS0toIJFXevMDwnY2m2S/upIW4w/PsfZYhGy5F9byuRxKmKKe6fDisy72VK8V5SeFbYV6rMD8fmTTn50Zrsm9Vea2qHLn/PjmGhYv2bVZeqSq/HPu4XFkmb1UJgfyKfJuXtwq9RoUSQC6cUOqWtiUqxgUOsZ+o02lLb/ubl1Ss6Sei2N90bKgRr6mcLX+LvhQTqjYoVCVQHr3hdZJdkPLkz6N4mcz2xXdS4jbQ/UO7sAvmGjuWJP/n6RBm3cPHLUf6/c+xUDY0duGS+jb28HDOpQpwfnOFGQratmc+9Aa9gZSkdoErlfqto3vtprFdAhbeVaC+Y5Uv+m/z3Mdvq8j/chXpmo3pL+7XpTJWGiM19KabjQnuzwZmODxYVBJ4kWzXhVmGhQssypvNXAW692XTyOvHSF4mY5bhSnmj5tKrkw1qE+RZ43ChykB/02fvbrs74D38ozXoaITdS2XXMhqqjPIPM3yg9eEmJvvQf4nvYDP6AYjbTDezJsOCpEtTHlvpeZ5TzXt6B98YuYl2t+Hl6I/ReIRN8w0y5MWO
+sidebar_class_name: "delete api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Detach a file from a study guide"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"delete"}
+  path={"/study-guides/{study_guide_id}/files/{file_id}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Removes the link between a file and a guide. Does NOT delete
+the file itself -- a file may be attached to many guides /
+courses.
+
+Dual-authz: viewer must be EITHER the file owner OR the
+study guide creator. Broader than POST (which requires file
+owner only) so a guide creator can curate their guide's
+attached files without owning every file.
+
+404 covers both 'guide missing/deleted' and 'file not
+attached to this guide'.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./detach-file.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./detach-file.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./detach-file.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

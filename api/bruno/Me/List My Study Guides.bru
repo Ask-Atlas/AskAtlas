@@ -1,0 +1,37 @@
+meta {
+  name: List My Study Guides
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/me/study-guides
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~course_id: 
+  sort_by: updated
+  limit: 25
+  ~cursor: 
+}
+
+docs {
+  # List study guides created by the authenticated user (ASK-131)
+
+  Returns study guides authored by the viewer as a paginated
+  list. Unlike the course-scoped list, this endpoint DOES
+  surface soft-deleted guides -- the response includes a
+  nullable `deleted_at` field so the owner can see (and
+  eventually restore) their own deleted content.
+  
+  Sort options: `updated` (default, updated_at DESC),
+  `newest` (created_at DESC), `title` (case-insensitive ASC).
+  Single direction per variant -- the endpoint does not
+  expose a `sort_dir` query param.
+  
+  Optional `course_id` filters to one course. A non-existent
+  course yields an empty array, not 404 (the filter just
+  yields no results).
+}

@@ -23,7 +23,16 @@ test.describe("Files API", () => {
 
     expect(body).toHaveProperty("files");
     expect(body).toHaveProperty("has_more");
-    expect(body).toHaveProperty("next_cursor");
+    expect(typeof body.has_more).toBe("boolean");
+    // next_cursor is logically tied to has_more: when has_more is true,
+    // a string cursor MUST be present; when false, it must be null or
+    // omitted entirely (oapi-codegen drops nullable + non-required *string
+    // via omitempty when nil).
+    if (body.has_more) {
+      expect(typeof body.next_cursor).toBe("string");
+    } else {
+      expect(body.next_cursor ?? null).toBeNull();
+    }
     expect(Array.isArray(body.files)).toBeTruthy();
 
     if (body.files.length > 0) {
@@ -54,11 +63,15 @@ test.describe("Files API", () => {
     expect(response.status()).toBe(400);
     const body = await response.json();
     expect(body).toHaveProperty("code", 400);
-    expect(body).toHaveProperty("status", "Bad Request");
+    expect(body).toHaveProperty("status", "VALIDATION_ERROR");
     expect(body.details).toHaveProperty("scope");
-    expect(body.details.scope).toContain(
-      "must be one of: owned, course, study_guide, accessible",
-    );
+    // kin-openapi enum violation message format. Assert every allowed
+    // value appears in the error so the API stays honest about the full
+    // valid set, not just whichever one we sampled.
+    expect(body.details.scope).toContain("is not one of the allowed values");
+    for (const v of ["owned", "course", "study_guide", "accessible"]) {
+      expect(body.details.scope).toContain(v);
+    }
   });
 
   for (const sortBy of VALID_SORTS) {
@@ -77,7 +90,10 @@ test.describe("Files API", () => {
     expect(response.status()).toBe(400);
     const body = await response.json();
     expect(body.details).toHaveProperty("sort_by");
-    expect(body.details.sort_by).toContain("must be one of: updated_at");
+    expect(body.details.sort_by).toContain("is not one of the allowed values");
+    for (const v of VALID_SORTS) {
+      expect(body.details.sort_by).toContain(v);
+    }
   });
 
   test("GET /files accepts valid sort_dir (asc/desc)", async ({ request }) => {
@@ -99,7 +115,9 @@ test.describe("Files API", () => {
     expect(response.status()).toBe(400);
     const body = await response.json();
     expect(body.details).toHaveProperty("sort_dir");
-    expect(body.details.sort_dir).toContain("must be one of: asc, desc");
+    expect(body.details.sort_dir).toContain("is not one of the allowed values");
+    expect(body.details.sort_dir).toContain("asc");
+    expect(body.details.sort_dir).toContain("desc");
   });
 
   for (const status of VALID_STATUSES) {
@@ -120,9 +138,10 @@ test.describe("Files API", () => {
     expect(response.status()).toBe(400);
     const body = await response.json();
     expect(body.details).toHaveProperty("status");
-    expect(body.details.status).toContain(
-      "must be one of: pending, complete, failed",
-    );
+    expect(body.details.status).toContain("is not one of the allowed values");
+    for (const v of VALID_STATUSES) {
+      expect(body.details.status).toContain(v);
+    }
   });
 
   test("GET /files rejects invalid mime_type", async ({ request }) => {
@@ -257,6 +276,113 @@ test.describe("Files API", () => {
         "/api/files/00000000-0000-0000-0000-000000000000",
       );
       expect(response.status()).toBe(404);
+    });
+  });
+
+  // POST /api/files (ASK-105). Validation-only coverage; we do NOT
+  // exercise the 201 happy path here because it would create
+  // dangling `pending` file records on staging that no subsequent
+  // PATCH would ever clear. The Go handler tests already pin the
+  // 201 response shape (FileResponse, no upload_url wrapper).
+  test.describe("POST /files validation", () => {
+    test("rejects unauthenticated with 401", async ({ playwright }) => {
+      const noAuth = await playwright.request.newContext({
+        baseURL: process.env.E2E_BASE_URL,
+        extraHTTPHeaders: {},
+      });
+      const resp = await noAuth.post("/api/files", {
+        data: {
+          name: "doc.pdf",
+          mime_type: "application/pdf",
+          size: 100,
+          s3_key: "uploads/abc/doc.pdf",
+        },
+      });
+      expect(resp.status()).toBe(401);
+      await noAuth.dispose();
+    });
+
+    test("rejects body missing s3_key with 400", async ({ request }) => {
+      const resp = await request.post("/api/files", {
+        data: {
+          name: "doc.pdf",
+          mime_type: "application/pdf",
+          size: 100,
+        },
+      });
+      expect(resp.status()).toBe(400);
+    });
+
+    test("rejects empty s3_key with 400", async ({ request }) => {
+      const resp = await request.post("/api/files", {
+        data: {
+          name: "doc.pdf",
+          mime_type: "application/pdf",
+          size: 100,
+          s3_key: "",
+        },
+      });
+      expect(resp.status()).toBe(400);
+    });
+
+    test("rejects s3_key over 1024 chars with 400", async ({ request }) => {
+      const resp = await request.post("/api/files", {
+        data: {
+          name: "doc.pdf",
+          mime_type: "application/pdf",
+          size: 100,
+          s3_key: "a".repeat(1025),
+        },
+      });
+      expect(resp.status()).toBe(400);
+    });
+
+    test("rejects unsupported mime_type with 400", async ({ request }) => {
+      const resp = await request.post("/api/files", {
+        data: {
+          name: "doc.zip",
+          mime_type: "application/zip",
+          size: 100,
+          s3_key: "uploads/abc/doc.zip",
+        },
+      });
+      expect(resp.status()).toBe(400);
+    });
+
+    test("rejects size=0 with 400", async ({ request }) => {
+      const resp = await request.post("/api/files", {
+        data: {
+          name: "doc.pdf",
+          mime_type: "application/pdf",
+          size: 0,
+          s3_key: "uploads/abc/doc.pdf",
+        },
+      });
+      expect(resp.status()).toBe(400);
+    });
+
+    test("rejects size over 100MB with 400", async ({ request }) => {
+      const resp = await request.post("/api/files", {
+        data: {
+          name: "doc.pdf",
+          mime_type: "application/pdf",
+          size: 104857601,
+          s3_key: "uploads/abc/doc.pdf",
+        },
+      });
+      expect(resp.status()).toBe(400);
+    });
+
+    test("rejects empty name with 400", async ({ request }) => {
+      const resp = await request.post("/api/files", {
+        data: {
+          name: "",
+          mime_type: "application/pdf",
+          size: 100,
+          s3_key: "uploads/abc/doc.pdf",
+        },
+      });
+      expect(resp.status()).toBe(400);
     });
   });
 });

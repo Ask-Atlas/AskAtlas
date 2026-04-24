@@ -1,0 +1,76 @@
+---
+id: create-study-guide-grant
+title: "Grant a permission on a study guide (ASK-211)"
+description: "Creates a new `study_guide_grants` row scoped to"
+sidebar_label: "Grant a permission on a study guide (ASK-211)"
+hide_title: true
+hide_table_of_contents: true
+api: eJztWEtv20gM/isEL5sAsp13t7652babLboNmgR7iIOY1tDWtNKMOo+kXsP/fTEj2ZYjI/Ch2FySgyONyCGH30diyDnqkg05qdWFwD6eGybHV86L2UcvBX80pBwmKNimRpZBbiVlgUDxI4xsEL+fBvn7aVCwIzD6EWyqSxbg9FCN9ppCUiQQBZnv3azk9Vv4UrIppLVSq/1Rd6i+qHwGLmOIur9ZSIN1baCgWfXMlbrtwgCEL3OZkuOhiotg2HmjLJwcvIVzrSa5TF0XRk3zI5AWcllIt/TWWzYj0AZGqfbG8gg6HYgnqLywkJJS2lWGgdKUrY2q2mVsNkX3gvOOxjkDq4k2KVtwmbTwIAkIzv98f/5pqFKtrDMkldvvDhUmWJKhgh0bi/3bOSoqGPu4GUZMUAZASnJZC6XrjMEr+cMz3Nxc/AF6EsPY8A0TNPzDS8MC+854TtCmGReE/TmGyESDRqopJjjRpiCHffReClws7ipltu6dFrOg8XSvVCvHyoVPVFawSK1632xwb942pcffOG2z7WtlBcZazGCiDVx+ubqGHpWyF8/SqeLcm2/GZtGrWDFUe4OrT52jw8P9LnyWxmhjoWJwZPdqe+9gBYIdqicUcRoqWvRWnLBSpbyNFkvurXgBbVrUIJuQf06yDXFoWtwGAStfYP8Wgx8Y4hv8wLtFguv82QG6BNcp9pyZB8mPmKDNyHBEJWcXzC2atLnd9HrDlQ1Ddwk66fJgaV1f2jjgYlEZsKVWtorL0cFh+LdJi6hUFwCBv4xtA2iQqlGL6lRfcakF3o6hf5LAu6g8T4tfi/5qN3E/nu20W43APblnxQU57jhZMD7lTyRKq67tyKoNdzec2cq3mmkVt2qqnRwctNn1jgTU5e3XcevKkRJkhPyXBXCoRLDkOVhnfOq8YSjIpZlUU2iYqqWFLkJxanEv1aLJDKkcT9lUdCPn7VacC7aWptsZJdiRzO22I5EQMrhE+eWGD0/2eIpydHHlz9p6A6ZBWb4Px1zhsiXrbxR5l2kTQvgKzEsBc9wG5oM2YykEq1dUXgqVkzYqf2sHE+3Va668GCpv26gs+xB4lC6D1BvDsVOx2pt4oyTHr4C9DGCn224DF8qxUZSDZfPAporLK0IvgVB00GU6TCtKHW9nsfvt407dYDAVMay6am/yoEmlxNDQWk69kW4Wv71jMmwGPmx+e9f8fBVwrU7XFFqdNXOuxLqXDu/jKIRJ/fBheSf+65/reBsOfPm67qXf/6SizLndES4bv+Z9H48n9Pvp5Oykc/rm8E3n5PTsqDM+nqSdo/Tt2fHk7IwmdLZ5Z+5Xnd0iDA8mOvq9jLT9PnA5WRhcXmCCIUyVwmH3oHsQewdtXUGR3fVEourDqNkqaQXUbHY3uqYN6s/XKfQ6Vfo/pko1kRz/dL0yJ6kCqDEL5nUe3WIzjzDB/vbezIYUzUIG9m9xPh+T5RuTLxZh+YdnE5LoLsEHMjJ4GVNKSBueBfYnlFt+hgx7X+sasQ87zbG2nqteJBVawwfKfXjDBL/zrD1KW4Q5SsYk2ERfK6HzyqPOddWGLjdpVftFstQYpCmX7lnZu0YNC8OsUBnqGVoRKzYaCpOX8Bsd1jFCseDEtTnmpKY+Vmms9gx//wFOELC/
+sidebar_class_name: "post api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Grant a permission on a study guide (ASK-211)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/study-guides/{study_guide_id}/grants"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Creates a new `study_guide_grants` row scoped to
+`(study_guide_id, grantee_type, grantee_id, permission)`.
+Only the guide's creator may create grants. A duplicate
+grant returns 409 Conflict. `grantee_type` is limited to
+`user` or `course` -- study guides cannot grant access to
+other study guides (the table enforces this via a CHECK
+constraint).
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./create-study-guide-grant.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./create-study-guide-grant.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./create-study-guide-grant.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

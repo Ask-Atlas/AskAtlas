@@ -1,0 +1,43 @@
+meta {
+  name: Update Study Guide
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "content": "string",
+    "description": "string",
+    "tags": [
+      "string"
+    ],
+    "title": "string"
+  }
+}
+
+docs {
+  # Update a study guide
+
+  Partial update of any subset of `title`, `description`, `content`,
+  or `tags`. Only fields provided in the request body are touched;
+  absent fields preserve their current values. Tags, when provided,
+  are REPLACED entirely (no merge) and normalized server-side
+  (trim + lowercase + dedupe).
+  
+  Creator-only: 403 if the viewer is not the guide's creator. 404
+  for missing or already-deleted guides. Order of checks:
+    1. Validate the request body (per-field caps + at-least-one
+       field provided).
+    2. Fetch + lock guide row.
+    3. 404 if missing or deleted_at IS NOT NULL.
+    4. 403 if creator_id != viewer_id.
+    5. UPDATE only the provided fields, set updated_at = now(),
+       COMMIT.
+    6. Re-hydrate the full StudyGuideDetail (same shape as GET).
+}

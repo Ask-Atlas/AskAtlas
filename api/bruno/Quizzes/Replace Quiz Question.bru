@@ -1,0 +1,56 @@
+meta {
+  name: Replace Quiz Question
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/api/quizzes/{{quizId}}/questions/{{questionId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "correct_answer": null,
+    "feedback_correct": "string",
+    "feedback_incorrect": "string",
+    "hint": "string",
+    "options": [
+      {
+        "is_correct": false,
+        "text": "string"
+      }
+    ],
+    "question": "string",
+    "sort_order": 0,
+    "type": "multiple-choice"
+  }
+}
+
+docs {
+  # Replace a question in a quiz (ASK-108)
+
+  Full replacement of one question in a quiz. PUT semantics --
+  every field on the request body is required; unprovided fields
+  are NOT preserved. The validation rules are identical to a
+  single question on POST /api/study-guides/{id}/quizzes (same
+  type enum, per-type correct_answer typing, MCQ option counts,
+  exactly-one-correct invariant).
+  
+  The replacement runs in a single transaction:
+  delete-old-options -> update-question -> insert-new-options.
+  Type changes are allowed (MCQ -> TF -> freeform); the
+  per-type option set is rebuilt from scratch on every call.
+  
+  Authorization: creator-only. The authenticated user must be
+  `quizzes.creator_id`; any other authenticated user gets 403.
+  
+  404 covers BOTH the quiz being missing/soft-deleted, the
+  parent study guide being soft-deleted, the question being
+  absent, AND the question belonging to a different quiz.
+  
+  Existing `practice_answers` rows are NOT affected -- the
+  question_id reference persists across the replace, so
+  historical session data stays intact.
+}

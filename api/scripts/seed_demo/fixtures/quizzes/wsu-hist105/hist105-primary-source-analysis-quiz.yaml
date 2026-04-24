@@ -1,0 +1,81 @@
+slug: hist105-primary-source-analysis-quiz
+study_guide_slug: hist105-primary-source-analysis
+title: "HIST 105 — Primary Source Analysis Quiz"
+description: "6 questions on the five-question framework, source genres, and the difference between primary and secondary evidence."
+questions:
+  - slug: q1
+    type: multiple_choice
+    text: "Which of the following is a primary source for the Italian Renaissance?"
+    hint: "A 'primary' source was produced *during* the period under study."
+    feedback_correct: "Correct — Machiavelli's *The Prince* (1513) was written during the period and is a primary source for Renaissance political thought."
+    feedback_incorrect: "Burckhardt (1860) and modern textbooks are *secondary* sources for the Renaissance, even though they discuss it. Machiavelli (1513) is the primary source here."
+    options:
+      - { text: "Burckhardt's *Civilization of the Renaissance in Italy* (1860)", correct: false }
+      - { text: "Machiavelli's *The Prince* (1513)", correct: true }
+      - { text: "A 2020 Wikipedia article on Florence", correct: false }
+      - { text: "A modern HIST 105 textbook chapter", correct: false }
+
+  - slug: q2
+    type: multiple_choice
+    text: "Twain's *Huckleberry Finn* (1884), set in the 1840s, is best treated as good evidence of which of the following?"
+    hint: "What can a literary source actually testify to?"
+    feedback_correct: "Right — a literary source is rich evidence of the moment of its publication. *Huckleberry Finn* tells you a lot about 1880s American attitudes."
+    feedback_incorrect: "Literature is rich evidence about the moment of *publication* and weak evidence about the period it depicts. The novel is good for 1880s attitudes, not 1840s lived experience."
+    options:
+      - { text: "The lived day-to-day experience of enslaved people on the 1840s Mississippi", correct: false }
+      - { text: "1880s American attitudes toward race, slavery, and childhood", correct: true }
+      - { text: "The exact 1840s population of St. Petersburg, Missouri", correct: false }
+      - { text: "Nineteenth-century steamboat engine specifications", correct: false }
+
+  - slug: q3
+    type: multiple_choice
+    text: "Which of the following is the most defensible HIST 105 way to use a 1340 papal bull as evidence?"
+    hint: "What did the author take for granted? Who was the audience?"
+    feedback_correct: "Correct — a papal bull is excellent evidence of papal *self-presentation* and intended audience expectations; it is weaker evidence of what actually happened on the ground."
+    feedback_incorrect: "A papal bull testifies most directly to what the papacy claimed and to whom. Use it for that, not as a neutral description of distant events."
+    options:
+      - { text: "As a neutral description of events occurring across Christendom in 1340", correct: false }
+      - { text: "As evidence of how the papacy presented itself and its audience expectations in 1340", correct: true }
+      - { text: "As proof that everything in the document was widely believed", correct: false }
+      - { text: "As a secondary source to be cited like a modern article", correct: false }
+
+  - slug: q4
+    type: multiple_choice
+    text: "Within the five-question framework taught in this guide, which question is described as where 'almost all of the analytical work lives'?"
+    hint: "It's not the first question, and it's not 'what does it say.'"
+    feedback_correct: "Yes — 'What does it assume but not say?' is the move that distinguishes B work from A work in HIST 105."
+    feedback_incorrect: "The high-leverage question is 'what does it assume but not say' — the assumptions and silences carry most of the analytical weight."
+    options:
+      - { text: "What is it?", correct: false }
+      - { text: "Who made it, when, for whom?", correct: false }
+      - { text: "What does it say?", correct: false }
+      - { text: "What does it assume but not say?", correct: true }
+
+  - slug: q5
+    type: multiple_choice
+    text: "A parish baptismal register from 1700–1750 is generally GOOD evidence of which of the following?"
+    hint: "What does the source systematically record?"
+    feedback_correct: "Correct — baptismal registers systematically record dates, so birth seasonality is a reliable inference. Causes of death and unbaptized births are silences."
+    feedback_incorrect: "Quantitative sources are good evidence of what they systematically record. Baptismal dates → birth seasonality is reliable. Causes of death are not in the source."
+    options:
+      - { text: "Causes of death across the parish", correct: false }
+      - { text: "Birth seasonality in the parish", correct: true }
+      - { text: "The number of unbaptized infant deaths", correct: false }
+      - { text: "Religious dissenters in the surrounding county", correct: false }
+
+  - slug: q6
+    type: freeform
+    text: "Briefly explain the analytical move 'Burckhardt is a primary source for nineteenth-century historiography even though he is a secondary source for the Renaissance,' and why this kind of move matters in HIST 105."
+    reference_answer: |
+      Burckhardt's *Civilization of the Renaissance in Italy* (1860) is
+      written about the Italian Renaissance, so relative to the
+      fifteenth century it is a *secondary* source: a later
+      interpretation. But relative to nineteenth-century European
+      intellectual life, the same book is a *primary* source — direct
+      evidence of how educated 1860s Basel saw modernity, individualism,
+      and the origins of European civilization. The same artifact can
+      be primary or secondary depending on the question you are asking
+      of it. This kind of pivot matters in HIST 105 because it forces
+      you to specify what your source is evidence *of* before you cite
+      it, rather than treating the primary/secondary distinction as a
+      fixed property of the document.

@@ -1,0 +1,31 @@
+meta {
+  name: List Study Guides
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/courses/{{courseId}}/study-guides
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~q: 
+  ~tag: 
+  sort_by: score
+  sort_dir: desc
+  page_limit: 25
+  ~cursor: 
+}
+
+docs {
+  # List study guides for a course
+
+  Returns the study guides for the given course as a paginated
+  list. Soft-deleted guides and guides whose creator has been
+  soft-deleted are excluded. Per-row aggregates (`vote_score`,
+  `is_recommended`, `quiz_count`) are computed inline. The full
+  `content` field is intentionally omitted -- it is only returned
+  by the get-by-id endpoint, keeping the list payload small.
+}

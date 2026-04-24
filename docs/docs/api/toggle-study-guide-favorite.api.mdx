@@ -1,0 +1,73 @@
+---
+id: toggle-study-guide-favorite
+title: "Toggle the study guide favorite (ASK-156)"
+description: "Toggles whether the authenticated user has favorited this"
+sidebar_label: "Toggle the study guide favorite (ASK-156)"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV99v20YM/leIe0oAxU63dgMM5CHF1iEdkAZ1gj3EQcLoaOsaiafcUU1TQ//7wJP8I5ZRDNiAPqxPliXySH7fxzve0viaAorzfGbNxFz6xaKkqTT2+Y/GWXqHn31wQiYzlmIeXK2ma8MITwVJQQGkIMBGCmJxOQpZaCIFKDDCvF/DghQuzjjq6rDQ5UcwxYpA0mIQqUJ1j4AxLTh3Ja3dZ0xsa+9Y4OgIHEcKkuIzVC5Gx4sMLJUk1L+tA0ViGc34gkIy8XxUUowTYA/EwZdlRSzgA/gnphALV0NeUP4wmrHJTI0BKxIK0Uyul4axIjMxKf3blP6tsyYzTvGoUYohSAVBw+6xIbi6OvsN/DyVtQUAiF8XOG54voE70GPjAlkzkdBQZmJeUIVmsjTyXHd5BMcLk5m5DxWKmZimcda07Y06x9pzpKj2Px0f688+/iBQbEoxmck9C7GoIdZ1qRw6z+NPUa2Xw+j+/hPlMqj4Y1pPC734ML2EMdZurCzG8VJ/bp1tx6si4eB0+ufRq5+PD7MZb8wrGieAjhJAcbx8CfjA/80v6o9s4cUauW9CVPfuYa/nr4ejGd+t9XkHgeYl5dKpr8PG8QKioJCqTqnoxCUFzbjXbadFsoAQ/FMGcyxjb+ak16QFz/Qi2i3KHbg+lH8CcRVFwaruPNd2Jykosp0xfVFmnMD76Ydz4KYsd2270AfRd/0TEqsWcuQZJ2XD3cnJSXK9g4B96yJ3rxu2NHdM9u6w74Cg24O4TkjrMFs6uPe+JOSh9DVp1+ld9wR51lrZP22SXQHl5vCpiQIb+duRaTOzjdQ3dW9R6EjhM5nRyvC+pFXb7GT1EuOE0UoTysETRsgD6f41gvM1vi8za7eb83oLlZ2UbzIjTjSVvttWm+nHvjtN2+pir/f151u0oFEo/ofdORVki8G6r2SBQvABVjsFRAlNLk0gqFDyQmW/Faq3tr5Cx3GgjNxb2grvWGhBQUnU1mnikL42MxXFiAva+82SoCvjvpLQWqcpYXnxIoedNXZpSimu89lE32LptK5/1zLXvLwa8nLFesr5oBD+IOZ7EfN6SMy5F5j7hn+w8p1YebNvGztjocBYQqTwmUKHyw+GvgdDKUEpvI75tU/HShpaJ+afj1waLxHZTcRNKNUda2d06oyUN8HJc/r2ljBQOG00wvXN9uepktuVuG20LrgQqU0/8KYRIxmZrH94tzr23/91mQ5jx3Of3FdVx4dTKTHC6cWZyYxm26nl1eh4dKxkaPkVJqX1Q30/Du9O58NRc1eCy42U/xd3op4joS8yrkt0rHgmHSx7OV2bqtPlRlAmM5PBtWmtqZvMFKrHybVZLu8x0lUo21ZfPzYUVE03mfmMwXVz3fXSWBf12ZpJmiC/QcnBx75jDuHfXMb2Vt2/RH5WlWHZ6D+TmQd6Hl4T25s2MwWhpZBK6IxO85xq2XIfbIbaOOu21QuOadu/AcFdkVc=
+sidebar_class_name: "post api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Toggle the study guide favorite (ASK-156)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/me/study-guides/{study_guide_id}/favorite"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Toggles whether the authenticated user has favorited this
+study guide. Same toggle semantics as the file favorite
+endpoint -- inserts when missing, deletes when present.
+Permission-less: no enrollment or ownership check.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./toggle-study-guide-favorite.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./toggle-study-guide-favorite.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./toggle-study-guide-favorite.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

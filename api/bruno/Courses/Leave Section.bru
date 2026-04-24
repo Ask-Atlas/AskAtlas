@@ -1,0 +1,19 @@
+meta {
+  name: Leave Section
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{baseUrl}}/api/courses/{{courseId}}/sections/{{sectionId}}/members/me
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Leave a section as the authenticated user
+
+  Removes the authenticated user's membership from the given section.
+  The membership row is hard-deleted. Any role (`student`, `ta`,
+  `instructor`) can leave.
+}

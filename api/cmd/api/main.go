@@ -16,14 +16,24 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/api"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/clerk"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/config"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/courses"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/dashboard"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/favorites"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/files"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/handlers"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/logging"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/middleware"
 	qstashclient "github.com/Ask-Atlas/AskAtlas/api/internal/qstash"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/quizzes"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/recents"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/refs"
 	s3client "github.com/Ask-Atlas/AskAtlas/api/internal/s3"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/schools"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/sessions"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/studyguides"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/user"
+	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/go-chi/chi/v5"
 	chiMiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -78,8 +88,46 @@ func main() {
 	jobHandler := handlers.NewJobHandler(s3Client, queries)
 
 	fileRepo := files.NewSQLCRepository(connPool, queries)
-	fileService := files.NewService(fileRepo)
+	fileService := files.NewService(fileRepo, files.WithDownloadURLGenerator(s3Client))
 	fileHandler := handlers.NewFileHandler(fileService, qstashClient)
+	grantHandler := handlers.NewGrantHandler(fileService)
+
+	schoolsRepo := schools.NewSQLCRepository(queries)
+	schoolsService := schools.NewService(schoolsRepo)
+	schoolsHandler := handlers.NewSchoolsHandler(schoolsService)
+
+	coursesRepo := courses.NewSQLCRepository(queries)
+	coursesService := courses.NewService(coursesRepo)
+	coursesHandler := handlers.NewCoursesHandler(coursesService)
+
+	studyGuidesRepo := studyguides.NewSQLCRepository(connPool, queries)
+	studyGuidesService := studyguides.NewService(studyGuidesRepo)
+	studyGuidesHandler := handlers.NewStudyGuideHandler(studyGuidesService)
+	studyGuideGrantHandler := handlers.NewStudyGuideGrantHandler(studyGuidesService)
+
+	quizzesRepo := quizzes.NewSQLCRepository(connPool, queries)
+	quizzesService := quizzes.NewService(quizzesRepo)
+	quizzesHandler := handlers.NewQuizzesHandler(quizzesService)
+
+	sessionsRepo := sessions.NewSQLCRepository(connPool, queries)
+	sessionsService := sessions.NewService(sessionsRepo)
+	sessionsHandler := handlers.NewSessionsHandler(sessionsService)
+
+	recentsRepo := recents.NewSQLCRepository(queries)
+	recentsService := recents.NewService(recentsRepo)
+	recentsHandler := handlers.NewRecentsHandler(recentsService)
+
+	favoritesRepo := favorites.NewSQLCRepository(queries)
+	favoritesService := favorites.NewService(favoritesRepo)
+	favoritesHandler := handlers.NewFavoritesHandler(favoritesService)
+
+	dashboardRepo := dashboard.NewSQLCRepository(queries)
+	dashboardService := dashboard.NewService(dashboardRepo)
+	dashboardHandler := handlers.NewDashboardHandler(dashboardService)
+
+	refsRepo := refs.NewSQLCRepository(queries)
+	refsService := refs.NewService(refsRepo)
+	refsHandler := handlers.NewRefsHandler(refsService)
 
 	clerkAuth := middleware.ClerkAuth(userService)
 
@@ -102,16 +150,33 @@ func main() {
 		slog.Error("failed to load swagger spec", "error", err)
 		os.Exit(1)
 	}
-	swagger.Servers = nil
 
 	oapiOptions := middleware_oapi.Options{
 		ErrorHandler: api.OAPIValidatorErrorHandler,
+		Options: openapi3filter.Options{
+			AuthenticationFunc: api.BearerAuthFunc,
+		},
 	}
+
+	compositeHandler := handlers.NewCompositeHandler(
+		fileHandler,
+		grantHandler,
+		schoolsHandler,
+		coursesHandler,
+		studyGuidesHandler,
+		studyGuideGrantHandler,
+		quizzesHandler,
+		sessionsHandler,
+		recentsHandler,
+		favoritesHandler,
+		dashboardHandler,
+		refsHandler,
+	)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(clerkAuth)
 		r.Use(middleware_oapi.OapiRequestValidatorWithOptions(swagger, &oapiOptions))
-		api.HandlerWithOptions(fileHandler, api.ChiServerOptions{
+		api.HandlerWithOptions(compositeHandler, api.ChiServerOptions{
 			BaseRouter:       r,
 			ErrorHandlerFunc: api.OAPIStrictErrorHandler,
 		})
