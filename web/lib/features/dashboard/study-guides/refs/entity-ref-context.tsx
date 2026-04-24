@@ -3,7 +3,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
-import { resolveRefs } from "@/lib/api/actions/refs";
 import type { RefSummary } from "@/lib/api/types";
 
 import { refKey, type EntityRef, type EntityType } from "./extract-refs";
@@ -35,6 +34,7 @@ async function defaultResolver(
   refs: EntityRef[],
 ): Promise<Record<string, RefSummary | null | undefined>> {
   if (refs.length === 0) return {};
+  const { resolveRefs } = await import("@/lib/api/actions/refs");
   const resp = await resolveRefs({ refs });
   return resp.results ?? {};
 }

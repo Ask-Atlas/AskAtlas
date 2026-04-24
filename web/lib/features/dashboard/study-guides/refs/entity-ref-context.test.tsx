@@ -1,14 +1,6 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom";
 
-// The default resolver transitively imports the Clerk server SDK
-// (ESM) via the resolveRefs server action. All tests here pass a
-// custom resolver, so stubbing the module avoids pulling Clerk into
-// jest.
-jest.mock("../../../../api/actions/refs", () => ({
-  resolveRefs: jest.fn(),
-}));
-
 import type { RefSummary } from "@/lib/api/types";
 
 import {
