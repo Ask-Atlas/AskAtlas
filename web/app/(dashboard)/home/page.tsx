@@ -71,36 +71,136 @@ const recentStudyGuides: StudyGuide[] = [
 ];
 
 const globalActivityHistory: ActivityEvent[] = [
-  { id: "g1", type: "create", fileName: "Biology Notes.pdf", timestamp: "2 hours ago" },
-  { id: "g2", type: "edit", fileName: "Cell Structure Quiz.pdf", timestamp: "5 hours ago" },
-  { id: "g3", type: "edit", fileName: "History Essay.docx", timestamp: "Yesterday" },
-  { id: "g4", type: "create", fileName: "DNA Overview.pdf", timestamp: "Yesterday" },
-  { id: "g5", type: "create", fileName: "WWI Timeline.pdf", timestamp: "2 days ago" },
-  { id: "g6", type: "create", fileName: "Algebra Practice.pdf", timestamp: "3 days ago" },
-  { id: "g7", type: "edit", fileName: "WWII Notes.docx", timestamp: "3 days ago" },
-  { id: "g8", type: "edit", fileName: "Equations Worksheet.pdf", timestamp: "4 days ago" },
+  {
+    id: "g1",
+    type: "create",
+    fileName: "Biology Notes.pdf",
+    timestamp: "2 hours ago",
+  },
+  {
+    id: "g2",
+    type: "edit",
+    fileName: "Cell Structure Quiz.pdf",
+    timestamp: "5 hours ago",
+  },
+  {
+    id: "g3",
+    type: "edit",
+    fileName: "History Essay.docx",
+    timestamp: "Yesterday",
+  },
+  {
+    id: "g4",
+    type: "create",
+    fileName: "DNA Overview.pdf",
+    timestamp: "Yesterday",
+  },
+  {
+    id: "g5",
+    type: "create",
+    fileName: "WWI Timeline.pdf",
+    timestamp: "2 days ago",
+  },
+  {
+    id: "g6",
+    type: "create",
+    fileName: "Algebra Practice.pdf",
+    timestamp: "3 days ago",
+  },
+  {
+    id: "g7",
+    type: "edit",
+    fileName: "WWII Notes.docx",
+    timestamp: "3 days ago",
+  },
+  {
+    id: "g8",
+    type: "edit",
+    fileName: "Equations Worksheet.pdf",
+    timestamp: "4 days ago",
+  },
 ];
 
 const guideActivities: Record<string, ActivityEvent[]> = {
   "1": [
-    { id: "e1", type: "create", fileName: "Biology Notes.pdf", timestamp: "2 hours ago" },
-    { id: "e1-2", type: "edit", fileName: "Cell Structure Quiz.pdf", timestamp: "5 hours ago" },
-    { id: "e1-3", type: "create", fileName: "DNA Overview.pdf", timestamp: "Yesterday" },
+    {
+      id: "e1",
+      type: "create",
+      fileName: "Biology Notes.pdf",
+      timestamp: "2 hours ago",
+    },
+    {
+      id: "e1-2",
+      type: "edit",
+      fileName: "Cell Structure Quiz.pdf",
+      timestamp: "5 hours ago",
+    },
+    {
+      id: "e1-3",
+      type: "create",
+      fileName: "DNA Overview.pdf",
+      timestamp: "Yesterday",
+    },
   ],
   "2": [
-    { id: "e2", type: "edit", fileName: "History Essay.docx", timestamp: "Yesterday" },
-    { id: "e2-2", type: "create", fileName: "WWI Timeline.pdf", timestamp: "2 days ago" },
-    { id: "e2-3", type: "edit", fileName: "WWII Notes.docx", timestamp: "3 days ago" },
+    {
+      id: "e2",
+      type: "edit",
+      fileName: "History Essay.docx",
+      timestamp: "Yesterday",
+    },
+    {
+      id: "e2-2",
+      type: "create",
+      fileName: "WWI Timeline.pdf",
+      timestamp: "2 days ago",
+    },
+    {
+      id: "e2-3",
+      type: "edit",
+      fileName: "WWII Notes.docx",
+      timestamp: "3 days ago",
+    },
   ],
   "3": [
-    { id: "e3", type: "create", fileName: "Algebra Practice.pdf", timestamp: "3 days ago" },
-    { id: "e3-2", type: "edit", fileName: "Equations Worksheet.pdf", timestamp: "4 days ago" },
-    { id: "e3-3", type: "create", fileName: "Graphing Examples.pdf", timestamp: "5 days ago" },
+    {
+      id: "e3",
+      type: "create",
+      fileName: "Algebra Practice.pdf",
+      timestamp: "3 days ago",
+    },
+    {
+      id: "e3-2",
+      type: "edit",
+      fileName: "Equations Worksheet.pdf",
+      timestamp: "4 days ago",
+    },
+    {
+      id: "e3-3",
+      type: "create",
+      fileName: "Graphing Examples.pdf",
+      timestamp: "5 days ago",
+    },
   ],
   "4": [
-    { id: "e4", type: "edit", fileName: "Shakespeare Analysis.docx", timestamp: "1 week ago" },
-    { id: "e4-2", type: "create", fileName: "Hamlet Summary.pdf", timestamp: "1 week ago" },
-    { id: "e4-3", type: "edit", fileName: "Macbeth Notes.docx", timestamp: "2 weeks ago" },
+    {
+      id: "e4",
+      type: "edit",
+      fileName: "Shakespeare Analysis.docx",
+      timestamp: "1 week ago",
+    },
+    {
+      id: "e4-2",
+      type: "create",
+      fileName: "Hamlet Summary.pdf",
+      timestamp: "1 week ago",
+    },
+    {
+      id: "e4-3",
+      type: "edit",
+      fileName: "Macbeth Notes.docx",
+      timestamp: "2 weeks ago",
+    },
   ],
 };
 
@@ -137,20 +237,28 @@ function StatCard({
             <div className="flex flex-col items-center">
               <div className="text-2xl font-bold text-primary">{value}</div>
               {description && (
-                <p className="text-xs text-muted-foreground text-center mt-0.5">{description}</p>
+                <p className="text-xs text-muted-foreground text-center mt-0.5">
+                  {description}
+                </p>
               )}
             </div>
             <div className="h-10 w-px bg-border" />
             <div className="flex flex-col items-center">
-              <div className="text-2xl font-bold text-primary">{secondaryValue}</div>
-              <p className="text-xs text-muted-foreground text-center mt-0.5">{secondaryLabel}</p>
+              <div className="text-2xl font-bold text-primary">
+                {secondaryValue}
+              </div>
+              <p className="text-xs text-muted-foreground text-center mt-0.5">
+                {secondaryLabel}
+              </p>
             </div>
           </div>
         ) : (
           <>
             <div className="text-2xl font-bold text-primary">{value}</div>
             {description && (
-              <p className="text-xs text-muted-foreground text-center mt-0.5">{description}</p>
+              <p className="text-xs text-muted-foreground text-center mt-0.5">
+                {description}
+              </p>
             )}
           </>
         )}
@@ -193,7 +301,9 @@ function StudyGuideList({
 
   return (
     <div className="space-y-3">
-      <h2 className="text-xl font-semibold text-foreground">Recent Study Guides</h2>
+      <h2 className="text-xl font-semibold text-foreground">
+        Recent Study Guides
+      </h2>
       <div className="w-full rounded-xl border border-border bg-card">
         {/* Column headers */}
         <div className="grid grid-cols-[1fr_120px_32px] gap-2 px-4 py-2 border-b border-border bg-muted/50">
@@ -240,7 +350,10 @@ function StudyGuideList({
                     />
                     <div className="min-w-0">
                       <button
-                        onClick={(e) => { e.stopPropagation(); onView?.(guide.id); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onView?.(guide.id);
+                        }}
                         className={cn(
                           "block text-sm font-medium truncate text-left hover:underline underline-offset-2 transition-colors",
                           isSelected
@@ -279,7 +392,10 @@ function StudyGuideList({
                           : "opacity-0 group-hover:opacity-100 hover:bg-muted",
                       )}
                     >
-                      <MoreHorizontal size={14} className="text-muted-foreground" />
+                      <MoreHorizontal
+                        size={14}
+                        className="text-muted-foreground"
+                      />
                     </button>
 
                     {isMenuOpen && (
@@ -317,7 +433,10 @@ function StudyGuideList({
                     </h3>
                     <div className="relative space-y-4 before:absolute before:inset-0 before:ml-[7px] before:h-full before:w-[1px] before:bg-border">
                       {activities.map((event) => (
-                        <div key={event.id} className="relative flex items-start gap-3">
+                        <div
+                          key={event.id}
+                          className="relative flex items-start gap-3"
+                        >
                           <div
                             className={cn(
                               "z-10 flex items-center justify-center w-4 h-4 rounded-full border bg-background shrink-0",
@@ -340,7 +459,8 @@ function StudyGuideList({
                               {event.fileName}
                             </button>
                             <p className="text-[10px] text-muted-foreground">
-                              {event.type === "create" ? "Created" : "Edited"} • {event.timestamp}
+                              {event.type === "create" ? "Created" : "Edited"} •{" "}
+                              {event.timestamp}
                             </p>
                           </div>
                         </div>
@@ -365,11 +485,14 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background p-6 text-foreground font-sans">
       <div className="max-w-7xl mx-auto space-y-6">
-
         {/* Welcome */}
         <div className="pt-4">
-          <h1 className="text-3xl font-bold text-foreground mb-1">Welcome back!</h1>
-          <p className="text-muted-foreground">Here&apos;s an overview of your learning progress</p>
+          <h1 className="text-3xl font-bold text-foreground mb-1">
+            Welcome back!
+          </h1>
+          <p className="text-muted-foreground">
+            Here&apos;s an overview of your learning progress
+          </p>
         </div>
 
         {/* Stats Row */}
@@ -398,7 +521,6 @@ export default function HomePage() {
 
         {/* Main Content */}
         <div className="flex flex-col lg:flex-row gap-8 items-start">
-
           {/* LEFT: Study Guide List */}
           <div className="flex-1 w-full lg:w-2/3 space-y-6">
             <StudyGuideList
@@ -436,14 +558,14 @@ export default function HomePage() {
                       {event.fileName}
                     </button>
                     <p className="text-xs text-muted-foreground">
-                      {event.type === "create" ? "Created" : "Edited"} • {event.timestamp}
+                      {event.type === "create" ? "Created" : "Edited"} •{" "}
+                      {event.timestamp}
                     </p>
                   </div>
                 </div>
               ))}
             </div>
           </aside>
-
         </div>
       </div>
     </div>
