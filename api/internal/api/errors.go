@@ -50,9 +50,14 @@ func OAPIValidatorErrorHandler(w http.ResponseWriter, message string, statusCode
 		}
 	}
 
+	// Leave Status empty -- RespondWithError fills it from Code via
+	// statusForCode, producing the symbolic constant ("VALIDATION_ERROR",
+	// "UNAUTHORIZED", "NOT_FOUND", ...) that matches every apperrors.NewX
+	// constructor. Using http.StatusText here used to emit the HTTP
+	// phrase ("Bad Request") and drift the validator's error contract
+	// away from the rest of the API.
 	err := &apperrors.AppError{
 		Code:    statusCode,
-		Status:  http.StatusText(statusCode),
 		Message: "Invalid request parameters",
 		Details: details,
 	}
@@ -79,9 +84,11 @@ func OAPIStrictErrorHandler(w http.ResponseWriter, r *http.Request, err error) {
 		details["validation"] = err.Error()
 	}
 
+	// See OAPIValidatorErrorHandler: omit Status so RespondWithError
+	// resolves the symbolic constant ("VALIDATION_ERROR" here) instead
+	// of the HTTP phrase.
 	appErr := &apperrors.AppError{
 		Code:    http.StatusBadRequest,
-		Status:  http.StatusText(http.StatusBadRequest),
 		Message: "Invalid request parameters",
 		Details: details,
 	}

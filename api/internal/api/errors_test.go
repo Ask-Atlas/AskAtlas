@@ -32,6 +32,15 @@ func TestOAPIValidatorErrorHandler(t *testing.T) {
 	if msg, ok := appErr.Details["scope"]; !ok || msg != "value must be one of [owned]" {
 		t.Errorf("expected details to contain scope: value must be one of [owned], got: %v", appErr.Details)
 	}
+
+	// Pin the wire-contract: every 400 the API emits must carry the
+	// symbolic VALIDATION_ERROR status, regardless of whether the 400
+	// came from the service layer (apperrors.NewBadRequest) or the
+	// OpenAPI validator. Regression on this field breaks every frontend
+	// that switches on `status` instead of the HTTP code.
+	if appErr.Status != apperrors.StatusValidationError {
+		t.Errorf("Status = %q, want %q", appErr.Status, apperrors.StatusValidationError)
+	}
 }
 
 func TestOAPIValidatorErrorHandler_Fallback(t *testing.T) {
@@ -53,6 +62,9 @@ func TestOAPIValidatorErrorHandler_Fallback(t *testing.T) {
 
 	if msg, ok := appErr.Details["validation"]; !ok || msg != message {
 		t.Errorf("expected details to contain validation: %s, got: %v", message, appErr.Details)
+	}
+	if appErr.Status != apperrors.StatusValidationError {
+		t.Errorf("Status = %q, want %q", appErr.Status, apperrors.StatusValidationError)
 	}
 }
 
