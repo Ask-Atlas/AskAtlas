@@ -12,6 +12,41 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 
+// ContentEditor pulls react-markdown (ESM) transitively. Tests here
+// only care about the surrounding form behavior; stub to a plain
+// textarea that preserves value/onChange/onBlur semantics.
+jest.mock("./content-editor", () => {
+  const React = jest.requireActual("react");
+  return {
+    ContentEditor: React.forwardRef(function StubContentEditor(
+      props: {
+        value: string;
+        onChange: (v: string) => void;
+        onBlur?: () => void;
+        name?: string;
+        placeholder?: string;
+        rows?: number;
+        disabled?: boolean;
+      },
+      ref: React.Ref<HTMLTextAreaElement>,
+    ) {
+      return (
+        <textarea
+          ref={ref}
+          aria-label="Content"
+          value={props.value}
+          onChange={(e) => props.onChange(e.target.value)}
+          onBlur={props.onBlur}
+          name={props.name}
+          placeholder={props.placeholder}
+          rows={props.rows}
+          disabled={props.disabled}
+        />
+      );
+    }),
+  };
+});
+
 import type { StudyGuideDetailResponse } from "@/lib/api/types";
 
 import { StudyGuideForm, type StudyGuideFormHandle } from "./study-guide-form";

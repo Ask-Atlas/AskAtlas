@@ -25,7 +25,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+
+import { ContentEditor } from "./content-editor";
 import type {
   CreateStudyGuideRequest,
   StudyGuideDetailResponse,
@@ -144,15 +145,20 @@ export const StudyGuideForm = forwardRef<
             <FormItem>
               <FormLabel>Content</FormLabel>
               <FormControl>
-                <Textarea
-                  placeholder="Write your study guide in markdown…"
+                <ContentEditor
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  name={field.name}
+                  placeholder="Write your study guide in markdown… Paste an internal URL to embed a live card."
                   rows={14}
-                  {...field}
+                  disabled={isSubmitting}
                 />
               </FormControl>
               <FormDescription>
-                Markdown supported. Rich editor + preview land with the
-                study-guide article renderer.
+                Markdown + GFM supported. Paste a study-guide / quiz / file /
+                course URL to embed a live reference card. Flip to Preview to
+                see the rendered article.
               </FormDescription>
               <FormMessage />
             </FormItem>
