@@ -55,22 +55,48 @@ type Repository interface {
 	ListOwnedFilesMimeDesc(ctx context.Context, arg db.ListOwnedFilesMimeDescParams) ([]db.ListOwnedFilesMimeDescRow, error)
 }
 
+// DownloadURLGenerator mints presigned GET URLs for a given S3 key.
+// Kept as a small interface so tests can stub it and so the service
+// layer never depends on the concrete s3 client. The key is passed
+// IN but never returned OUT -- callers only ever see the signed URL.
+type DownloadURLGenerator interface {
+	GeneratePresignedGetURL(ctx context.Context, key string) (string, error)
+}
+
 // Service is the business-logic layer for the files feature.
 //
-// Note: as of ASK-105 the service no longer presigns S3 URLs. The
-// caller (Next.js server) generates the s3_key + presigns the
-// upload separately; the Go API only manages metadata records.
-// File deletions still go through QStash + the jobs handler,
-// which holds its own S3 client -- the files Service itself is
-// pure metadata.
+// Note: as of ASK-105 the service no longer presigns UPLOAD S3 URLs.
+// The caller (Next.js server) generates the s3_key + presigns the
+// upload separately; the Go API only manages metadata records for
+// uploads. DOWNLOAD presigning, however, lives here (ASK-205) because
+// the read-side grants check belongs in one place and the s3_key
+// should never leak to the handler. File deletions still go through
+// QStash + the jobs handler, which holds its own S3 client.
 type Service struct {
 	repo       Repository
 	queryTable map[sortKey]queryFn
+	urlGen     DownloadURLGenerator
+}
+
+// Option customises a Service at construction. Uses the functional
+// options pattern so the common test call (`NewService(repo)`) stays
+// the same while production wiring can opt into a download URL
+// generator.
+type Option func(*Service)
+
+// WithDownloadURLGenerator injects the presigner used by
+// GetDownloadURL (ASK-205). Services constructed without this option
+// will reject GetDownloadURL calls with a 500-class error.
+func WithDownloadURLGenerator(g DownloadURLGenerator) Option {
+	return func(s *Service) { s.urlGen = g }
 }
 
 // NewService creates a new Service instance configured with the given repository.
-func NewService(repo Repository) *Service {
+func NewService(repo Repository, opts ...Option) *Service {
 	s := &Service{repo: repo}
+	for _, opt := range opts {
+		opt(s)
+	}
 	s.queryTable = map[sortKey]queryFn{
 		{SortFieldUpdatedAt, SortDirDesc}: s.queryUpdatedDesc,
 		{SortFieldUpdatedAt, SortDirAsc}:  s.queryUpdatedAsc,
@@ -86,6 +112,57 @@ func NewService(repo Repository) *Service {
 		{SortFieldMimeType, SortDirDesc}:  s.queryMimeDesc,
 	}
 	return s
+}
+
+// GetDownloadURL returns a freshly-minted presigned GET URL for the
+// file at `fileID`, enforcing the same grants check that GetFile uses
+// (GetFileIfViewable) and rejecting files that aren't in a streamable
+// state. The file's `s3_key` is read from the DB row and handed to
+// the injected DownloadURLGenerator -- it never leaves the service.
+//
+// Error mapping:
+//   - missing file / no grant / soft-deleted -> apperrors.ErrNotFound (-> 404)
+//     Matches GetFile's handler convention: we don't leak existence to
+//     viewers who can't access the file. This deviates from the ticket's
+//     AC3 ("403 for no-grant") but is consistent with every other read
+//     path in the files feature -- distinguishing 403 from 404 would
+//     require a second probe and change the security posture of the
+//     whole API.
+//   - pending / failed -> apperrors.ErrNotFound (-> 404)
+//     No object exists in storage to sign a URL for.
+//   - generator not configured -> internal error (-> 500)
+//     Production wiring must pass WithDownloadURLGenerator.
+func (s *Service) GetDownloadURL(ctx context.Context, viewerID, fileID uuid.UUID) (string, error) {
+	if s.urlGen == nil {
+		return "", fmt.Errorf("GetDownloadURL: download URL generator not configured")
+	}
+
+	row, err := s.repo.GetFileIfViewable(ctx, db.GetFileIfViewableParams{
+		FileID:   utils.UUID(fileID),
+		ViewerID: utils.UUID(viewerID),
+		// Matches GetFile's handler call: only owner + direct user
+		// grants + public sentinel are honoured here. Course /
+		// study-guide grants for downloads can be wired when the
+		// handler starts resolving viewer course/study-guide IDs.
+		CourseIds:     nil,
+		StudyGuideIds: nil,
+	})
+	if err != nil {
+		return "", err // sql.ErrNoRows -> apperrors.ErrNotFound via ToHTTPError
+	}
+
+	// Only `complete` files have bytes in storage. Pending / failed
+	// collapse to 404 so callers can't distinguish "upload didn't
+	// finish" from "file doesn't exist".
+	if string(row.Status) != "complete" {
+		return "", fmt.Errorf("GetDownloadURL: %w", apperrors.ErrNotFound)
+	}
+
+	url, err := s.urlGen.GeneratePresignedGetURL(ctx, row.S3Key)
+	if err != nil {
+		return "", fmt.Errorf("GetDownloadURL: presign: %w", err)
+	}
+	return url, nil
 }
 
 // GetFile retrieves a single file, verifying that the requesting user has access to it.

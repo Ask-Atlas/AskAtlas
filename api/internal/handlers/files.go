@@ -26,6 +26,7 @@ const maxS3KeyLength = 1024
 type FileService interface {
 	CreateFile(ctx context.Context, params files.CreateFileParams) (files.File, error)
 	GetFile(ctx context.Context, params files.GetFileParams) (files.File, error)
+	GetDownloadURL(ctx context.Context, viewerID, fileID uuid.UUID) (string, error)
 	ListFiles(ctx context.Context, params files.ListFilesParams) ([]files.File, *string, error)
 	DeleteFile(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher) error
 	UpdateFile(ctx context.Context, params files.UpdateFileParams) (files.File, error)
@@ -210,6 +211,41 @@ func (h *FileHandler) UpdateFile(w http.ResponseWriter, r *http.Request, fileId 
 	}
 
 	respondJSON(w, http.StatusOK, toDTOFileResponse(file))
+}
+
+// DownloadFile handles GET /api/files/{file_id}/download (ASK-205).
+// Emits a 302 with a freshly-minted presigned S3 GET URL in the
+// `Location` header. The service owns grants + state gating; the
+// handler is a thin wire adapter.
+//
+// We deliberately DO NOT echo the presigned URL in the body: the
+// whole point of this endpoint (vs. a `download_url` field on
+// FileResponse) is to keep the bearer-token-equivalent URL out of
+// JSON payloads that end up in logs / caches / downstream observers.
+func (h *FileHandler) DownloadFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	url, err := h.service.GetDownloadURL(r.Context(), viewerID, uuid.UUID(fileId))
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("DownloadFile failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	w.Header().Set("Location", url)
+	// No caching of the redirect -- the Location points at a 15-min
+	// presigned URL, so serving a cached 302 after expiry would break
+	// downloads. The presigned URL itself is what Garage serves with
+	// its own cache semantics; the redirect stays fresh.
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusFound)
 }
 
 // GetFile handles requests to retrieve a single file by its unique identifier.
