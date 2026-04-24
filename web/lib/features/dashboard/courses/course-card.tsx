@@ -63,9 +63,13 @@ function RowVariant({
   code: string;
   rightSlot?: ReactNode;
 }) {
+  // The flex container is pointer-events-none so clicks on padding or
+  // the gap between text and slot fall through to the overlay Link
+  // (rather than dying on this empty wrapper). Only the slot wrapper
+  // re-enables pointer events so it can own its own click.
   return (
-    <div className="flex items-center gap-3 p-3">
-      <div className="pointer-events-none relative z-10 min-w-0 flex-1">
+    <div className="pointer-events-none flex items-center gap-3 p-3">
+      <div className="relative z-10 min-w-0 flex-1">
         <p className="text-foreground text-sm font-semibold">{code}</p>
         <p
           className="text-muted-foreground truncate text-xs"
@@ -75,7 +79,9 @@ function RowVariant({
         </p>
       </div>
       {rightSlot ? (
-        <div className="relative z-10 shrink-0">{rightSlot}</div>
+        <div className="pointer-events-auto relative z-10 shrink-0">
+          {rightSlot}
+        </div>
       ) : null}
     </div>
   );
@@ -90,9 +96,10 @@ function TileVariant({
   code: string;
   rightSlot?: ReactNode;
 }) {
+  // Same dead-zone fix as RowVariant -- see comment above.
   return (
-    <div className="p-4">
-      <div className="pointer-events-none relative z-10 space-y-1.5">
+    <div className="pointer-events-none p-4">
+      <div className="relative z-10 space-y-1.5">
         <h3 className="text-foreground text-base font-semibold leading-tight">
           {code}
         </h3>
@@ -104,7 +111,9 @@ function TileVariant({
         </p>
       </div>
       {rightSlot ? (
-        <div className="absolute right-3 top-3 z-10">{rightSlot}</div>
+        <div className="pointer-events-auto absolute right-3 top-3 z-10">
+          {rightSlot}
+        </div>
       ) : null}
     </div>
   );
