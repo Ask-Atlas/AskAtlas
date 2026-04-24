@@ -90,7 +90,19 @@ export function EntityRefProvider({
     <EntityRefContext.Provider
       value={{
         status,
-        get: (type, id) => map[refKey(type, id)] ?? null,
+        get: (type, id) => {
+          const k = refKey(type, id);
+          const hit = map[k] ?? null;
+          if (process.env.NODE_ENV !== "production") {
+            // eslint-disable-next-line no-console
+            console.debug("[refs.get]", {
+              lookup: k,
+              hit: hit ? hit.type : null,
+              mapKeys: Object.keys(map),
+            });
+          }
+          return hit;
+        },
       }}
     >
       {children}
