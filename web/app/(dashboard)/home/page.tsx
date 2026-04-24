@@ -71,36 +71,36 @@ const recentStudyGuides: StudyGuide[] = [
 ];
 
 const globalActivityHistory: ActivityEvent[] = [
-  { id: "g1", type: "create", fileName: "Biology Notes.pdf",        timestamp: "2 hours ago" },
-  { id: "g2", type: "edit",   fileName: "Cell Structure Quiz.pdf",  timestamp: "5 hours ago" },
-  { id: "g3", type: "edit",   fileName: "History Essay.docx",       timestamp: "Yesterday"   },
-  { id: "g4", type: "create", fileName: "DNA Overview.pdf",         timestamp: "Yesterday"   },
-  { id: "g5", type: "create", fileName: "WWI Timeline.pdf",         timestamp: "2 days ago"  },
-  { id: "g6", type: "create", fileName: "Algebra Practice.pdf",     timestamp: "3 days ago"  },
-  { id: "g7", type: "edit",   fileName: "WWII Notes.docx",          timestamp: "3 days ago"  },
-  { id: "g8", type: "edit",   fileName: "Equations Worksheet.pdf",  timestamp: "4 days ago"  },
+  { id: "g1", type: "create", fileName: "Biology Notes.pdf", timestamp: "2 hours ago" },
+  { id: "g2", type: "edit", fileName: "Cell Structure Quiz.pdf", timestamp: "5 hours ago" },
+  { id: "g3", type: "edit", fileName: "History Essay.docx", timestamp: "Yesterday" },
+  { id: "g4", type: "create", fileName: "DNA Overview.pdf", timestamp: "Yesterday" },
+  { id: "g5", type: "create", fileName: "WWI Timeline.pdf", timestamp: "2 days ago" },
+  { id: "g6", type: "create", fileName: "Algebra Practice.pdf", timestamp: "3 days ago" },
+  { id: "g7", type: "edit", fileName: "WWII Notes.docx", timestamp: "3 days ago" },
+  { id: "g8", type: "edit", fileName: "Equations Worksheet.pdf", timestamp: "4 days ago" },
 ];
 
 const guideActivities: Record<string, ActivityEvent[]> = {
   "1": [
-    { id: "e1",   type: "create", fileName: "Biology Notes.pdf",       timestamp: "2 hours ago" },
-    { id: "e1-2", type: "edit",   fileName: "Cell Structure Quiz.pdf", timestamp: "5 hours ago" },
-    { id: "e1-3", type: "create", fileName: "DNA Overview.pdf",        timestamp: "Yesterday"   },
+    { id: "e1", type: "create", fileName: "Biology Notes.pdf", timestamp: "2 hours ago" },
+    { id: "e1-2", type: "edit", fileName: "Cell Structure Quiz.pdf", timestamp: "5 hours ago" },
+    { id: "e1-3", type: "create", fileName: "DNA Overview.pdf", timestamp: "Yesterday" },
   ],
   "2": [
-    { id: "e2",   type: "edit",   fileName: "History Essay.docx", timestamp: "Yesterday"  },
-    { id: "e2-2", type: "create", fileName: "WWI Timeline.pdf",   timestamp: "2 days ago" },
-    { id: "e2-3", type: "edit",   fileName: "WWII Notes.docx",    timestamp: "3 days ago" },
+    { id: "e2", type: "edit", fileName: "History Essay.docx", timestamp: "Yesterday" },
+    { id: "e2-2", type: "create", fileName: "WWI Timeline.pdf", timestamp: "2 days ago" },
+    { id: "e2-3", type: "edit", fileName: "WWII Notes.docx", timestamp: "3 days ago" },
   ],
   "3": [
-    { id: "e3",   type: "create", fileName: "Algebra Practice.pdf",    timestamp: "3 days ago" },
-    { id: "e3-2", type: "edit",   fileName: "Equations Worksheet.pdf", timestamp: "4 days ago" },
-    { id: "e3-3", type: "create", fileName: "Graphing Examples.pdf",   timestamp: "5 days ago" },
+    { id: "e3", type: "create", fileName: "Algebra Practice.pdf", timestamp: "3 days ago" },
+    { id: "e3-2", type: "edit", fileName: "Equations Worksheet.pdf", timestamp: "4 days ago" },
+    { id: "e3-3", type: "create", fileName: "Graphing Examples.pdf", timestamp: "5 days ago" },
   ],
   "4": [
-    { id: "e4",   type: "edit",   fileName: "Shakespeare Analysis.docx", timestamp: "1 week ago"  },
-    { id: "e4-2", type: "create", fileName: "Hamlet Summary.pdf",        timestamp: "1 week ago"  },
-    { id: "e4-3", type: "edit",   fileName: "Macbeth Notes.docx",        timestamp: "2 weeks ago" },
+    { id: "e4", type: "edit", fileName: "Shakespeare Analysis.docx", timestamp: "1 week ago" },
+    { id: "e4-2", type: "create", fileName: "Hamlet Summary.pdf", timestamp: "1 week ago" },
+    { id: "e4-3", type: "edit", fileName: "Macbeth Notes.docx", timestamp: "2 weeks ago" },
   ],
 };
 
@@ -124,10 +124,10 @@ function StatCard({
   secondaryLabel,
 }: StatCardProps) {
   return (
-    <Card className="bg-[#252525] border-[#3a3a3a] flex flex-col justify-center">
+    <Card className="bg-card border-border flex flex-col justify-center">
       <CardHeader className="flex flex-col items-center justify-center space-y-1 pb-0 pt-3">
-        <Icon className="h-4 w-4 text-orange-400" />
-        <CardTitle className="text-sm font-medium text-gray-300 text-center">
+        <Icon className="h-4 w-4 text-primary" />
+        <CardTitle className="text-sm font-medium text-muted-foreground text-center">
           {title}
         </CardTitle>
       </CardHeader>
@@ -135,22 +135,22 @@ function StatCard({
         {secondaryValue !== undefined && secondaryLabel ? (
           <div className="flex items-center gap-6">
             <div className="flex flex-col items-center">
-              <div className="text-2xl font-bold text-amber-400">{value}</div>
+              <div className="text-2xl font-bold text-primary">{value}</div>
               {description && (
-                <p className="text-xs text-gray-400 text-center mt-0.5">{description}</p>
+                <p className="text-xs text-muted-foreground text-center mt-0.5">{description}</p>
               )}
             </div>
-            <div className="h-10 w-px bg-zinc-700" />
+            <div className="h-10 w-px bg-border" />
             <div className="flex flex-col items-center">
-              <div className="text-2xl font-bold text-amber-400">{secondaryValue}</div>
-              <p className="text-xs text-gray-400 text-center mt-0.5">{secondaryLabel}</p>
+              <div className="text-2xl font-bold text-primary">{secondaryValue}</div>
+              <p className="text-xs text-muted-foreground text-center mt-0.5">{secondaryLabel}</p>
             </div>
           </div>
         ) : (
           <>
-            <div className="text-2xl font-bold text-amber-400">{value}</div>
+            <div className="text-2xl font-bold text-primary">{value}</div>
             {description && (
-              <p className="text-xs text-gray-400 text-center mt-0.5">{description}</p>
+              <p className="text-xs text-muted-foreground text-center mt-0.5">{description}</p>
             )}
           </>
         )}
@@ -193,21 +193,21 @@ function StudyGuideList({
 
   return (
     <div className="space-y-3">
-      <h2 className="text-xl font-semibold text-white">Recent Study Guides</h2>
-      <div className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60">
+      <h2 className="text-xl font-semibold text-foreground">Recent Study Guides</h2>
+      <div className="w-full rounded-xl border border-border bg-card">
         {/* Column headers */}
-        <div className="grid grid-cols-[1fr_120px_32px] gap-2 px-4 py-2 border-b border-zinc-800 bg-zinc-900">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+        <div className="grid grid-cols-[1fr_120px_32px] gap-2 px-4 py-2 border-b border-border bg-muted/50">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Name
           </span>
-          <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Last Opened
           </span>
           <span />
         </div>
 
         {/* File rows */}
-        <div className="divide-y divide-zinc-800/70">
+        <div className="divide-y divide-border">
           {guides.map((guide) => {
             const isSelected = selectedId === guide.id;
             const isMenuOpen = openMenuId === guide.id;
@@ -223,8 +223,8 @@ function StudyGuideList({
                   className={cn(
                     "group w-full grid grid-cols-[1fr_120px_32px] gap-2 items-center px-4 py-2.5 text-left transition-colors cursor-pointer",
                     isSelected
-                      ? "bg-orange-500/10 text-white"
-                      : "text-zinc-400 hover:bg-zinc-800/50 hover:text-zinc-200",
+                      ? "bg-primary/10 text-foreground"
+                      : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                   )}
                 >
                   {/* Name + icon + description */}
@@ -234,8 +234,8 @@ function StudyGuideList({
                       className={cn(
                         "shrink-0 transition-colors",
                         isSelected
-                          ? "text-orange-400"
-                          : "text-zinc-500 group-hover:text-zinc-400",
+                          ? "text-primary"
+                          : "text-muted-foreground group-hover:text-foreground",
                       )}
                     />
                     <div className="min-w-0">
@@ -244,20 +244,20 @@ function StudyGuideList({
                         className={cn(
                           "block text-sm font-medium truncate text-left hover:underline underline-offset-2 transition-colors",
                           isSelected
-                            ? "text-orange-300 hover:text-orange-200"
-                            : "text-zinc-200 hover:text-white",
+                            ? "text-primary hover:text-primary/80"
+                            : "text-foreground hover:text-foreground/80",
                         )}
                       >
                         {guide.title}
                       </button>
-                      <span className="block text-[11px] text-zinc-500 truncate">
+                      <span className="block text-[11px] text-muted-foreground truncate">
                         {guide.description ?? guide.subject}
                       </span>
                     </div>
                   </div>
 
                   {/* Last accessed */}
-                  <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <Clock size={11} className="shrink-0" />
                     <span className="truncate">{guide.lastAccessed}</span>
                   </div>
@@ -275,22 +275,22 @@ function StudyGuideList({
                       className={cn(
                         "flex items-center justify-center w-6 h-6 rounded transition-all",
                         isMenuOpen
-                          ? "opacity-100 bg-zinc-700"
-                          : "opacity-0 group-hover:opacity-100 hover:bg-zinc-700",
+                          ? "opacity-100 bg-muted"
+                          : "opacity-0 group-hover:opacity-100 hover:bg-muted",
                       )}
                     >
-                      <MoreHorizontal size={14} className="text-zinc-400" />
+                      <MoreHorizontal size={14} className="text-muted-foreground" />
                     </button>
 
                     {isMenuOpen && (
-                      <div className="absolute right-0 top-7 z-50 w-32 rounded-lg border border-zinc-700 bg-zinc-800 shadow-xl overflow-hidden">
+                      <div className="absolute right-0 top-7 z-50 w-32 rounded-lg border border-border bg-popover text-popover-foreground shadow-xl overflow-hidden">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             onView?.(guide.id);
                             setOpenMenuId(null);
                           }}
-                          className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
                         >
                           View
                         </button>
@@ -300,7 +300,7 @@ function StudyGuideList({
                             onEdit?.(guide.id);
                             setOpenMenuId(null);
                           }}
-                          className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
                         >
                           Edit
                         </button>
@@ -311,16 +311,16 @@ function StudyGuideList({
 
                 {/* Inline Activity Timeline — shown when selected */}
                 {isSelected && activities.length > 0 && (
-                  <div className="bg-zinc-900/80 px-4 py-4 border-t border-zinc-800/50">
-                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-3">
+                  <div className="bg-muted/30 px-4 py-4 border-t border-border">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
                       Recent Activity
                     </h3>
-                    <div className="relative space-y-4 before:absolute before:inset-0 before:ml-[7px] before:h-full before:w-[1px] before:bg-zinc-800">
+                    <div className="relative space-y-4 before:absolute before:inset-0 before:ml-[7px] before:h-full before:w-[1px] before:bg-border">
                       {activities.map((event) => (
                         <div key={event.id} className="relative flex items-start gap-3">
                           <div
                             className={cn(
-                              "z-10 flex items-center justify-center w-4 h-4 rounded-full border bg-zinc-900 shrink-0",
+                              "z-10 flex items-center justify-center w-4 h-4 rounded-full border bg-background shrink-0",
                               event.type === "create"
                                 ? "border-green-500/50"
                                 : "border-amber-500/50",
@@ -335,11 +335,11 @@ function StudyGuideList({
                           <div className="flex-1 min-w-0 pt-0.5">
                             <button
                               onClick={(e) => e.stopPropagation()}
-                              className="block font-medium text-xs text-zinc-200 truncate text-left hover:underline underline-offset-2 hover:text-orange-300 transition-colors"
+                              className="block font-medium text-xs text-foreground truncate text-left hover:underline underline-offset-2 hover:text-primary transition-colors"
                             >
                               {event.fileName}
                             </button>
-                            <p className="text-[10px] text-zinc-500">
+                            <p className="text-[10px] text-muted-foreground">
                               {event.type === "create" ? "Created" : "Edited"} • {event.timestamp}
                             </p>
                           </div>
@@ -363,13 +363,13 @@ export default function HomePage() {
   const [selectedGuideId, setSelectedGuideId] = useState<string>("1");
 
   return (
-    <div className="dark min-h-screen bg-[#1a1a1a] p-6 text-zinc-100 font-sans">
+    <div className="min-h-screen bg-background p-6 text-foreground font-sans">
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* Welcome */}
         <div className="pt-4">
-          <h1 className="text-3xl font-bold text-white mb-1">Welcome back!</h1>
-          <p className="text-gray-400">Here&apos;s an overview of your learning progress</p>
+          <h1 className="text-3xl font-bold text-foreground mb-1">Welcome back!</h1>
+          <p className="text-muted-foreground">Here&apos;s an overview of your learning progress</p>
         </div>
 
         {/* Stats Row */}
@@ -410,16 +410,16 @@ export default function HomePage() {
           </div>
 
           {/* RIGHT: Activity History Sidebar */}
-          <aside className="w-full lg:w-[350px] bg-zinc-900/40 p-6 rounded-2xl border border-zinc-800/50 shadow-xl">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-zinc-500 mb-6">
+          <aside className="w-full lg:w-[350px] bg-card p-6 rounded-2xl border border-border shadow-xl">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-6">
               Activity History
             </h2>
-            <div className="relative space-y-8 before:absolute before:inset-0 before:ml-[11px] before:h-full before:w-[1px] before:bg-zinc-800">
+            <div className="relative space-y-8 before:absolute before:inset-0 before:ml-[11px] before:h-full before:w-[1px] before:bg-border">
               {globalActivityHistory.map((event) => (
                 <div key={event.id} className="relative flex items-start gap-4">
                   <div
                     className={cn(
-                      "z-10 flex items-center justify-center w-6 h-6 rounded-full border bg-[#1a1a1a] shrink-0",
+                      "z-10 flex items-center justify-center w-6 h-6 rounded-full border bg-background shrink-0",
                       event.type === "create"
                         ? "border-green-500/50"
                         : "border-amber-500/50",
@@ -432,10 +432,10 @@ export default function HomePage() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <button className="block font-medium text-sm text-zinc-100 truncate text-left hover:underline underline-offset-2 hover:text-orange-300 transition-colors">
+                    <button className="block font-medium text-sm text-foreground truncate text-left hover:underline underline-offset-2 hover:text-primary transition-colors">
                       {event.fileName}
                     </button>
-                    <p className="text-xs text-zinc-500">
+                    <p className="text-xs text-muted-foreground">
                       {event.type === "create" ? "Created" : "Edited"} • {event.timestamp}
                     </p>
                   </div>
