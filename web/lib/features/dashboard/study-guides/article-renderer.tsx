@@ -104,9 +104,17 @@ type RefCardComponent = (props: {
   inline?: boolean;
 }) => React.JSX.Element;
 
+// rehype-sanitize's default schema clobbers id/name attrs with the
+// "user-content-" prefix to prevent DOM-clobbering attacks. Strip the
+// prefix before using the id for ref lookup.
+const CLOBBER_PREFIX = "user-content-";
+
 function refTag(Card: RefCardComponent, inline: boolean) {
   const Rendered = (props: Record<string, unknown>) => {
-    const id = typeof props.id === "string" ? props.id : undefined;
+    const raw = typeof props.id === "string" ? props.id : undefined;
+    const id = raw?.startsWith(CLOBBER_PREFIX)
+      ? raw.slice(CLOBBER_PREFIX.length)
+      : raw;
     if (!id) return null;
     return <Card id={id} inline={inline} />;
   };
