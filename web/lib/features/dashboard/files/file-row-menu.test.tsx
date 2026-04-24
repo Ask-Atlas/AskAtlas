@@ -1,11 +1,11 @@
 /**
- * Exercises the ASK-165 acceptance criteria: menu opens with Rename +
- * Delete, Rename opens the inline input auto-focused and pre-selected,
- * Enter saves when changed, empty stays open, identical-name closes
- * without an API call, rejection reverts + closes, Delete opens the
- * confirmation dialog and confirming fires onDelete.
+ * Exercises the ASK-165 acceptance criteria for the menu shell:
+ * trigger opens Rename + Delete, Rename fires `onStartRename` (the
+ * rename UI itself lives on FileCard via its `rename` prop, tested
+ * separately), Delete opens the shared ConfirmationDialog, confirm
+ * fires onDelete, cancel does not.
  */
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 
@@ -38,12 +38,12 @@ function deferred<T>() {
   return { promise, resolve, reject };
 }
 
-describe("FileRowMenu / menu trigger", () => {
-  it("shows Rename and Delete when the trigger is clicked (AC1)", async () => {
+describe("FileRowMenu / menu trigger (AC1)", () => {
+  it("shows Rename and Delete when the trigger is clicked", async () => {
     render(
       <FileRowMenu
         file={makeFile()}
-        onRename={jest.fn().mockResolvedValue(undefined)}
+        onStartRename={jest.fn()}
         onDelete={jest.fn().mockResolvedValue(undefined)}
       />,
     );
@@ -55,145 +55,23 @@ describe("FileRowMenu / menu trigger", () => {
   });
 });
 
-describe("FileRowMenu / rename flow", () => {
-  async function openRename() {
+describe("FileRowMenu / rename intent", () => {
+  it("fires onStartRename when the Rename item is picked", async () => {
+    const onStartRename = jest.fn();
+    render(
+      <FileRowMenu
+        file={makeFile()}
+        onStartRename={onStartRename}
+        onDelete={jest.fn()}
+      />,
+    );
     await userEvent.click(
       screen.getByRole("button", { name: /file actions/i }),
     );
     await userEvent.click(screen.getByRole("menuitem", { name: "Rename" }));
-  }
-
-  it("focuses the input with the current filename pre-selected (AC2)", async () => {
-    render(
-      <FileRowMenu
-        file={makeFile()}
-        onRename={jest.fn().mockResolvedValue(undefined)}
-        onDelete={jest.fn()}
-      />,
-    );
-    await openRename();
-    const input = screen.getByRole("textbox", {
-      name: /new file name/i,
-    }) as HTMLInputElement;
-    expect(input).toHaveFocus();
-    expect(input.selectionStart).toBe(0);
-    expect(input.selectionEnd).toBe(input.value.length);
-  });
-
-  it("calls onRename with the trimmed value when Enter is pressed (AC3)", async () => {
-    const onRename = jest.fn().mockResolvedValue(undefined);
-    render(
-      <FileRowMenu
-        file={makeFile()}
-        onRename={onRename}
-        onDelete={jest.fn()}
-      />,
-    );
-    await openRename();
-    const input = screen.getByRole("textbox", { name: /new file name/i });
-    await userEvent.clear(input);
-    await userEvent.type(input, "  New name.pdf  {Enter}");
-    expect(onRename).toHaveBeenCalledWith("New name.pdf");
-  });
-
-  it("does not call onRename when the new name is empty (AC6)", async () => {
-    const onRename = jest.fn().mockResolvedValue(undefined);
-    render(
-      <FileRowMenu
-        file={makeFile()}
-        onRename={onRename}
-        onDelete={jest.fn()}
-      />,
-    );
-    await openRename();
-    const input = screen.getByRole("textbox", { name: /new file name/i });
-    await userEvent.clear(input);
-    await userEvent.keyboard("{Enter}");
-    expect(onRename).not.toHaveBeenCalled();
-    // Input must stay open so the user can recover without re-opening
-    // the dropdown.
-    expect(input).toBeInTheDocument();
-  });
-
-  it("does not call onRename when the new name is whitespace-only", async () => {
-    const onRename = jest.fn().mockResolvedValue(undefined);
-    render(
-      <FileRowMenu
-        file={makeFile()}
-        onRename={onRename}
-        onDelete={jest.fn()}
-      />,
-    );
-    await openRename();
-    const input = screen.getByRole("textbox", { name: /new file name/i });
-    await userEvent.clear(input);
-    await userEvent.type(input, "   {Enter}");
-    expect(onRename).not.toHaveBeenCalled();
-    expect(input).toBeInTheDocument();
-  });
-
-  it("does not call onRename when the new name equals the current name (edge case)", async () => {
-    const onRename = jest.fn().mockResolvedValue(undefined);
-    const file = makeFile();
-    render(
-      <FileRowMenu file={file} onRename={onRename} onDelete={jest.fn()} />,
-    );
-    await openRename();
-    // Default value already matches file.name; just press Enter.
-    await userEvent.keyboard("{Enter}");
-    expect(onRename).not.toHaveBeenCalled();
-    // And the input closes because the user's intent was "no change".
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("textbox", { name: /new file name/i }),
-      ).not.toBeInTheDocument(),
-    );
-  });
-
-  it("cancels on Esc and closes the input without calling onRename", async () => {
-    const onRename = jest.fn();
-    render(
-      <FileRowMenu
-        file={makeFile()}
-        onRename={onRename}
-        onDelete={jest.fn()}
-      />,
-    );
-    await openRename();
-    await userEvent.keyboard("{Escape}");
-    expect(onRename).not.toHaveBeenCalled();
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("textbox", { name: /new file name/i }),
-      ).not.toBeInTheDocument(),
-    );
-  });
-
-  it("reverts to the menu trigger when onRename rejects (AC4)", async () => {
-    const renamePromise = deferred<void>();
-    const onRename = jest.fn(() => renamePromise.promise);
-    render(
-      <FileRowMenu
-        file={makeFile()}
-        onRename={onRename}
-        onDelete={jest.fn()}
-      />,
-    );
-    await openRename();
-    const input = screen.getByRole("textbox", { name: /new file name/i });
-    await userEvent.clear(input);
-    await userEvent.type(input, "New name.pdf{Enter}");
-    await act(async () => {
-      renamePromise.reject(new Error("network"));
-    });
-    // After the rejection settles the menu returns -- caller toasts and
-    // the row re-renders with the original filename (which is untouched
-    // since we never mutated `file`).
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /file actions/i }),
-      ).toBeInTheDocument(),
-    );
+    // Inputs, commits, and cancels are owned by FileCard's `rename`
+    // prop -- the menu's job is purely to signal intent.
+    expect(onStartRename).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -203,7 +81,7 @@ describe("FileRowMenu / delete flow", () => {
     render(
       <FileRowMenu
         file={makeFile()}
-        onRename={jest.fn()}
+        onStartRename={jest.fn()}
         onDelete={onDelete}
       />,
     );
@@ -223,7 +101,7 @@ describe("FileRowMenu / delete flow", () => {
     render(
       <FileRowMenu
         file={makeFile()}
-        onRename={jest.fn()}
+        onStartRename={jest.fn()}
         onDelete={onDelete}
       />,
     );
@@ -245,7 +123,7 @@ describe("FileRowMenu / delete flow", () => {
     render(
       <FileRowMenu
         file={makeFile()}
-        onRename={jest.fn()}
+        onStartRename={jest.fn()}
         onDelete={onDelete}
       />,
     );

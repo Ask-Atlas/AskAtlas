@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useState } from "react";
 
 import type { FileResponse } from "@/lib/api/types";
 
@@ -39,7 +40,7 @@ const meta: Meta<typeof FileRowMenu> = {
     docs: {
       description: {
         component:
-          "Inline rename + delete menu designed to live in the FileCard `rowMenu` slot. Rename swaps the trigger for an auto-focused input (filename pre-selected). Delete opens the shared ConfirmationDialog. While either request is in flight the trigger shows a spinner and the menu disables so callers can't double-submit.",
+          "Dropdown menu shell for the FileCard `rowMenu` slot. Exposes **Rename** (which fires `onStartRename` so the caller can flip FileCard into rename mode) and **Delete** (which opens the shared ConfirmationDialog). Rename UX itself lives on FileCard via its `rename` prop -- the input renders in-place of the filename.",
       },
     },
   },
@@ -51,39 +52,9 @@ type Story = StoryObj<typeof FileRowMenu>;
 export const Default: Story = {
   args: {
     file: makeFile(),
-    onRename: () => resolveAfter(500)(),
-    onDelete: resolveAfter(500),
-  },
-};
-
-export const SlowRename: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "Rename takes 2s so you can see the disabled input + spinner in the trigger after the swap back.",
-      },
+    onStartRename: () => {
+      // no-op for this story; see InsideFileCard for the real flow
     },
-  },
-  args: {
-    file: makeFile(),
-    onRename: () => resolveAfter(2000)(),
-    onDelete: resolveAfter(500),
-  },
-};
-
-export const RenameFails: Story = {
-  parameters: {
-    docs: {
-      description: {
-        story:
-          "`onRename` rejects after ~800ms. The menu returns to the trigger (with the original filename left untouched on `file`). Consumers wrap their own onRename with try/catch + toast.",
-      },
-    },
-  },
-  args: {
-    file: makeFile(),
-    onRename: () => rejectAfter(800)(),
     onDelete: resolveAfter(500),
   },
 };
@@ -99,8 +70,24 @@ export const SlowDelete: Story = {
   },
   args: {
     file: makeFile(),
-    onRename: () => resolveAfter(500)(),
+    onStartRename: () => {},
     onDelete: resolveAfter(1500),
+  },
+};
+
+export const DeleteFails: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`onDelete` rejects after ~800ms. The dialog closes and the trigger returns -- consumers wrap their own onDelete with try/catch + toast.",
+      },
+    },
+  },
+  args: {
+    file: makeFile(),
+    onStartRename: () => {},
+    onDelete: rejectAfter(800),
   },
 };
 
@@ -110,28 +97,52 @@ export const InsideFileCard: Story = {
     docs: {
       description: {
         story:
-          "Shows the canonical placement: FileRowMenu mounted into the FileCard `rowMenu` slot on the list variant.",
+          "Canonical placement + rename flow: the caller tracks 'which file is renaming' in local state, passes `rename={{...}}` to FileCard when that file is active, and wires Rename in the menu via `onStartRename`. Click the three dots and pick Rename -- the filename text swaps to an auto-focused input right where the filename was.",
       },
     },
   },
-  render: (args) => (
+  render: (args) => <InsideFileCardDemo file={args.file} />,
+  args: {
+    file: makeFile(),
+    onStartRename: () => {},
+    onDelete: resolveAfter(500),
+  },
+};
+
+function InsideFileCardDemo({ file }: { file: FileResponse }) {
+  // The caller owns rename-mode state. In a real page this would be
+  // keyed by file.id across a list of rows; here we're showing a single
+  // row so a boolean is enough.
+  const [renaming, setRenaming] = useState(false);
+  const [currentName, setCurrentName] = useState(file.name);
+  const liveFile: FileResponse = { ...file, name: currentName };
+
+  return (
     <div className="w-[620px]">
       <FileCard
-        file={args.file}
+        file={liveFile}
         variant="list"
+        rename={
+          renaming
+            ? {
+                onCommit: async (newName) => {
+                  // Simulate a 500ms server round-trip.
+                  await new Promise((r) => setTimeout(r, 500));
+                  setCurrentName(newName);
+                  setRenaming(false);
+                },
+                onCancel: () => setRenaming(false),
+              }
+            : undefined
+        }
         rowMenu={
           <FileRowMenu
-            file={args.file}
-            onRename={args.onRename}
-            onDelete={args.onDelete}
+            file={liveFile}
+            onStartRename={() => setRenaming(true)}
+            onDelete={resolveAfter(500)}
           />
         }
       />
     </div>
-  ),
-  args: {
-    file: makeFile(),
-    onRename: () => resolveAfter(500)(),
-    onDelete: resolveAfter(500),
-  },
-};
+  );
+}
