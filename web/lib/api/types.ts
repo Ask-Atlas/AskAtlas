@@ -125,5 +125,14 @@ export type ListRecentsQuery = NonNullable<
 export type FavoriteItem = ApiSchemas["FavoriteItem"];
 export type RecentItem = ApiSchemas["RecentItem"];
 
+// ---------- Refs (ASK-208 / ASK-209 inline entity cards) ----------
+export type RefsResolveRequest = ApiSchemas["RefsResolveRequest"];
+export type RefsResolveRequestRef = ApiSchemas["RefsResolveRequestRef"];
+export type RefsResolveResponse = ApiSchemas["RefsResolveResponse"];
+export type RefSummary = ApiSchemas["RefSummary"];
+export type RefCourseInfo = ApiSchemas["RefCourseInfo"];
+export type RefCreatorInfo = ApiSchemas["RefCreatorInfo"];
+export type RefSchoolInfo = ApiSchemas["RefSchoolInfo"];
+
 // ---------- Errors ----------
 export type AppError = ApiSchemas["AppError"];
