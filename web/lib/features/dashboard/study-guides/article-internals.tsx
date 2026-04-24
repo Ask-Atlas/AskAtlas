@@ -1,5 +1,6 @@
 "use client";
 
+import { ImageOff } from "lucide-react";
 import { useState } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
@@ -38,9 +39,18 @@ export function ArticleImage({ src, alt }: ArticleImageProps) {
       {state === "error" ? (
         <div
           role="alert"
-          className="text-muted-foreground rounded-md border border-dashed p-8 text-center text-sm"
+          className="bg-muted/40 text-muted-foreground flex items-center gap-3 rounded-md border p-4 text-sm"
         >
-          Image failed to load
+          <ImageOff
+            className="text-muted-foreground/70 size-5 shrink-0"
+            aria-hidden
+          />
+          <div className="flex-1">
+            <div className="text-foreground font-medium">Image unavailable</div>
+            <div className="truncate text-xs">
+              {alt ? alt : "The referenced file could not be loaded."}
+            </div>
+          </div>
         </div>
       ) : null}
       {/* eslint-disable-next-line @next/next/no-img-element */}

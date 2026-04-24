@@ -73,7 +73,22 @@ describe("ArticleImage", () => {
     render(<ArticleImage src="/api/files/missing/download" alt="broken" />);
     const img = screen.getByAltText("broken");
     fireEvent.error(img);
-    expect(screen.getByRole("alert")).toHaveTextContent("Image failed to load");
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Image unavailable");
+    // alt text is echoed so authors can see which embed broke.
+    expect(alert).toHaveTextContent("broken");
+  });
+
+  it("falls back to a generic message when no alt was set", () => {
+    const { container } = render(
+      <ArticleImage src="/api/files/missing/download" />,
+    );
+    const img = container.querySelector("img");
+    expect(img).not.toBeNull();
+    fireEvent.error(img as HTMLImageElement);
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /could not be loaded/i,
+    );
   });
 
   it("uses alt='' for unlabeled images (accessibility hygiene)", () => {
