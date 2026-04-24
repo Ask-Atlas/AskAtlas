@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import type { Context, ReactNode } from "react";
 
 import type { RefSummary } from "@/lib/api/types";
 
@@ -14,10 +14,21 @@ interface ContextValue {
   get(type: EntityType, id: string): RefSummary | null;
 }
 
-const EntityRefContext = createContext<ContextValue>({
-  status: "ready",
-  get: () => null,
-});
+// Pin the context on globalThis so module duplication in Storybook /
+// Vite dev can't end up with a Provider and a useContext consumer on
+// two different context instances.
+const GLOBAL_KEY = "__ASKATLAS_ENTITY_REF_CONTEXT__";
+type GlobalHolder = typeof globalThis & {
+  [GLOBAL_KEY]?: Context<ContextValue>;
+};
+const holder = globalThis as GlobalHolder;
+if (!holder[GLOBAL_KEY]) {
+  holder[GLOBAL_KEY] = createContext<ContextValue>({
+    status: "ready",
+    get: () => null,
+  });
+}
+const EntityRefContext = holder[GLOBAL_KEY] as Context<ContextValue>;
 
 export type RefResolver = (
   refs: EntityRef[],
@@ -90,19 +101,7 @@ export function EntityRefProvider({
     <EntityRefContext.Provider
       value={{
         status,
-        get: (type, id) => {
-          const k = refKey(type, id);
-          const hit = map[k] ?? null;
-          if (process.env.NODE_ENV !== "production") {
-            // eslint-disable-next-line no-console
-            console.debug("[refs.get]", {
-              lookup: k,
-              hit: hit ? hit.type : null,
-              mapKeys: Object.keys(map),
-            });
-          }
-          return hit;
-        },
+        get: (type, id) => map[refKey(type, id)] ?? null,
       }}
     >
       {children}

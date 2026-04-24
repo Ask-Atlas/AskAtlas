@@ -62,14 +62,6 @@ const sanitizeSchema = {
   },
 };
 
-function debugDumpHast() {
-  return (tree: unknown) => {
-    if (process.env.NODE_ENV !== "production") {
-      // eslint-disable-next-line no-console
-      console.debug("[hast after sanitize]", JSON.stringify(tree, null, 2));
-    }
-  };
-}
 
 /**
  * Renders study-guide markdown as styled HTML. GFM tables + task lists,
@@ -97,11 +89,7 @@ export function ArticleRenderer({
       >
         <Markdown
           remarkPlugins={[remarkGfm, remarkDirective, remarkAskAtlasDirectives]}
-          rehypePlugins={[
-            rehypeRaw,
-            [rehypeSanitize, sanitizeSchema],
-            debugDumpHast,
-          ]}
+          rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
           components={markdownComponents}
         >
           {content}
@@ -119,21 +107,7 @@ type RefCardComponent = (props: {
 function refTag(Card: RefCardComponent, inline: boolean) {
   const Rendered = (props: Record<string, unknown>) => {
     const id = typeof props.id === "string" ? props.id : undefined;
-    if (process.env.NODE_ENV !== "production") {
-      // eslint-disable-next-line no-console
-      console.debug("[refTag] received props", {
-        keys: Object.keys(props),
-        id,
-        allProps: props,
-      });
-    }
-    if (!id) {
-      return process.env.NODE_ENV !== "production" ? (
-        <span style={{ color: "red" }}>
-          [refTag got no id: keys={Object.keys(props).join(",")}]
-        </span>
-      ) : null;
-    }
+    if (!id) return null;
     return <Card id={id} inline={inline} />;
   };
   Rendered.displayName = "RefTag";
