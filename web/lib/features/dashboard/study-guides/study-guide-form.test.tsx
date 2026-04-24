@@ -3,11 +3,12 @@
  * with valid fields shapes the body correctly (AC1); edit-mode
  * pre-fills from `initial` (AC2); title/content below min-length
  * disables Save + shows inline error (AC3, AC4); Cancel callback
- * fires; tags are comma-split/trimmed on submit; and the imperative
- * `setError` hook surfaces server-side validation errors for AC5.
+ * fires; the imperative `setError` hook surfaces server-side
+ * validation errors for AC5. Also covers the tag-chip interactions
+ * (Enter commits, dedupe, Backspace pops last chip, X removes).
  */
 import { createRef } from "react";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 
@@ -45,22 +46,27 @@ function makeStudyGuide(
   } as StudyGuideDetailResponse;
 }
 
+async function typeTag(user: ReturnType<typeof userEvent.setup>, tag: string) {
+  const input = screen.getByRole("textbox", { name: /add a tag/i });
+  await user.type(input, `${tag}{Enter}`);
+}
+
 describe("StudyGuideForm / create mode", () => {
   it("submits the shaped body when valid fields are filled (AC1)", async () => {
+    const user = userEvent.setup();
     const onSubmit = jest.fn().mockResolvedValue(undefined);
     render(
       <StudyGuideForm mode="create" onSubmit={onSubmit} onCancel={jest.fn()} />,
     );
-    await userEvent.type(screen.getByLabelText(/title/i), "Concurrency notes");
-    await userEvent.type(
+    await user.type(screen.getByLabelText(/title/i), "Concurrency notes");
+    await user.type(
       screen.getByLabelText(/content/i),
       "# Overview\n\nMutexes, semaphores, and monitors.",
     );
-    await userEvent.type(
-      screen.getByLabelText(/tags/i),
-      "concurrency, threads, systems",
-    );
-    await userEvent.click(screen.getByRole("button", { name: /create/i }));
+    await typeTag(user, "concurrency");
+    await typeTag(user, "threads");
+    await typeTag(user, "systems");
+    await user.click(screen.getByRole("button", { name: /create/i }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect(onSubmit).toHaveBeenCalledWith({
       title: "Concurrency notes",
@@ -69,31 +75,8 @@ describe("StudyGuideForm / create mode", () => {
     });
   });
 
-  it("trims whitespace around comma-separated tags", async () => {
-    const onSubmit = jest.fn().mockResolvedValue(undefined);
-    render(
-      <StudyGuideForm mode="create" onSubmit={onSubmit} onCancel={jest.fn()} />,
-    );
-    await userEvent.type(screen.getByLabelText(/title/i), "Title here");
-    await userEvent.type(
-      screen.getByLabelText(/content/i),
-      "Body long enough to pass validation threshold.",
-    );
-    await userEvent.type(
-      screen.getByLabelText(/tags/i),
-      "  midterm ,  concurrency  ,,  systems  ",
-    );
-    await userEvent.click(screen.getByRole("button", { name: /create/i }));
-    await waitFor(() =>
-      expect(onSubmit).toHaveBeenCalledWith(
-        expect.objectContaining({
-          tags: ["midterm", "concurrency", "systems"],
-        }),
-      ),
-    );
-  });
-
   it("disables Save and shows inline error while title is below 3 chars (AC3)", async () => {
+    const user = userEvent.setup();
     render(
       <StudyGuideForm
         mode="create"
@@ -101,8 +84,8 @@ describe("StudyGuideForm / create mode", () => {
         onCancel={jest.fn()}
       />,
     );
-    await userEvent.type(screen.getByLabelText(/title/i), "Hi");
-    await userEvent.type(
+    await user.type(screen.getByLabelText(/title/i), "Hi");
+    await user.type(
       screen.getByLabelText(/content/i),
       "Body long enough to satisfy the min-length requirement.",
     );
@@ -115,6 +98,7 @@ describe("StudyGuideForm / create mode", () => {
   });
 
   it("disables Save and shows inline error while content is below 10 chars (AC4)", async () => {
+    const user = userEvent.setup();
     render(
       <StudyGuideForm
         mode="create"
@@ -122,8 +106,8 @@ describe("StudyGuideForm / create mode", () => {
         onCancel={jest.fn()}
       />,
     );
-    await userEvent.type(screen.getByLabelText(/title/i), "Valid title");
-    await userEvent.type(screen.getByLabelText(/content/i), "short");
+    await user.type(screen.getByLabelText(/title/i), "Valid title");
+    await user.type(screen.getByLabelText(/content/i), "short");
     expect(screen.getByRole("button", { name: /create/i })).toBeDisabled();
     await waitFor(() =>
       expect(
@@ -133,12 +117,114 @@ describe("StudyGuideForm / create mode", () => {
   });
 
   it("fires onCancel when Cancel is clicked", async () => {
+    const user = userEvent.setup();
     const onCancel = jest.fn();
     render(
       <StudyGuideForm mode="create" onSubmit={jest.fn()} onCancel={onCancel} />,
     );
-    await userEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
     expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("StudyGuideForm / tag chips", () => {
+  it("adds a chip when the user types and presses Enter", async () => {
+    const user = userEvent.setup();
+    render(
+      <StudyGuideForm
+        mode="create"
+        onSubmit={jest.fn()}
+        onCancel={jest.fn()}
+      />,
+    );
+    await typeTag(user, "midterm");
+    const group = screen.getByRole("group", { name: /tags/i });
+    expect(within(group).getByText("midterm")).toBeInTheDocument();
+  });
+
+  it("normalizes to lowercase + trims whitespace", async () => {
+    const user = userEvent.setup();
+    render(
+      <StudyGuideForm
+        mode="create"
+        onSubmit={jest.fn()}
+        onCancel={jest.fn()}
+      />,
+    );
+    await typeTag(user, "  MidTERM  ");
+    const group = screen.getByRole("group", { name: /tags/i });
+    expect(within(group).getByText("midterm")).toBeInTheDocument();
+    expect(within(group).queryByText("MidTERM")).not.toBeInTheDocument();
+  });
+
+  it("dedupes: re-adding an existing tag is a no-op and clears the input", async () => {
+    const user = userEvent.setup();
+    render(
+      <StudyGuideForm
+        mode="create"
+        onSubmit={jest.fn()}
+        onCancel={jest.fn()}
+      />,
+    );
+    await typeTag(user, "midterm");
+    await typeTag(user, "midterm");
+    const group = screen.getByRole("group", { name: /tags/i });
+    // Only one chip; the duplicate Enter just clears the input.
+    expect(within(group).getAllByText("midterm")).toHaveLength(1);
+    const input = screen.getByRole("textbox", { name: /add a tag/i });
+    expect(input).toHaveValue("");
+  });
+
+  it("removes a chip when its X is clicked", async () => {
+    const user = userEvent.setup();
+    render(
+      <StudyGuideForm
+        mode="create"
+        onSubmit={jest.fn()}
+        onCancel={jest.fn()}
+      />,
+    );
+    await typeTag(user, "midterm");
+    await typeTag(user, "concurrency");
+    await user.click(screen.getByRole("button", { name: /remove midterm/i }));
+    const group = screen.getByRole("group", { name: /tags/i });
+    expect(within(group).queryByText("midterm")).not.toBeInTheDocument();
+    expect(within(group).getByText("concurrency")).toBeInTheDocument();
+  });
+
+  it("pops the last chip on Backspace when the draft input is empty", async () => {
+    const user = userEvent.setup();
+    render(
+      <StudyGuideForm
+        mode="create"
+        onSubmit={jest.fn()}
+        onCancel={jest.fn()}
+      />,
+    );
+    await typeTag(user, "midterm");
+    await typeTag(user, "concurrency");
+    const input = screen.getByRole("textbox", { name: /add a tag/i });
+    input.focus();
+    await user.keyboard("{Backspace}");
+    const group = screen.getByRole("group", { name: /tags/i });
+    expect(within(group).queryByText("concurrency")).not.toBeInTheDocument();
+    expect(within(group).getByText("midterm")).toBeInTheDocument();
+  });
+
+  it("ignores empty / whitespace-only submits", async () => {
+    const user = userEvent.setup();
+    render(
+      <StudyGuideForm
+        mode="create"
+        onSubmit={jest.fn()}
+        onCancel={jest.fn()}
+      />,
+    );
+    const input = screen.getByRole("textbox", { name: /add a tag/i });
+    await user.type(input, "   {Enter}");
+    const group = screen.getByRole("group", { name: /tags/i });
+    // No chip was added.
+    expect(within(group).queryAllByRole("button")).toHaveLength(0);
   });
 });
 
@@ -159,9 +245,9 @@ describe("StudyGuideForm / edit mode", () => {
     expect(screen.getByLabelText(/content/i)).toHaveValue(
       "# Chapter 1\n\nSystems programming is...",
     );
-    expect(screen.getByLabelText(/tags/i)).toHaveValue(
-      "midterm, systems-programming",
-    );
+    const group = screen.getByRole("group", { name: /tags/i });
+    expect(within(group).getByText("midterm")).toBeInTheDocument();
+    expect(within(group).getByText("systems-programming")).toBeInTheDocument();
   });
 
   it("labels the submit button 'Save' in edit mode", () => {
@@ -177,6 +263,7 @@ describe("StudyGuideForm / edit mode", () => {
   });
 
   it("round-trips pre-filled tags back through submit unchanged", async () => {
+    const user = userEvent.setup();
     const onSubmit = jest.fn().mockResolvedValue(undefined);
     render(
       <StudyGuideForm
@@ -186,7 +273,7 @@ describe("StudyGuideForm / edit mode", () => {
         onCancel={jest.fn()}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    await user.click(screen.getByRole("button", { name: /^save$/i }));
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
