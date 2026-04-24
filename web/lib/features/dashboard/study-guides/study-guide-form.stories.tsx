@@ -118,3 +118,37 @@ export const EditEmptyTags: Story = {
     onCancel: () => {},
   },
 };
+
+export const CreatePublic: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Create mode with the visibility chip pre-flipped to Public. Clicking the chip opens the popover showing the Private/Public segmented control plus a hint that grants require saving the guide first.",
+      },
+    },
+  },
+  args: {
+    mode: "create",
+    initial: makeStudyGuide({ visibility: "public" }),
+    onSubmit: resolveAfter(500),
+    onCancel: () => {},
+  },
+};
+
+export const EditWithGrantsStub: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Edit mode variant for the visibility popover. The popover mounts the GrantsManager which issues a network request -- in Storybook that request fails and the manager falls back to its 'No shares yet' state. Demonstrates the chip surface; real grant flows are covered by the Jest/RTL tests.",
+      },
+    },
+  },
+  args: {
+    mode: "edit",
+    initial: makeStudyGuide({ visibility: "private" }),
+    onSubmit: resolveAfter(500),
+    onCancel: () => {},
+  },
+};

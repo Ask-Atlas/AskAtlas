@@ -15,9 +15,13 @@ import type {
   CastVoteRequest,
   CastVoteResponse,
   FileAttachmentResponse,
+  ListStudyGuideGrantsResponse,
   RecommendationResponse,
   ResourceSummary,
+  StudyGuideCreateGrantRequest,
   StudyGuideDetailResponse,
+  StudyGuideGrantResponse,
+  StudyGuideRevokeGrantRequest,
   UpdateStudyGuideRequest,
 } from "../types";
 
@@ -172,5 +176,47 @@ export async function removeStudyGuideVote(
       params: { path: { study_guide_id: studyGuideId } },
     }),
     `DELETE /study-guides/${studyGuideId}/votes`,
+  );
+}
+
+// ---------- Grants (ASK-211/ASK-212) ----------
+
+/** List the grants (share targets) currently attached to a study guide. */
+export async function listStudyGuideGrants(
+  studyGuideId: string,
+): Promise<ListStudyGuideGrantsResponse> {
+  return unwrap(
+    await serverApi.GET("/study-guides/{study_guide_id}/grants", {
+      params: { path: { study_guide_id: studyGuideId } },
+    }),
+    `GET /study-guides/${studyGuideId}/grants`,
+  );
+}
+
+/** Grant a permission on a study guide to another user or course. */
+export async function createStudyGuideGrant(
+  studyGuideId: string,
+  body: StudyGuideCreateGrantRequest,
+): Promise<StudyGuideGrantResponse> {
+  return unwrap(
+    await serverApi.POST("/study-guides/{study_guide_id}/grants", {
+      params: { path: { study_guide_id: studyGuideId } },
+      body,
+    }),
+    `POST /study-guides/${studyGuideId}/grants`,
+  );
+}
+
+/** Revoke a previously-issued study-guide permission grant. */
+export async function revokeStudyGuideGrant(
+  studyGuideId: string,
+  body: StudyGuideRevokeGrantRequest,
+): Promise<void> {
+  return unwrapVoid(
+    await serverApi.DELETE("/study-guides/{study_guide_id}/grants", {
+      params: { path: { study_guide_id: studyGuideId } },
+      body,
+    }),
+    `DELETE /study-guides/${studyGuideId}/grants`,
   );
 }

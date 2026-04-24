@@ -47,6 +47,15 @@ jest.mock("./content-editor", () => {
   };
 });
 
+// GrantsManager issues network calls on mount (listStudyGuideGrants +
+// listMyEnrollments). The form-level tests assert chip presence and
+// popover branching only, so we stub the manager to a sentinel node.
+jest.mock("./grants-manager", () => ({
+  GrantsManager: ({ studyGuideId }: { studyGuideId: string }) => (
+    <div data-testid="grants-manager-stub">grants:{studyGuideId}</div>
+  ),
+}));
+
 import type { StudyGuideDetailResponse } from "@/lib/api/types";
 
 import { StudyGuideForm, type StudyGuideFormHandle } from "./study-guide-form";
@@ -114,6 +123,7 @@ describe("StudyGuideForm / create mode", () => {
       title: "Concurrency notes",
       content: "# Overview\n\nMutexes, semaphores, and monitors.",
       tags: ["concurrency", "threads", "systems"],
+      visibility: "private",
     });
   });
 
@@ -346,5 +356,106 @@ describe("StudyGuideForm / server error surface (AC5)", () => {
     await waitFor(() =>
       expect(screen.getByText("Title already taken")).toBeInTheDocument(),
     );
+  });
+});
+
+describe("StudyGuideForm / visibility (ASK-212)", () => {
+  async function fillRequiredFields(
+    user: ReturnType<typeof userEvent.setup>,
+  ) {
+    await user.type(screen.getByLabelText(/title/i), "Visibility demo");
+    await user.type(
+      screen.getByLabelText(/content/i),
+      "Body long enough to pass validation.",
+    );
+  }
+
+  it("defaults to Private in create mode and submits visibility=private", async () => {
+    const user = userEvent.setup();
+    const onSubmit = jest.fn().mockResolvedValue(undefined);
+    render(
+      <StudyGuideForm mode="create" onSubmit={onSubmit} onCancel={jest.fn()} />,
+    );
+    expect(
+      screen.getByRole("button", { name: /visibility: private/i }),
+    ).toBeInTheDocument();
+    await fillRequiredFields(user);
+    await user.click(screen.getByRole("button", { name: /create/i }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ visibility: "private" }),
+    );
+  });
+
+  it("flips to Public via the popover radio and submits visibility=public", async () => {
+    const user = userEvent.setup();
+    const onSubmit = jest.fn().mockResolvedValue(undefined);
+    render(
+      <StudyGuideForm mode="create" onSubmit={onSubmit} onCancel={jest.fn()} />,
+    );
+    await fillRequiredFields(user);
+    await user.click(
+      screen.getByRole("button", { name: /visibility: private/i }),
+    );
+    await user.click(await screen.findByRole("radio", { name: /public/i }));
+    // Chip label should reflect the new selection immediately.
+    expect(
+      await screen.findByRole("button", { name: /visibility: public/i }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /create/i }));
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ visibility: "public" }),
+    );
+  });
+
+  it("reads Public from initial.visibility in edit mode", () => {
+    render(
+      <StudyGuideForm
+        mode="edit"
+        initial={makeStudyGuide({ visibility: "public" })}
+        onSubmit={jest.fn()}
+        onCancel={jest.fn()}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: /visibility: public/i }),
+    ).toBeInTheDocument();
+  });
+
+  it("hides the grants manager in create mode and shows the save-first hint", async () => {
+    const user = userEvent.setup();
+    render(
+      <StudyGuideForm
+        mode="create"
+        onSubmit={jest.fn()}
+        onCancel={jest.fn()}
+      />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: /visibility: private/i }),
+    );
+    expect(
+      await screen.findByText(/save the guide first to share/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("grants-manager-stub")).not.toBeInTheDocument();
+  });
+
+  it("mounts the grants manager inside the popover in edit mode", async () => {
+    const user = userEvent.setup();
+    render(
+      <StudyGuideForm
+        mode="edit"
+        initial={makeStudyGuide({ visibility: "private" })}
+        onSubmit={jest.fn()}
+        onCancel={jest.fn()}
+      />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: /visibility: private/i }),
+    );
+    expect(
+      await screen.findByTestId("grants-manager-stub"),
+    ).toBeInTheDocument();
   });
 });

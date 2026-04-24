@@ -6,6 +6,7 @@ import {
   forwardRef,
   type ForwardedRef,
   type KeyboardEvent,
+  useCallback,
   useImperativeHandle,
   useRef,
   useState,
@@ -25,9 +26,12 @@ import {
 import { Input } from "@/components/ui/input";
 
 import { ContentEditor } from "./content-editor";
+import { GrantsManager } from "./grants-manager";
+import { VisibilityChip } from "./visibility-chip";
 import type {
   CreateStudyGuideRequest,
   StudyGuideDetailResponse,
+  StudyGuideVisibility,
   UpdateStudyGuideRequest,
 } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
@@ -39,6 +43,7 @@ const schema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   content: z.string().min(10, "Content must be at least 10 characters"),
   tags: z.array(z.string()),
+  visibility: z.enum(["private", "public"]),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -87,8 +92,17 @@ export const StudyGuideForm = forwardRef<
       title: initial?.title ?? "",
       content: initial?.content ?? "",
       tags: initial?.tags ?? [],
+      visibility:
+        (initial?.visibility as StudyGuideVisibility | undefined) ?? "private",
     },
   });
+
+  // Tracks the current grant count so the chip can show "Shared · N"
+  // even before the form field changes. Only relevant in edit mode.
+  const [grantCount, setGrantCount] = useState(0);
+  const handleGrantCountChange = useCallback((count: number) => {
+    setGrantCount(count);
+  }, []);
 
   useImperativeHandle(
     ref,
@@ -105,6 +119,7 @@ export const StudyGuideForm = forwardRef<
       title: values.title,
       content: values.content,
       tags: values.tags,
+      visibility: values.visibility,
     });
   };
 
@@ -161,29 +176,56 @@ export const StudyGuideForm = forwardRef<
           )}
         />
         <div className="mt-6 flex flex-col gap-3 border-t pt-4 md:flex-row md:items-start md:justify-between">
-          <FormField
-            control={form.control}
-            name="tags"
-            render={({ field }) => (
-              <FormItem className="w-full space-y-1 md:max-w-xl md:flex-1">
-                <FormControl>
-                  <div className="flex items-start gap-2">
-                    <Tag
-                      className="text-muted-foreground mt-2 size-4 shrink-0"
-                      aria-hidden
-                    />
-                    <TagChipsInput
-                      value={field.value}
-                      onChange={field.onChange}
+          <div className="flex w-full flex-col gap-3 md:max-w-xl md:flex-1 md:flex-row md:items-start">
+            <FormField
+              control={form.control}
+              name="tags"
+              render={({ field }) => (
+                <FormItem className="w-full space-y-1 md:flex-1">
+                  <FormControl>
+                    <div className="flex items-start gap-2">
+                      <Tag
+                        className="text-muted-foreground mt-2 size-4 shrink-0"
+                        aria-hidden
+                      />
+                      <TagChipsInput
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={isSubmitting}
+                        className="flex-1"
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage className="px-0" />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="visibility"
+              render={({ field }) => (
+                <FormItem className="space-y-1">
+                  <FormControl>
+                    <VisibilityChip
+                      visibility={field.value}
+                      grantCount={mode === "edit" ? grantCount : 0}
                       disabled={isSubmitting}
-                      className="flex-1"
-                    />
-                  </div>
-                </FormControl>
-                <FormMessage className="px-0" />
-              </FormItem>
-            )}
-          />
+                    >
+                      <VisibilityPopoverBody
+                        mode={mode}
+                        studyGuideId={initial?.id}
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={isSubmitting}
+                        onGrantCountChange={handleGrantCountChange}
+                      />
+                    </VisibilityChip>
+                  </FormControl>
+                  <FormMessage className="px-0" />
+                </FormItem>
+              )}
+            />
+          </div>
           <div className="flex shrink-0 justify-end gap-2">
             <Button
               type="button"
@@ -331,6 +373,77 @@ function TagChipsInput({
           <span aria-hidden>+</span>
           {value.length === 0 ? "Add tags" : "Add tag"}
         </button>
+      )}
+    </div>
+  );
+}
+
+interface VisibilityPopoverBodyProps {
+  mode: "create" | "edit";
+  studyGuideId: string | undefined;
+  value: StudyGuideVisibility;
+  onChange: (next: StudyGuideVisibility) => void;
+  disabled: boolean;
+  onGrantCountChange: (count: number) => void;
+}
+
+/**
+ * Popover body rendered inside `VisibilityChip`: a Private/Public
+ * segmented control on top, and (edit-mode only) the GrantsManager
+ * below. In create mode we show a short hint explaining the guide
+ * must be saved before grants can be attached.
+ */
+function VisibilityPopoverBody({
+  mode,
+  studyGuideId,
+  value,
+  onChange,
+  disabled,
+  onGrantCountChange,
+}: VisibilityPopoverBodyProps) {
+  const options: Array<{ id: StudyGuideVisibility; label: string }> = [
+    { id: "private", label: "Private" },
+    { id: "public", label: "Public" },
+  ];
+  return (
+    <div className="space-y-3">
+      <div
+        role="radiogroup"
+        aria-label="Visibility"
+        className="bg-muted flex rounded-md p-0.5"
+      >
+        {options.map((option) => {
+          const checked = value === option.id;
+          return (
+            <button
+              key={option.id}
+              type="button"
+              role="radio"
+              aria-checked={checked}
+              disabled={disabled}
+              onClick={() => onChange(option.id)}
+              className={cn(
+                "flex-1 rounded-sm px-2 py-1 text-xs transition-colors",
+                "focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2",
+                checked
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+      {mode === "edit" && studyGuideId ? (
+        <GrantsManager
+          studyGuideId={studyGuideId}
+          onGrantCountChange={onGrantCountChange}
+        />
+      ) : (
+        <p className="text-muted-foreground text-xs">
+          Save the guide first to share with courses or people.
+        </p>
       )}
     </div>
   );

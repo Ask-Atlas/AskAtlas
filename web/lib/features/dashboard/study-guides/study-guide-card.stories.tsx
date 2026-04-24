@@ -15,6 +15,7 @@ function makeGuide(
     is_recommended: true,
     tags: ["week 6", "midterm", "eigen"],
     course_id: "c_math340",
+    visibility: "private",
     ...overrides,
   };
 }
@@ -110,5 +111,36 @@ export const LongTitleOverflow: Story = {
     }),
     variant: "list",
     courseLabel: "MATH 340",
+  },
+};
+
+export const PublicIndicator: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Public study guides surface a globe icon next to the title (tooltip: Public).",
+      },
+    },
+  },
+  args: {
+    guide: makeGuide({ visibility: "public" }),
+    variant: "list",
+    courseLabel: "MATH 340",
+  },
+};
+
+export const PrivateIndicatorCompact: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Private study guides show a lock icon even on the compact card variant.",
+      },
+    },
+  },
+  args: {
+    guide: makeGuide({ visibility: "private" }),
+    variant: "compact",
   },
 };
