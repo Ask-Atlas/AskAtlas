@@ -43,7 +43,9 @@ function rawFor(node: AnyDirective): string {
     .map(([k, v]) => `${k}="${v ?? ""}"`)
     .join(" ");
   const prefix = node.type === "containerDirective" ? ":::" : "::";
-  return attrStr ? `${prefix}${node.name}{${attrStr}}` : `${prefix}${node.name}`;
+  return attrStr
+    ? `${prefix}${node.name}{${attrStr}}`
+    : `${prefix}${node.name}`;
 }
 
 function replaceWithText(parent: Parent, index: number, raw: string) {

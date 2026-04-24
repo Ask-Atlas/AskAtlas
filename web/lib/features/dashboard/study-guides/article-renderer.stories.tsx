@@ -157,7 +157,7 @@ export const CalloutAside: Story = {
     docs: {
       description: {
         story:
-          "Inline `<aside class=\"callout\">` HTML is allowed via rehype-raw and survives rehype-sanitize. Useful for author-flagged asides without needing a custom directive.",
+          'Inline `<aside class="callout">` HTML is allowed via rehype-raw and survives rehype-sanitize. Useful for author-flagged asides without needing a custom directive.',
       },
     },
   },
@@ -278,15 +278,15 @@ export const Callouts: Story = {
   args: {
     initialRefs: {},
     content: [
-      ":::callout{type=\"note\"}",
+      ':::callout{type="note"}',
       "Sequential consistency is strictly stronger than causal consistency.",
       ":::",
       "",
-      ":::callout{type=\"warning\"}",
+      ':::callout{type="warning"}',
       "The textbook uses *linearizability* where some papers say *atomic consistency*.",
       ":::",
       "",
-      ":::callout{type=\"tip\"}",
+      ':::callout{type="tip"}',
       "Reach for a mutex when exactly one writer should be in the critical section.",
       ":::",
     ].join("\n"),
@@ -305,13 +305,13 @@ export const UnknownDirectivesPassThrough: Story = {
   args: {
     initialRefs: {},
     content: [
-      "`::foo{id=\"xyz\"}` renders as plain text:",
+      '`::foo{id="xyz"}` renders as plain text:',
       "",
-      "::foo{id=\"xyz\"}",
+      '::foo{id="xyz"}',
       "",
-      "And `::sg{id=\"not-a-uuid\"}` also passes through:",
+      'And `::sg{id="not-a-uuid"}` also passes through:',
       "",
-      "::sg{id=\"not-a-uuid\"}",
+      '::sg{id="not-a-uuid"}',
     ].join("\n"),
   },
 };

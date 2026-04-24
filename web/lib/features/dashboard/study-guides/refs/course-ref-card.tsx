@@ -36,7 +36,10 @@ export function CourseRefCard({ id, inline }: Props) {
     );
   }
 
-  const heading = code && summary.title ? `${code} · ${summary.title}` : code ?? summary.title ?? "Course";
+  const heading =
+    code && summary.title
+      ? `${code} · ${summary.title}`
+      : (code ?? summary.title ?? "Course");
 
   return (
     <Link

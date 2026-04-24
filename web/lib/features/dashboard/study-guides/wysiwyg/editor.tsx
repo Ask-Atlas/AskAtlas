@@ -38,7 +38,6 @@ function resolveHosts(explicit?: string[]): string[] {
   return hosts;
 }
 
-
 export function TiptapEditor({
   value,
   onChange,
@@ -100,8 +99,9 @@ export function TiptapEditor({
   useEffect(() => {
     if (!editor) return;
     const current =
-      (editor.storage as { markdown?: { getMarkdown?: () => string } })
-        .markdown?.getMarkdown?.() ?? "";
+      (
+        editor.storage as { markdown?: { getMarkdown?: () => string } }
+      ).markdown?.getMarkdown?.() ?? "";
     if (current === value) return;
     editor.commands.setContent(preprocessMarkdown(value), {
       emitUpdate: false,
@@ -112,8 +112,9 @@ export function TiptapEditor({
     if (!editor) return;
     const handler = () => {
       const md =
-        (editor.storage as { markdown?: { getMarkdown?: () => string } })
-          .markdown?.getMarkdown?.() ?? "";
+        (
+          editor.storage as { markdown?: { getMarkdown?: () => string } }
+        ).markdown?.getMarkdown?.() ?? "";
       onChange(md);
     };
     editor.on("update", handler);

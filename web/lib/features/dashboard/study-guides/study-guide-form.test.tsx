@@ -267,7 +267,9 @@ describe("StudyGuideForm / tag chips", () => {
     const group = screen.getByRole("group", { name: /tags/i });
     // No chip was added -- the only button in the group is the
     // reopened "+ Add tag" trigger.
-    expect(within(group).queryAllByRole("button", { name: /remove/i })).toHaveLength(0);
+    expect(
+      within(group).queryAllByRole("button", { name: /remove/i }),
+    ).toHaveLength(0);
   });
 });
 
