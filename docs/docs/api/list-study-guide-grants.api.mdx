@@ -1,0 +1,71 @@
+---
+id: list-study-guide-grants
+title: "List permission grants on a study guide (ASK-211)"
+description: "Returns every `study_guide_grants` row for the guide. Only"
+sidebar_label: "List permission grants on a study guide (ASK-211)"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV8Fu20YQ/ZXFXJoAtCQn7oU9KYljuC3awIrRgywoK+5I3ITcpWeHTlSC/17skpJJUXB0KOCLTxK5M7Nv9r0hHyuwBZJkbc21ghj+1I5nXKrtVakVXpE07CAChS4hXfgwiOEGuSTjBD4gbcUX5+OXG5+w3ISML4Lsd7G2JDhFEVZG4m+Tbe/M/sYvTiSEki2JXG5Fph2LJvs3Yaw5axedIExQP6C4mLwd3RmIoJAkc2QkB/G8AiNzhBi6KLSCCLSHWkhOB/g/pyhKo+9LFLe31x+EXQecoUIDDiIgvC81oYKYqcQIXJJiLiGugLdFsyFps4EI1pZyyRBDWWoFdb3wya6wxqHz8W8mE//Tx9AcbWgbIkisYTTsw2RRZDoJjIy/Oh9bDfe2q6+Y8KCx9zbLMPEXvqfmNIU1QnZ7G4mZJUYlVtuGAVRLyXfmw+XsvXA2HIXB7+hYuFQSClfSWiboxFqT45YD8rph3XTY7NTBJ4nk1nPAmLuf4542+M4CPlEg5do530UoLF5NZ3+cvTk/fz3YWKsTCIkOtXFKStgZcdkEHiZ0Ak6s99jUE9XUcrU9qdojb0+GK8l4xjpHqOuuoucQJmQwMr2mey32GujB7YFZRMCaM4/m4Cly004E1IdQWvF0Uo89hLr5dQQXk/PhTN0aWXJqSf+L6v8bqhlLoyQpX1UgkSWxG2/hmMqES0KRS05SbTais1UbrWwutXED8SZWdaWlDeMGqdGr5NIdFUqOzsnNcUkqZKmzo/MmldIeksw+9TAc1DjkJkDc43ncvUPWtCgufZt7Yt4OifloaaWVQvPCynOxcjFk5S/LYm1L8zIrz8TKr8eMwbVhJCMz4ZAekJpzeWHoORgKADm13hhvkIP15BRiGHfsihtX/fdoPd7sbHNDYWNTS8p8piw0eIfoMClJ8zasvUNJSNPSF58vusszT2vTXDdo32rKXEBrTv31KgRB1P75uHMCv//zOXgAbdY2pO/6dd+mnEknpp+uIQKPttHJ+WgymgTjYh3nMmisddr+9TwwaUOf2bNtPRFWj2J+7m+J9hgZf/C4yKQ2vuVAVdWSPYcu2RBBfNw2BQeTWsc+papW0uEtZXXtb9+XSJ7pRQQPkrRc+bOfV6C08/8VxGuZOXzimF7dtDp+LU76ejna186cG+/aHmRW+iuI4Btuhx9Q9aKOIEWpkALWJmiaJFhwJ33wLPLq3U/N1aWX3X95KA1i
+sidebar_class_name: "get api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"List permission grants on a study guide (ASK-211)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/study-guides/{study_guide_id}/grants"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Returns every `study_guide_grants` row for the guide. Only
+the guide's creator may list grants; non-creators receive 403.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./list-study-guide-grants.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./list-study-guide-grants.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./list-study-guide-grants.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

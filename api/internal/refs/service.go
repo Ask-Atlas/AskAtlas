@@ -13,7 +13,7 @@ import (
 
 // Repository is the data-access interface required by the refs Service.
 type Repository interface {
-	ListStudyGuideRefSummaries(ctx context.Context, ids []pgtype.UUID) ([]db.ListStudyGuideRefSummariesRow, error)
+	ListStudyGuideRefSummaries(ctx context.Context, arg db.ListStudyGuideRefSummariesParams) ([]db.ListStudyGuideRefSummariesRow, error)
 	ListQuizRefSummaries(ctx context.Context, ids []pgtype.UUID) ([]db.ListQuizRefSummariesRow, error)
 	ListFileRefSummaries(ctx context.Context, arg db.ListFileRefSummariesParams) ([]db.ListFileRefSummariesRow, error)
 	ListCourseRefSummaries(ctx context.Context, ids []pgtype.UUID) ([]db.ListCourseRefSummariesRow, error)
@@ -90,7 +90,7 @@ func (s *Service) Resolve(ctx context.Context, viewerID uuid.UUID, refs []Ref) (
 		wg.Add(1)
 		go func(ids []uuid.UUID) {
 			defer wg.Done()
-			out, err := s.resolveStudyGuides(ctx, ids)
+			out, err := s.resolveStudyGuides(ctx, viewerID, ids)
 			if err != nil {
 				record(err)
 				return
@@ -142,8 +142,11 @@ func (s *Service) Resolve(ctx context.Context, viewerID uuid.UUID, refs []Ref) (
 	return results, nil
 }
 
-func (s *Service) resolveStudyGuides(ctx context.Context, ids []uuid.UUID) ([]Summary, error) {
-	rows, err := s.repo.ListStudyGuideRefSummaries(ctx, toPgtypeUUIDs(ids))
+func (s *Service) resolveStudyGuides(ctx context.Context, viewerID uuid.UUID, ids []uuid.UUID) ([]Summary, error) {
+	rows, err := s.repo.ListStudyGuideRefSummaries(ctx, db.ListStudyGuideRefSummariesParams{
+		Ids:      toPgtypeUUIDs(ids),
+		ViewerID: utils.UUID(viewerID),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("refs.resolveStudyGuides: %w", err)
 	}

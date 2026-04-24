@@ -1,0 +1,74 @@
+---
+id: revoke-study-guide-grant
+title: "Revoke a permission on a study guide (ASK-211)"
+description: "Deletes the `study_guide_grants` row matched by"
+sidebar_label: "Revoke a permission on a study guide (ASK-211)"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV1tP60YQ/iureSlIDgkQclq/hcI5oq3aIy7qQxLBxjtO9mDvmr0AqeX/Xs3aIQ6OEA+VeCh5SHyZ3bl832y+KUEXaLiTWl0IiOESH/U9XjkvVt+8FPjNcOUgAoE2MbIgO4jhDDN0aJlbIruzZHy7IOvbBZnbO2b0E8u5S5Yo2Hw1VXd7bSspIhYsEW/dqsDNHb0p0OTSWqnV/t3BVP2lslVwFNb+ZFlikDttWM5XzIRwD9glOm+UZUeDIdOKWZ8kaG00VcPBkD0tUTGl64CkWtTeGD5L6yzbU9oxKTAvtEPlWK/HcmmMNnaqUpmtc9o/mCqIoOCG5+jQWIgnJSieI8SwnRxEIKlKBXfLTumul8i8kg8e2c3NxRnTaUgu7FCnCBEYfPDSoIDYGY8R2GSJOYe4BCpXcGikWkAEqTY5dxCD91JAVc3qxWjdqRYrWvF6r0QrypNe8aLIZBLA7/+wFF7ZdaXnPzDpUuCy9sLmWqxYqg07O//j/Pqc9Xkh+yGbXsjG9svt6lT9uqBTtTe++r13dHi4Lq0hKjqJlry3+bErcVQ+h3gC3qIBysobizCrIthw6R0Fi2BDt7fcPEp8olsh61IQ/2FWVW2sJttBb0Wy5WcWgZMuI0ebTqs7L/RbU1uoqtqBLbSydVmOBkP62cYiLGp6IeQ0HAy6VqdcsIYb8J/R4MpxJbgR8h8UDKlt2DpeZp3xifMGN53XctVYC51zqWwH/0SLNu5SOVygoeSs487bLlhVBDlayxc7+FJR3I7LzO5KiQshKSSefd+K4dUer9EOIb7Es/HegndcFOeUZgPlcHDYxeVGce+W2lAJP4H5KGCOu8B81WYuhUD1icpHobLjsPtTO5Zqrz575YNQOdn153KhHBrFM2bRPKKp6/KJ0EcgFAJ0S01yvhEqUa1FY3iXMiNnAcVa43qT0UpeSCB5aTHxRrpVeHeK3KAZe9p8Mmu/viJk6/zaRi/ZLp0roFG2dD8PRhA1F1/XMu23v6+BUiLGXG6U7fkzz4sMu0pxLQjbKhCOU/7zSToa9k6+HH7pDU9GR735cZr0jpJfRsfpaMRTPtqWaHGt+CqS8qkOca9rbe/HLuOWjb9fQARUpnrB4cHgYBAUpbYu54HfzXxQazvGW7MNjSm8LfvZixx+zf5y00X/48mrgdfhs+sXGZeKSh24WTbsnkCb3RBB3JnLGoLPIlhq62hJWc65xRuTVRU9fvBoiNqzCB65kXxOmE9KENLStYA45ZnFNxDau2x6d5+9a9bbmVfzkKsVUYxnnu4ggntcdcfNiqaeJXKBJsRaG/1aR9S7rmeR9SadU7iK1ivGSYKFe9N21jpb6oGPOraZNPNwloLhNCnRdwhZhxqFgyA8KyHjauHD+Qn1rvT5F2SJzc8=
+sidebar_class_name: "delete api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Revoke a permission on a study guide (ASK-211)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"delete"}
+  path={"/study-guides/{study_guide_id}/grants"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Deletes the `study_guide_grants` row matched by
+`(study_guide_id, grantee_type, grantee_id, permission)`.
+Only the guide's creator may revoke. Returns 204 on success,
+404 when no matching grant exists (not idempotent -- mirrors
+file_grants).
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./revoke-study-guide-grant.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./revoke-study-guide-grant.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./revoke-study-guide-grant.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

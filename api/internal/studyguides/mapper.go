@@ -19,6 +19,7 @@ type sharedGuideRow struct {
 	Tags             []string
 	CourseID         pgtype.UUID
 	ViewCount        int32
+	Visibility       db.StudyGuideVisibility
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
 	CreatorID        pgtype.UUID
@@ -63,6 +64,7 @@ func mapStudyGuide(r sharedGuideRow) (StudyGuide, error) {
 		ViewCount:     int64(r.ViewCount),
 		IsRecommended: r.IsRecommended,
 		QuizCount:     r.QuizCount,
+		Visibility:    string(r.Visibility),
 		CreatedAt:     r.CreatedAt.Time,
 		UpdatedAt:     r.UpdatedAt.Time,
 	}, nil
@@ -111,6 +113,7 @@ func mapStudyGuideDetail(r db.GetStudyGuideDetailRow) (StudyGuideDetail, error) 
 		VoteScore:     r.VoteScore,
 		ViewCount:     int64(r.ViewCount),
 		IsRecommended: r.IsRecommended,
+		Visibility:    string(r.Visibility),
 		CreatedAt:     r.CreatedAt.Time,
 		UpdatedAt:     r.UpdatedAt.Time,
 		// UserVote + nested arrays are attached by the service after
@@ -164,6 +167,36 @@ func mapResource(r db.ListGuideResourcesRow) (Resource, error) {
 	}, nil
 }
 
+// mapGrant projects a sqlc db.StudyGuideGrant row onto the domain
+// Grant type. Mirrors files.mapGrantRow.
+func mapGrant(r db.StudyGuideGrant) (Grant, error) {
+	id, err := utils.PgxToGoogleUUID(r.ID)
+	if err != nil {
+		return Grant{}, fmt.Errorf("mapGrant: id: %w", err)
+	}
+	studyGuideID, err := utils.PgxToGoogleUUID(r.StudyGuideID)
+	if err != nil {
+		return Grant{}, fmt.Errorf("mapGrant: study guide id: %w", err)
+	}
+	granteeID, err := utils.PgxToGoogleUUID(r.GranteeID)
+	if err != nil {
+		return Grant{}, fmt.Errorf("mapGrant: grantee id: %w", err)
+	}
+	grantedBy, err := utils.PgxToGoogleUUID(r.GrantedBy)
+	if err != nil {
+		return Grant{}, fmt.Errorf("mapGrant: granted by: %w", err)
+	}
+	return Grant{
+		ID:           id,
+		StudyGuideID: studyGuideID,
+		GranteeType:  string(r.GranteeType),
+		GranteeID:    granteeID,
+		Permission:   string(r.Permission),
+		GrantedBy:    grantedBy,
+		CreatedAt:    r.CreatedAt.Time,
+	}, nil
+}
+
 // mapGuideFile projects a ListGuideFiles row onto the domain
 // GuideFile type. Privacy floor -- no user_id, no s3_key, no checksum.
 func mapGuideFile(r db.ListGuideFilesRow) (GuideFile, error) {
@@ -185,7 +218,7 @@ func mapGuideFile(r db.ListGuideFilesRow) (GuideFile, error) {
 func fromScoreDescRow(r db.ListStudyGuidesScoreDescRow) sharedGuideRow {
 	return sharedGuideRow{
 		ID: r.ID, Title: r.Title, Description: r.Description, Tags: r.Tags,
-		CourseID: r.CourseID, ViewCount: r.ViewCount,
+		CourseID: r.CourseID, ViewCount: r.ViewCount, Visibility: r.Visibility,
 		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 		CreatorID: r.CreatorID, CreatorFirstName: r.CreatorFirstName, CreatorLastName: r.CreatorLastName,
 		VoteScore: r.VoteScore, IsRecommended: r.IsRecommended, QuizCount: r.QuizCount,
@@ -195,7 +228,7 @@ func fromScoreDescRow(r db.ListStudyGuidesScoreDescRow) sharedGuideRow {
 func fromScoreAscRow(r db.ListStudyGuidesScoreAscRow) sharedGuideRow {
 	return sharedGuideRow{
 		ID: r.ID, Title: r.Title, Description: r.Description, Tags: r.Tags,
-		CourseID: r.CourseID, ViewCount: r.ViewCount,
+		CourseID: r.CourseID, ViewCount: r.ViewCount, Visibility: r.Visibility,
 		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 		CreatorID: r.CreatorID, CreatorFirstName: r.CreatorFirstName, CreatorLastName: r.CreatorLastName,
 		VoteScore: r.VoteScore, IsRecommended: r.IsRecommended, QuizCount: r.QuizCount,
@@ -205,7 +238,7 @@ func fromScoreAscRow(r db.ListStudyGuidesScoreAscRow) sharedGuideRow {
 func fromViewsDescRow(r db.ListStudyGuidesViewsDescRow) sharedGuideRow {
 	return sharedGuideRow{
 		ID: r.ID, Title: r.Title, Description: r.Description, Tags: r.Tags,
-		CourseID: r.CourseID, ViewCount: r.ViewCount,
+		CourseID: r.CourseID, ViewCount: r.ViewCount, Visibility: r.Visibility,
 		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 		CreatorID: r.CreatorID, CreatorFirstName: r.CreatorFirstName, CreatorLastName: r.CreatorLastName,
 		VoteScore: r.VoteScore, IsRecommended: r.IsRecommended, QuizCount: r.QuizCount,
@@ -215,7 +248,7 @@ func fromViewsDescRow(r db.ListStudyGuidesViewsDescRow) sharedGuideRow {
 func fromViewsAscRow(r db.ListStudyGuidesViewsAscRow) sharedGuideRow {
 	return sharedGuideRow{
 		ID: r.ID, Title: r.Title, Description: r.Description, Tags: r.Tags,
-		CourseID: r.CourseID, ViewCount: r.ViewCount,
+		CourseID: r.CourseID, ViewCount: r.ViewCount, Visibility: r.Visibility,
 		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 		CreatorID: r.CreatorID, CreatorFirstName: r.CreatorFirstName, CreatorLastName: r.CreatorLastName,
 		VoteScore: r.VoteScore, IsRecommended: r.IsRecommended, QuizCount: r.QuizCount,
@@ -225,7 +258,7 @@ func fromViewsAscRow(r db.ListStudyGuidesViewsAscRow) sharedGuideRow {
 func fromNewestDescRow(r db.ListStudyGuidesNewestDescRow) sharedGuideRow {
 	return sharedGuideRow{
 		ID: r.ID, Title: r.Title, Description: r.Description, Tags: r.Tags,
-		CourseID: r.CourseID, ViewCount: r.ViewCount,
+		CourseID: r.CourseID, ViewCount: r.ViewCount, Visibility: r.Visibility,
 		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 		CreatorID: r.CreatorID, CreatorFirstName: r.CreatorFirstName, CreatorLastName: r.CreatorLastName,
 		VoteScore: r.VoteScore, IsRecommended: r.IsRecommended, QuizCount: r.QuizCount,
@@ -235,7 +268,7 @@ func fromNewestDescRow(r db.ListStudyGuidesNewestDescRow) sharedGuideRow {
 func fromNewestAscRow(r db.ListStudyGuidesNewestAscRow) sharedGuideRow {
 	return sharedGuideRow{
 		ID: r.ID, Title: r.Title, Description: r.Description, Tags: r.Tags,
-		CourseID: r.CourseID, ViewCount: r.ViewCount,
+		CourseID: r.CourseID, ViewCount: r.ViewCount, Visibility: r.Visibility,
 		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 		CreatorID: r.CreatorID, CreatorFirstName: r.CreatorFirstName, CreatorLastName: r.CreatorLastName,
 		VoteScore: r.VoteScore, IsRecommended: r.IsRecommended, QuizCount: r.QuizCount,
@@ -245,7 +278,7 @@ func fromNewestAscRow(r db.ListStudyGuidesNewestAscRow) sharedGuideRow {
 func fromUpdatedDescRow(r db.ListStudyGuidesUpdatedDescRow) sharedGuideRow {
 	return sharedGuideRow{
 		ID: r.ID, Title: r.Title, Description: r.Description, Tags: r.Tags,
-		CourseID: r.CourseID, ViewCount: r.ViewCount,
+		CourseID: r.CourseID, ViewCount: r.ViewCount, Visibility: r.Visibility,
 		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 		CreatorID: r.CreatorID, CreatorFirstName: r.CreatorFirstName, CreatorLastName: r.CreatorLastName,
 		VoteScore: r.VoteScore, IsRecommended: r.IsRecommended, QuizCount: r.QuizCount,
@@ -255,7 +288,7 @@ func fromUpdatedDescRow(r db.ListStudyGuidesUpdatedDescRow) sharedGuideRow {
 func fromUpdatedAscRow(r db.ListStudyGuidesUpdatedAscRow) sharedGuideRow {
 	return sharedGuideRow{
 		ID: r.ID, Title: r.Title, Description: r.Description, Tags: r.Tags,
-		CourseID: r.CourseID, ViewCount: r.ViewCount,
+		CourseID: r.CourseID, ViewCount: r.ViewCount, Visibility: r.Visibility,
 		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt,
 		CreatorID: r.CreatorID, CreatorFirstName: r.CreatorFirstName, CreatorLastName: r.CreatorLastName,
 		VoteScore: r.VoteScore, IsRecommended: r.IsRecommended, QuizCount: r.QuizCount,
@@ -273,6 +306,7 @@ type sharedMyGuideRow struct {
 	Tags             []string
 	CourseID         pgtype.UUID
 	ViewCount        int32
+	Visibility       db.StudyGuideVisibility
 	CreatedAt        pgtype.Timestamptz
 	UpdatedAt        pgtype.Timestamptz
 	DeletedAt        pgtype.Timestamptz
@@ -316,6 +350,7 @@ func mapMyStudyGuide(r sharedMyGuideRow) (MyStudyGuide, error) {
 		ViewCount:     int64(r.ViewCount),
 		IsRecommended: r.IsRecommended,
 		QuizCount:     r.QuizCount,
+		Visibility:    string(r.Visibility),
 		CreatedAt:     r.CreatedAt.Time,
 		UpdatedAt:     r.UpdatedAt.Time,
 		DeletedAt:     utils.TimestamptzPtr(r.DeletedAt),
@@ -325,7 +360,7 @@ func mapMyStudyGuide(r sharedMyGuideRow) (MyStudyGuide, error) {
 func fromMyUpdatedRow(r db.ListMyStudyGuidesUpdatedRow) sharedMyGuideRow {
 	return sharedMyGuideRow{
 		ID: r.ID, Title: r.Title, Description: r.Description, Tags: r.Tags,
-		CourseID: r.CourseID, ViewCount: r.ViewCount,
+		CourseID: r.CourseID, ViewCount: r.ViewCount, Visibility: r.Visibility,
 		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, DeletedAt: r.DeletedAt,
 		CreatorID: r.CreatorID, CreatorFirstName: r.CreatorFirstName, CreatorLastName: r.CreatorLastName,
 		VoteScore: r.VoteScore, IsRecommended: r.IsRecommended, QuizCount: r.QuizCount,
@@ -335,7 +370,7 @@ func fromMyUpdatedRow(r db.ListMyStudyGuidesUpdatedRow) sharedMyGuideRow {
 func fromMyNewestRow(r db.ListMyStudyGuidesNewestRow) sharedMyGuideRow {
 	return sharedMyGuideRow{
 		ID: r.ID, Title: r.Title, Description: r.Description, Tags: r.Tags,
-		CourseID: r.CourseID, ViewCount: r.ViewCount,
+		CourseID: r.CourseID, ViewCount: r.ViewCount, Visibility: r.Visibility,
 		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, DeletedAt: r.DeletedAt,
 		CreatorID: r.CreatorID, CreatorFirstName: r.CreatorFirstName, CreatorLastName: r.CreatorLastName,
 		VoteScore: r.VoteScore, IsRecommended: r.IsRecommended, QuizCount: r.QuizCount,
@@ -345,7 +380,7 @@ func fromMyNewestRow(r db.ListMyStudyGuidesNewestRow) sharedMyGuideRow {
 func fromMyTitleRow(r db.ListMyStudyGuidesTitleRow) sharedMyGuideRow {
 	return sharedMyGuideRow{
 		ID: r.ID, Title: r.Title, Description: r.Description, Tags: r.Tags,
-		CourseID: r.CourseID, ViewCount: r.ViewCount,
+		CourseID: r.CourseID, ViewCount: r.ViewCount, Visibility: r.Visibility,
 		CreatedAt: r.CreatedAt, UpdatedAt: r.UpdatedAt, DeletedAt: r.DeletedAt,
 		CreatorID: r.CreatorID, CreatorFirstName: r.CreatorFirstName, CreatorLastName: r.CreatorLastName,
 		VoteScore: r.VoteScore, IsRecommended: r.IsRecommended, QuizCount: r.QuizCount,

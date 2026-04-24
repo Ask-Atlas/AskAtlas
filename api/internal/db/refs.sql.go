@@ -220,7 +220,30 @@ FROM study_guides sg
 JOIN courses c ON c.id = sg.course_id
 WHERE sg.id = ANY($1::uuid[])
   AND sg.deleted_at IS NULL
+  AND (
+    sg.visibility = 'public'
+    OR sg.creator_id = $2::uuid
+    OR EXISTS (
+      SELECT 1 FROM study_guide_grants g
+      WHERE g.study_guide_id = sg.id
+        AND g.permission IN ('view', 'edit', 'delete')
+        AND (
+          (g.grantee_type = 'user' AND g.grantee_id = $2::uuid)
+          OR (g.grantee_type = 'course' AND EXISTS (
+            SELECT 1 FROM course_sections cs
+            JOIN course_members cm ON cm.section_id = cs.id
+            WHERE cs.course_id = g.grantee_id
+              AND cm.user_id = $2::uuid
+          ))
+        )
+    )
+  )
 `
+
+type ListStudyGuideRefSummariesParams struct {
+	Ids      []pgtype.UUID `json:"ids"`
+	ViewerID pgtype.UUID   `json:"viewer_id"`
+}
 
 type ListStudyGuideRefSummariesRow struct {
 	ID               pgtype.UUID `json:"id"`
@@ -236,12 +259,16 @@ type ListStudyGuideRefSummariesRow struct {
 // render a ref card. Entities missing from the result (deleted,
 // invisible to the viewer, or nonexistent) are absent from the rows;
 // the service fills nulls into the response map.
-// Compact summary for `::sg{id}` refs. Study guides are publicly
-// viewable aside from the soft-delete invariant (same as
-// GetStudyGuideDetail). The quiz_count subquery excludes soft-deleted
-// quizzes so a ref to a guide whose only quiz was deleted shows 0.
-func (q *Queries) ListStudyGuideRefSummaries(ctx context.Context, ids []pgtype.UUID) ([]ListStudyGuideRefSummariesRow, error) {
-	rows, err := q.db.Query(ctx, listStudyGuideRefSummaries, ids)
+// Compact summary for `::sg{id}` refs. Grants-gated (ASK-211): a ref
+// hydrates only when the viewer can see the guide under the same
+// visibility rules as GetStudyGuideDetail -- public, creator, direct
+// user grant, or course grant via enrollment. Guides the viewer can't
+// see simply don't appear in the result set and surface as null refs
+// on the wire (the service layer handles the map lookup). The
+// quiz_count subquery excludes soft-deleted quizzes so a ref to a
+// guide whose only quiz was deleted shows 0.
+func (q *Queries) ListStudyGuideRefSummaries(ctx context.Context, arg ListStudyGuideRefSummariesParams) ([]ListStudyGuideRefSummariesRow, error) {
+	rows, err := q.db.Query(ctx, listStudyGuideRefSummaries, arg.Ids, arg.ViewerID)
 	if err != nil {
 		return nil, err
 	}

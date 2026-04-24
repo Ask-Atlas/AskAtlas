@@ -8,6 +8,7 @@ type CompositeHandler struct {
 	*SchoolsHandler
 	*CoursesHandler
 	*StudyGuideHandler
+	*StudyGuideGrantHandler
 	*QuizzesHandler
 	*SessionsHandler
 	*RecentsHandler
@@ -18,18 +19,32 @@ type CompositeHandler struct {
 
 // NewCompositeHandler creates a handler that delegates to every
 // feature-specific handler.
-func NewCompositeHandler(fh *FileHandler, gh *GrantHandler, sh *SchoolsHandler, ch *CoursesHandler, sgh *StudyGuideHandler, qh *QuizzesHandler, ssh *SessionsHandler, rh *RecentsHandler, favh *FavoritesHandler, dh *DashboardHandler, refsh *RefsHandler) *CompositeHandler {
+func NewCompositeHandler(
+	fh *FileHandler,
+	gh *GrantHandler,
+	sh *SchoolsHandler,
+	ch *CoursesHandler,
+	sgh *StudyGuideHandler,
+	sggh *StudyGuideGrantHandler,
+	qh *QuizzesHandler,
+	ssh *SessionsHandler,
+	rh *RecentsHandler,
+	favh *FavoritesHandler,
+	dh *DashboardHandler,
+	refsh *RefsHandler,
+) *CompositeHandler {
 	return &CompositeHandler{
-		FileHandler:       fh,
-		GrantHandler:      gh,
-		SchoolsHandler:    sh,
-		CoursesHandler:    ch,
-		StudyGuideHandler: sgh,
-		QuizzesHandler:    qh,
-		SessionsHandler:   ssh,
-		RecentsHandler:    rh,
-		FavoritesHandler:  favh,
-		DashboardHandler:  dh,
-		RefsHandler:       refsh,
+		FileHandler:            fh,
+		GrantHandler:           gh,
+		SchoolsHandler:         sh,
+		CoursesHandler:         ch,
+		StudyGuideHandler:      sgh,
+		StudyGuideGrantHandler: sggh,
+		QuizzesHandler:         qh,
+		SessionsHandler:        ssh,
+		RecentsHandler:         rh,
+		FavoritesHandler:       favh,
+		DashboardHandler:       dh,
+		RefsHandler:            refsh,
 	}
 }

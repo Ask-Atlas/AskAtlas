@@ -2,11 +2,13 @@ package studyguides
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
+	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -108,8 +110,48 @@ func (r *sqlcRepository) CourseExistsForGuides(ctx context.Context, id pgtype.UU
 	return r.queries.CourseExistsForGuides(ctx, id)
 }
 
-func (r *sqlcRepository) GetStudyGuideDetail(ctx context.Context, id pgtype.UUID) (db.GetStudyGuideDetailRow, error) {
-	return r.queries.GetStudyGuideDetail(ctx, id)
+func (r *sqlcRepository) GetStudyGuideDetail(ctx context.Context, arg db.GetStudyGuideDetailParams) (db.GetStudyGuideDetailRow, error) {
+	return r.queries.GetStudyGuideDetail(ctx, arg)
+}
+
+func (r *sqlcRepository) GetStudyGuideCreator(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error) {
+	return r.queries.GetStudyGuideCreator(ctx, id)
+}
+
+func (r *sqlcRepository) InsertStudyGuideGrant(ctx context.Context, arg db.InsertStudyGuideGrantParams) (db.StudyGuideGrant, error) {
+	return r.queries.InsertStudyGuideGrant(ctx, arg)
+}
+
+func (r *sqlcRepository) RevokeStudyGuideGrant(ctx context.Context, arg db.RevokeStudyGuideGrantParams) (int64, error) {
+	return r.queries.RevokeStudyGuideGrant(ctx, arg)
+}
+
+func (r *sqlcRepository) ListStudyGuideGrants(ctx context.Context, studyGuideID pgtype.UUID) ([]db.StudyGuideGrant, error) {
+	return r.queries.ListStudyGuideGrants(ctx, studyGuideID)
+}
+
+// CheckUserExists / CheckCourseExists wrap the sqlc-generated existence
+// probes and collapse sql.ErrNoRows to apperrors.ErrNotFound so the
+// service can switch on that sentinel without re-discovering the
+// driver error type. Mirrors files.sqlcRepository.
+func (r *sqlcRepository) CheckUserExists(ctx context.Context, userID pgtype.UUID) error {
+	if _, err := r.queries.CheckUserExists(ctx, userID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("CheckUserExists: %w", apperrors.ErrNotFound)
+		}
+		return fmt.Errorf("CheckUserExists: %w", err)
+	}
+	return nil
+}
+
+func (r *sqlcRepository) CheckCourseExists(ctx context.Context, courseID pgtype.UUID) error {
+	if _, err := r.queries.CheckCourseExists(ctx, courseID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("CheckCourseExists: %w", apperrors.ErrNotFound)
+		}
+		return fmt.Errorf("CheckCourseExists: %w", err)
+	}
+	return nil
 }
 
 func (r *sqlcRepository) GetUserVoteForGuide(ctx context.Context, arg db.GetUserVoteForGuideParams) (db.VoteDirection, error) {

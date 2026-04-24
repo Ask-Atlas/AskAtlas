@@ -16,8 +16,8 @@ func NewSQLCRepository(queries *db.Queries) Repository {
 	return &sqlcRepository{queries: queries}
 }
 
-func (r *sqlcRepository) ListStudyGuideRefSummaries(ctx context.Context, ids []pgtype.UUID) ([]db.ListStudyGuideRefSummariesRow, error) {
-	return r.queries.ListStudyGuideRefSummaries(ctx, ids)
+func (r *sqlcRepository) ListStudyGuideRefSummaries(ctx context.Context, arg db.ListStudyGuideRefSummariesParams) ([]db.ListStudyGuideRefSummariesRow, error) {
+	return r.queries.ListStudyGuideRefSummaries(ctx, arg)
 }
 
 func (r *sqlcRepository) ListQuizRefSummaries(ctx context.Context, ids []pgtype.UUID) ([]db.ListQuizRefSummariesRow, error) {

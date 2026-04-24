@@ -17,6 +17,7 @@ import (
 // per-sort-variant query.
 type dbFilters struct {
 	CourseID pgtype.UUID
+	ViewerID pgtype.UUID
 	Q        pgtype.Text
 	Tags     []string
 	Cursor   *Cursor
@@ -110,6 +111,7 @@ func validateListParams(p ListStudyGuidesParams) error {
 func toDBFilters(p ListStudyGuidesParams) dbFilters {
 	f := dbFilters{
 		CourseID: utils.UUID(p.CourseID),
+		ViewerID: utils.UUID(p.ViewerID),
 		Cursor:   p.Cursor,
 	}
 	if p.Q != nil {
@@ -189,6 +191,7 @@ func mapListRows[R any](rows []R, project func(R) sharedGuideRow) ([]StudyGuide,
 func (s *Service) queryScoreDesc(ctx context.Context, f dbFilters, limit int32) ([]StudyGuide, error) {
 	rows, err := s.repo.ListStudyGuidesScoreDesc(ctx, db.ListStudyGuidesScoreDescParams{
 		CourseID:        f.CourseID,
+		ViewerID:        f.ViewerID,
 		Q:               f.Q,
 		Tags:            f.Tags,
 		PageLimit:       limit,
@@ -206,6 +209,7 @@ func (s *Service) queryScoreDesc(ctx context.Context, f dbFilters, limit int32) 
 func (s *Service) queryScoreAsc(ctx context.Context, f dbFilters, limit int32) ([]StudyGuide, error) {
 	rows, err := s.repo.ListStudyGuidesScoreAsc(ctx, db.ListStudyGuidesScoreAscParams{
 		CourseID:        f.CourseID,
+		ViewerID:        f.ViewerID,
 		Q:               f.Q,
 		Tags:            f.Tags,
 		PageLimit:       limit,
@@ -223,6 +227,7 @@ func (s *Service) queryScoreAsc(ctx context.Context, f dbFilters, limit int32) (
 func (s *Service) queryViewsDesc(ctx context.Context, f dbFilters, limit int32) ([]StudyGuide, error) {
 	rows, err := s.repo.ListStudyGuidesViewsDesc(ctx, db.ListStudyGuidesViewsDescParams{
 		CourseID:        f.CourseID,
+		ViewerID:        f.ViewerID,
 		Q:               f.Q,
 		Tags:            f.Tags,
 		PageLimit:       limit,
@@ -239,6 +244,7 @@ func (s *Service) queryViewsDesc(ctx context.Context, f dbFilters, limit int32) 
 func (s *Service) queryViewsAsc(ctx context.Context, f dbFilters, limit int32) ([]StudyGuide, error) {
 	rows, err := s.repo.ListStudyGuidesViewsAsc(ctx, db.ListStudyGuidesViewsAscParams{
 		CourseID:        f.CourseID,
+		ViewerID:        f.ViewerID,
 		Q:               f.Q,
 		Tags:            f.Tags,
 		PageLimit:       limit,
@@ -255,6 +261,7 @@ func (s *Service) queryViewsAsc(ctx context.Context, f dbFilters, limit int32) (
 func (s *Service) queryNewestDesc(ctx context.Context, f dbFilters, limit int32) ([]StudyGuide, error) {
 	rows, err := s.repo.ListStudyGuidesNewestDesc(ctx, db.ListStudyGuidesNewestDescParams{
 		CourseID:        f.CourseID,
+		ViewerID:        f.ViewerID,
 		Q:               f.Q,
 		Tags:            f.Tags,
 		PageLimit:       limit,
@@ -270,6 +277,7 @@ func (s *Service) queryNewestDesc(ctx context.Context, f dbFilters, limit int32)
 func (s *Service) queryNewestAsc(ctx context.Context, f dbFilters, limit int32) ([]StudyGuide, error) {
 	rows, err := s.repo.ListStudyGuidesNewestAsc(ctx, db.ListStudyGuidesNewestAscParams{
 		CourseID:        f.CourseID,
+		ViewerID:        f.ViewerID,
 		Q:               f.Q,
 		Tags:            f.Tags,
 		PageLimit:       limit,
@@ -285,6 +293,7 @@ func (s *Service) queryNewestAsc(ctx context.Context, f dbFilters, limit int32) 
 func (s *Service) queryUpdatedDesc(ctx context.Context, f dbFilters, limit int32) ([]StudyGuide, error) {
 	rows, err := s.repo.ListStudyGuidesUpdatedDesc(ctx, db.ListStudyGuidesUpdatedDescParams{
 		CourseID:        f.CourseID,
+		ViewerID:        f.ViewerID,
 		Q:               f.Q,
 		Tags:            f.Tags,
 		PageLimit:       limit,
@@ -300,6 +309,7 @@ func (s *Service) queryUpdatedDesc(ctx context.Context, f dbFilters, limit int32
 func (s *Service) queryUpdatedAsc(ctx context.Context, f dbFilters, limit int32) ([]StudyGuide, error) {
 	rows, err := s.repo.ListStudyGuidesUpdatedAsc(ctx, db.ListStudyGuidesUpdatedAscParams{
 		CourseID:        f.CourseID,
+		ViewerID:        f.ViewerID,
 		Q:               f.Q,
 		Tags:            f.Tags,
 		PageLimit:       limit,

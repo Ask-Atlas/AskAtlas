@@ -46,7 +46,18 @@ type Repository interface {
 
 	CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error)
 
-	GetStudyGuideDetail(ctx context.Context, id pgtype.UUID) (db.GetStudyGuideDetailRow, error)
+	GetStudyGuideDetail(ctx context.Context, arg db.GetStudyGuideDetailParams) (db.GetStudyGuideDetailRow, error)
+	GetStudyGuideCreator(ctx context.Context, id pgtype.UUID) (pgtype.UUID, error)
+	InsertStudyGuideGrant(ctx context.Context, arg db.InsertStudyGuideGrantParams) (db.StudyGuideGrant, error)
+	RevokeStudyGuideGrant(ctx context.Context, arg db.RevokeStudyGuideGrantParams) (int64, error)
+	ListStudyGuideGrants(ctx context.Context, studyGuideID pgtype.UUID) ([]db.StudyGuideGrant, error)
+
+	// Grantee-existence probes for CreateGrant (ASK-211). Mirror the
+	// files.Repository pair -- they wrap the same sqlc-generated
+	// Check*Exists queries and collapse sql.ErrNoRows into
+	// apperrors.ErrNotFound.
+	CheckUserExists(ctx context.Context, userID pgtype.UUID) error
+	CheckCourseExists(ctx context.Context, courseID pgtype.UUID) error
 	GetUserVoteForGuide(ctx context.Context, arg db.GetUserVoteForGuideParams) (db.VoteDirection, error)
 	ListGuideRecommenders(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListGuideRecommendersRow, error)
 	ListGuideQuizzesWithQuestionCount(ctx context.Context, studyGuideID pgtype.UUID) ([]db.ListGuideQuizzesWithQuestionCountRow, error)

@@ -77,8 +77,13 @@ func DecodeCursor(s string) (Cursor, error) {
 }
 
 // ListStudyGuidesParams is the input to Service.ListStudyGuides.
+// ViewerID is the JWT viewer and drives the visibility predicate on
+// the underlying SQL queries (ASK-211): public guides surface to
+// everyone, private guides surface only to the creator, direct-user
+// grantees, or course grantees enrolled via course_members.
 type ListStudyGuidesParams struct {
 	CourseID uuid.UUID
+	ViewerID uuid.UUID
 	Q        *string
 	Tags     []string
 	SortBy   SortField
@@ -196,6 +201,9 @@ type CreateStudyGuideParams struct {
 	Description *string
 	Content     *string
 	Tags        []string
+	// Visibility is optional -- nil means "use DB default (private)".
+	// Valid values: "private", "public". Validated by the service.
+	Visibility *string
 }
 
 // DeleteStudyGuideParams is the input to Service.DeleteStudyGuide.
@@ -224,6 +232,9 @@ type UpdateStudyGuideParams struct {
 	Description  *string
 	Content      *string
 	Tags         *[]string
+	// Visibility is optional -- nil preserves the current value via
+	// COALESCE in the SQL. Valid values: "private", "public".
+	Visibility *string
 }
 
 // CastVoteParams is the input to Service.CastVote (ASK-139). ViewerID
@@ -338,5 +349,40 @@ type FileAttachment struct {
 type DetachFileParams struct {
 	StudyGuideID uuid.UUID
 	FileID       uuid.UUID
+	ViewerID     uuid.UUID
+}
+
+// CreateGrantParams is the input to Service.CreateGrant (ASK-211).
+// ViewerID (the guide's creator -- enforced by the service) is the
+// authz pivot; non-creators receive ErrForbidden.
+//
+// grantee_type must be "user" or "course" (study-guide grants do NOT
+// accept "study_guide" as a grantee_type); permission must be one of
+// "view", "edit", "delete". Validated by the service before the DB
+// round trip.
+type CreateGrantParams struct {
+	StudyGuideID uuid.UUID
+	ViewerID     uuid.UUID
+	GranteeType  string
+	GranteeID    uuid.UUID
+	Permission   string
+}
+
+// RevokeGrantParams is the input to Service.RevokeGrant (ASK-211).
+// Same creator-only authz as CreateGrant. A 0-rows delete surfaces
+// as 404 (not idempotent, mirrors file_grants).
+type RevokeGrantParams struct {
+	StudyGuideID uuid.UUID
+	ViewerID     uuid.UUID
+	GranteeType  string
+	GranteeID    uuid.UUID
+	Permission   string
+}
+
+// ListGrantsParams is the input to Service.ListGrants (ASK-211).
+// Creator-only; non-creators receive ErrForbidden before the list
+// query runs.
+type ListGrantsParams struct {
+	StudyGuideID uuid.UUID
 	ViewerID     uuid.UUID
 }
