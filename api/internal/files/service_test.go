@@ -699,3 +699,90 @@ func TestService_RecordFileView_UpsertLastViewedFails(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "deadlock detected")
 }
+
+// GetDownloadURL (ASK-205)
+
+func TestService_GetDownloadURL_HappyPath(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	gen := mock_files.NewMockDownloadURLGenerator(t)
+	svc := files.NewService(repo, files.WithDownloadURLGenerator(gen))
+
+	viewerID := uuid.New()
+	fileID := uuid.New()
+	s3Key := "uploads/abc/doc.pdf"
+	want := "https://s3.example/b/" + s3Key + "?sig=xyz"
+
+	repo.EXPECT().
+		GetFileIfViewable(mock.Anything, mock.MatchedBy(func(p db.GetFileIfViewableParams) bool {
+			return p.FileID == utils.UUID(fileID) && p.ViewerID == utils.UUID(viewerID)
+		})).
+		Return(db.File{
+			S3Key:  s3Key,
+			Status: "complete",
+		}, nil)
+
+	gen.EXPECT().
+		GeneratePresignedGetURL(mock.Anything, s3Key).
+		Return(want, nil)
+
+	got, err := svc.GetDownloadURL(context.Background(), viewerID, fileID)
+	require.NoError(t, err)
+	assert.Equal(t, want, got)
+}
+
+func TestService_GetDownloadURL_NoGeneratorConfigured(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	svc := files.NewService(repo)
+
+	_, err := svc.GetDownloadURL(context.Background(), uuid.New(), uuid.New())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "download URL generator not configured")
+}
+
+func TestService_GetDownloadURL_ForwardsRepoNotFound(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	gen := mock_files.NewMockDownloadURLGenerator(t)
+	svc := files.NewService(repo, files.WithDownloadURLGenerator(gen))
+
+	repo.EXPECT().GetFileIfViewable(mock.Anything, mock.Anything).
+		Return(db.File{}, apperrors.ErrNotFound)
+
+	_, err := svc.GetDownloadURL(context.Background(), uuid.New(), uuid.New())
+	require.Error(t, err)
+	assert.ErrorIs(t, err, apperrors.ErrNotFound)
+}
+
+func TestService_GetDownloadURL_NonCompleteStatusIs404(t *testing.T) {
+	cases := []string{"pending", "failed"}
+
+	for _, status := range cases {
+		t.Run(status, func(t *testing.T) {
+			repo := mock_files.NewMockRepository(t)
+			gen := mock_files.NewMockDownloadURLGenerator(t)
+			svc := files.NewService(repo, files.WithDownloadURLGenerator(gen))
+
+			repo.EXPECT().GetFileIfViewable(mock.Anything, mock.Anything).
+				Return(db.File{S3Key: "uploads/x", Status: db.UploadStatus(status)}, nil)
+
+			_, err := svc.GetDownloadURL(context.Background(), uuid.New(), uuid.New())
+			require.Error(t, err)
+			assert.ErrorIs(t, err, apperrors.ErrNotFound)
+		})
+	}
+}
+
+func TestService_GetDownloadURL_PresignerErrorBubblesUp(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	gen := mock_files.NewMockDownloadURLGenerator(t)
+	svc := files.NewService(repo, files.WithDownloadURLGenerator(gen))
+
+	repo.EXPECT().GetFileIfViewable(mock.Anything, mock.Anything).
+		Return(db.File{S3Key: "uploads/x", Status: "complete"}, nil)
+	gen.EXPECT().GeneratePresignedGetURL(mock.Anything, "uploads/x").
+		Return("", errors.New("aws creds missing"))
+
+	_, err := svc.GetDownloadURL(context.Background(), uuid.New(), uuid.New())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "presign")
+	assert.Contains(t, err.Error(), "aws creds missing")
+}

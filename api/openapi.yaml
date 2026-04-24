@@ -286,6 +286,52 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /files/{file_id}/download:
+    get:
+      operationId: DownloadFile
+      summary: Get file contents via presigned redirect (ASK-205)
+      description: |
+        Returns 302 with a freshly-minted presigned S3 GET URL in the
+        `Location` header. The browser follows the redirect and loads
+        the bytes directly from object storage. Presigned URL TTL is
+        15 minutes; clients with long-lived references (e.g. `<img src>`
+        baked into study-guide markdown) keep pointing at this stable
+        endpoint and get a new signed URL on every request.
+
+        Grants are respected -- the viewer must own the file or hold
+        a direct `view` grant (or the public sentinel). Files in
+        `pending` / `failed` / soft-deleted states return 404 so
+        callers can't distinguish "not ready" from "forbidden".
+      parameters:
+        - name: file_id
+          in: path
+          description: The unique UUID of the file
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '302':
+          description: |
+            Redirect to a freshly-minted presigned S3 GET URL (15-min
+            TTL). The browser follows the Location header and loads
+            bytes directly from object storage.
+          headers:
+            Location:
+              schema:
+                type: string
+                format: uri
+              description: Presigned S3 GET URL.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /files/{file_id}/favorite:
     post:
       operationId: ToggleFileFavorite

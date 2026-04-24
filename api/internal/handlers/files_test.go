@@ -519,6 +519,133 @@ func TestFileHandler_RecordFileView_BadUUID_400(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
+// GET /api/files/{file_id}/download (ASK-205).
+func TestFileHandler_DownloadFile_302_Owner(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFileService(t)
+	h := handlers.NewFileHandler(mockSvc, nil)
+
+	viewerID := uuid.New()
+	fileID := uuid.New()
+	presigned := "https://s3.example/askatlas/uploads/abc?X-Amz-Signature=deadbeef"
+
+	mockSvc.EXPECT().
+		GetDownloadURL(mock.Anything, viewerID, fileID).
+		Return(presigned, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/files/"+fileID.String()+"/download", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), viewerID))
+	w := httptest.NewRecorder()
+	r := fileTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusFound, w.Code)
+	assert.Equal(t, presigned, w.Header().Get("Location"))
+	assert.Equal(t, "no-store", w.Header().Get("Cache-Control"))
+	assert.Empty(t, w.Body.String())
+}
+
+func TestFileHandler_DownloadFile_302_GrantedViewer(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFileService(t)
+	h := handlers.NewFileHandler(mockSvc, nil)
+
+	viewerID := uuid.New()
+	fileID := uuid.New()
+	presigned := "https://s3.example/askatlas/uploads/abc?X-Amz-Signature=granted"
+
+	mockSvc.EXPECT().
+		GetDownloadURL(mock.Anything, viewerID, fileID).
+		Return(presigned, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/files/"+fileID.String()+"/download", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), viewerID))
+	w := httptest.NewRecorder()
+	r := fileTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusFound, w.Code)
+	assert.Equal(t, presigned, w.Header().Get("Location"))
+}
+
+func TestFileHandler_DownloadFile_Unauthorized_401(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFileService(t)
+	h := handlers.NewFileHandler(mockSvc, nil)
+
+	fileID := uuid.New()
+	req := httptest.NewRequest(http.MethodGet, "/files/"+fileID.String()+"/download", nil)
+	w := httptest.NewRecorder()
+	r := fileTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestFileHandler_DownloadFile_NotFound_404(t *testing.T) {
+	cases := []struct {
+		name    string
+		service error
+	}{
+		{name: "no grant / missing file", service: apperrors.ErrNotFound},
+		{name: "pending file", service: apperrors.ErrNotFound},
+		{name: "failed file", service: apperrors.ErrNotFound},
+		{name: "soft-deleted file", service: apperrors.ErrNotFound},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockSvc := mock_handlers.NewMockFileService(t)
+			h := handlers.NewFileHandler(mockSvc, nil)
+
+			viewerID := uuid.New()
+			fileID := uuid.New()
+			mockSvc.EXPECT().
+				GetDownloadURL(mock.Anything, viewerID, fileID).
+				Return("", tc.service)
+
+			req := httptest.NewRequest(http.MethodGet, "/files/"+fileID.String()+"/download", nil)
+			req = req.WithContext(authctx.WithUserID(req.Context(), viewerID))
+			w := httptest.NewRecorder()
+			r := fileTestRouter(t, h)
+			r.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusNotFound, w.Code)
+			assert.Empty(t, w.Header().Get("Location"))
+		})
+	}
+}
+
+func TestFileHandler_DownloadFile_BadUUID_400(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFileService(t)
+	h := handlers.NewFileHandler(mockSvc, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/files/not-a-uuid/download", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), uuid.New()))
+	w := httptest.NewRecorder()
+	r := fileTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestFileHandler_DownloadFile_ServiceError_500(t *testing.T) {
+	mockSvc := mock_handlers.NewMockFileService(t)
+	h := handlers.NewFileHandler(mockSvc, nil)
+
+	viewerID := uuid.New()
+	fileID := uuid.New()
+
+	mockSvc.EXPECT().
+		GetDownloadURL(mock.Anything, viewerID, fileID).
+		Return("", errors.New("s3 presign exploded"))
+
+	req := httptest.NewRequest(http.MethodGet, "/files/"+fileID.String()+"/download", nil)
+	req = req.WithContext(authctx.WithUserID(req.Context(), viewerID))
+	w := httptest.NewRecorder()
+	r := fileTestRouter(t, h)
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+}
+
 func TestFileHandler_RecordFileView_ServiceError_500(t *testing.T) {
 	mockSvc := mock_handlers.NewMockFileService(t)
 	h := handlers.NewFileHandler(mockSvc, nil)

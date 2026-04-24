@@ -26,6 +26,7 @@ const maxS3KeyLength = 1024
 type FileService interface {
 	CreateFile(ctx context.Context, params files.CreateFileParams) (files.File, error)
 	GetFile(ctx context.Context, params files.GetFileParams) (files.File, error)
+	GetDownloadURL(ctx context.Context, viewerID, fileID uuid.UUID) (string, error)
 	ListFiles(ctx context.Context, params files.ListFilesParams) ([]files.File, *string, error)
 	DeleteFile(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher) error
 	UpdateFile(ctx context.Context, params files.UpdateFileParams) (files.File, error)
@@ -210,6 +211,33 @@ func (h *FileHandler) UpdateFile(w http.ResponseWriter, r *http.Request, fileId 
 	}
 
 	respondJSON(w, http.StatusOK, toDTOFileResponse(file))
+}
+
+// DownloadFile handles GET /api/files/{file_id}/download (ASK-205).
+// 302 with a presigned S3 GET URL in Location; service owns grants +
+// state gating. No body -- the presigned URL stays off the JSON surface.
+func (h *FileHandler) DownloadFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
+	viewerID, appErr := viewerIDFromContext(r)
+	if appErr != nil {
+		apperrors.RespondWithError(w, appErr)
+		return
+	}
+
+	url, err := h.service.GetDownloadURL(r.Context(), viewerID, uuid.UUID(fileId))
+	if err != nil {
+		sysErr := apperrors.ToHTTPError(err)
+		if sysErr.Code >= 500 {
+			slog.Error("DownloadFile failed", "error", err)
+		}
+		apperrors.RespondWithError(w, sysErr)
+		return
+	}
+
+	// no-store on the redirect: Location points at a 15-min presigned
+	// URL, so a cached 302 after expiry would break downloads.
+	w.Header().Set("Location", url)
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusFound)
 }
 
 // GetFile handles requests to retrieve a single file by its unique identifier.

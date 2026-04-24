@@ -111,6 +111,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/files/{file_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get file contents via presigned redirect (ASK-205)
+         * @description Returns 302 with a freshly-minted presigned S3 GET URL in the
+         *     `Location` header. The browser follows the redirect and loads
+         *     the bytes directly from object storage. Presigned URL TTL is
+         *     15 minutes; clients with long-lived references (e.g. `<img src>`
+         *     baked into study-guide markdown) keep pointing at this stable
+         *     endpoint and get a new signed URL on every request.
+         *
+         *     Grants are respected -- the viewer must own the file or hold
+         *     a direct `view` grant (or the public sentinel). Files in
+         *     `pending` / `failed` / soft-deleted states return 404 so
+         *     callers can't distinguish "not ready" from "forbidden".
+         */
+        get: operations["DownloadFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/files/{file_id}/favorite": {
         parameters: {
             query?: never;
@@ -2845,6 +2875,38 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    DownloadFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The unique UUID of the file */
+                file_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /**
+             * @description Redirect to a freshly-minted presigned S3 GET URL (15-min
+             *     TTL). The browser follows the Location header and loads
+             *     bytes directly from object storage.
+             */
+            302: {
+                headers: {
+                    /** @description Presigned S3 GET URL. */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             500: components["responses"]["InternalServerError"];
         };

@@ -29,11 +29,14 @@ func New(ctx context.Context, bucket string) (*Client, error) {
 		return nil, fmt.Errorf("s3client.New: load config: %w", err)
 	}
 
-	// Use path-style addressing ({endpoint}/{bucket}/{key}) so presigned URLs
-	// stay on the endpoint hostname. Garage fronts behind a single-level
-	// wildcard TLS cert that does not cover virtual-hosted {bucket}.{endpoint}.
-	svc := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.UsePathStyle = true
+	// Path-style addressing is required by both clients: Garage fronts
+	// behind a single-level wildcard TLS cert that does not cover
+	// virtual-hosted {bucket}.{endpoint}.
+	pathStyle := func(o *s3.Options) { o.UsePathStyle = true }
+
+	// svc handles direct-from-server calls (DeleteObject etc.) and
+	// carries the Garage proxy-fragile header strip.
+	svc := s3.NewFromConfig(cfg, pathStyle, func(o *s3.Options) {
 		// Strip SDK-added proxy-fragile headers RIGHT BEFORE the v4
 		// signer runs. Our Garage instance is fronted by a CDN
 		// reverse-proxy that normalises / rewrites a small set of
@@ -70,9 +73,15 @@ func New(ctx context.Context, bucket string) (*Client, error) {
 			), "Signing", middleware.Before)
 		})
 	})
+
+	// presignSvc omits the Garage strip: the presign stack has no
+	// "Signing" step to insert relative to, and the browser that
+	// follows the signed URL never emits the headers the proxy rewrites.
+	presignSvc := s3.NewFromConfig(cfg, pathStyle)
+
 	return &Client{
 		svc:       svc,
-		presigner: s3.NewPresignClient(svc),
+		presigner: s3.NewPresignClient(presignSvc),
 		bucket:    bucket,
 	}, nil
 }
@@ -93,6 +102,19 @@ func (c *Client) GeneratePresignedPutURL(ctx context.Context, key, contentType s
 	}, s3.WithPresignExpires(presignExpiry))
 	if err != nil {
 		return "", fmt.Errorf("s3client.GeneratePresignedPutURL: %w", err)
+	}
+
+	return req.URL, nil
+}
+
+// GeneratePresignedGetURL creates a presigned S3 GET URL for reading the object at key.
+func (c *Client) GeneratePresignedGetURL(ctx context.Context, key string) (string, error) {
+	req, err := c.presigner.PresignGetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(c.bucket),
+		Key:    aws.String(key),
+	}, s3.WithPresignExpires(presignExpiry))
+	if err != nil {
+		return "", fmt.Errorf("s3client.GeneratePresignedGetURL: %w", err)
 	}
 
 	return req.URL, nil

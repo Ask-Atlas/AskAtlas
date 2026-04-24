@@ -55,22 +55,37 @@ type Repository interface {
 	ListOwnedFilesMimeDesc(ctx context.Context, arg db.ListOwnedFilesMimeDescParams) ([]db.ListOwnedFilesMimeDescRow, error)
 }
 
+// DownloadURLGenerator mints presigned GET URLs for a given S3 key.
+type DownloadURLGenerator interface {
+	GeneratePresignedGetURL(ctx context.Context, key string) (string, error)
+}
+
 // Service is the business-logic layer for the files feature.
 //
-// Note: as of ASK-105 the service no longer presigns S3 URLs. The
-// caller (Next.js server) generates the s3_key + presigns the
-// upload separately; the Go API only manages metadata records.
-// File deletions still go through QStash + the jobs handler,
-// which holds its own S3 client -- the files Service itself is
-// pure metadata.
+// Note: as of ASK-105 the service no longer presigns UPLOAD S3 URLs.
+// The caller (Next.js server) generates the s3_key + presigns the
+// upload separately; the Go API only manages metadata records for
+// uploads. DOWNLOAD presigning lives here (ASK-205).
 type Service struct {
 	repo       Repository
 	queryTable map[sortKey]queryFn
+	urlGen     DownloadURLGenerator
+}
+
+// Option customises a Service at construction.
+type Option func(*Service)
+
+// WithDownloadURLGenerator injects the presigner used by GetDownloadURL.
+func WithDownloadURLGenerator(g DownloadURLGenerator) Option {
+	return func(s *Service) { s.urlGen = g }
 }
 
 // NewService creates a new Service instance configured with the given repository.
-func NewService(repo Repository) *Service {
+func NewService(repo Repository, opts ...Option) *Service {
 	s := &Service{repo: repo}
+	for _, opt := range opts {
+		opt(s)
+	}
 	s.queryTable = map[sortKey]queryFn{
 		{SortFieldUpdatedAt, SortDirDesc}: s.queryUpdatedDesc,
 		{SortFieldUpdatedAt, SortDirAsc}:  s.queryUpdatedAsc,
@@ -86,6 +101,41 @@ func NewService(repo Repository) *Service {
 		{SortFieldMimeType, SortDirDesc}:  s.queryMimeDesc,
 	}
 	return s
+}
+
+// GetDownloadURL returns a presigned GET URL for the file, enforcing
+// the same grants check GetFile uses (GetFileIfViewable) and rejecting
+// files that aren't in a streamable state. The s3_key never leaves the
+// service -- callers only see the URL.
+//
+// Missing / no-grant / soft-deleted / pending / failed all collapse to
+// apperrors.ErrNotFound. This deviates from the ticket's AC3 "403 for
+// no-grant" but matches every other read path in the files feature --
+// not leaking existence to viewers who can't access the file.
+func (s *Service) GetDownloadURL(ctx context.Context, viewerID, fileID uuid.UUID) (string, error) {
+	if s.urlGen == nil {
+		return "", fmt.Errorf("GetDownloadURL: download URL generator not configured")
+	}
+
+	row, err := s.repo.GetFileIfViewable(ctx, db.GetFileIfViewableParams{
+		FileID:        utils.UUID(fileID),
+		ViewerID:      utils.UUID(viewerID),
+		CourseIds:     nil,
+		StudyGuideIds: nil,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	if string(row.Status) != "complete" {
+		return "", fmt.Errorf("GetDownloadURL: %w", apperrors.ErrNotFound)
+	}
+
+	url, err := s.urlGen.GeneratePresignedGetURL(ctx, row.S3Key)
+	if err != nil {
+		return "", fmt.Errorf("GetDownloadURL: presign: %w", err)
+	}
+	return url, nil
 }
 
 // GetFile retrieves a single file, verifying that the requesting user has access to it.
