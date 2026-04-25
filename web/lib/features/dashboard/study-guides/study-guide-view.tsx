@@ -1,132 +1,334 @@
+"use client";
+
+/**
+ * Reader surface for a single study guide. Renders the guide header,
+ * the article body via `<ArticleRenderer>` (markdown + GFM + embedded
+ * images via `/api/files/{id}/download`), and inline lists for
+ * quizzes, resources, and attached files. Author-only affordances
+ * (Edit, Delete) gate on the `isAuthor` prop the page resolves from
+ * Clerk.
+ */
+import {
+  ExternalLink,
+  FileText,
+  Pencil,
+  Play,
+  ThumbsUp,
+  Trash2,
+  Video,
+} from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Separator } from "@/components/ui/separator";
-import { BookOpen, ExternalLink, FileText, Play, Video } from "lucide-react";
-import Link from "next/link";
-import type { StudyGuide, StudyGuideResource } from "./study-guide-view.types";
+import { deleteStudyGuide, recordFileView } from "@/lib/api";
+import type {
+  ResourceSummary,
+  StudyGuideDetailResponse,
+  StudyGuideFileSummary,
+} from "@/lib/api/types";
+import { ConfirmationDialog } from "@/lib/features/shared/confirmation-dialog";
+import { toast } from "@/lib/features/shared/toast/toast";
+import { cn, formatBytes, formatRelativeDate } from "@/lib/utils";
 
-const MOCK_STUDY_GUIDE: StudyGuide = {
-  id: "binary-trees-cheat-sheet",
-  title: "Binary Trees Cheat Sheet",
-  description:
-    "A comprehensive overview of binary tree data structures, traversal algorithms, and common interview patterns.",
-  course: "Data Structures & Algorithms",
-  createdBy: "NathanielGainesWSU",
-  updatedAt: "March 2026",
-  quizzes: [
-    { id: "q1", title: "Tree Traversal Quiz", questionCount: 10 },
-    { id: "q2", title: "Balanced Trees Quiz", questionCount: 8 },
-  ],
-  resources: [
-    {
-      id: "r1",
-      title: "Binary Trees - Visual Reference",
-      url: "https://visualgo.net/en/bst",
-      type: "link",
-    },
-    {
-      id: "r2",
-      title: "Lecture Slides - Week 7",
-      url: "https://example.com/slides.pdf",
-      type: "pdf",
-    },
-    {
-      id: "r3",
-      title: "Tree Algorithms Explained",
-      url: "https://example.com/video",
-      type: "video",
-    },
-  ],
-};
+import { ArticleRenderer } from "./article-renderer";
 
-function resourceIcon(type: StudyGuideResource["type"]) {
-  if (type === "pdf") return <FileText className="h-4 w-4 shrink-0" />;
-  if (type === "video") return <Video className="h-4 w-4 shrink-0" />;
-  return <ExternalLink className="h-4 w-4 shrink-0" />;
+interface StudyGuideViewProps {
+  guide: StudyGuideDetailResponse;
+  isAuthor: boolean;
 }
 
-export function StudyGuideView() {
-  const guide = MOCK_STUDY_GUIDE;
+export function StudyGuideView({ guide, isAuthor }: StudyGuideViewProps) {
+  const router = useRouter();
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [isDeleting, startDeleteTransition] = useTransition();
+
+  const creatorName =
+    `${guide.creator.first_name} ${guide.creator.last_name}`.trim() ||
+    "Unknown author";
+  const courseLabel = `${guide.course.department} ${guide.course.number}`;
+
+  const handleConfirmDelete = () => {
+    startDeleteTransition(async () => {
+      try {
+        await deleteStudyGuide(guide.id);
+        toast.success("Study guide deleted");
+        router.push(`/courses/${guide.course.id}`);
+      } catch (err) {
+        toast.error(err);
+      } finally {
+        setConfirmDeleteOpen(false);
+      }
+    });
+  };
 
   return (
-    <section className="space-y-6">
-      <header className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary">{guide.course}</Badge>
+    <section className="mx-auto flex w-full max-w-3xl flex-col gap-8 py-2">
+      <header className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/courses/${guide.course.id}`}
+            className="text-foreground hover:bg-muted bg-muted/60 inline-flex items-center rounded-md px-2 py-0.5 font-mono text-[11px] font-semibold tracking-[-0.2px] transition-colors"
+          >
+            {courseLabel}
+          </Link>
+          <Badge variant="secondary" className="text-[11px]">
+            {guide.visibility === "public" ? "Public" : "Private"}
+          </Badge>
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight">{guide.title}</h1>
-        <p className="text-muted-foreground text-sm">{guide.description}</p>
-        <p className="text-muted-foreground text-xs">
-          Created by {guide.createdBy} · Updated {guide.updatedAt}
+        <h1 className="text-foreground text-[32px] font-semibold leading-[1.15] tracking-[-0.6px]">
+          {guide.title}
+        </h1>
+        {guide.description ? (
+          <p className="text-muted-foreground text-[15px] leading-[1.55]">
+            {guide.description}
+          </p>
+        ) : null}
+        <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-[13px]">
+          <span>by {creatorName}</span>
+          <span aria-hidden={true} className="text-muted-foreground/50">
+            ·
+          </span>
+          <span>Updated {formatRelativeDate(guide.updated_at)}</span>
+          <span aria-hidden={true} className="text-muted-foreground/50">
+            ·
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <ThumbsUp className="size-3.5" aria-hidden={true} />
+            {guide.vote_score}
+          </span>
         </p>
+        {isAuthor ? (
+          <div className="flex flex-wrap gap-2 pt-2">
+            <Button asChild variant="outline" size="sm" className="h-8">
+              <Link href={`/study-guides/${guide.id}/edit`}>
+                <Pencil className="size-3.5" aria-hidden={true} />
+                Edit
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive h-8"
+              onClick={() => setConfirmDeleteOpen(true)}
+              disabled={isDeleting}
+            >
+              <Trash2 className="size-3.5" aria-hidden={true} />
+              Delete
+            </Button>
+          </div>
+        ) : null}
       </header>
 
-      <Separator />
+      {guide.content ? (
+        <ArticleRenderer content={guide.content} />
+      ) : (
+        <EmptyState
+          icon={<FileText className="size-7" aria-hidden={true} />}
+          title="This guide is empty"
+          body={
+            isAuthor
+              ? "Add some content via the editor."
+              : "The author hasn't written anything yet."
+          }
+          className="border-border bg-muted/30 rounded-[10px] border py-10"
+        />
+      )}
 
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <BookOpen className="text-muted-foreground h-4 w-4" />
-          <h2 className="text-sm font-medium">Quizzes</h2>
+      {guide.tags.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {guide.tags.map((tag) => (
+            <Badge
+              key={tag}
+              variant="secondary"
+              className="bg-muted text-muted-foreground text-[11px]"
+            >
+              {tag}
+            </Badge>
+          ))}
         </div>
-        {guide.quizzes.length === 0 ? (
-          <div className="bg-muted/50 rounded-xl px-4 py-8 text-center">
-            <p className="text-muted-foreground text-sm">No quizzes yet.</p>
-          </div>
-        ) : (
+      ) : null}
+
+      {guide.files.length > 0 || isAuthor ? (
+        <Section title="Attached files" count={guide.files.length}>
+          {guide.files.length === 0 ? (
+            <SectionEmpty body="No files attached yet." />
+          ) : (
+            <div className="border-border divide-border overflow-hidden divide-y rounded-[10px] border">
+              {guide.files.map((file) => (
+                <FileRow key={file.id} file={file} />
+              ))}
+            </div>
+          )}
+        </Section>
+      ) : null}
+
+      {guide.resources.length > 0 || isAuthor ? (
+        <Section title="Resources" count={guide.resources.length}>
+          {guide.resources.length === 0 ? (
+            <SectionEmpty body="No resources linked yet." />
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {guide.resources.map((resource) => (
+                <ResourceRow key={resource.id} resource={resource} />
+              ))}
+            </div>
+          )}
+        </Section>
+      ) : null}
+
+      {guide.quizzes.length > 0 ? (
+        <Section title="Quizzes" count={guide.quizzes.length}>
           <div className="grid gap-3 sm:grid-cols-2">
             {guide.quizzes.map((quiz) => (
               <div
                 key={quiz.id}
-                className="bg-muted/50 flex items-center justify-between rounded-xl px-4 py-3"
+                className="bg-card border-border flex items-center justify-between gap-3 rounded-[10px] border p-3"
               >
-                <div>
-                  <p className="text-sm font-medium">{quiz.title}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-foreground truncate text-sm font-semibold">
+                    {quiz.title}
+                  </p>
                   <p className="text-muted-foreground text-xs">
-                    {quiz.questionCount} questions
+                    {quiz.question_count}{" "}
+                    {quiz.question_count === 1 ? "question" : "questions"}
                   </p>
                 </div>
-                <Button size="sm" asChild>
-                  <Link href="/practice">
-                    <Play className="mr-1 h-3 w-3" />
+                <Button asChild size="sm" className="h-8 shrink-0">
+                  <Link href={`/practice?quiz=${quiz.id}`}>
+                    <Play className="size-3" aria-hidden={true} />
                     Start
                   </Link>
                 </Button>
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </Section>
+      ) : null}
 
-      <Separator />
-
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <ExternalLink className="text-muted-foreground h-4 w-4" />
-          <h2 className="text-sm font-medium">Referenced Resources</h2>
-        </div>
-        {guide.resources.length === 0 ? (
-          <div className="bg-muted/50 rounded-xl px-4 py-8 text-center">
-            <p className="text-muted-foreground text-sm">
-              No resources linked.
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {guide.resources.map((resource) => (
-              <a
-                key={resource.id}
-                href={resource.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-muted/50 hover:bg-muted flex items-center gap-3 rounded-xl px-4 py-3 transition-colors"
-              >
-                {resourceIcon(resource.type)}
-                <span className="text-sm font-medium">{resource.title}</span>
-              </a>
-            ))}
-          </div>
-        )}
-      </div>
+      <ConfirmationDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Delete this study guide?"
+        description="This permanently deletes the guide, its quizzes, and all attached files / resources for everyone who can see it. This can't be undone."
+        confirmLabel={isDeleting ? "Deleting…" : "Delete"}
+        cancelLabel="Cancel"
+        destructive
+        disabled={isDeleting}
+        onConfirm={handleConfirmDelete}
+      />
     </section>
+  );
+}
+
+function Section({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2.5">
+        <h2 className="text-foreground text-[18px] font-semibold leading-tight tracking-[-0.3px]">
+          {title}
+        </h2>
+        <span className="bg-muted text-muted-foreground rounded-md px-2 py-0.5 font-mono text-[11px] font-semibold">
+          {count}
+        </span>
+      </div>
+      <Separator className="opacity-60" />
+      {children}
+    </div>
+  );
+}
+
+function SectionEmpty({ body }: { body: string }) {
+  return (
+    <div className="border-border bg-muted/30 text-muted-foreground rounded-[10px] border px-4 py-6 text-center text-sm">
+      {body}
+    </div>
+  );
+}
+
+function FileRow({ file }: { file: StudyGuideFileSummary }) {
+  const handleOpen = () => {
+    // recordFileView is fire-and-forget so a slow recents update never
+    // blocks the user from reading the file.
+    void recordFileView(file.id).catch(() => {
+      // intentional: telemetry failure must not surface to the user.
+    });
+    window.open(`/api/files/${file.id}/download`, "_blank", "noopener");
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleOpen}
+      className={cn(
+        "hover:bg-muted/40 flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors",
+        "focus-visible:bg-muted/40 focus-visible:outline-none",
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <FileText
+          className="text-muted-foreground/70 size-4 shrink-0"
+          aria-hidden={true}
+        />
+        <div className="min-w-0">
+          <p className="text-foreground truncate text-sm font-medium">
+            {file.name || "Untitled"}
+          </p>
+          <p className="text-muted-foreground text-xs">
+            {file.mime_type} · {formatBytes(file.size)}
+          </p>
+        </div>
+      </div>
+      <ExternalLink
+        className="text-muted-foreground/60 size-3.5 shrink-0"
+        aria-hidden={true}
+      />
+    </button>
+  );
+}
+
+function ResourceRow({ resource }: { resource: ResourceSummary }) {
+  const Icon =
+    resource.type === "video"
+      ? Video
+      : resource.type === "pdf" || resource.type === "article"
+        ? FileText
+        : ExternalLink;
+  return (
+    <a
+      href={resource.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(
+        "bg-card border-border hover:border-foreground/20 flex items-start gap-3 rounded-[10px] border p-3 transition-all",
+        "hover:shadow-sm",
+      )}
+    >
+      <Icon
+        className="text-muted-foreground/70 mt-0.5 size-4 shrink-0"
+        aria-hidden={true}
+      />
+      <div className="min-w-0 flex-1">
+        <p className="text-foreground line-clamp-2 text-sm font-medium">
+          {resource.title}
+        </p>
+        {resource.description ? (
+          <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
+            {resource.description}
+          </p>
+        ) : null}
+      </div>
+    </a>
   );
 }
