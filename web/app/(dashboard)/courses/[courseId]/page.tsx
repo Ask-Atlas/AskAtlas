@@ -39,6 +39,8 @@ import {
   type StudyGuideListItemResponse as StudyGuideCardListItem,
 } from "@/lib/features/dashboard/study-guides/study-guide-card";
 
+import { SetDashboardBreadcrumb } from "../../dashboard-breadcrumb-context";
+
 interface PageProps {
   params: Promise<{ courseId: string }>;
 }
@@ -67,8 +69,11 @@ export default async function CourseDetailPage({ params }: PageProps) {
   const studyGuides = studyGuidesRes.study_guides;
   const isEnrolled = Boolean(myEnrollmentInCourse);
 
+  const breadcrumbLabel = `${course.department} ${course.number}`;
+
   return (
     <section className="mx-auto flex w-full max-w-[1184px] flex-col gap-7 px-10 py-8">
+      <SetDashboardBreadcrumb label={breadcrumbLabel} />
       <CourseDetailHeader
         course={course}
         enrolledCount={enrolledCount}
@@ -337,6 +342,7 @@ function toCardItem(guide: StudyGuideListItemResponse): StudyGuideCardListItem {
   return {
     id: guide.id,
     title: guide.title,
+    description: guide.description,
     creator: { display_name: displayName },
     vote_score: guide.vote_score,
     quiz_count: guide.quiz_count,
@@ -344,5 +350,6 @@ function toCardItem(guide: StudyGuideListItemResponse): StudyGuideCardListItem {
     tags: guide.tags,
     course_id: guide.course_id,
     visibility: guide.visibility,
+    updated_at: guide.updated_at,
   };
 }
