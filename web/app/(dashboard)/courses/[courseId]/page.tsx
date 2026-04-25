@@ -12,7 +12,15 @@
  *   - Enrolled: section status banner + study-guide grid (the body).
  *   - Not enrolled: "Pick a section" picker + dimmed study-guide teaser.
  */
-import { ArrowRightLeft, Lock, Plus, UserRound, Users } from "lucide-react";
+import {
+  ArrowRightLeft,
+  BookOpen,
+  CalendarOff,
+  Lock,
+  Plus,
+  UserRound,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -127,30 +135,32 @@ function EnrolledBanner({
 }) {
   const sectionLabel = sectionCode ? `Section ${sectionCode}` : "your section";
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 rounded-[10px] border border-stone-200 bg-stone-50 px-3 py-3">
+    <div className="border-border bg-muted/40 flex flex-wrap items-center justify-between gap-4 rounded-[10px] border px-3 py-3">
       <div className="flex min-w-0 items-center gap-3.5">
         <span
-          className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-800"
+          className="bg-primary/10 text-primary flex size-8 shrink-0 items-center justify-center rounded-lg"
           aria-hidden={true}
         >
           <UserRound className="size-4" />
         </span>
         <div className="flex min-w-0 flex-col gap-0.5">
           <p className="flex flex-wrap items-center gap-x-1.5 text-[13px]">
-            <span className="text-zinc-600">You&rsquo;re in</span>
-            <span className="font-mono font-semibold text-zinc-950">
+            <span className="text-muted-foreground">You&rsquo;re in</span>
+            <span className="text-foreground font-mono font-semibold">
               {sectionLabel}
             </span>
             {instructor ? (
               <>
-                <span className="text-zinc-400" aria-hidden={true}>
+                <span className="text-muted-foreground/50" aria-hidden={true}>
                   ·
                 </span>
-                <span className="font-medium text-zinc-800">{instructor}</span>
+                <span className="text-foreground font-medium">
+                  {instructor}
+                </span>
               </>
             ) : null}
           </p>
-          <p className="text-[12px] text-zinc-500">{term}</p>
+          <p className="text-muted-foreground text-[12px]">{term}</p>
         </div>
       </div>
       <div className="flex items-center gap-3">
@@ -179,24 +189,25 @@ function SectionPicker({
   if (sections.length === 0) {
     return (
       <EmptyState
+        icon={<CalendarOff className="size-8" aria-hidden={true} />}
         title="No sections offered"
         body="This course has no current section offerings. Check back next term."
-        className="rounded-[10px] border border-zinc-200"
+        className="border-border bg-muted/30 rounded-[10px] border py-12"
       />
     );
   }
   return (
     <div className="flex flex-col gap-3.5">
       <div className="flex flex-col gap-1.5">
-        <h2 className="text-[18px] font-semibold leading-tight tracking-[-0.3px] text-zinc-950">
+        <h2 className="text-foreground text-[18px] font-semibold leading-tight tracking-[-0.3px]">
           Pick a section
         </h2>
-        <p className="text-[13px] text-zinc-600">
+        <p className="text-muted-foreground text-[13px]">
           Join a section to access study guides for this course. You&rsquo;ll
           only see what your section is sharing.
         </p>
       </div>
-      <div className="flex flex-col divide-y divide-zinc-100 rounded-[10px] border border-zinc-200 bg-white">
+      <div className="divide-border bg-card border-border flex flex-col divide-y rounded-[10px] border">
         {sections.map((section) => (
           <SectionRow
             key={section.id}
@@ -222,14 +233,14 @@ function StudyGuidesSection({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-3">
-            <h2 className="text-[22px] font-semibold leading-tight tracking-[-0.4px] text-zinc-950">
+            <h2 className="text-foreground text-[22px] font-semibold leading-tight tracking-[-0.4px]">
               Study guides
             </h2>
-            <span className="rounded-md bg-zinc-100 px-2 py-0.5 font-mono text-[12px] font-semibold text-zinc-600">
+            <span className="bg-muted text-muted-foreground rounded-md px-2 py-0.5 font-mono text-[12px] font-semibold">
               {studyGuides.length}
             </span>
           </div>
-          <p className="text-[13px] text-zinc-600">
+          <p className="text-muted-foreground text-[13px]">
             Browse what your classmates have written, or start your own.
           </p>
         </div>
@@ -243,6 +254,7 @@ function StudyGuidesSection({
 
       {studyGuides.length === 0 ? (
         <EmptyState
+          icon={<BookOpen className="size-8" aria-hidden={true} />}
           title="No study guides yet"
           body="Be the first to share notes, an outline, or a cheat sheet with your section."
           action={
@@ -252,7 +264,7 @@ function StudyGuidesSection({
               </Link>
             </Button>
           }
-          className="rounded-[10px] border border-zinc-200"
+          className="border-border bg-muted/30 rounded-[10px] border py-14"
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -279,19 +291,19 @@ function StudyGuidesTeaser({
   }
   const previews = studyGuides.slice(0, 3);
   const lockedCount = Math.max(studyGuides.length - previews.length, 0);
-  const opacities = ["opacity-55", "opacity-45", "opacity-30"];
+  const opacities = ["opacity-60", "opacity-40", "opacity-25"];
   return (
     <div className="flex flex-col gap-3.5">
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center gap-3">
-          <h2 className="text-[22px] font-semibold leading-tight tracking-[-0.4px] text-zinc-500">
+          <h2 className="text-muted-foreground text-[22px] font-semibold leading-tight tracking-[-0.4px]">
             Study guides
           </h2>
-          <span className="rounded-md bg-zinc-100 px-2 py-0.5 font-mono text-[12px] font-semibold text-zinc-500">
+          <span className="bg-muted text-muted-foreground rounded-md px-2 py-0.5 font-mono text-[12px] font-semibold">
             {studyGuides.length}
           </span>
         </div>
-        <p className="text-[13px] text-zinc-400">
+        <p className="text-muted-foreground/80 text-[13px]">
           You&rsquo;ll see what your section is sharing once you join.
         </p>
       </div>
@@ -300,15 +312,18 @@ function StudyGuidesTeaser({
         aria-hidden={true}
       >
         {previews.map((guide, index) => (
-          <div key={guide.id} className={opacities[index] ?? "opacity-30"}>
+          <div key={guide.id} className={opacities[index] ?? "opacity-25"}>
             <StudyGuideCard guide={toCardItem(guide)} variant="list" />
           </div>
         ))}
       </div>
       {lockedCount > 0 ? (
-        <p className="flex items-center justify-center gap-1.5 pt-1 text-[13px] font-medium text-zinc-500">
-          <Lock className="size-3.5 text-zinc-400" aria-hidden={true} />+{" "}
-          {lockedCount} more {lockedCount === 1 ? "guide" : "guides"} locked
+        <p className="text-muted-foreground flex items-center justify-center gap-1.5 pt-1 text-[13px] font-medium">
+          <Lock
+            className="text-muted-foreground/60 size-3.5"
+            aria-hidden={true}
+          />
+          + {lockedCount} more {lockedCount === 1 ? "guide" : "guides"} locked
         </p>
       ) : null}
     </div>

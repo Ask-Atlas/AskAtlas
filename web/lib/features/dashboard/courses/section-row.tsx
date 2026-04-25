@@ -63,16 +63,16 @@ export function SectionRow({
       )}
     >
       <div className="flex min-w-0 flex-1 items-center gap-3.5">
-        <span className="rounded-md bg-zinc-100 px-2 py-0.5 font-mono text-[11px] font-semibold tracking-[-0.2px] text-zinc-800">
+        <span className="bg-muted text-foreground rounded-md px-2 py-0.5 font-mono text-[11px] font-semibold tracking-[-0.2px]">
           {sectionLabel}
         </span>
         <div className="flex min-w-0 flex-col gap-0.5">
-          <p className="truncate text-[14px] font-medium text-zinc-950">
+          <p className="text-foreground truncate text-[14px] font-medium">
             {section.instructor_name ?? "Instructor TBA"}
           </p>
-          <p className="truncate text-[12px] text-zinc-500">
+          <p className="text-muted-foreground truncate text-[12px]">
             <span>{section.term}</span>
-            <span className="px-2 text-zinc-300" aria-hidden={true}>
+            <span className="text-muted-foreground/50 px-2" aria-hidden={true}>
               ·
             </span>
             <span>

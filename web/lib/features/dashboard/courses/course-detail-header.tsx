@@ -39,17 +39,21 @@ export function CourseDetailHeader({
             {termLabel ? (
               <>
                 <span
-                  className="size-[3px] rounded-full bg-zinc-300"
+                  className="bg-border size-[3px] rounded-full"
                   aria-hidden={true}
                 />
-                <span className="text-[13px] text-zinc-500">{termLabel}</span>
+                <span className="text-muted-foreground text-[13px]">
+                  {termLabel}
+                </span>
               </>
             ) : null}
           </div>
           <h1 className="text-foreground text-[30px] font-semibold leading-[1.15] tracking-[-0.6px]">
             {course.title}
           </h1>
-          <p className="text-[14px] text-zinc-600">{course.school.name}</p>
+          <p className="text-muted-foreground text-[14px]">
+            {course.school.name}
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button
@@ -74,25 +78,37 @@ export function CourseDetailHeader({
         </div>
       </div>
 
-      <div className="h-px w-full bg-zinc-200" />
+      <div className="bg-border h-px w-full" />
 
-      <div className="flex flex-wrap items-center gap-x-[18px] gap-y-2 text-[13px] font-medium text-zinc-600">
+      <div className="text-muted-foreground flex flex-wrap items-center gap-x-[18px] gap-y-2 text-[13px] font-medium">
         <span className="flex items-center gap-1.5">
-          <Users className="size-3.5 text-zinc-400" aria-hidden={true} />
+          <Users
+            className="text-muted-foreground/60 size-3.5"
+            aria-hidden={true}
+          />
           {enrolledCount.toLocaleString()} enrolled
         </span>
         <span className="flex items-center gap-1.5">
-          <Layers className="size-3.5 text-zinc-400" aria-hidden={true} />
+          <Layers
+            className="text-muted-foreground/60 size-3.5"
+            aria-hidden={true}
+          />
           {sectionsCount} {sectionsCount === 1 ? "section" : "sections"}
         </span>
         <span className="flex items-center gap-1.5">
-          <FileText className="size-3.5 text-zinc-400" aria-hidden={true} />
+          <FileText
+            className="text-muted-foreground/60 size-3.5"
+            aria-hidden={true}
+          />
           {studyGuidesCount}{" "}
           {studyGuidesCount === 1 ? "study guide" : "study guides"}
         </span>
         {lastUpdatedLabel ? (
           <span className="flex items-center gap-1.5">
-            <Calendar className="size-3.5 text-zinc-400" aria-hidden={true} />
+            <Calendar
+              className="text-muted-foreground/60 size-3.5"
+              aria-hidden={true}
+            />
             {lastUpdatedLabel}
           </span>
         ) : null}
