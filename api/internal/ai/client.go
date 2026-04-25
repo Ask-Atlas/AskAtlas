@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/openai/openai-go"
@@ -15,27 +16,47 @@ import (
 
 // Client is the AskAtlas-facing wrapper around openai-go. It owns the
 // API key, applies our model defaults, normalizes Chat-Completions
-// streaming chunks into the package-level Event shape, and writes
-// the cost log that ASK-214's ledger consumes.
+// streaming chunks into the package-level Event shape, writes the
+// cost log, and (when configured) persists a row in ai_usage so the
+// quota service can enforce daily caps.
 //
 // Construct via NewClient. The zero value is unusable.
 type Client struct {
-	sdk    openai.Client
-	logger *slog.Logger
+	sdk      openai.Client
+	logger   *slog.Logger
+	recorder UsageRecorder // may be nil -- see WithRecorder
+}
+
+// ClientOption tunes a Client at construction. Functional-options
+// pattern keeps NewClient back-compat as we add optional dependencies
+// (recorder, custom HTTP client, retries) over the lifetime of the
+// AI epic.
+type ClientOption func(*Client)
+
+// WithRecorder wires a persistent usage recorder (typically the
+// QuotaService) so every completed request writes one row to
+// ai_usage. Without a recorder, Client still emits the structured
+// cost log -- the row write is the addition.
+func WithRecorder(r UsageRecorder) ClientOption {
+	return func(c *Client) { c.recorder = r }
 }
 
 // NewClient builds a Client backed by the real OpenAI SDK. The
 // caller is responsible for ensuring apiKey is non-empty -- config
 // validation guards this at startup so we don't fail a request with
 // "missing key" later.
-func NewClient(apiKey string, logger *slog.Logger) *Client {
+func NewClient(apiKey string, logger *slog.Logger, opts ...ClientOption) *Client {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Client{
+	c := &Client{
 		sdk:    openai.NewClient(option.WithAPIKey(apiKey)),
 		logger: logger,
 	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
 }
 
 // Stream sends req to Claude and returns a channel of Events. The
@@ -152,7 +173,8 @@ func (c *Client) Complete(ctx context.Context, req StreamRequest) (CompleteRespo
 }
 
 // logCost writes a single structured line per request; ASK-214's
-// rate-limit middleware tails this stream into the ai_usage table.
+// rate-limit middleware reads ai_usage to enforce daily caps, and
+// the structured log is the audit-only sibling of that row.
 // No secrets logged -- only counts + IDs.
 func (c *Client) logCost(req StreamRequest, requestID string, usage Usage, err error) {
 	model := req.Model
@@ -172,9 +194,47 @@ func (c *Client) logCost(req StreamRequest, requestID string, usage Usage, err e
 	if err != nil {
 		attrs = append(attrs, slog.String("error", err.Error()))
 		c.logger.LogAttrs(context.Background(), slog.LevelError, "ai_request_failed", attrs...)
+		c.recordUsage(req, requestID, usage)
 		return
 	}
 	c.logger.LogAttrs(context.Background(), slog.LevelInfo, "ai_request", attrs...)
+	c.recordUsage(req, requestID, usage)
+}
+
+// recordUsage persists a row in ai_usage when a recorder is wired.
+// Uses a detached context so a cancelled request still attributes
+// its (partial) cost to the user -- the alternative would let
+// abusive clients spam-cancel to dodge the daily quota.
+//
+// 5-second deadline is generous: Postgres INSERTs against the
+// indexed (user_id, feature, created_at) shape complete in single-
+// digit ms. Anything slower than that is a real DB problem and
+// surfacing it as a log line is enough.
+func (c *Client) recordUsage(req StreamRequest, requestID string, usage Usage) {
+	if c.recorder == nil {
+		return
+	}
+	model := req.Model
+	if model == "" {
+		model = ModelDefault
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	rec := UsageRecord{
+		UserID:    req.UserID,
+		Feature:   req.Feature,
+		Model:     model,
+		Usage:     usage,
+		RequestID: requestID,
+	}
+	if err := c.recorder.RecordUsage(ctx, rec); err != nil {
+		c.logger.LogAttrs(context.Background(), slog.LevelError, "ai_usage_persist_failed",
+			slog.String("request_id", requestID),
+			slog.String("user_id", req.UserID.String()),
+			slog.String("feature", string(req.Feature)),
+			slog.String("error", err.Error()),
+		)
+	}
 }
 
 // logCancelled records partial usage for streams that ended because
@@ -196,6 +256,10 @@ func (c *Client) logCancelled(req StreamRequest, requestID string, usage Usage) 
 		slog.Int64("cache_write_tokens", usage.CacheWriteTokens),
 		slog.Bool("cancelled", true),
 	)
+	// Cancelled requests still bill -- OpenAI charges input tokens
+	// regardless of whether output completed. Skipping the row would
+	// let abusive clients spam-cancel to dodge the daily quota.
+	c.recordUsage(req, requestID, usage)
 }
 
 // send tries to deliver ev on out, but bails if the consumer or the

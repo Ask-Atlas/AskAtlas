@@ -11,6 +11,53 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AiFeature string
+
+const (
+	AiFeaturePing         AiFeature = "ping"
+	AiFeatureEdit         AiFeature = "edit"
+	AiFeatureGroundedEdit AiFeature = "grounded_edit"
+	AiFeatureQa           AiFeature = "qa"
+	AiFeatureQuiz         AiFeature = "quiz"
+	AiFeatureRefSuggest   AiFeature = "ref_suggest"
+	AiFeatureOther        AiFeature = "other"
+)
+
+func (e *AiFeature) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AiFeature(s)
+	case string:
+		*e = AiFeature(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AiFeature: %T", src)
+	}
+	return nil
+}
+
+type NullAiFeature struct {
+	AiFeature AiFeature `json:"ai_feature"`
+	Valid     bool      `json:"valid"` // Valid is true if AiFeature is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAiFeature) Scan(value interface{}) error {
+	if value == nil {
+		ns.AiFeature, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AiFeature.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAiFeature) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AiFeature), nil
+}
+
 type CourseRole string
 
 const (
@@ -394,6 +441,19 @@ func (ns NullVoteDirection) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.VoteDirection), nil
+}
+
+type AiUsage struct {
+	ID               pgtype.UUID        `json:"id"`
+	UserID           pgtype.UUID        `json:"user_id"`
+	Feature          AiFeature          `json:"feature"`
+	Model            string             `json:"model"`
+	InputTokens      int64              `json:"input_tokens"`
+	OutputTokens     int64              `json:"output_tokens"`
+	CacheReadTokens  int64              `json:"cache_read_tokens"`
+	CacheWriteTokens int64              `json:"cache_write_tokens"`
+	RequestID        string             `json:"request_id"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 }
 
 type Course struct {
