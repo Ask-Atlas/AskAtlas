@@ -2,7 +2,26 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
 import type { StudyGuideDetailResponse } from "@/lib/api/types";
 
+import type { GrantsManagerActions } from "./grants-manager";
 import { StudyGuideForm } from "./study-guide-form";
+
+// Storybook can't reach the real server actions (Vite would pull in
+// `@clerk/nextjs/server` which is Node-only). Provide a stub bag so
+// the GrantsManager mounts and lands in its "No shares yet" state.
+const stubGrantActions: GrantsManagerActions = {
+  listGrants: async () => ({ grants: [] }),
+  listEnrollments: async () => ({ enrollments: [] }),
+  createGrant: async (studyGuideId, body) => ({
+    id: "preview-grant",
+    study_guide_id: studyGuideId,
+    grantee_type: body.grantee_type,
+    grantee_id: body.grantee_id,
+    permission: body.permission,
+    granted_by: "u_preview_1",
+    created_at: "2026-04-01T00:00:00Z",
+  }),
+  revokeGrant: async () => {},
+};
 
 function makeStudyGuide(
   overrides: Partial<StudyGuideDetailResponse> = {},
@@ -29,8 +48,8 @@ function makeStudyGuide(
     quizzes: [],
     resources: [],
     files: [],
-    created_at: new Date(Date.now() - 7 * 86_400_000).toISOString(),
-    updated_at: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+    created_at: "2026-04-17T00:00:00Z",
+    updated_at: "2026-04-22T00:00:00Z",
     ...overrides,
   } as StudyGuideDetailResponse;
 }
@@ -141,7 +160,7 @@ export const EditWithGrantsStub: Story = {
     docs: {
       description: {
         story:
-          "Edit mode variant for the visibility popover. The popover mounts the GrantsManager which issues a network request -- in Storybook that request fails and the manager falls back to its 'No shares yet' state. Demonstrates the chip surface; real grant flows are covered by the Jest/RTL tests.",
+          "Edit mode variant for the visibility popover. Click the chip to see the Private/Public toggle plus the GrantsManager surface. Storybook injects stub actions so the manager lands in its 'No shares yet' state -- real grant flows are covered by the Jest/RTL tests.",
       },
     },
   },
@@ -150,5 +169,6 @@ export const EditWithGrantsStub: Story = {
     initial: makeStudyGuide({ visibility: "private" }),
     onSubmit: resolveAfter(500),
     onCancel: () => {},
+    grantActions: stubGrantActions,
   },
 };

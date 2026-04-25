@@ -1,27 +1,55 @@
 "use client";
 
 import { Loader2, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { listMyEnrollments } from "@/lib/api/actions/me";
-import {
-  createStudyGuideGrant,
-  listStudyGuideGrants,
-  revokeStudyGuideGrant,
-} from "@/lib/api/actions/study-guides";
-import type { ApiSchemas, StudyGuideGrantResponse } from "@/lib/api/types";
+import type {
+  EnrollmentResponse,
+  ListMyEnrollmentsResponse,
+  ListStudyGuideGrantsResponse,
+  StudyGuideCreateGrantRequest,
+  StudyGuideGrantResponse,
+  StudyGuideRevokeGrantRequest,
+} from "@/lib/api/types";
 import { toast } from "@/lib/features/shared/toast/toast";
-
-// Enrollment isn't exposed from `lib/api/types` (only the list wrapper
-// is), so we pull it straight off the generated schemas.
-type EnrollmentResponse = ApiSchemas["EnrollmentResponse"];
 
 const SEARCH_DEBOUNCE_MS = 200;
 
+type GranteeType = StudyGuideRevokeGrantRequest["grantee_type"];
+type Permission = StudyGuideRevokeGrantRequest["permission"];
+
+function isGranteeType(value: string): value is GranteeType {
+  return value === "course" || value === "user";
+}
+
+function isPermission(value: string): value is Permission {
+  return value === "view" || value === "share" || value === "delete";
+}
+
+/**
+ * Server actions are injected so this client component stays free of
+ * `"use server"` imports. That keeps Storybook (Vite) from following
+ * the chain into `@clerk/nextjs/server`, and matches the DI pattern
+ * used by every other feature component in this codebase.
+ */
+export interface GrantsManagerActions {
+  listGrants: (studyGuideId: string) => Promise<ListStudyGuideGrantsResponse>;
+  listEnrollments: () => Promise<ListMyEnrollmentsResponse>;
+  createGrant: (
+    studyGuideId: string,
+    body: StudyGuideCreateGrantRequest,
+  ) => Promise<StudyGuideGrantResponse>;
+  revokeGrant: (
+    studyGuideId: string,
+    body: StudyGuideRevokeGrantRequest,
+  ) => Promise<void>;
+}
+
 export interface GrantsManagerProps {
   studyGuideId: string;
+  actions: GrantsManagerActions;
   /** Optional callback invoked whenever the grant count changes. */
   onGrantCountChange?: (count: number) => void;
 }
@@ -42,6 +70,7 @@ export interface GrantsManagerProps {
  */
 export function GrantsManager({
   studyGuideId,
+  actions,
   onGrantCountChange,
 }: GrantsManagerProps) {
   const [grants, setGrants] = useState<StudyGuideGrantResponse[]>([]);
@@ -49,6 +78,9 @@ export function GrantsManager({
   const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([]);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  // Course IDs with an in-flight POST. Gates duplicate clicks even
+  // before the optimistic state has flushed.
+  const inFlightAdds = useRef<Set<string>>(new Set());
 
   // Initial load -- grants + enrollments in parallel so the popover is
   // interactive as soon as the data lands.
@@ -57,8 +89,8 @@ export function GrantsManager({
     async function load() {
       try {
         const [grantsRes, enrollmentsRes] = await Promise.all([
-          listStudyGuideGrants(studyGuideId),
-          listMyEnrollments(),
+          actions.listGrants(studyGuideId),
+          actions.listEnrollments(),
         ]);
         if (cancelled) return;
         setGrants(grantsRes.grants);
@@ -73,7 +105,7 @@ export function GrantsManager({
     return () => {
       cancelled = true;
     };
-  }, [studyGuideId]);
+  }, [studyGuideId, actions]);
 
   // Report grant count changes back to the caller so the visibility
   // chip can re-render with the new "Shared · N" label.
@@ -121,6 +153,8 @@ export function GrantsManager({
 
   const addCourseGrant = useCallback(
     async (courseId: string) => {
+      if (inFlightAdds.current.has(courseId)) return;
+      inFlightAdds.current.add(courseId);
       // Optimistic insert with a temporary id so React keys stay
       // stable; real id replaces it when the POST resolves.
       const temp: StudyGuideGrantResponse = {
@@ -135,7 +169,7 @@ export function GrantsManager({
       setGrants((prev) => [...prev, temp]);
       setQuery("");
       try {
-        const created = await createStudyGuideGrant(studyGuideId, {
+        const created = await actions.createGrant(studyGuideId, {
           grantee_type: "course",
           grantee_id: courseId,
           permission: "view",
@@ -146,27 +180,38 @@ export function GrantsManager({
       } catch (error: unknown) {
         setGrants((prev) => prev.filter((grant) => grant.id !== temp.id));
         toast.error(error);
+      } finally {
+        inFlightAdds.current.delete(courseId);
       }
     },
-    [studyGuideId],
+    [studyGuideId, actions],
   );
 
   const removeGrant = useCallback(
     async (grant: StudyGuideGrantResponse) => {
-      const snapshot = grants;
-      setGrants((prev) => prev.filter((existing) => existing.id !== grant.id));
+      if (!isGranteeType(grant.grantee_type) || !isPermission(grant.permission)) {
+        toast.error(new Error("Cannot revoke grant: unrecognized type"));
+        return;
+      }
+      // Functional setState captures the current array as `snapshot`
+      // so a concurrent add/remove can't roll back to a stale closure.
+      let snapshot: StudyGuideGrantResponse[] = [];
+      setGrants((prev) => {
+        snapshot = prev;
+        return prev.filter((existing) => existing.id !== grant.id);
+      });
       try {
-        await revokeStudyGuideGrant(studyGuideId, {
-          grantee_type: grant.grantee_type as "course" | "user",
+        await actions.revokeGrant(studyGuideId, {
+          grantee_type: grant.grantee_type,
           grantee_id: grant.grantee_id,
-          permission: grant.permission as "view" | "share" | "delete",
+          permission: grant.permission,
         });
       } catch (error: unknown) {
         setGrants(snapshot);
         toast.error(error);
       }
     },
-    [grants, studyGuideId],
+    [studyGuideId, actions],
   );
 
   const courseGrants = grants.filter(
@@ -317,6 +362,10 @@ function formatCourseLabel(
   const match = enrollments.find(
     (enrollment) => enrollment.course.id === courseId,
   );
-  if (!match) return "Course";
+  // TODO(ASK-212-followup): the API should return course
+  // department/number alongside each grant so we can label grants on
+  // courses the viewer isn't enrolled in. For now we fall back to the
+  // grantee_id (UUID) so duplicate "Course" chips remain distinguishable.
+  if (!match) return `Course ${courseId.slice(0, 8)}`;
   return `${match.course.department} ${match.course.number}`;
 }

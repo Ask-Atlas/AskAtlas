@@ -58,6 +58,7 @@ jest.mock("./grants-manager", () => ({
 
 import type { StudyGuideDetailResponse } from "@/lib/api/types";
 
+import type { GrantsManagerActions } from "./grants-manager";
 import { StudyGuideForm, type StudyGuideFormHandle } from "./study-guide-form";
 
 function makeStudyGuide(
@@ -443,12 +444,19 @@ describe("StudyGuideForm / visibility (ASK-212)", () => {
 
   it("mounts the grants manager inside the popover in edit mode", async () => {
     const user = userEvent.setup();
+    const stubActions: GrantsManagerActions = {
+      listGrants: jest.fn().mockResolvedValue({ grants: [] }),
+      listEnrollments: jest.fn().mockResolvedValue({ enrollments: [] }),
+      createGrant: jest.fn(),
+      revokeGrant: jest.fn(),
+    };
     render(
       <StudyGuideForm
         mode="edit"
         initial={makeStudyGuide({ visibility: "private" })}
         onSubmit={jest.fn()}
         onCancel={jest.fn()}
+        grantActions={stubActions}
       />,
     );
     await user.click(

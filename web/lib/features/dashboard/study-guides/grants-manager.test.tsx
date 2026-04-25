@@ -9,16 +9,6 @@ import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom";
 
-jest.mock("../../../api/actions/study-guides", () => ({
-  listStudyGuideGrants: jest.fn(),
-  createStudyGuideGrant: jest.fn(),
-  revokeStudyGuideGrant: jest.fn(),
-}));
-
-jest.mock("../../../api/actions/me", () => ({
-  listMyEnrollments: jest.fn(),
-}));
-
 jest.mock("../../shared/toast/toast", () => ({
   toast: {
     error: jest.fn(),
@@ -28,29 +18,34 @@ jest.mock("../../shared/toast/toast", () => ({
   },
 }));
 
-import {
-  createStudyGuideGrant,
-  listStudyGuideGrants,
-  revokeStudyGuideGrant,
-} from "../../../api/actions/study-guides";
-import { listMyEnrollments } from "../../../api/actions/me";
 import { toast } from "../../shared/toast/toast";
+import type { StudyGuideGrantResponse } from "@/lib/api/types";
 
-import { GrantsManager } from "./grants-manager";
+import {
+  GrantsManager,
+  type GrantsManagerActions,
+} from "./grants-manager";
 
-const mockList = listStudyGuideGrants as jest.MockedFunction<
-  typeof listStudyGuideGrants
+const mockList = jest.fn() as jest.MockedFunction<
+  GrantsManagerActions["listGrants"]
 >;
-const mockCreate = createStudyGuideGrant as jest.MockedFunction<
-  typeof createStudyGuideGrant
+const mockCreate = jest.fn() as jest.MockedFunction<
+  GrantsManagerActions["createGrant"]
 >;
-const mockRevoke = revokeStudyGuideGrant as jest.MockedFunction<
-  typeof revokeStudyGuideGrant
+const mockRevoke = jest.fn() as jest.MockedFunction<
+  GrantsManagerActions["revokeGrant"]
 >;
-const mockEnrollments = listMyEnrollments as jest.MockedFunction<
-  typeof listMyEnrollments
+const mockEnrollments = jest.fn() as jest.MockedFunction<
+  GrantsManagerActions["listEnrollments"]
 >;
 const mockToastError = toast.error as jest.MockedFunction<typeof toast.error>;
+
+const actions: GrantsManagerActions = {
+  listGrants: (id) => mockList(id),
+  listEnrollments: () => mockEnrollments(),
+  createGrant: (id, body) => mockCreate(id, body),
+  revokeGrant: (id, body) => mockRevoke(id, body),
+};
 
 const STUDY_GUIDE_ID = "sg_1";
 const COURSE_ID_MATH = "course_math_340";
@@ -97,7 +92,9 @@ function enrollmentFixture() {
   };
 }
 
-function grantFixture(overrides: Partial<Record<string, string>> = {}) {
+function grantFixture(
+  overrides: Partial<StudyGuideGrantResponse> = {},
+): StudyGuideGrantResponse {
   return {
     id: "grant_1",
     study_guide_id: STUDY_GUIDE_ID,
@@ -121,7 +118,7 @@ describe("GrantsManager / initial load", () => {
     mockList.mockResolvedValue({
       grants: [grantFixture({ grantee_id: COURSE_ID_MATH })],
     });
-    render(<GrantsManager studyGuideId={STUDY_GUIDE_ID} />);
+    render(<GrantsManager studyGuideId={STUDY_GUIDE_ID} actions={actions} />);
     expect(
       await screen.findByTestId(`grant-chip-${COURSE_ID_MATH}`),
     ).toBeInTheDocument();
@@ -130,7 +127,7 @@ describe("GrantsManager / initial load", () => {
 
   it("surfaces a toast when the initial fetch fails", async () => {
     mockList.mockRejectedValue(new Error("boom"));
-    render(<GrantsManager studyGuideId={STUDY_GUIDE_ID} />);
+    render(<GrantsManager studyGuideId={STUDY_GUIDE_ID} actions={actions} />);
     await waitFor(() => expect(mockToastError).toHaveBeenCalled());
   });
 });
@@ -138,16 +135,16 @@ describe("GrantsManager / initial load", () => {
 describe("GrantsManager / add course grant", () => {
   it("inserts the chip optimistically before the network resolves", async () => {
     jest.useFakeTimers();
-    let resolveCreate: ((value: unknown) => void) | undefined;
+    let resolveCreate!: (value: StudyGuideGrantResponse) => void;
     mockCreate.mockImplementation(
       () =>
-        new Promise((resolve) => {
-          resolveCreate = resolve as (value: unknown) => void;
-        }) as never,
+        new Promise<StudyGuideGrantResponse>((resolve) => {
+          resolveCreate = resolve;
+        }),
     );
 
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    render(<GrantsManager studyGuideId={STUDY_GUIDE_ID} />);
+    render(<GrantsManager studyGuideId={STUDY_GUIDE_ID} actions={actions} />);
     // Wait for the initial load to settle so the search input is live.
     await waitFor(() => expect(mockList).toHaveBeenCalled());
 
@@ -183,7 +180,7 @@ describe("GrantsManager / add course grant", () => {
     jest.useFakeTimers();
     mockCreate.mockRejectedValue(new Error("nope"));
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    render(<GrantsManager studyGuideId={STUDY_GUIDE_ID} />);
+    render(<GrantsManager studyGuideId={STUDY_GUIDE_ID} actions={actions} />);
     await waitFor(() => expect(mockList).toHaveBeenCalled());
 
     await user.type(
@@ -224,7 +221,7 @@ describe("GrantsManager / remove grant", () => {
     );
 
     const user = userEvent.setup();
-    render(<GrantsManager studyGuideId={STUDY_GUIDE_ID} />);
+    render(<GrantsManager studyGuideId={STUDY_GUIDE_ID} actions={actions} />);
     const chip = await screen.findByTestId(`grant-chip-${COURSE_ID_MATH}`);
     await user.click(within(chip).getByRole("button", { name: /remove/i }));
     expect(
@@ -243,7 +240,7 @@ describe("GrantsManager / remove grant", () => {
     mockRevoke.mockRejectedValue(new Error("nope"));
 
     const user = userEvent.setup();
-    render(<GrantsManager studyGuideId={STUDY_GUIDE_ID} />);
+    render(<GrantsManager studyGuideId={STUDY_GUIDE_ID} actions={actions} />);
     const chip = await screen.findByTestId(`grant-chip-${COURSE_ID_MATH}`);
     await user.click(within(chip).getByRole("button", { name: /remove/i }));
     // Chip comes back once the DELETE rejects.
@@ -258,7 +255,7 @@ describe("GrantsManager / people search", () => {
   it("shows the coming-soon placeholder when the query starts with @", async () => {
     jest.useFakeTimers();
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    render(<GrantsManager studyGuideId={STUDY_GUIDE_ID} />);
+    render(<GrantsManager studyGuideId={STUDY_GUIDE_ID} actions={actions} />);
     await waitFor(() => expect(mockList).toHaveBeenCalled());
     await user.type(
       screen.getByRole("textbox", { name: /search courses or people/i }),

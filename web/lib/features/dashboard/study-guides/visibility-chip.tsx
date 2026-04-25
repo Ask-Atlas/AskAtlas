@@ -89,7 +89,7 @@ export function VisibilityChip({
           title={display.tooltip}
           className={cn(
             "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring",
-            "inline-flex h-7 items-center gap-1.5 rounded-full border border-dashed px-3 text-xs",
+            "inline-flex h-7 min-w-24 items-center justify-center gap-1.5 rounded-full border border-dashed px-3 text-xs",
             "transition-colors focus-visible:outline-none focus-visible:ring-2",
             "disabled:cursor-not-allowed disabled:opacity-60",
           )}

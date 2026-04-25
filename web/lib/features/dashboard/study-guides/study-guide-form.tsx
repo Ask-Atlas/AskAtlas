@@ -26,7 +26,10 @@ import {
 import { Input } from "@/components/ui/input";
 
 import { ContentEditor } from "./content-editor";
-import { GrantsManager } from "./grants-manager";
+import {
+  GrantsManager,
+  type GrantsManagerActions,
+} from "./grants-manager";
 import { VisibilityChip } from "./visibility-chip";
 import type {
   CreateStudyGuideRequest,
@@ -73,13 +76,19 @@ interface StudyGuideFormProps {
     body: CreateStudyGuideRequest | UpdateStudyGuideRequest,
   ) => Promise<void>;
   onCancel: () => void;
+  /**
+   * Server-action bag for the GrantsManager (edit mode only). Pages
+   * inject the real actions; tests/Storybook inject mocks. Omitting
+   * this falls back to the same "save first" hint as create mode.
+   */
+  grantActions?: GrantsManagerActions;
 }
 
 export const StudyGuideForm = forwardRef<
   StudyGuideFormHandle,
   StudyGuideFormProps
 >(function StudyGuideForm(
-  { mode, initial, onSubmit, onCancel },
+  { mode, initial, onSubmit, onCancel, grantActions },
   ref: ForwardedRef<StudyGuideFormHandle>,
 ) {
   const form = useForm<FormValues>({
@@ -92,8 +101,7 @@ export const StudyGuideForm = forwardRef<
       title: initial?.title ?? "",
       content: initial?.content ?? "",
       tags: initial?.tags ?? [],
-      visibility:
-        (initial?.visibility as StudyGuideVisibility | undefined) ?? "private",
+      visibility: initial?.visibility ?? "private",
     },
   });
 
@@ -115,11 +123,16 @@ export const StudyGuideForm = forwardRef<
   const { isSubmitting, isValid } = form.formState;
 
   const handleSubmit = async (values: FormValues) => {
+    // Only forward `visibility` when it actually changed (or in create
+    // mode). PATCH-ing it on every save would silently force pre-
+    // backfill rows with a missing/null visibility into "private".
+    const visibilityChanged =
+      mode === "create" || initial?.visibility !== values.visibility;
     await onSubmit({
       title: values.title,
       content: values.content,
       tags: values.tags,
-      visibility: values.visibility,
+      ...(visibilityChanged ? { visibility: values.visibility } : {}),
     });
   };
 
@@ -218,6 +231,7 @@ export const StudyGuideForm = forwardRef<
                         onChange={field.onChange}
                         disabled={isSubmitting}
                         onGrantCountChange={handleGrantCountChange}
+                        grantActions={grantActions}
                       />
                     </VisibilityChip>
                   </FormControl>
@@ -385,13 +399,14 @@ interface VisibilityPopoverBodyProps {
   onChange: (next: StudyGuideVisibility) => void;
   disabled: boolean;
   onGrantCountChange: (count: number) => void;
+  grantActions: GrantsManagerActions | undefined;
 }
 
 /**
  * Popover body rendered inside `VisibilityChip`: a Private/Public
  * segmented control on top, and (edit-mode only) the GrantsManager
- * below. In create mode we show a short hint explaining the guide
- * must be saved before grants can be attached.
+ * below. In create mode -- or when `grantActions` is omitted (e.g.
+ * Storybook) -- we show a short hint instead of the manager.
  */
 function VisibilityPopoverBody({
   mode,
@@ -400,16 +415,37 @@ function VisibilityPopoverBody({
   onChange,
   disabled,
   onGrantCountChange,
+  grantActions,
 }: VisibilityPopoverBodyProps) {
   const options: Array<{ id: StudyGuideVisibility; label: string }> = [
     { id: "private", label: "Private" },
     { id: "public", label: "Public" },
   ];
+  // Arrow keys move focus + selection between the two radios per the
+  // ARIA radiogroup pattern. Tab moves out of the group entirely so
+  // only the selected radio is in the tab order (`tabIndex` below).
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (
+      event.key !== "ArrowLeft" &&
+      event.key !== "ArrowRight" &&
+      event.key !== "ArrowUp" &&
+      event.key !== "ArrowDown"
+    ) {
+      return;
+    }
+    event.preventDefault();
+    const currentIndex = options.findIndex((option) => option.id === value);
+    const direction =
+      event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
+    const next = options[(currentIndex + direction + options.length) % options.length]!;
+    onChange(next.id);
+  };
   return (
     <div className="space-y-3">
       <div
         role="radiogroup"
         aria-label="Visibility"
+        onKeyDown={handleKeyDown}
         className="bg-muted flex rounded-md p-0.5"
       >
         {options.map((option) => {
@@ -420,6 +456,7 @@ function VisibilityPopoverBody({
               type="button"
               role="radio"
               aria-checked={checked}
+              tabIndex={checked ? 0 : -1}
               disabled={disabled}
               onClick={() => onChange(option.id)}
               className={cn(
@@ -435,9 +472,10 @@ function VisibilityPopoverBody({
           );
         })}
       </div>
-      {mode === "edit" && studyGuideId ? (
+      {mode === "edit" && studyGuideId && grantActions ? (
         <GrantsManager
           studyGuideId={studyGuideId}
+          actions={grantActions}
           onGrantCountChange={onGrantCountChange}
         />
       ) : (
