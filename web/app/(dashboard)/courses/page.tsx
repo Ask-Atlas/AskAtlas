@@ -5,14 +5,16 @@ import { Check, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SkeletonGrid } from "@/components/ui/skeleton-grid";
 import { listCourses, listMyEnrollments, listSchools } from "@/lib/api";
 import type {
   ListCoursesQuery,
   ListCoursesResponse,
   SchoolResponse,
 } from "@/lib/api/types";
-import { CourseCard } from "@/lib/features/dashboard/courses/course-card";
+import {
+  CourseCard,
+  CourseCardSkeleton,
+} from "@/lib/features/dashboard/courses/course-card";
 import { CourseSearchBar } from "@/lib/features/dashboard/courses/course-search-bar";
 import { toast } from "@/lib/features/shared/toast/toast";
 
@@ -124,7 +126,11 @@ export default function CoursesPage() {
           }
         />
       ) : isLoading && data === null ? (
-        <SkeletonGrid count={9} className={GRID_CLASSES} />
+        <div className={GRID_CLASSES} aria-busy="true" aria-live="polite">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <CourseCardSkeleton key={i} />
+          ))}
+        </div>
       ) : showEmptyState ? (
         <EmptyState
           title="No courses match"
