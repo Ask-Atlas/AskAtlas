@@ -1,0 +1,29 @@
+meta {
+  name: A I Ping
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/ai/ping
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "prompt": "string"
+  }
+}
+
+docs {
+  # Smoke test for the AI streaming pipeline (ASK-213)
+
+  Internal smoke endpoint that exercises the OpenAI client +
+  SSE plumbing end-to-end. Streams a short response (default
+  "pong") from GPT-4.1-nano as a series of `text/event-stream`
+  events: `delta`, `usage`, `done`. Used by `curl -N` and the
+  backend health checks to verify wiring; not part of any
+  product feature. Kept under `/ai/*` so it shares the routing
+  bypass (no 60s timeout) that real AI endpoints will need.
+}

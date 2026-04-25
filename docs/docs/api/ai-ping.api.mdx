@@ -1,0 +1,76 @@
+---
+id: ai-ping
+title: "Smoke test for the AI streaming pipeline (ASK-213)"
+description: "Internal smoke endpoint that exercises the OpenAI client +"
+sidebar_label: "Smoke test for the AI streaming pipeline (ASK-213)"
+hide_title: true
+hide_table_of_contents: true
+api: eJztV0tv20YQ/iuDvcRqKFlO0x7Uk1K4hZIiNiIHPZgGOOKOxI3I3c3u0LIq6L8Xs6RkxfaxQFAguojUvma+x+xop5yngGycnWk1UdPZtbErlSlNsQzGy4CaqJllChZriI1bE5DV3hnLwBUy0AOF0kSKwBXBlSc7nUFZG7IMr3M7n1+Cr9tmYexKVg7ZDcnqEcw5EDYREGLlAkOg6J2NBGealtjWnNtceWdXuRrAMrgG/ry+Gb4dXQwtWgeYVlIwFMEtoWB64HO6J8vDmHYucpte4wQKTTVjkUHRRlyRPGhnqRjB50gaFlsoyjbUMPxYAFotieR2geWarIaKsOYKyorKdQR2cE/BLLewMcHY1W9gHYPHwBIF2m1ufXC6LRmWhNwGGsEH8gyt1RSgOEdz/lMB0YFhiBWGHrfgWjZ2ldvF1mOMcGYd/DqOwKYh1/KgwzoQ1jCdHRmIsDF1DZZIj3KrMhXoa0uR3zm9VZNdejWBtJpwaClTpbNMlmUIva9Nmag//xKF5p2KZUUNyhNvPamJcosvVPIzPXzqToGF01tYugDXV/MbOEdvJD0vTJ9N5x+Gby5+fiKZwSi3hQ+u8VyAieDSlljDcAibiiy4xjBTogAqtLqmABjX8Uh+bhP97CCQr7dw0EgGm8qUlWxK1rWrSqYctAmiwo6w3G4MV65lWLTBSqjs1mRjh58PYgg2FAWFLtATPCKHzh+NsX+RXXGlJheZavDh+DYej5/CdXVPIRhNKale3D0u3QlHySd95epTykziTEuisauaYOOChleS7atRrgYjtd9nig3XdHRuT4za72Xs4KiUy5vxWL6+jUxgSSaBzjMjuExvku6jb+BMzAVl1dr1IMtt7yI4WxqhLuEHr6HEsiIoXWs5Dg4Wk7WhMRbZhbSWQnChgLPG6N6osERTt4EGI7jEsuoCehWh0Mg4KcDjtnaoc2sivJ9ffeyYOpHyM+u/qOUjd0sXGmQ1UQtjMWx7sN6+hM871NBbSv1n7pkzWo1Bm39IQ4LjsfZFDm0pVQMa5LISeZ4c1c/WrkFj4zO5lk7TyfHGMq0oqH2mIiO38TkY+0w1FIXNF8c0MZo6vpQSam06615/E8OTPToZHorQbRfiMZ7H0+9OlOz9paR55OXiOS+fLbZcuSAQ/iDm+xDzy0uGeewUKNxT6HD5wdD3YCgFyJWTvs67VMA8yhWlDpe07JZoimpyu1NtqNOgN2p/J0NlGwxv09g7wkBh2sr627vT4blQ1yVwOumYTsXs5aA0TYpumqSy/uGPQzF+//dNutBEEp8eu5jLB2x8Tae38QnKxi5dOusAQFxPucYI0+uZypSk1gnnYjQejWWFINFgEp3FFNA8XcQs/Yy0MnLhTmf9fSgi8sZTbSwdW5rBU1nuHuX9o1X+37TKvT4TGL5GY0UeyQO73ii3Co24RsR2l6lKTDS5VbvdAiN9DvV+Lz9/bSmISe4ydY/B4EKUeHu3z1RFqCkk/6xpqybq904mwxs5WqbXrYTwrCLus8OKaVmS55O5z3sdMePR6NKIi7f6/r9JZU0F3Mh/A9yoiVKZ6pruZNn0207VaFdtKmWqC0A+/wLmHvA5
+sidebar_class_name: "post api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Smoke test for the AI streaming pipeline (ASK-213)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/ai/ping"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Internal smoke endpoint that exercises the OpenAI client +
+SSE plumbing end-to-end. Streams a short response (default
+"pong") from GPT-4.1-nano as a series of `text/event-stream`
+events: `delta`, `usage`, `done`. Used by `curl -N` and the
+backend health checks to verify wiring; not part of any
+product feature. Kept under `/ai/*` so it shares the routing
+bypass (no 60s timeout) that real AI endpoints will need.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  parameters={undefined}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./ai-ping.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./ai-ping.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

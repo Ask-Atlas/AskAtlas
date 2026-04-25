@@ -2775,6 +2775,42 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /ai/ping:
+    post:
+      operationId: AIPing
+      summary: Smoke test for the AI streaming pipeline (ASK-213)
+      description: |
+        Internal smoke endpoint that exercises the OpenAI client +
+        SSE plumbing end-to-end. Streams a short response (default
+        "pong") from GPT-4.1-nano as a series of `text/event-stream`
+        events: `delta`, `usage`, `done`. Used by `curl -N` and the
+        backend health checks to verify wiring; not part of any
+        product feature. Kept under `/ai/*` so it shares the routing
+        bypass (no 60s timeout) that real AI endpoints will need.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIPingRequest'
+      responses:
+        '200':
+          description: |
+            SSE event stream. Event types: `delta` (text chunk),
+            `usage` (final token + cache counts), `done` (terminator),
+            `error` (mid-stream failure). Each event's `data:` payload
+            is JSON.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
 components:
   securitySchemes:
@@ -2783,6 +2819,19 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    AIPingRequest:
+      type: object
+      description: |
+        Request body for POST /api/ai/ping (ASK-213 smoke endpoint).
+        `prompt` is optional -- when omitted the handler asks GPT-4.1-
+        nano to reply "pong", which is enough to exercise SSE wiring
+        without burning tokens.
+      properties:
+        prompt:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Override the default smoke prompt (defaults to "Reply with the single word 'pong'.").
     RefsResolveRequest:
       type: object
       description: |

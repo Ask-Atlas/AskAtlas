@@ -1,0 +1,41 @@
+meta {
+  name: Resolve Refs
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/refs/resolve
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "refs": [
+      {
+        "id": "00000000-0000-0000-0000-000000000000",
+        "type": "sg"
+      }
+    ]
+  }
+}
+
+docs {
+  # Batch-resolve inline entity refs (ASK-208)
+
+  Given a list of `(type, id)` pairs, returns a compact summary
+  for each entity the viewer can see. Used by the study-guide
+  article renderer to hydrate `::sg{id}`, `::quiz{id}`,
+  `::file{id}`, and `::course{id}` directives.
+  
+  Response is a map keyed by `"{type}:{id}"`. A `null` value
+  means the entity is deleted, invisible to the viewer, or
+  nonexistent. Refs the viewer can't see return `null` (not
+  403) so a study guide can legitimately reference a file a
+  reader doesn't have access to without raising an error.
+  
+  Server dedupes on `(type, id)` before running the per-type
+  lookups; the request cap of 50 refs is generous for a single
+  article.
+}

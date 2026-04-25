@@ -18,6 +18,7 @@ type Config struct {
 	AppEnv                  string
 	S3Bucket                string
 	Port                    string
+	OpenAIAPIKey            string
 }
 
 // Load reads and validates runtime configuration from environment variables.
@@ -32,6 +33,7 @@ func Load() (Config, error) {
 		AppBaseURL:              strings.TrimSpace(os.Getenv("APP_BASE_URL")),
 		S3Bucket:                strings.TrimSpace(os.Getenv("S3_BUCKET")),
 		Port:                    strings.TrimSpace(os.Getenv("PORT")),
+		OpenAIAPIKey:            strings.TrimSpace(os.Getenv("OPENAI_API_KEY")),
 	}
 
 	if cfg.Port == "" {
@@ -67,6 +69,9 @@ func Load() (Config, error) {
 	}
 	if cfg.S3Bucket == "" {
 		return Config{}, fmt.Errorf("S3_BUCKET environment variable is not set")
+	}
+	if cfg.OpenAIAPIKey == "" {
+		return Config{}, fmt.Errorf("OPENAI_API_KEY environment variable is not set")
 	}
 
 	return cfg, nil

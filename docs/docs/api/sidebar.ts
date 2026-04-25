@@ -352,6 +352,12 @@ const sidebar: SidebarsConfig = {
           label: "Leave a section as the authenticated user",
           className: "api-method delete",
         },
+        {
+          type: "doc",
+          id: "api/ai-ping",
+          label: "Smoke test for the AI streaming pipeline (ASK-213)",
+          className: "api-method post",
+        },
       ],
     },
   ],
