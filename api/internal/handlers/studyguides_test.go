@@ -34,7 +34,7 @@ func studyGuidesTestRouter(t *testing.T, sgh *handlers.StudyGuideHandler) chi.Ro
 	ch := handlers.NewCoursesHandler(mock_handlers.NewMockCourseService(t))
 	qh := handlers.NewQuizzesHandler(mock_handlers.NewMockQuizService(t))
 	ssh := handlers.NewSessionsHandler(mock_handlers.NewMockSessionService(t))
-	composite := handlers.NewCompositeHandler(fh, gh, sh, ch, sgh, nil, qh, ssh, nil, nil, nil, nil)
+	composite := handlers.NewCompositeHandler(fh, gh, sh, ch, sgh, nil, qh, ssh, nil, nil, nil, nil, nil)
 	r := chi.NewRouter()
 	api.HandlerWithOptions(composite, api.ChiServerOptions{BaseRouter: r})
 	return r

@@ -1,0 +1,27 @@
+meta {
+  name: Download File
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/files/{{fileId}}/download
+  body: none
+  auth: inherit
+}
+
+docs {
+  # Get file contents via presigned redirect (ASK-205)
+
+  Returns 302 with a freshly-minted presigned S3 GET URL in the
+  `Location` header. The browser follows the redirect and loads
+  the bytes directly from object storage. Presigned URL TTL is
+  15 minutes; clients with long-lived references (e.g. `<img src>`
+  baked into study-guide markdown) keep pointing at this stable
+  endpoint and get a new signed URL on every request.
+  
+  Grants are respected -- the viewer must own the file or hold
+  a direct `view` grant (or the public sentinel). Files in
+  `pending` / `failed` / soft-deleted states return 404 so
+  callers can't distinguish "not ready" from "forbidden".
+}

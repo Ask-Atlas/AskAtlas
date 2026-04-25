@@ -9,10 +9,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	clerkSDK "github.com/clerk/clerk-sdk-go/v2"
 
+	"github.com/Ask-Atlas/AskAtlas/api/internal/ai"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/api"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/clerk"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/config"
@@ -129,18 +131,28 @@ func main() {
 	refsService := refs.NewService(refsRepo)
 	refsHandler := handlers.NewRefsHandler(refsService)
 
+	aiClient := ai.NewClient(cfg.OpenAIAPIKey, logger)
+	aiHandler := handlers.NewAIHandler(aiClient)
+
 	clerkAuth := middleware.ClerkAuth(userService)
 
-	r.Use(chiMiddleware.Timeout(60 * time.Second))
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	// Default 60s timeout for non-streaming endpoints. AI routes
+	// under /api/ai/* opt out below because chiMiddleware.Timeout
+	// uses http.TimeoutHandler, which buffers the response and
+	// would defeat SSE flush-per-chunk semantics.
+	defaultTimeout := chiMiddleware.Timeout(60 * time.Second)
+
+	r.With(defaultTimeout).Get("/", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("Hello World"))
 	})
 
 	r.Route("/webhooks", func(r chi.Router) {
+		r.Use(defaultTimeout)
 		r.With(clerkSignatureVerifier).Post("/clerk", clerkWebhookHandler.Webhook)
 	})
 
 	r.Route("/jobs", func(r chi.Router) {
+		r.Use(defaultTimeout)
 		r.With(qstashVerifier).Post("/delete-file", jobHandler.DeleteFileJob)
 		r.With(qstashVerifier).Post("/delete-file-failed", jobHandler.DeleteFileFailedJob)
 	})
@@ -171,11 +183,19 @@ func main() {
 		favoritesHandler,
 		dashboardHandler,
 		refsHandler,
+		aiHandler,
 	)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(clerkAuth)
 		r.Use(middleware_oapi.OapiRequestValidatorWithOptions(swagger, &oapiOptions))
+		// Skip the default 60s timeout for AI streaming paths.
+		// chiMiddleware.Timeout uses http.TimeoutHandler, which
+		// buffers the response and would defeat SSE flush-per-chunk.
+		// Cancellation still flows from the request Context all the
+		// way to the Anthropic SDK, so the stream cleanly ends when
+		// the client disconnects.
+		r.Use(skipTimeoutForPrefix(defaultTimeout, "/api/ai/"))
 		api.HandlerWithOptions(compositeHandler, api.ChiServerOptions{
 			BaseRouter:       r,
 			ErrorHandlerFunc: api.OAPIStrictErrorHandler,
@@ -187,5 +207,25 @@ func main() {
 	if err := http.ListenAndServe(addr, r); err != nil {
 		slog.Error("Server failed to start", "error", err)
 		os.Exit(1)
+	}
+}
+
+// skipTimeoutForPrefix returns a middleware that applies `timeout` to
+// every request EXCEPT those whose URL path begins with skipPrefix.
+// Used so AI streaming routes (/api/ai/*) bypass the default
+// http.TimeoutHandler -- which buffers and breaks SSE -- while every
+// other CRUD route keeps the 60s safety net. Uses HasPrefix (not
+// Contains) so a future path that merely contains "/ai/" as a query
+// substring or path segment can't silently inherit the bypass.
+func skipTimeoutForPrefix(timeout func(http.Handler) http.Handler, skipPrefix string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		wrapped := timeout(next)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, skipPrefix) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			wrapped.ServeHTTP(w, r)
+		})
 	}
 }

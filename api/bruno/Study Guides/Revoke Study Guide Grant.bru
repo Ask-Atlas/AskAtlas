@@ -1,0 +1,29 @@
+meta {
+  name: Revoke Study Guide Grant
+  type: http
+  seq: 13
+}
+
+delete {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}/grants
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "grantee_id": "00000000-0000-0000-0000-000000000000",
+    "grantee_type": "user",
+    "permission": "view"
+  }
+}
+
+docs {
+  # Revoke a permission on a study guide (ASK-211)
+
+  Deletes the `study_guide_grants` row matched by
+  `(study_guide_id, grantee_type, grantee_id, permission)`.
+  Only the guide's creator may revoke. Returns 204 on success,
+  404 when no matching grant exists (not idempotent -- mirrors
+  file_grants).
+}

@@ -1,0 +1,18 @@
+meta {
+  name: List Study Guide Grants
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}/grants
+  body: none
+  auth: inherit
+}
+
+docs {
+  # List permission grants on a study guide (ASK-211)
+
+  Returns every `study_guide_grants` row for the guide. Only
+  the guide's creator may list grants; non-creators receive 403.
+}
