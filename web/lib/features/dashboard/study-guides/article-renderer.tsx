@@ -62,7 +62,6 @@ const sanitizeSchema = {
   },
 };
 
-
 /**
  * Renders study-guide markdown as styled HTML. GFM tables + task lists,
  * inline HTML via rehype-raw behind rehype-sanitize's XSS-safe schema,
@@ -128,9 +127,7 @@ const CalloutTag = (props: Record<string, unknown>) => {
       ? (props["data-callout-type"] as string)
       : undefined;
   return (
-    <CalloutBlock type={type}>
-      {props.children as React.ReactNode}
-    </CalloutBlock>
+    <CalloutBlock type={type}>{props.children as React.ReactNode}</CalloutBlock>
   );
 };
 

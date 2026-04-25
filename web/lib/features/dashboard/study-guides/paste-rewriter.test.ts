@@ -20,7 +20,10 @@ describe("rewritePastedUrl", () => {
   });
 
   it("rewrites a quiz URL", () => {
-    const r = rewritePastedUrl(`https://askatlas.app/quizzes/${QUIZ_ID}`, HOSTS);
+    const r = rewritePastedUrl(
+      `https://askatlas.app/quizzes/${QUIZ_ID}`,
+      HOSTS,
+    );
     expect(r?.type).toBe("quiz");
     expect(r?.directive).toBe(`::quiz{id="${QUIZ_ID}"}`);
   });

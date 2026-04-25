@@ -86,11 +86,24 @@ describe("CourseCard / row variant", () => {
 describe("CourseCard / tile variant", () => {
   it("renders department, title, and school name", () => {
     render(<CourseCard course={makeCourse()} variant="tile" />);
+    expect(screen.getByText("CPTS 322")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "CPTS 322" }),
+      screen.getByRole("heading", { name: "Systems Programming" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Systems Programming")).toBeInTheDocument();
     expect(screen.getByText("Washington State University")).toBeInTheDocument();
+  });
+
+  it("renders member and section counts when provided", () => {
+    render(
+      <CourseCard
+        course={makeCourse()}
+        variant="tile"
+        memberCount={248}
+        sectionCount={3}
+      />,
+    );
+    expect(screen.getByText("248")).toBeInTheDocument();
+    expect(screen.getByText(/3 sections/)).toBeInTheDocument();
   });
 
   it("links to /courses/{id} by default", () => {

@@ -81,6 +81,16 @@ export type StudyGuideFileSummary = ApiSchemas["StudyGuideFileSummary"];
 export type RecommendationResponse = ApiSchemas["RecommendationResponse"];
 export type CastVoteRequest = ApiSchemas["CastVoteRequest"];
 export type CastVoteResponse = ApiSchemas["CastVoteResponse"];
+// ASK-211/ASK-212: visibility + grant sharing
+export type StudyGuideVisibility =
+  ApiSchemas["StudyGuideDetailResponse"]["visibility"];
+export type StudyGuideCreateGrantRequest =
+  ApiSchemas["StudyGuideCreateGrantRequest"];
+export type StudyGuideRevokeGrantRequest =
+  ApiSchemas["StudyGuideRevokeGrantRequest"];
+export type StudyGuideGrantResponse = ApiSchemas["StudyGuideGrantResponse"];
+export type ListStudyGuideGrantsResponse =
+  ApiSchemas["ListStudyGuideGrantsResponse"];
 
 // ---------- Quizzes ----------
 export type QuizDetailResponse = ApiSchemas["QuizDetailResponse"];
@@ -106,6 +116,7 @@ export type PracticeAnswerResponse = ApiSchemas["PracticeAnswerResponse"];
 
 // ---------- Me / Dashboard ----------
 export type DashboardResponse = ApiSchemas["DashboardResponse"];
+export type EnrollmentResponse = ApiSchemas["EnrollmentResponse"];
 export type ListMyEnrollmentsResponse = ApiSchemas["ListMyEnrollmentsResponse"];
 export type ListMyEnrollmentsQuery = NonNullable<
   ApiPaths["/me/courses"]["get"]["parameters"]["query"]
