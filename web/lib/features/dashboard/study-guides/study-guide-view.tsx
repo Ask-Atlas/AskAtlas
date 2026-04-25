@@ -153,36 +153,34 @@ export function StudyGuideView({ guide, isAuthor }: StudyGuideViewProps) {
         </div>
       ) : null}
 
-      {guide.files.length > 0 || isAuthor ? (
-        <Section title="Attached files" count={guide.files.length}>
-          {guide.files.length === 0 ? (
-            <SectionEmpty body="No files attached yet." />
-          ) : (
-            <div className="border-border divide-border overflow-hidden divide-y rounded-[10px] border">
-              {guide.files.map((file) => (
-                <FileRow key={file.id} file={file} />
-              ))}
-            </div>
-          )}
-        </Section>
-      ) : null}
+      <Section title="Attached files" count={guide.files.length}>
+        {guide.files.length === 0 ? (
+          <SectionEmpty body="No files attached yet." />
+        ) : (
+          <div className="border-border divide-border overflow-hidden divide-y rounded-[10px] border">
+            {guide.files.map((file) => (
+              <FileRow key={file.id} file={file} />
+            ))}
+          </div>
+        )}
+      </Section>
 
-      {guide.resources.length > 0 || isAuthor ? (
-        <Section title="Resources" count={guide.resources.length}>
-          {guide.resources.length === 0 ? (
-            <SectionEmpty body="No resources linked yet." />
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {guide.resources.map((resource) => (
-                <ResourceRow key={resource.id} resource={resource} />
-              ))}
-            </div>
-          )}
-        </Section>
-      ) : null}
+      <Section title="Resources" count={guide.resources.length}>
+        {guide.resources.length === 0 ? (
+          <SectionEmpty body="No resources linked yet." />
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {guide.resources.map((resource) => (
+              <ResourceRow key={resource.id} resource={resource} />
+            ))}
+          </div>
+        )}
+      </Section>
 
-      {guide.quizzes.length > 0 ? (
-        <Section title="Quizzes" count={guide.quizzes.length}>
+      <Section title="Quizzes" count={guide.quizzes.length}>
+        {guide.quizzes.length === 0 ? (
+          <SectionEmpty body="No quizzes yet." />
+        ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {guide.quizzes.map((quiz) => (
               <div
@@ -207,8 +205,8 @@ export function StudyGuideView({ guide, isAuthor }: StudyGuideViewProps) {
               </div>
             ))}
           </div>
-        </Section>
-      ) : null}
+        )}
+      </Section>
 
       <ConfirmationDialog
         open={confirmDeleteOpen}
