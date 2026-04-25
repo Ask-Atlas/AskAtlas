@@ -57,11 +57,7 @@ describe("SearchInput", () => {
   });
 
   it("honors a custom clearLabel for localization", () => {
-    render(
-      <ControlledHarness initial="algo" withClear clearLabel="Effacer" />,
-    );
-    expect(
-      screen.getByRole("button", { name: "Effacer" }),
-    ).toBeInTheDocument();
+    render(<ControlledHarness initial="algo" withClear clearLabel="Effacer" />);
+    expect(screen.getByRole("button", { name: "Effacer" })).toBeInTheDocument();
   });
 });

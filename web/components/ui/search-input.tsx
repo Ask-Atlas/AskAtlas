@@ -3,8 +3,10 @@ import { Search, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-export interface SearchInputProps
-  extends Omit<React.ComponentProps<"input">, "type"> {
+export interface SearchInputProps extends Omit<
+  React.ComponentProps<"input">,
+  "type"
+> {
   containerClassName?: string;
   onClear?: () => void;
   clearLabel?: string;
@@ -19,8 +21,7 @@ function SearchInput({
   disabled,
   ...props
 }: SearchInputProps) {
-  const hasValue =
-    typeof value === "string" ? value.length > 0 : value != null;
+  const hasValue = typeof value === "string" ? value.length > 0 : value != null;
   const showClear = onClear != null && hasValue && !disabled;
 
   return (
