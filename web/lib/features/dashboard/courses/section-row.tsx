@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { joinSection, leaveSection } from "@/lib/api";
@@ -29,6 +30,7 @@ export function SectionRow({
   initialMembership,
   className,
 }: SectionRowProps) {
+  const router = useRouter();
   const [membership, setMembership] = useState<Membership>(initialMembership);
 
   const sectionLabel = section.section_code
@@ -38,7 +40,12 @@ export function SectionRow({
   const handleJoin = async () => {
     try {
       await joinSection(courseId, section.id);
-      setMembership("member");
+      // Re-fetch the route so the page swaps from the picker view to
+      // the enrolled banner + study-guide grid. router.refresh() is
+      // called inside the button's transition, so the spinner stays
+      // up until the new server payload renders -- no flash of
+      // stale "Join" UI between success and the page swap.
+      router.refresh();
     } catch (err) {
       toast.error(err);
       throw err;
@@ -49,6 +56,7 @@ export function SectionRow({
     try {
       await leaveSection(courseId, section.id);
       setMembership("not-member");
+      router.refresh();
     } catch (err) {
       toast.error(err);
       throw err;

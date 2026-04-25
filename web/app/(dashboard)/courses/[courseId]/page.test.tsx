@@ -33,6 +33,14 @@ const notFoundMock = jest.fn(() => {
 
 jest.mock("next/navigation", () => ({
   notFound: () => notFoundMock(),
+  useRouter: () => ({
+    refresh: jest.fn(),
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
+    forward: jest.fn(),
+    prefetch: jest.fn(),
+  }),
 }));
 
 import {
