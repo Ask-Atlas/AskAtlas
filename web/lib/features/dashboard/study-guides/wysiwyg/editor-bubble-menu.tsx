@@ -115,11 +115,23 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
 
   const handleSubmit = (instruction: string) => {
     if (!aiEdit || !target) return;
-    const docContext = buildDocContext(editor, target, aiEdit.title);
+    // Read live mapped positions from the plugin state -- if the doc
+    // was edited while the popover was open, the AiSelectionRange
+    // plugin has already remapped (from, to) through `tr.mapping`.
+    // Falling back to the captured target keeps the call safe even
+    // if some upstream transaction cleared the plugin state.
+    const live = aiSelectionPluginKey.getState(editor.state);
+    const from = live?.from ?? target.from;
+    const to = live?.to ?? target.to;
+    const text =
+      live && live.from !== target.from
+        ? editor.state.doc.textBetween(from, to, "\n", "\n")
+        : target.text;
+    const docContext = buildDocContext(editor, { from, to }, aiEdit.title);
     void start({
-      selectionText: target.text,
-      selectionStart: target.from,
-      selectionEnd: target.to,
+      selectionText: text,
+      selectionStart: from,
+      selectionEnd: to,
       instruction,
       docContext,
     });
@@ -127,24 +139,31 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
 
   // Mirror stream status into the highlight so the decoration pulses
   // while the model streams and stops once we hit done / error.
+  // Reads live (mapped) positions from the plugin state so the
+  // highlight doesn't snap back to a stale target after doc edits.
   useEffect(() => {
-    if (!askOpen || !target) return;
+    if (!askOpen) return;
+    const live = aiSelectionPluginKey.getState(editor.state);
+    if (!live) return;
     setHighlight({
-      from: target.from,
-      to: target.to,
+      from: live.from,
+      to: live.to,
       status: status === "streaming" ? "streaming" : "idle",
     });
-  }, [askOpen, target, status, setHighlight]);
+  }, [askOpen, status, setHighlight, editor]);
 
-  // Recompute the popover anchor rect on scroll / resize so the
-  // popover stays glued to the highlighted range. Layout effect so
-  // we measure after the DOM commits but before paint.
+  // Recompute the popover anchor rect on scroll, resize, AND every
+  // editor transaction so the popover stays glued to the highlighted
+  // range even after typing into the doc. Layout effect so we measure
+  // after the DOM commits but before paint.
   useLayoutEffect(() => {
     if (!askOpen || !target) return;
     const update = () => {
+      const live = aiSelectionPluginKey.getState(editor.state);
+      const from = live?.from ?? target.from;
+      const to = live?.to ?? target.to;
       try {
-        const rect = posToDOMRect(editor.view, target.from, target.to);
-        setAnchorRect(rect);
+        setAnchorRect(posToDOMRect(editor.view, from, to));
       } catch {
         // Doc was edited out from under us; ignore.
       }
@@ -152,9 +171,11 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
     update();
     window.addEventListener("scroll", update, true);
     window.addEventListener("resize", update);
+    editor.on("transaction", update);
     return () => {
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
+      editor.off("transaction", update);
     };
   }, [askOpen, target, editor]);
 
@@ -242,8 +263,19 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
               closeAsk();
             }}
             onInteractOutside={(e) => {
-              // Only close on click-outside; ignore focus shifts so a
-              // recents-dropdown click doesn't dismiss accidentally.
+              // Radix DropdownMenu portals to <body>, so clicking a
+              // recents item is technically "outside" this popover.
+              // Skip the dismiss when the event target sits inside any
+              // portalled menu/listbox so picking a recent prompt
+              // doesn't slam the popover shut.
+              const target = e.detail.originalEvent.target;
+              if (
+                target instanceof Element &&
+                target.closest('[role="menu"], [role="listbox"]')
+              ) {
+                e.preventDefault();
+                return;
+              }
               if (e.detail.originalEvent.type === "pointerdown") {
                 closeAsk();
               }
