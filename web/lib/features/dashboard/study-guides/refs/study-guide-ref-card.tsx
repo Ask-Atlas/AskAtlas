@@ -60,8 +60,7 @@ export function StudyGuideRefCard({ id, inline }: Props) {
         {courseLabel ? <span>{courseLabel}</span> : null}
         {typeof summary.quiz_count === "number" ? (
           <span>
-            {summary.quiz_count}{" "}
-            {summary.quiz_count === 1 ? "quiz" : "quizzes"}
+            {summary.quiz_count} {summary.quiz_count === 1 ? "quiz" : "quizzes"}
           </span>
         ) : null}
       </div>

@@ -49,13 +49,17 @@ describe("ArticleImage", () => {
   });
 
   it("renders the alt as a figcaption when provided", () => {
-    render(<ArticleImage src="/api/files/abc/download" alt="diagram caption" />);
+    render(
+      <ArticleImage src="/api/files/abc/download" alt="diagram caption" />,
+    );
     const caption = screen.getByText("diagram caption");
     expect(caption.tagName).toBe("FIGCAPTION");
   });
 
   it("omits the figcaption when alt is empty", () => {
-    const { container } = render(<ArticleImage src="/api/files/abc/download" />);
+    const { container } = render(
+      <ArticleImage src="/api/files/abc/download" />,
+    );
     expect(container.querySelector("figcaption")).toBeNull();
   });
 
@@ -86,15 +90,15 @@ describe("ArticleImage", () => {
     const img = container.querySelector("img");
     expect(img).not.toBeNull();
     fireEvent.error(img as HTMLImageElement);
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      /could not be loaded/i,
-    );
+    expect(screen.getByRole("alert")).toHaveTextContent(/could not be loaded/i);
   });
 
   it("uses alt='' for unlabeled images (accessibility hygiene)", () => {
     // alt="" gives the img presentation role, so getByRole("img") skips
     // it; query the DOM directly.
-    const { container } = render(<ArticleImage src="/api/files/abc/download" />);
+    const { container } = render(
+      <ArticleImage src="/api/files/abc/download" />,
+    );
     const img = container.querySelector("img");
     expect(img).toHaveAttribute("alt", "");
   });
