@@ -1,13 +1,5 @@
 "use client";
 
-/**
- * Client child for `/study-guides/[id]/edit` (ASK-195). Wraps the
- * shared `<StudyGuideForm mode="edit">` with the actual server-
- * action wiring: update for save, delete for the destructive
- * action below the form. The visibility popover's `GrantsManager`
- * also needs the share/revoke actions, which we forward as a
- * `grantActions` bag.
- */
 import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";

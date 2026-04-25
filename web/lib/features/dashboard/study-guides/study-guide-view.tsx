@@ -1,13 +1,5 @@
 "use client";
 
-/**
- * Reader surface for a single study guide. Renders the guide header,
- * the article body via `<ArticleRenderer>` (markdown + GFM + embedded
- * images via `/api/files/{id}/download`), and inline lists for
- * quizzes, resources, and attached files. Author-only affordances
- * (Edit, Delete) gate on the `canEdit` prop the page resolves from
- * Clerk.
- */
 import {
   ExternalLink,
   FileText,
@@ -258,11 +250,7 @@ function SectionEmpty({ body }: { body: string }) {
 
 function FileRow({ file }: { file: StudyGuideFileSummary }) {
   const handleOpen = () => {
-    // recordFileView is fire-and-forget so a slow recents update never
-    // blocks the user from reading the file.
-    void recordFileView(file.id).catch(() => {
-      // intentional: telemetry failure must not surface to the user.
-    });
+    void recordFileView(file.id).catch(() => undefined);
     window.open(`/api/files/${file.id}/download`, "_blank", "noopener");
   };
   return (
