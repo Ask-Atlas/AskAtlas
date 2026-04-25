@@ -118,7 +118,7 @@ describe("StudyGuideForm / create mode", () => {
     await typeTag(user, "concurrency");
     await typeTag(user, "threads");
     await typeTag(user, "systems");
-    await user.click(screen.getByRole("button", { name: /create/i }));
+    await user.click(screen.getByRole("button", { name: /save as draft/i }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect(onSubmit).toHaveBeenCalledWith({
       title: "Concurrency notes",
@@ -142,7 +142,9 @@ describe("StudyGuideForm / create mode", () => {
       screen.getByLabelText(/content/i),
       "Body long enough to satisfy the min-length requirement.",
     );
-    expect(screen.getByRole("button", { name: /create/i })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /save as draft/i }),
+    ).toBeDisabled();
     await waitFor(() =>
       expect(
         screen.getByText("Title must be at least 3 characters"),
@@ -161,7 +163,9 @@ describe("StudyGuideForm / create mode", () => {
     );
     await user.type(screen.getByLabelText(/title/i), "Valid title");
     await user.type(screen.getByLabelText(/content/i), "short");
-    expect(screen.getByRole("button", { name: /create/i })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /save as draft/i }),
+    ).toBeDisabled();
     await waitFor(() =>
       expect(
         screen.getByText("Content must be at least 10 characters"),
@@ -381,7 +385,7 @@ describe("StudyGuideForm / visibility (ASK-212)", () => {
       screen.getByRole("button", { name: /visibility: private/i }),
     ).toBeInTheDocument();
     await fillRequiredFields(user);
-    await user.click(screen.getByRole("button", { name: /create/i }));
+    await user.click(screen.getByRole("button", { name: /save as draft/i }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ visibility: "private" }),
@@ -403,7 +407,8 @@ describe("StudyGuideForm / visibility (ASK-212)", () => {
     expect(
       await screen.findByRole("button", { name: /visibility: public/i }),
     ).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /create/i }));
+    // After flipping to public, the submit label switches to "Publish".
+    await user.click(screen.getByRole("button", { name: /^publish$/i }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ visibility: "public" }),

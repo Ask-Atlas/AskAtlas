@@ -109,7 +109,9 @@ describe("NewStudyGuideForm (ASK-191)", () => {
       screen.getByLabelText(/content/i),
       "Stack smashing walkthrough...",
     );
-    await userEvent.click(screen.getByRole("button", { name: /create/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /save as draft/i }),
+    );
     await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
     expect(createMock).toHaveBeenCalledWith(
       COURSE_A,
@@ -141,7 +143,9 @@ describe("NewStudyGuideForm (ASK-191)", () => {
       screen.getByLabelText(/content/i),
       "Stack smashing walkthrough...",
     );
-    await userEvent.click(screen.getByRole("button", { name: /create/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /save as draft/i }),
+    );
     await waitFor(() => expect(toastErrorMock).toHaveBeenCalledWith(apiErr));
     expect(pushMock).not.toHaveBeenCalled();
     expect((screen.getByLabelText(/title/i) as HTMLInputElement).value).toBe(

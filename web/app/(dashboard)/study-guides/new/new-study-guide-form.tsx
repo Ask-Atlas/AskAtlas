@@ -7,7 +7,7 @@
  */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { type ReactNode, useMemo, useRef, useState } from "react";
 import { BookOpen } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -75,19 +75,21 @@ export function NewStudyGuideForm({
 
   if (courses.length === 0) {
     return (
-      <section className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-10">
-        <Header />
-        <EmptyState
-          icon={<BookOpen className="size-8" aria-hidden={true} />}
-          title="Join a course first"
-          body="Study guides are created under a course. Join one to start writing."
-          action={
-            <Button asChild>
-              <Link href="/courses">Browse courses</Link>
-            </Button>
-          }
-          className="border-border bg-muted/30 rounded-[10px] border py-12"
-        />
+      <section className="flex flex-col gap-8 py-2">
+        <PageHeader />
+        <div className="mx-auto w-full max-w-2xl">
+          <EmptyState
+            icon={<BookOpen className="size-8" aria-hidden={true} />}
+            title="Join a course first"
+            body="Study guides live under a course so the right people can find them. Join a section and you&rsquo;ll land back here ready to draft."
+            action={
+              <Button asChild>
+                <Link href="/courses">Browse courses</Link>
+              </Button>
+            }
+            className="border-border bg-muted/30 rounded-[10px] border py-12"
+          />
+        </div>
       </section>
     );
   }
@@ -136,53 +138,75 @@ export function NewStudyGuideForm({
   };
 
   return (
-    <section className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-10">
-      <Header />
+    <section className="flex flex-col gap-8 py-2">
+      <PageHeader>
+        <CoursePicker
+          courses={courses}
+          value={selectedCourseId}
+          onChange={setSelectedCourseId}
+        />
+      </PageHeader>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="course-select" className="text-sm font-medium">
-          Course
-        </Label>
-        <Select
-          value={selectedCourseId ?? undefined}
-          onValueChange={setSelectedCourseId}
-        >
-          <SelectTrigger id="course-select" className="w-full">
-            <SelectValue placeholder="Pick a course" />
-          </SelectTrigger>
-          <SelectContent>
-            {courses.map((course) => (
-              <SelectItem key={course.id} value={course.id}>
-                {course.department} {course.number} — {course.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-muted-foreground text-xs">
-          New guides are scoped to a course. Pick the one this guide belongs to
-          — you can&rsquo;t move it later without recreating.
-        </p>
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        <StudyGuideForm
+          ref={formRef}
+          mode="create"
+          onSubmit={handleSubmit}
+          onCancel={handleCancel}
+        />
       </div>
-
-      <StudyGuideForm
-        ref={formRef}
-        mode="create"
-        onSubmit={handleSubmit}
-        onCancel={handleCancel}
-      />
     </section>
   );
 }
 
-function Header() {
+function PageHeader({ children }: { children?: ReactNode }) {
   return (
-    <header className="space-y-1.5">
-      <h1 className="text-foreground text-[28px] font-semibold leading-tight tracking-[-0.4px]">
-        New study guide
-      </h1>
-      <p className="text-muted-foreground text-sm">
-        Draft notes, an outline, or a cheat sheet for one of your courses.
-      </p>
+    <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+      <div className="space-y-1.5">
+        <h1 className="text-foreground text-[28px] font-semibold leading-tight tracking-[-0.4px]">
+          New study guide
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          Draft notes, an outline, or a cheat sheet for one of your courses.
+        </p>
+      </div>
+      {children}
     </header>
+  );
+}
+
+function CoursePicker({
+  courses,
+  value,
+  onChange,
+}: {
+  courses: { id: string; department: string; number: string; title: string }[];
+  value: string | null;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <div className="flex flex-col items-start gap-1.5 sm:items-end">
+      <Label
+        htmlFor="course-select"
+        className="text-muted-foreground text-xs font-medium uppercase tracking-wide"
+      >
+        Save to
+      </Label>
+      <Select value={value ?? undefined} onValueChange={onChange}>
+        <SelectTrigger
+          id="course-select"
+          className="h-9 w-full min-w-[260px] text-sm"
+        >
+          <SelectValue placeholder="Pick a course" />
+        </SelectTrigger>
+        <SelectContent align="end">
+          {courses.map((course) => (
+            <SelectItem key={course.id} value={course.id}>
+              {course.department} {course.number} — {course.title}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   );
 }

@@ -11,7 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { Badge } from "@/components/ui/badge";
@@ -118,6 +118,10 @@ export const StudyGuideForm = forwardRef<
   );
 
   const { isSubmitting, isValid } = form.formState;
+  const currentVisibility = useWatch({
+    control: form.control,
+    name: "visibility",
+  });
 
   const handleSubmit = async (values: FormValues) => {
     // Only forward `visibility` when it actually changed (or in create
@@ -133,13 +137,22 @@ export const StudyGuideForm = forwardRef<
     });
   };
 
-  const submitLabel = isSubmitting
-    ? mode === "create"
-      ? "Creating…"
-      : "Saving…"
-    : mode === "create"
-      ? "Create"
-      : "Save";
+  // In create mode, surface the visibility intent on the submit
+  // itself: drafting (private) reads "Save as draft", publishing
+  // (public) reads "Publish". Edit mode keeps the simpler "Save"
+  // because the visibility popover sits next to it for tweaks.
+  const submitLabel =
+    mode === "create"
+      ? currentVisibility === "public"
+        ? isSubmitting
+          ? "Publishing…"
+          : "Publish"
+        : isSubmitting
+          ? "Saving draft…"
+          : "Save as draft"
+      : isSubmitting
+        ? "Saving…"
+        : "Save";
 
   return (
     <Form {...form}>
