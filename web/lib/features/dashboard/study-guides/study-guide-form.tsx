@@ -90,10 +90,11 @@ export const StudyGuideForm = forwardRef<
 ) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    // onChange so the Save button can disable/enable reactively as the
-    // user types -- matches "Submit button disabled until required
-    // fields meet min length" (AC3/AC4).
-    mode: "onChange",
+    // onTouched so we don't yell at the user while they're still
+    // typing the first three characters of their title. Validation
+    // kicks in once the field has been blurred, then keeps validating
+    // onChange so the inline error clears live as they fix it.
+    mode: "onTouched",
     defaultValues: {
       title: initial?.title ?? "",
       content: initial?.content ?? "",
