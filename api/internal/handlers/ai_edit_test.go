@@ -220,6 +220,32 @@ func TestAIEdit_BadBody_400(t *testing.T) {
 	}
 }
 
+func TestAIEdit_StreamDisconnectBeforeDone_NoAuditRow(t *testing.T) {
+	t.Parallel()
+
+	// Channel closes WITHOUT ever sending EventDone -- mimics a
+	// client disconnect or upstream cutoff after partial deltas.
+	// We received some text on the wire but no completion signal,
+	// so the audit row would be misleading. Don't persist.
+	creator := uuid.New()
+	reader := &fakeStudyGuideReader{creatorID: creator}
+	svc := &fakeAIEditService{}
+	streamer := &fakeStreamer{events: []ai.Event{
+		{Kind: ai.EventDelta, Delta: "partial..."},
+		// no EventDone, no EventError -- channel just closes
+	}}
+	h := handlers.NewAIEditHandler(reader, svc, streamer)
+
+	req := httptest.NewRequest(http.MethodPost, "/x", strings.NewReader(string(aiEditBody(t, "x", "y")))).
+		WithContext(authctx.WithUserID(context.Background(), creator))
+	rec := httptest.NewRecorder()
+	h.AIEdit(rec, req, openapi_types.UUID(uuid.New()))
+
+	if svc.recordCalls != 0 {
+		t.Errorf("RecordEdit called %d times after disconnect-before-done, want 0", svc.recordCalls)
+	}
+}
+
 func TestAIEdit_StreamError_NoAuditRow(t *testing.T) {
 	t.Parallel()
 

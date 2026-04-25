@@ -143,6 +143,7 @@ func (h *AIEditHandler) AIEdit(w http.ResponseWriter, r *http.Request, studyGuid
 	var replacement strings.Builder
 	var captured ai.Usage
 	var streamFailed bool
+	var streamCompleted bool
 
 	heartbeat := time.NewTicker(ai.HeartbeatInterval)
 	defer heartbeat.Stop()
@@ -172,6 +173,8 @@ streamLoop:
 				}
 			case ai.EventError:
 				streamFailed = true
+			case ai.EventDone:
+				streamCompleted = true
 			}
 			if writeAIEditEvent(session, ev) != nil {
 				break streamLoop
@@ -180,7 +183,11 @@ streamLoop:
 		}
 	}
 
-	if streamFailed || replacement.Len() == 0 {
+	// Persist the audit row only on a fully successful stream. Mid-
+	// stream client disconnects (Context().Done before EventDone) and
+	// upstream errors leave streamCompleted=false; we'd otherwise
+	// record a half-baked replacement that the user never even saw.
+	if !streamCompleted || streamFailed || replacement.Len() == 0 {
 		return
 	}
 
