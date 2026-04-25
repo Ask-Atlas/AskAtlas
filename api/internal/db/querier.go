@@ -68,6 +68,11 @@ type Querier interface {
 	// the upsert in the same logical request so the response reflects the
 	// post-mutation state.
 	ComputeGuideVoteScore(ctx context.Context, studyGuideID pgtype.UUID) (int64, error)
+	// Returns the number of ai_usage rows for the given user + feature
+	// since `since`. The middleware passes UTC midnight as `since` to
+	// enforce a daily quota; future per-hour quotas reuse the same
+	// query with a different bound.
+	CountAIUsageSince(ctx context.Context, arg CountAIUsageSinceParams) (int64, error)
 	// Count of all questions on a quiz. Used by AddQuizQuestion (ASK-115)
 	// to enforce the per-quiz 100-question cap inside the same
 	// transaction as the insert, so two concurrent adds at the boundary
@@ -410,6 +415,23 @@ type Querier interface {
 	// answer row too -- the counter and the underlying answer can
 	// never disagree.
 	IncrementSessionCorrectAnswers(ctx context.Context, id pgtype.UUID) error
+	// Queries for the ai_usage cost ledger (ASK-214).
+	//
+	// Two consumers:
+	//
+	//   * The quota middleware counts today's spend per (user, feature)
+	//     before dispatching to OpenAI; rejecting with 429 on overflow.
+	//   * The cost-log hook in internal/ai/client.go writes one row per
+	//     completed (or cancelled) request so partial usage is still
+	//     attributed to the user who initiated it.
+	//
+	// Index `idx_ai_usage_user_feature_created` is the supporting index
+	// for the COUNT below.
+	// Records one billable AI request. Called from the cost-log hook
+	// after the upstream stream terminates (success, error, OR ctx
+	// cancellation). Returns the inserted row so callers can correlate
+	// via id if needed.
+	InsertAIUsage(ctx context.Context, arg InsertAIUsageParams) (AiUsage, error)
 	InsertFile(ctx context.Context, arg InsertFileParams) (File, error)
 	// Inserts a new file_grants row for POST /api/files/{file_id}/grants
 	// (ASK-122). Plain INSERT -- no ON CONFLICT DO UPDATE because the

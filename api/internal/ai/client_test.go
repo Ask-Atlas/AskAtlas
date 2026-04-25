@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -148,3 +149,88 @@ func TestBuildParams_SystemAndMessageOrder(t *testing.T) {
 		t.Fatalf("Messages[1] is not a user message: %+v", got.Messages[1])
 	}
 }
+
+// recordingRecorder captures every UsageRecord fed to it so tests
+// can assert correct field translation from the cost-log hook.
+type recordingRecorder struct {
+	calls []UsageRecord
+	err   error
+}
+
+func (r *recordingRecorder) RecordUsage(_ context.Context, rec UsageRecord) error {
+	r.calls = append(r.calls, rec)
+	return r.err
+}
+
+func TestClient_RecordUsage_Wired(t *testing.T) {
+	t.Parallel()
+
+	rec := &recordingRecorder{}
+	c := NewClient("fake-key", nil, WithRecorder(rec))
+
+	req := StreamRequest{
+		UserID:  uuid.New(),
+		Feature: FeatureEdit,
+		Model:   ModelDefault,
+		Messages: []Message{
+			{Role: RoleUser, Blocks: []Block{{Text: "hi"}}},
+		},
+	}
+	usage := Usage{InputTokens: 12, OutputTokens: 7, CacheReadTokens: 3}
+	c.recordUsage(req, "req_test_123", usage)
+
+	if len(rec.calls) != 1 {
+		t.Fatalf("RecordUsage call count = %d, want 1", len(rec.calls))
+	}
+	got := rec.calls[0]
+	if got.UserID != req.UserID {
+		t.Errorf("UserID = %v, want %v", got.UserID, req.UserID)
+	}
+	if got.Feature != FeatureEdit {
+		t.Errorf("Feature = %q, want %q", got.Feature, FeatureEdit)
+	}
+	if got.Model != ModelDefault {
+		t.Errorf("Model = %q, want %q", got.Model, ModelDefault)
+	}
+	if got.Usage != usage {
+		t.Errorf("Usage = %+v, want %+v", got.Usage, usage)
+	}
+	if got.RequestID != "req_test_123" {
+		t.Errorf("RequestID = %q, want req_test_123", got.RequestID)
+	}
+}
+
+func TestClient_RecordUsage_NoRecorderIsNoop(t *testing.T) {
+	t.Parallel()
+
+	// No WithRecorder option -- recorder is nil. Should not panic.
+	c := NewClient("fake-key", nil)
+	c.recordUsage(StreamRequest{
+		Feature: FeaturePing,
+		UserID:  uuid.New(),
+	}, "req_xyz", Usage{})
+}
+
+func TestClient_RecordUsage_RecorderError_DoesNotPanic(t *testing.T) {
+	t.Parallel()
+
+	// A failing recorder should not crash the cost-log hook --
+	// dropped row is a log line, never a panic.
+	rec := &recordingRecorder{err: errFakeDB}
+	c := NewClient("fake-key", nil, WithRecorder(rec))
+	c.recordUsage(StreamRequest{
+		Feature: FeaturePing,
+		UserID:  uuid.New(),
+	}, "req_err", Usage{})
+
+	if len(rec.calls) != 1 {
+		t.Errorf("call count = %d, want 1 (recorder still invoked)", len(rec.calls))
+	}
+}
+
+var errFakeDB = errFake("db offline")
+
+type errFake string
+
+func (e errFake) Error() string { return string(e) }
+

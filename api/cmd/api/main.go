@@ -131,7 +131,13 @@ func main() {
 	refsService := refs.NewService(refsRepo)
 	refsHandler := handlers.NewRefsHandler(refsService)
 
-	aiClient := ai.NewClient(cfg.OpenAIAPIKey, logger)
+	// QuotaService is both the per-user daily-cap gate (called by
+	// the AIQuota middleware before each request) and the
+	// UsageRecorder that ai.Client uses to write ai_usage rows from
+	// its cost-log hook -- so partial usage on cancellation still
+	// counts against the user's quota.
+	aiQuotaService := ai.NewQuotaService(queries, ai.QuotasFromEnv())
+	aiClient := ai.NewClient(cfg.OpenAIAPIKey, logger, ai.WithRecorder(aiQuotaService))
 	aiHandler := handlers.NewAIHandler(aiClient)
 
 	clerkAuth := middleware.ClerkAuth(userService)
@@ -196,6 +202,12 @@ func main() {
 		// way to the Anthropic SDK, so the stream cleanly ends when
 		// the client disconnects.
 		r.Use(skipTimeoutForPrefix(defaultTimeout, "/api/ai/"))
+		// AIQuota gates only /api/ai/* paths; non-AI requests pass
+		// through untouched. Must be registered AFTER clerkAuth so
+		// authctx is populated, BEFORE OapiRequestValidatorWithOptions
+		// is OK either way -- the middleware short-circuits for over-
+		// quota before the validator runs.
+		r.Use(middleware.AIQuota(aiQuotaService, "/api/ai/", nil))
 		api.HandlerWithOptions(compositeHandler, api.ChiServerOptions{
 			BaseRouter:       r,
 			ErrorHandlerFunc: api.OAPIStrictErrorHandler,
