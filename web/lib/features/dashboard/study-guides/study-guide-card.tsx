@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { ThumbsUp } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Globe2, Lock, ThumbsUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface StudyGuideListItemResponse {
@@ -12,6 +18,11 @@ export interface StudyGuideListItemResponse {
   is_recommended: boolean;
   tags: string[];
   course_id: string;
+  // ASK-212: every list item carries the canonical visibility flag.
+  // The list response does NOT include a grant count, so we can only
+  // distinguish `private` vs `public` here; the "Shared" indicator
+  // (private + >=1 grant) surfaces on the detail page instead.
+  visibility: "private" | "public";
 }
 
 interface StudyGuideCardProps {
@@ -51,9 +62,12 @@ export function StudyGuideCard({
 function CompactVariant({ guide }: { guide: StudyGuideListItemResponse }) {
   return (
     <div className="space-y-1">
-      <p className="line-clamp-2 text-sm font-medium leading-snug text-foreground">
-        {guide.title}
-      </p>
+      <div className="flex items-start gap-1.5">
+        <p className="line-clamp-2 flex-1 text-sm font-medium leading-snug text-foreground">
+          {guide.title}
+        </p>
+        <VisibilityIndicator visibility={guide.visibility} />
+      </div>
       <p className="text-xs text-muted-foreground">
         by {guide.creator.display_name} ·{" "}
         {guide.quiz_count === 1 ? "1 quiz" : `${guide.quiz_count} quizzes`}
@@ -72,9 +86,12 @@ function ListVariant({
   return (
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-2">
-        <p className="line-clamp-2 text-sm font-bold leading-snug text-foreground">
-          {guide.title}
-        </p>
+        <div className="flex min-w-0 flex-1 items-start gap-1.5">
+          <p className="line-clamp-2 flex-1 text-sm font-bold leading-snug text-foreground">
+            {guide.title}
+          </p>
+          <VisibilityIndicator visibility={guide.visibility} />
+        </div>
         {guide.is_recommended && (
           <Badge
             variant="secondary"
@@ -120,5 +137,32 @@ function ListVariant({
         </div>
       )}
     </div>
+  );
+}
+
+function VisibilityIndicator({
+  visibility,
+}: {
+  visibility: StudyGuideListItemResponse["visibility"];
+}) {
+  const { Icon, label } =
+    visibility === "public"
+      ? { Icon: Globe2, label: "Public" }
+      : { Icon: Lock, label: "Private" };
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            role="img"
+            aria-label={label}
+            className="text-muted-foreground mt-0.5 inline-flex shrink-0"
+          >
+            <Icon className="size-3.5" aria-hidden />
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

@@ -51,13 +51,16 @@ export {
   attachFile,
   attachResource,
   castStudyGuideVote,
+  createStudyGuideGrant,
   deleteStudyGuide,
   detachFile,
   detachResource,
   getStudyGuide,
+  listStudyGuideGrants,
   recommendStudyGuide,
   removeStudyGuideRecommendation,
   removeStudyGuideVote,
+  revokeStudyGuideGrant,
   updateStudyGuide,
 } from "./actions/study-guides";
 

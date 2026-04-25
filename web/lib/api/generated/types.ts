@@ -1189,6 +1189,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/study-guides/{study_guide_id}/grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List permission grants on a study guide (ASK-211)
+         * @description Returns every `study_guide_grants` row for the guide. Only
+         *     the guide's creator may list grants; non-creators receive 403.
+         */
+        get: operations["ListStudyGuideGrants"];
+        put?: never;
+        /**
+         * Grant a permission on a study guide (ASK-211)
+         * @description Creates a new `study_guide_grants` row scoped to
+         *     `(study_guide_id, grantee_type, grantee_id, permission)`.
+         *     Only the guide's creator may create grants. A duplicate
+         *     grant returns 409 Conflict. `grantee_type` is limited to
+         *     `user` or `course` -- study guides cannot grant access to
+         *     other study guides (the table enforces this via a CHECK
+         *     constraint).
+         */
+        post: operations["CreateStudyGuideGrant"];
+        /**
+         * Revoke a permission on a study guide (ASK-211)
+         * @description Deletes the `study_guide_grants` row matched by
+         *     `(study_guide_id, grantee_type, grantee_id, permission)`.
+         *     Only the guide's creator may revoke. Returns 204 on success,
+         *     404 when no matching grant exists (not idempotent -- mirrors
+         *     file_grants).
+         */
+        delete: operations["RevokeStudyGuideGrant"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/courses/{course_id}/study-guides": {
         parameters: {
             query?: never;
@@ -1667,6 +1706,54 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description Request body for POST /api/study-guides/{study_guide_id}/grants
+         *     (ASK-211). Mirrors CreateGrantRequest but constrains
+         *     `grantee_type` to `user`/`course` since study guides cannot
+         *     grant access to other study guides.
+         */
+        StudyGuideCreateGrantRequest: {
+            /** @enum {string} */
+            grantee_type: "user" | "course";
+            /** Format: uuid */
+            grantee_id: string;
+            /** @enum {string} */
+            permission: "view" | "share" | "delete";
+        };
+        /**
+         * @description Request body for DELETE /api/study-guides/{study_guide_id}/grants
+         *     (ASK-211).
+         */
+        StudyGuideRevokeGrantRequest: {
+            /** @enum {string} */
+            grantee_type: "user" | "course";
+            /** Format: uuid */
+            grantee_id: string;
+            /** @enum {string} */
+            permission: "view" | "share" | "delete";
+        };
+        /** @description A study-guide permission grant (ASK-211) */
+        StudyGuideGrantResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            study_guide_id: string;
+            grantee_type: string;
+            /** Format: uuid */
+            grantee_id: string;
+            permission: string;
+            /** Format: uuid */
+            granted_by: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description Collection of grants on a study guide. Sorted by created_at
+         *     DESC so the newest share surfaces first.
+         */
+        ListStudyGuideGrantsResponse: {
+            grants: components["schemas"]["StudyGuideGrantResponse"][];
+        };
         /** @description A school (university or college) */
         SchoolResponse: {
             /** Format: uuid */
@@ -1875,6 +1962,8 @@ export interface components {
             is_recommended: boolean;
             /** Format: int64 */
             quiz_count: number;
+            /** @enum {string} */
+            visibility: "private" | "public";
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -2006,12 +2095,21 @@ export interface components {
          *     (trim + lowercase + dedupe); empty tags after trim are
          *     rejected with 400. `creator_id` is set from the JWT and
          *     ignored if supplied here.
+         *
+         *     `visibility` is optional and defaults to `private`. Private
+         *     guides are visible only to the creator + grantees (direct
+         *     user grant or enrolled-course grant). A course-wide view
+         *     grant is auto-seeded on create so course members keep their
+         *     "visible to everyone in the course" ergonomics without a
+         *     follow-up POST /grants call (ASK-211).
          */
         CreateStudyGuideRequest: {
             title: string;
             description?: string | null;
             content?: string | null;
             tags?: string[];
+            /** @enum {string} */
+            visibility?: "private" | "public";
         };
         /**
          * @description Request body for PATCH /api/study-guides/{study_guide_id}.
@@ -2019,13 +2117,17 @@ export interface components {
          *     value. Tags, when provided, REPLACE all existing tags (no
          *     merge) and are normalized server-side (trim + lowercase +
          *     dedupe). At least one field must be provided -- an empty body
-         *     `{}` is rejected with 400.
+         *     `{}` is rejected with 400. Supplying `visibility` flips the
+         *     guide between private and public (ASK-211); existing grants
+         *     are preserved either way.
          */
         UpdateStudyGuideRequest: {
             title?: string;
             description?: string | null;
             content?: string | null;
             tags?: string[];
+            /** @enum {string} */
+            visibility?: "private" | "public";
         };
         /**
          * @description Full study-guide payload for the detail endpoint. Includes
@@ -2053,6 +2155,13 @@ export interface components {
             quizzes: components["schemas"]["QuizSummary"][];
             resources: components["schemas"]["ResourceSummary"][];
             files: components["schemas"]["StudyGuideFileSummary"][];
+            /**
+             * @description Visibility of the guide (ASK-211). `private` guides are
+             *     visible only to the creator + grantees; `public` guides
+             *     are visible to every authenticated user.
+             * @enum {string}
+             */
+            visibility: "private" | "public";
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -2099,6 +2208,8 @@ export interface components {
              *     about an undefined case).
              */
             deleted_at: string | null;
+            /** @enum {string} */
+            visibility: "private" | "public";
         };
         /**
          * @description Paginated envelope for GET /api/me/study-guides (ASK-131).
@@ -4044,6 +4155,96 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    ListStudyGuideGrants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The unique UUID of the study guide */
+                study_guide_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Grants list */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListStudyGuideGrantsResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    CreateStudyGuideGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The unique UUID of the study guide */
+                study_guide_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudyGuideCreateGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description Grant created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StudyGuideGrantResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    RevokeStudyGuideGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The unique UUID of the study guide */
+                study_guide_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StudyGuideRevokeGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description Grant revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             500: components["responses"]["InternalServerError"];
         };

@@ -2,7 +2,26 @@ import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
 import type { StudyGuideDetailResponse } from "@/lib/api/types";
 
+import type { GrantsManagerActions } from "./grants-manager";
 import { StudyGuideForm } from "./study-guide-form";
+
+// Storybook can't reach the real server actions (Vite would pull in
+// `@clerk/nextjs/server` which is Node-only). Provide a stub bag so
+// the GrantsManager mounts and lands in its "No shares yet" state.
+const stubGrantActions: GrantsManagerActions = {
+  listGrants: async () => ({ grants: [] }),
+  listEnrollments: async () => ({ enrollments: [] }),
+  createGrant: async (studyGuideId, body) => ({
+    id: "preview-grant",
+    study_guide_id: studyGuideId,
+    grantee_type: body.grantee_type,
+    grantee_id: body.grantee_id,
+    permission: body.permission,
+    granted_by: "u_preview_1",
+    created_at: "2026-04-01T00:00:00Z",
+  }),
+  revokeGrant: async () => {},
+};
 
 function makeStudyGuide(
   overrides: Partial<StudyGuideDetailResponse> = {},
@@ -29,8 +48,8 @@ function makeStudyGuide(
     quizzes: [],
     resources: [],
     files: [],
-    created_at: new Date(Date.now() - 7 * 86_400_000).toISOString(),
-    updated_at: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+    created_at: "2026-04-17T00:00:00Z",
+    updated_at: "2026-04-22T00:00:00Z",
     ...overrides,
   } as StudyGuideDetailResponse;
 }
@@ -116,5 +135,40 @@ export const EditEmptyTags: Story = {
     initial: makeStudyGuide({ tags: [] }),
     onSubmit: resolveAfter(500),
     onCancel: () => {},
+  },
+};
+
+export const CreatePublic: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Create mode with the visibility chip pre-flipped to Public. Clicking the chip opens the popover showing the Private/Public segmented control plus a hint that grants require saving the guide first.",
+      },
+    },
+  },
+  args: {
+    mode: "create",
+    initial: makeStudyGuide({ visibility: "public" }),
+    onSubmit: resolveAfter(500),
+    onCancel: () => {},
+  },
+};
+
+export const EditWithGrantsStub: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Edit mode variant for the visibility popover. Click the chip to see the Private/Public toggle plus the GrantsManager surface. Storybook injects stub actions so the manager lands in its 'No shares yet' state -- real grant flows are covered by the Jest/RTL tests.",
+      },
+    },
+  },
+  args: {
+    mode: "edit",
+    initial: makeStudyGuide({ visibility: "private" }),
+    onSubmit: resolveAfter(500),
+    onCancel: () => {},
+    grantActions: stubGrantActions,
   },
 };
