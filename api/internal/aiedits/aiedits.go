@@ -132,8 +132,17 @@ func (s *Service) RecordEdit(ctx context.Context, params RecordEditParams) (Edit
 // belongs to a different user / different guide -- callers can't
 // distinguish "wrong row" from "no such row" by status code.
 func (s *Service) UpdateAcceptance(ctx context.Context, params UpdateAcceptanceParams) (Edit, error) {
-	if params.ID == uuid.Nil || params.StudyGuideID == uuid.Nil || params.UserID == uuid.Nil {
-		return Edit{}, fmt.Errorf("aiedits: UpdateAcceptance requires non-nil IDs")
+	// edit ID = uuid.Nil from a client (e.g. malformed-but-valid path
+	// param) is just "no such row" -- map to ErrNotFound so the
+	// handler returns 404 instead of leaking a 500.
+	if params.ID == uuid.Nil {
+		return Edit{}, ErrNotFound
+	}
+	// StudyGuideID and UserID come from path + auth context; nil
+	// here is a programming error (handler forgot to extract). Keep
+	// the loud failure so it surfaces in dev/staging.
+	if params.StudyGuideID == uuid.Nil || params.UserID == uuid.Nil {
+		return Edit{}, fmt.Errorf("aiedits: UpdateAcceptance requires non-nil StudyGuideID + UserID")
 	}
 	row, err := s.repo.UpdateAcceptance(ctx, params, s.now().UTC())
 	if err != nil {

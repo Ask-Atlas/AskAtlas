@@ -180,12 +180,28 @@ func TestService_UpdateAcceptance_NotFoundPropagates(t *testing.T) {
 	}
 }
 
-func TestService_UpdateAcceptance_NilIDsRejected(t *testing.T) {
+func TestService_UpdateAcceptance_NilEditID_ReturnsNotFound(t *testing.T) {
 	t.Parallel()
 
 	repo := &fakeRepo{}
 	s := NewService(repo)
-	_, err := s.UpdateAcceptance(context.Background(), UpdateAcceptanceParams{})
+	_, err := s.UpdateAcceptance(context.Background(), UpdateAcceptanceParams{
+		StudyGuideID: uuid.New(),
+		UserID:       uuid.New(),
+	})
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("err = %v, want ErrNotFound (uuid.Nil edit id is just a no-match)", err)
+	}
+}
+
+func TestService_UpdateAcceptance_NilStudyGuideOrUser_StillProgrammerError(t *testing.T) {
+	t.Parallel()
+
+	repo := &fakeRepo{}
+	s := NewService(repo)
+	_, err := s.UpdateAcceptance(context.Background(), UpdateAcceptanceParams{
+		ID: uuid.New(),
+	})
 	if err == nil || !strings.Contains(err.Error(), "non-nil") {
 		t.Errorf("err = %v, want contains 'non-nil'", err)
 	}
