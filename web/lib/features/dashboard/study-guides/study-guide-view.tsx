@@ -5,7 +5,7 @@
  * the article body via `<ArticleRenderer>` (markdown + GFM + embedded
  * images via `/api/files/{id}/download`), and inline lists for
  * quizzes, resources, and attached files. Author-only affordances
- * (Edit, Delete) gate on the `isAuthor` prop the page resolves from
+ * (Edit, Delete) gate on the `canEdit` prop the page resolves from
  * Clerk.
  */
 import {
@@ -39,10 +39,10 @@ import { ArticleRenderer } from "./article-renderer";
 
 interface StudyGuideViewProps {
   guide: StudyGuideDetailResponse;
-  isAuthor: boolean;
+  canEdit: boolean;
 }
 
-export function StudyGuideView({ guide, isAuthor }: StudyGuideViewProps) {
+export function StudyGuideView({ guide, canEdit }: StudyGuideViewProps) {
   const router = useRouter();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [isDeleting, startDeleteTransition] = useTransition();
@@ -102,7 +102,7 @@ export function StudyGuideView({ guide, isAuthor }: StudyGuideViewProps) {
             {guide.vote_score}
           </span>
         </p>
-        {isAuthor ? (
+        {canEdit ? (
           <div className="flex flex-wrap gap-2 pt-2">
             <Button asChild variant="outline" size="sm" className="h-8">
               <Link href={`/study-guides/${guide.id}/edit`}>
@@ -131,7 +131,7 @@ export function StudyGuideView({ guide, isAuthor }: StudyGuideViewProps) {
           icon={<FileText className="size-7" aria-hidden={true} />}
           title="This guide is empty"
           body={
-            isAuthor
+            canEdit
               ? "Add some content via the editor."
               : "The author hasn't written anything yet."
           }

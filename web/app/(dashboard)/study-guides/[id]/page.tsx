@@ -7,10 +7,9 @@
  * not-found boundary handles it; everything else bubbles to the
  * dashboard error boundary.
  */
-import { auth } from "@clerk/nextjs/server";
 import { notFound } from "next/navigation";
 
-import { getStudyGuide } from "@/lib/api";
+import { getStudyGuide, listStudyGuideGrants } from "@/lib/api";
 import { ApiError } from "@/lib/api/errors";
 import { StudyGuideView } from "@/lib/features/dashboard/study-guides/study-guide-view";
 
@@ -21,13 +20,23 @@ interface PageProps {
 export default async function StudyGuidePage({ params }: PageProps) {
   const { id } = await params;
 
-  const [guide, session] = await Promise.all([getStudyGuideOr404(id), auth()]);
+  // We can't compare `guide.creator.id` (internal user UUID) to
+  // Clerk's `userId` (e.g. `user_xxx`) directly -- the detail
+  // response doesn't expose a `caller_can_edit` flag. The
+  // pragmatic gate is `listStudyGuideGrants` (ASK-211): only the
+  // owner and share/delete grantees can list grants, plain
+  // viewers get 403. Treating a successful response as
+  // "edit-level access" covers ownership AND grantees in one
+  // call. Wrap in try/catch so any error (403, network) just
+  // hides the action.
+  const [guide, canEdit] = await Promise.all([
+    getStudyGuideOr404(id),
+    listStudyGuideGrants(id)
+      .then(() => true)
+      .catch(() => false),
+  ]);
 
-  const isAuthor = Boolean(
-    session.userId && guide.creator.id === session.userId,
-  );
-
-  return <StudyGuideView guide={guide} isAuthor={isAuthor} />;
+  return <StudyGuideView guide={guide} canEdit={canEdit} />;
 }
 
 async function getStudyGuideOr404(id: string) {
