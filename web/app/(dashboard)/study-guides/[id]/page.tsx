@@ -34,7 +34,14 @@ async function getStudyGuideOr404(id: string) {
   try {
     return await getStudyGuide(id);
   } catch (err) {
-    if (err instanceof ApiError && err.status === 404) {
+    // 400 (malformed UUID in the path) and 404 (no row with that id)
+    // both mean "this URL doesn't reference a real guide" -- route
+    // both to the not-found boundary instead of the error boundary
+    // so a typo in the URL doesn't look like a server crash.
+    if (
+      err instanceof ApiError &&
+      (err.status === 404 || err.status === 400)
+    ) {
       notFound();
     }
     throw err;
