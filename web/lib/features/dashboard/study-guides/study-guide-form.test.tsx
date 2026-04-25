@@ -128,7 +128,7 @@ describe("StudyGuideForm / create mode", () => {
     });
   });
 
-  it("disables Save and shows inline error while title is below 3 chars (AC3)", async () => {
+  it("shows the title min-length error after the field blurs (AC3)", async () => {
     const user = userEvent.setup();
     render(
       <StudyGuideForm
@@ -137,20 +137,23 @@ describe("StudyGuideForm / create mode", () => {
         onCancel={jest.fn()}
       />,
     );
-    await user.type(screen.getByLabelText(/title/i), "Hi");
-    await user.type(
-      screen.getByLabelText(/content/i),
-      "Body long enough to satisfy the min-length requirement.",
-    );
-    expect(screen.getByRole("button", { name: /create/i })).toBeDisabled();
+    const title = screen.getByLabelText(/title/i) as HTMLInputElement;
+    await user.type(title, "Hi");
+    // While focused / before blur, no inline error -- we don't yell
+    // at the user mid-typing.
+    expect(
+      screen.queryByText("Title must be at least 3 characters"),
+    ).not.toBeInTheDocument();
+    act(() => title.blur());
     await waitFor(() =>
       expect(
         screen.getByText("Title must be at least 3 characters"),
       ).toBeInTheDocument(),
     );
+    expect(screen.getByRole("button", { name: /create/i })).toBeDisabled();
   });
 
-  it("disables Save and shows inline error while content is below 10 chars (AC4)", async () => {
+  it("shows the content min-length error after the field blurs (AC4)", async () => {
     const user = userEvent.setup();
     render(
       <StudyGuideForm
@@ -160,13 +163,18 @@ describe("StudyGuideForm / create mode", () => {
       />,
     );
     await user.type(screen.getByLabelText(/title/i), "Valid title");
-    await user.type(screen.getByLabelText(/content/i), "short");
-    expect(screen.getByRole("button", { name: /create/i })).toBeDisabled();
+    const content = screen.getByLabelText(/content/i) as HTMLTextAreaElement;
+    await user.type(content, "short");
+    expect(
+      screen.queryByText("Content must be at least 10 characters"),
+    ).not.toBeInTheDocument();
+    act(() => content.blur());
     await waitFor(() =>
       expect(
         screen.getByText("Content must be at least 10 characters"),
       ).toBeInTheDocument(),
     );
+    expect(screen.getByRole("button", { name: /create/i })).toBeDisabled();
   });
 
   it("fires onCancel when Cancel is clicked", async () => {
@@ -399,7 +407,6 @@ describe("StudyGuideForm / visibility (ASK-212)", () => {
       screen.getByRole("button", { name: /visibility: private/i }),
     );
     await user.click(await screen.findByRole("radio", { name: /public/i }));
-    // Chip label should reflect the new selection immediately.
     expect(
       await screen.findByRole("button", { name: /visibility: public/i }),
     ).toBeInTheDocument();

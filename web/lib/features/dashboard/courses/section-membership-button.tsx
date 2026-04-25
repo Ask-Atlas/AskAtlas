@@ -91,12 +91,16 @@ export function SectionMembershipButton({
   }
 
   const handleJoin = () => {
+    // Don't optimistically swap to "member" -- access to the course
+    // material depends on the server confirming enrollment, so the
+    // caller drives a router.refresh inside this transition and the
+    // button stays in `isPending` (spinner) until the new server
+    // payload renders. Errors bubble to the caller's toast.
     startTransition(async () => {
-      setOptimisticMembership("member");
       try {
         await onJoin();
       } catch {
-        // useOptimistic reverts on settle; caller surfaces toast.
+        // caller surfaces toast.
       }
     });
   };
@@ -106,9 +110,14 @@ export function SectionMembershipButton({
       type="button"
       disabled={isPending}
       onClick={handleJoin}
+      aria-label={isPending ? "Joining section" : undefined}
       className={cn("min-w-[5.5rem]", className)}
     >
-      Join
+      {isPending ? (
+        <Loader2 className="size-4 animate-spin" aria-hidden={true} />
+      ) : (
+        "Join"
+      )}
     </Button>
   );
 }
