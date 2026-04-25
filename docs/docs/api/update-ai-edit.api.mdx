@@ -1,0 +1,73 @@
+---
+id: update-ai-edit
+title: "Record accept/reject for a streamed AI edit (ASK-215)"
+description: "Called by the frontend after the user resolves the diff"
+sidebar_label: "Record accept/reject for a streamed AI edit (ASK-215)"
+hide_title: true
+hide_table_of_contents: true
+api: eJztWE1vGzcQ/SvEnBJ0JTlBchHQg2wkqFqgDewEOViCPVqOtIy55IYcWlEF/feC5MpaWRs3h6ABivjiXXI4X+/NLEdbsA05ZGXNVMIYPjQSmSbTN1IxFCDJl041cRvGcIFakxSLjeCKxNJZw2SkwCWTS0vBkxOOvNX35NOKVMvlzNh7cho3Q3FF7MUtliU1TPJW/HJ4uUG+FdakUxikYuHsejgzU0l1Y5kMi8FAaPQs1k4xibUyvhDeChS18qVW5Z0o0YgFzUxpnaOSs7PvJu8vflNmJXCFygxnBgpo0GFNTM7D+HoLBmuCMXgOcnOzCkrSjZJQgIphN8gVFODoc1COJIzZBSrAlxXVCOMt8KbJp50yKyhgaV2NDGMIQUnY7YoHAyQVf0/N83yYPJ9buYknHusqE0gct7BptCoT1qNPPiK6PTVlF5+oPIX+MlsRCys3YmldTqoYYaNGKWuDlDU/2iq5G6EaxUj9aNsGvBvOzNs9X0rUOrJD+X+ljtgzJ4F2iO0a9rSBeQGNiyRmRT6Fud85BLWwVhOak6g+VsRV14H92bQymYro/lC8Re1J/CocfUqkGkZMgRVrelQybZpgt4sSjnxjjc9uvTw7i/+OHchnZYfw8N0g+8tQ1BjrtBZdZidoCuGIgzOHek6IzgwZ2VhleCimptRBtmgsg9bCOrVSBvXIUaOxpDpWJdMXjmXIFc3M8gCyEY4GjowkJyrl2bqNWCuubGCBwlMsQSaxJC6rU3xTkfTUo2cXyhRhAZ40pecbz+j4aIVMlN87fOMbzBYe/IYCaitJJ61N4Bu2d2R8PBT46L10hLlBnZJNyW8o05NAvuVIN9QT+d1p8AcZZZhW5I6FYj56RY5T1Gepm7S+/ZzGvp2jxPZbP8p1r8iT9WyC1riIdRjbXUc6ovVUmmPdDVjV1Kekg/i36ej2g9wJJrGiL+26bQWv+qr/HKVo2/f3K/srRiPRSfU3SUHO2dRWUx8SmVHBkaiRyyp9Ew+mWmlpa1SJ+MdUL62kr7CMkYPv5wZ5jyvq3ZPEqLTvCwmlVNEl1O+OfHikIzfZQ9NILj74c7A+76DTNG9imA+4vOjpygYDV9bFFP4E5kcB8+oUmD8ti6UN5icqPwiV131tbGqYnEEtPLl7cjkvPxH6EQglB7myMg8XZZVGHa5gDI+u6cc3kr4re7pORUDziBScjlqwURDHDk9lcIo3ae+c0JGbhGjoet7dvoog51C7Qg+BV8wNtBNP+rInISjah7f7T+3vH9+nj2wkz+Vh4nnzBetG0/G1v/2IK7O0ydI+Uf5uwhq9mLybQgExsEywF8Oz4VnEr7Ge63wJaue1Syqtk+1YMMr3/zT+YKQeYU1yPyaIZ5OrPwYvX7x+/pjB20Ml/J9G6BbBeP0fNRqViSlMLNm2nLuGLueggPHJhR4VFGkqTtv78XheQGU9Rw3b7QI9fXB6t4vLnwO5yLl5AffoVL61XW9BKh+fJYyXcVh7AoFnl219PRdfC6JdRLOJPEEd4hsUcEeb0x8J4nT/H1rfp2g33xVQEUpyKQF59yIbGryPOg6nT9pvdDqfmCTuPCk77zSVRIRYnu3PDXXqoeBwHacrXGdXbYo8VX1a24JGswqpb0JWGv/+AW12fCo=
+sidebar_class_name: "patch api-method"
+info_path: docs/api/askatlas-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Record accept/reject for a streamed AI edit (ASK-215)"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"patch"}
+  path={"/study-guides/{study_guide_id}/ai/edits/{edit_id}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Called by the frontend after the user resolves the diff
+overlay. Sets `accepted` + `accepted_at` on the audit row.
+Idempotent -- last write wins, so a misclick can be
+corrected by PATCHing again.
+
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./update-ai-edit.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./update-ai-edit.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./update-ai-edit.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      
