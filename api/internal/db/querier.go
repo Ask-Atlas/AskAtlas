@@ -350,6 +350,11 @@ type Querier interface {
 	// Privacy floor: no email, no clerk_id. Creator exposes only
 	// id/first_name/last_name.
 	GetStudyGuideDetail(ctx context.Context, arg GetStudyGuideDetailParams) (GetStudyGuideDetailRow, error)
+	// Look up by (edit_id, study_guide_id) -- the path scoping prevents
+	// a caller from updating an edit row attached to a different guide
+	// they happen to know the id of. Caller still applies user-id
+	// ownership in the service layer.
+	GetStudyGuideEdit(ctx context.Context, arg GetStudyGuideEditParams) (StudyGuideEdit, error)
 	// =============================================================================
 	// Files section: aggregate stats + recent files.
 	// =============================================================================
@@ -539,6 +544,20 @@ type Querier interface {
 	// the FK violation is unreachable in normal flow; the FK still acts
 	// as a backstop if a course is hard-deleted between preflight + insert.
 	InsertStudyGuide(ctx context.Context, arg InsertStudyGuideParams) (InsertStudyGuideRow, error)
+	// Queries for the AI edit audit table (ASK-215).
+	//
+	// Two consumers:
+	//
+	//   * The /api/study-guides/{id}/ai/edit handler INSERTs one row
+	//     after streaming the replacement to the client. Includes the
+	//     full input + output text so future eval / replay is possible.
+	//   * The /api/study-guides/{id}/ai/edits/{edit_id} PATCH handler
+	//     SETs accepted + accepted_at when the user resolves the diff.
+	// Persisted after a successful Stream completes. selection_start /
+	// selection_end are character offsets in the rendered article body
+	// (TipTap coordinate space, same one the selection toolbar uses).
+	// instruction is the user's free-form rewrite directive.
+	InsertStudyGuideEdit(ctx context.Context, arg InsertStudyGuideEditParams) (StudyGuideEdit, error)
 	// ============================================================================
 	// Study-guide grants (ASK-211). Parallel to file_grants. The study_guide_grants
 	// table lives in migration 20260424192951 (ASK-207 phase 1); these queries
@@ -1143,6 +1162,11 @@ type Querier interface {
 	// but also means a no-op PATCH still bumps updated_at -- the service's
 	// empty-body 400 check prevents that case from reaching SQL).
 	UpdateStudyGuide(ctx context.Context, arg UpdateStudyGuideParams) error
+	// Records the user's accept/reject decision. Idempotent: re-PATCH
+	// with the same value is a no-op. Once-only is NOT enforced -- the
+	// frontend can correct a misclick within the editor session by
+	// PATCH-ing again. Last write wins.
+	UpdateStudyGuideEditAcceptance(ctx context.Context, arg UpdateStudyGuideEditAcceptanceParams) (StudyGuideEdit, error)
 	UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
 	// Per-(user, file) most-recent-view timestamp for POST /api/files/{file_id}/view
 	// (ASK-134). Powers the recents sidebar (ASK-145). The PK is

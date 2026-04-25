@@ -358,6 +358,18 @@ const sidebar: SidebarsConfig = {
           label: "Smoke test for the AI streaming pipeline (ASK-213)",
           className: "api-method post",
         },
+        {
+          type: "doc",
+          id: "api/ai-edit",
+          label: "Stream an AI rewrite of a selected span (ASK-215)",
+          className: "api-method post",
+        },
+        {
+          type: "doc",
+          id: "api/update-ai-edit",
+          label: "Record accept/reject for a streamed AI edit (ASK-215)",
+          className: "api-method patch",
+        },
       ],
     },
   ],

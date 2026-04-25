@@ -1,0 +1,1 @@
+{"parameters":[{"name":"study_guide_id","in":"path","required":true,"schema":{"type":"string","format":"uuid"}},{"name":"edit_id","in":"path","required":true,"schema":{"type":"string","format":"uuid"}}]}

@@ -22,32 +22,72 @@ type QuotaGate interface {
 	CheckAndReserve(ctx context.Context, userID uuid.UUID, feature ai.Feature) error
 }
 
-// FeatureForPath maps a URL path to a Feature for quota attribution.
-// Returns ai.FeaturePing as the safety fallback so we always charge
-// _something_ if the path mapping drifts behind a new endpoint.
+// FeatureForPath maps a (method, path) pair to a Feature when the
+// route initiates an AI request that should be quota-gated and
+// timeout-exempt for SSE. Returns (_, false) for non-AI routes -- the
+// AIQuota middleware passes them through unchanged.
 //
-// Update this map every time a new /api/ai/* route ships. The list
-// is intentionally explicit (not regex/glob) so the bill column on
+// Splitting AI detection out of the middleware lets a single mapper
+// power both the quota gate AND the timeout-skipper in main.go, so
+// the two can never disagree about whether a route is "AI".
+//
+// Only POST routes that hit the model count as AI. PATCH/GET on the
+// audit/usage tables don't burn tokens; they pass through.
+//
+// Update this mapper every time a new AI endpoint ships. The list is
+// intentionally explicit (not regex/glob) so the bill column on
 // every endpoint is visible in one place at code-review time.
-type FeatureForPath func(path string) ai.Feature
+type FeatureForPath func(method, path string) (ai.Feature, bool)
 
-// DefaultFeatureForPath is the production mapping. Falls back to
-// FeaturePing for any unrecognized /api/ai/* path -- the wrong
-// bucket, but never zero, which keeps the ledger honest while we
-// notice the missing entry.
-func DefaultFeatureForPath(path string) ai.Feature {
-	switch {
-	case strings.HasPrefix(path, "/api/ai/ping"):
-		return ai.FeaturePing
-	// Future endpoints register here:
-	//   case strings.HasPrefix(path, "/api/ai/edit"):           return ai.FeatureEdit
-	//   case strings.HasPrefix(path, "/api/ai/grounded-edit"):  return ai.FeatureGroundedEdit
-	//   case strings.HasPrefix(path, "/api/ai/qa"):             return ai.FeatureQA
-	//   case strings.HasPrefix(path, "/api/ai/quiz"):           return ai.FeatureQuiz
-	//   case strings.HasPrefix(path, "/api/ai/refs/suggest"):   return ai.FeatureRefSuggest
-	default:
-		return ai.FeaturePing
+// DefaultFeatureForPath is the production mapping. Add new endpoints
+// here as they ship.
+func DefaultFeatureForPath(method, path string) (ai.Feature, bool) {
+	if method != http.MethodPost {
+		return "", false
 	}
+	switch {
+	case path == "/api/ai/ping":
+		return ai.FeaturePing, true
+	case isStudyGuideAIPath(path, "edit"):
+		return ai.FeatureEdit, true
+	// Future endpoints register here:
+	//   case isStudyGuideAIPath(path, "grounded-edit"): return ai.FeatureGroundedEdit, true
+	//   case isStudyGuideAIPath(path, "qa"):            return ai.FeatureQA, true
+	//   case isStudyGuideAIPath(path, "quiz"):          return ai.FeatureQuiz, true
+	//   case isStudyGuideAIPath(path, "refs/suggest"):  return ai.FeatureRefSuggest, true
+	default:
+		return "", false
+	}
+}
+
+// isStudyGuideAIPath matches /api/study-guides/<id>/ai/<suffix> with
+// exactly one path segment for <id>. We don't fully validate the
+// UUID -- the OpenAPI validator already rejects malformed IDs before
+// middleware runs. Just need enough specificity to avoid hits on a
+// hypothetical /api/study-guides/<id>/ai-history kind of route.
+func isStudyGuideAIPath(path, suffix string) bool {
+	const prefix = "/api/study-guides/"
+	if !strings.HasPrefix(path, prefix) {
+		return false
+	}
+	rest := path[len(prefix):]
+	want := "/ai/" + suffix
+	if !strings.HasSuffix(rest, want) {
+		return false
+	}
+	id := rest[:len(rest)-len(want)]
+	return id != "" && !strings.ContainsRune(id, '/')
+}
+
+// IsAIRoute is the public form of the mapper's bool. The timeout-
+// skipper in main.go calls this to align bypass decisions with the
+// quota gate -- a route is AI for both or for neither.
+func IsAIRoute(mapper FeatureForPath, method, path string) bool {
+	if mapper == nil {
+		mapper = DefaultFeatureForPath
+	}
+	_, ok := mapper(method, path)
+	return ok
 }
 
 // AIQuota returns a middleware that gates AI requests against a
@@ -60,17 +100,16 @@ func DefaultFeatureForPath(path string) ai.Feature {
 // ai.Client.recordUsage), so partial usage on cancellation is still
 // attributed.
 //
-// scope is the URL prefix (e.g. "/api/ai/") that this middleware
-// gates. Requests outside the prefix pass through untouched, which
-// lets the same handler chain serve both AI and non-AI routes
-// without per-route wiring.
-func AIQuota(gate QuotaGate, scope string, mapper FeatureForPath) func(http.Handler) http.Handler {
+// Non-AI routes (per the mapper) pass through untouched. Mount once
+// at the /api group; the mapper decides which subset to gate.
+func AIQuota(gate QuotaGate, mapper FeatureForPath) func(http.Handler) http.Handler {
 	if mapper == nil {
 		mapper = DefaultFeatureForPath
 	}
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if !strings.HasPrefix(r.URL.Path, scope) {
+			feature, isAI := mapper(r.Method, r.URL.Path)
+			if !isAI {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -81,7 +120,6 @@ func AIQuota(gate QuotaGate, scope string, mapper FeatureForPath) func(http.Hand
 				return
 			}
 
-			feature := mapper(r.URL.Path)
 			err := gate.CheckAndReserve(r.Context(), userID, feature)
 			if err == nil {
 				next.ServeHTTP(w, r)

@@ -39,25 +39,49 @@ func (h *nextHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func TestAIQuota_PassesThroughOutsideScope(t *testing.T) {
+func TestAIQuota_PassesThroughNonAIRoute(t *testing.T) {
 	t.Parallel()
 
 	gate := &fakeGate{}
 	next := &nextHandler{}
-	mw := middleware.AIQuota(gate, "/api/ai/", nil)
+	mw := middleware.AIQuota(gate, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/files", nil)
 	rec := httptest.NewRecorder()
 	mw(next).ServeHTTP(rec, req)
 
 	if !next.called {
-		t.Fatal("next handler was not invoked for out-of-scope request")
+		t.Fatal("next handler was not invoked for non-AI request")
 	}
 	if gate.calls != 0 {
-		t.Errorf("gate called %d times for out-of-scope request, want 0", gate.calls)
+		t.Errorf("gate called %d times for non-AI request, want 0", gate.calls)
 	}
 	if rec.Code != http.StatusOK {
 		t.Errorf("status = %d, want 200", rec.Code)
+	}
+}
+
+func TestAIQuota_PassesThroughPATCHOnAIPath(t *testing.T) {
+	t.Parallel()
+
+	// PATCH on /api/study-guides/<id>/ai/edits/<edit_id> updates the
+	// audit row -- doesn't hit the model. Should NOT count against
+	// quota.
+	gate := &fakeGate{}
+	next := &nextHandler{}
+	mw := middleware.AIQuota(gate, nil)
+
+	req := httptest.NewRequest(http.MethodPatch,
+		"/api/study-guides/11111111-2222-3333-4444-555555555555/ai/edits/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+		nil).WithContext(authctx.WithUserID(context.Background(), uuid.New()))
+	rec := httptest.NewRecorder()
+	mw(next).ServeHTTP(rec, req)
+
+	if !next.called {
+		t.Fatal("next was not invoked for PATCH on AI path (should pass through)")
+	}
+	if gate.calls != 0 {
+		t.Errorf("gate called %d times for PATCH, want 0", gate.calls)
 	}
 }
 
@@ -66,7 +90,7 @@ func TestAIQuota_NoAuthContext(t *testing.T) {
 
 	gate := &fakeGate{}
 	next := &nextHandler{}
-	mw := middleware.AIQuota(gate, "/api/ai/", nil)
+	mw := middleware.AIQuota(gate, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/ai/ping", nil)
 	rec := httptest.NewRecorder()
@@ -83,13 +107,13 @@ func TestAIQuota_NoAuthContext(t *testing.T) {
 	}
 }
 
-func TestAIQuota_UnderQuota(t *testing.T) {
+func TestAIQuota_UnderQuota_Ping(t *testing.T) {
 	t.Parallel()
 
 	user := uuid.New()
 	gate := &fakeGate{err: nil}
 	next := &nextHandler{}
-	mw := middleware.AIQuota(gate, "/api/ai/", nil)
+	mw := middleware.AIQuota(gate, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/ai/ping", nil).
 		WithContext(authctx.WithUserID(context.Background(), user))
@@ -110,6 +134,28 @@ func TestAIQuota_UnderQuota(t *testing.T) {
 	}
 }
 
+func TestAIQuota_UnderQuota_StudyGuideEdit(t *testing.T) {
+	t.Parallel()
+
+	user := uuid.New()
+	gate := &fakeGate{err: nil}
+	next := &nextHandler{}
+	mw := middleware.AIQuota(gate, nil)
+
+	req := httptest.NewRequest(http.MethodPost,
+		"/api/study-guides/11111111-2222-3333-4444-555555555555/ai/edit",
+		nil).WithContext(authctx.WithUserID(context.Background(), user))
+	rec := httptest.NewRecorder()
+	mw(next).ServeHTTP(rec, req)
+
+	if !next.called {
+		t.Fatal("next was not invoked for under-quota edit request")
+	}
+	if gate.lastFt != ai.FeatureEdit {
+		t.Errorf("gate feature = %q, want %q", gate.lastFt, ai.FeatureEdit)
+	}
+}
+
 func TestAIQuota_OverQuota_429Envelope(t *testing.T) {
 	t.Parallel()
 
@@ -122,10 +168,11 @@ func TestAIQuota_OverQuota_429Envelope(t *testing.T) {
 		ResetAt: resetAt,
 	}}
 	next := &nextHandler{}
-	mw := middleware.AIQuota(gate, "/api/ai/", func(string) ai.Feature { return ai.FeatureEdit })
+	mw := middleware.AIQuota(gate, nil)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/ai/edit", nil).
-		WithContext(authctx.WithUserID(context.Background(), user))
+	req := httptest.NewRequest(http.MethodPost,
+		"/api/study-guides/11111111-2222-3333-4444-555555555555/ai/edit",
+		nil).WithContext(authctx.WithUserID(context.Background(), user))
 	rec := httptest.NewRecorder()
 	mw(next).ServeHTTP(rec, req)
 
@@ -174,7 +221,7 @@ func TestAIQuota_GenericError_500(t *testing.T) {
 	user := uuid.New()
 	gate := &fakeGate{err: errors.New("postgres: connection refused")}
 	next := &nextHandler{}
-	mw := middleware.AIQuota(gate, "/api/ai/", nil)
+	mw := middleware.AIQuota(gate, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/api/ai/ping", nil).
 		WithContext(authctx.WithUserID(context.Background(), user))
@@ -186,5 +233,31 @@ func TestAIQuota_GenericError_500(t *testing.T) {
 	}
 	if rec.Code != http.StatusInternalServerError {
 		t.Errorf("status = %d, want 500", rec.Code)
+	}
+}
+
+func TestIsAIRoute(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		method string
+		path   string
+		want   bool
+	}{
+		{http.MethodPost, "/api/ai/ping", true},
+		{http.MethodPost, "/api/study-guides/xxx-id/ai/edit", true},
+		{http.MethodGet, "/api/ai/ping", false},
+		{http.MethodPatch, "/api/study-guides/x/ai/edits/y", false},
+		{http.MethodPost, "/api/files", false},
+		{http.MethodPost, "/api/study-guides/x/y/ai/edit", false},
+		{http.MethodPost, "/api/study-guides//ai/edit", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.method+"_"+tc.path, func(t *testing.T) {
+			got := middleware.IsAIRoute(nil, tc.method, tc.path)
+			if got != tc.want {
+				t.Errorf("IsAIRoute(%q, %q) = %v, want %v", tc.method, tc.path, got, tc.want)
+			}
+		})
 	}
 }

@@ -9,12 +9,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"time"
 
 	clerkSDK "github.com/clerk/clerk-sdk-go/v2"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/ai"
+	"github.com/Ask-Atlas/AskAtlas/api/internal/aiedits"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/api"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/clerk"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/config"
@@ -140,6 +140,10 @@ func main() {
 	aiClient := ai.NewClient(cfg.OpenAIAPIKey, logger, ai.WithRecorder(aiQuotaService))
 	aiHandler := handlers.NewAIHandler(aiClient)
 
+	aiEditsRepo := aiedits.NewSQLCRepository(queries)
+	aiEditsService := aiedits.NewService(aiEditsRepo)
+	aiEditHandler := handlers.NewAIEditHandler(studyGuidesService, aiEditsService, aiClient)
+
 	clerkAuth := middleware.ClerkAuth(userService)
 
 	// Default 60s timeout for non-streaming endpoints. AI routes
@@ -190,24 +194,20 @@ func main() {
 		dashboardHandler,
 		refsHandler,
 		aiHandler,
+		aiEditHandler,
 	)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(clerkAuth)
 		r.Use(middleware_oapi.OapiRequestValidatorWithOptions(swagger, &oapiOptions))
-		// Skip the default 60s timeout for AI streaming paths.
-		// chiMiddleware.Timeout uses http.TimeoutHandler, which
-		// buffers the response and would defeat SSE flush-per-chunk.
-		// Cancellation still flows from the request Context all the
-		// way to the Anthropic SDK, so the stream cleanly ends when
-		// the client disconnects.
-		r.Use(skipTimeoutForPrefix(defaultTimeout, "/api/ai/"))
-		// AIQuota gates only /api/ai/* paths; non-AI requests pass
-		// through untouched. Must be registered AFTER clerkAuth so
-		// authctx is populated, BEFORE OapiRequestValidatorWithOptions
-		// is OK either way -- the middleware short-circuits for over-
-		// quota before the validator runs.
-		r.Use(middleware.AIQuota(aiQuotaService, "/api/ai/", nil))
+		// Both middlewares consult the same FeatureForPath mapper so
+		// they can never disagree about whether a request is "AI".
+		// chiMiddleware.Timeout wraps the response writer in an
+		// http.TimeoutHandler that buffers the body -- which breaks
+		// SSE flush-per-chunk -- so AI routes opt out; the AI
+		// client's request-context cancel is the real shutdown path.
+		r.Use(skipTimeoutForAIRoutes(defaultTimeout, nil))
+		r.Use(middleware.AIQuota(aiQuotaService, nil))
 		api.HandlerWithOptions(compositeHandler, api.ChiServerOptions{
 			BaseRouter:       r,
 			ErrorHandlerFunc: api.OAPIStrictErrorHandler,
@@ -222,18 +222,19 @@ func main() {
 	}
 }
 
-// skipTimeoutForPrefix returns a middleware that applies `timeout` to
-// every request EXCEPT those whose URL path begins with skipPrefix.
-// Used so AI streaming routes (/api/ai/*) bypass the default
-// http.TimeoutHandler -- which buffers and breaks SSE -- while every
-// other CRUD route keeps the 60s safety net. Uses HasPrefix (not
-// Contains) so a future path that merely contains "/ai/" as a query
-// substring or path segment can't silently inherit the bypass.
-func skipTimeoutForPrefix(timeout func(http.Handler) http.Handler, skipPrefix string) func(http.Handler) http.Handler {
+// skipTimeoutForAIRoutes returns a middleware that applies `timeout`
+// to every request EXCEPT those that the FeatureForPath mapper
+// classifies as AI. Used so SSE streaming routes bypass the default
+// http.TimeoutHandler -- which buffers and breaks flush-per-chunk --
+// while every other CRUD route keeps the 60s safety net.
+//
+// Sharing the mapper with middleware.AIQuota guarantees the timeout
+// skip and the quota gate agree on which routes are "AI".
+func skipTimeoutForAIRoutes(timeout func(http.Handler) http.Handler, mapper middleware.FeatureForPath) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		wrapped := timeout(next)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if strings.HasPrefix(r.URL.Path, skipPrefix) {
+			if middleware.IsAIRoute(mapper, r.Method, r.URL.Path) {
 				next.ServeHTTP(w, r)
 				return
 			}

@@ -233,4 +233,3 @@ var errFakeDB = errFake("db offline")
 type errFake string
 
 func (e errFake) Error() string { return string(e) }
-

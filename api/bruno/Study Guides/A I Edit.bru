@@ -1,0 +1,42 @@
+meta {
+  name: A I Edit
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}/ai/edit
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "doc_context": {
+      "following": "string",
+      "preceding": "string",
+      "title": "string"
+    },
+    "instruction": "string",
+    "selection_end": 0,
+    "selection_start": 0,
+    "selection_text": "string"
+  }
+}
+
+docs {
+  # Stream an AI rewrite of a selected span (ASK-215)
+
+  User selects text in the study-guide editor, gives an
+  instruction (e.g. "make this clearer", "add an example"),
+  and the model streams a replacement. The full replacement
+  is captured server-side and persisted to the
+  `study_guide_edits` audit table; the user's accept/reject
+  decision is recorded later via PATCH on
+  `/study-guides/{id}/ai/edits/{edit_id}`.
+  
+  Per the ticket Decision: server returns the FULL
+  replacement, NOT a diff syntax. The frontend computes the
+  diff client-side from `original_span` (echoed back) and
+  the streamed `delta` events.
+}
