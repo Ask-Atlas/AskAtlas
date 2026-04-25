@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SkeletonGrid } from "@/components/ui/skeleton-grid";
@@ -150,9 +149,7 @@ export default function CoursesPage() {
                 course={course}
                 variant="tile"
                 rightSlot={
-                  joinedCourseIds.has(course.id) ? (
-                    <Badge variant="secondary">Joined</Badge>
-                  ) : undefined
+                  joinedCourseIds.has(course.id) ? <JoinedPill /> : undefined
                 }
               />
             ))}
@@ -179,5 +176,14 @@ export default function CoursesPage() {
         </>
       )}
     </section>
+  );
+}
+
+function JoinedPill() {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-md bg-orange-100 px-2 py-0.5 text-[11px] font-semibold text-orange-800">
+      <Check className="size-2.5 text-orange-700" aria-hidden={true} />
+      Joined
+    </span>
   );
 }
