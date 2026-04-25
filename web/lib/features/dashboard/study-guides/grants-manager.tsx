@@ -142,7 +142,8 @@ export function GrantsManager({
     return enrollments
       .map((enrollment) => enrollment.course)
       .filter((course) => {
-        if (seen.has(course.id) || grantedCourseIds.has(course.id)) return false;
+        if (seen.has(course.id) || grantedCourseIds.has(course.id))
+          return false;
         const hay =
           `${course.department} ${course.number} ${course.title}`.toLowerCase();
         if (!hay.includes(needle)) return false;
@@ -189,7 +190,10 @@ export function GrantsManager({
 
   const removeGrant = useCallback(
     async (grant: StudyGuideGrantResponse) => {
-      if (!isGranteeType(grant.grantee_type) || !isPermission(grant.permission)) {
+      if (
+        !isGranteeType(grant.grantee_type) ||
+        !isPermission(grant.permission)
+      ) {
         toast.error(new Error("Cannot revoke grant: unrecognized type"));
         return;
       }

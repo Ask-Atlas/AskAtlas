@@ -363,9 +363,7 @@ describe("StudyGuideForm / server error surface (AC5)", () => {
 });
 
 describe("StudyGuideForm / visibility (ASK-212)", () => {
-  async function fillRequiredFields(
-    user: ReturnType<typeof userEvent.setup>,
-  ) {
+  async function fillRequiredFields(user: ReturnType<typeof userEvent.setup>) {
     await user.type(screen.getByLabelText(/title/i), "Visibility demo");
     await user.type(
       screen.getByLabelText(/content/i),

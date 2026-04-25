@@ -26,10 +26,7 @@ import {
 import { Input } from "@/components/ui/input";
 
 import { ContentEditor } from "./content-editor";
-import {
-  GrantsManager,
-  type GrantsManagerActions,
-} from "./grants-manager";
+import { GrantsManager, type GrantsManagerActions } from "./grants-manager";
 import { VisibilityChip } from "./visibility-chip";
 import type {
   CreateStudyGuideRequest,
@@ -437,7 +434,8 @@ function VisibilityPopoverBody({
     const currentIndex = options.findIndex((option) => option.id === value);
     const direction =
       event.key === "ArrowRight" || event.key === "ArrowDown" ? 1 : -1;
-    const next = options[(currentIndex + direction + options.length) % options.length]!;
+    const next =
+      options[(currentIndex + direction + options.length) % options.length]!;
     onChange(next.id);
   };
   return (

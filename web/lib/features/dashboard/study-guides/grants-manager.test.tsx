@@ -21,10 +21,7 @@ jest.mock("../../shared/toast/toast", () => ({
 import { toast } from "../../shared/toast/toast";
 import type { StudyGuideGrantResponse } from "@/lib/api/types";
 
-import {
-  GrantsManager,
-  type GrantsManagerActions,
-} from "./grants-manager";
+import { GrantsManager, type GrantsManagerActions } from "./grants-manager";
 
 const mockList = jest.fn() as jest.MockedFunction<
   GrantsManagerActions["listGrants"]
