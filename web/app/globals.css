@@ -135,3 +135,33 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ASK-216: highlight the text range an AI edit is operating on. The
+   class is applied as a ProseMirror inline Decoration by the
+   AiSelectionRange extension, so it tracks the text on scroll, doc
+   edits, and resize without any JS measurement. */
+.ai-edit-range {
+  background-color: oklch(0.92 0.06 250);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1.5px oklch(0.7 0.18 252 / 0.55);
+  transition: box-shadow 120ms ease;
+}
+
+.dark .ai-edit-range {
+  background-color: oklch(0.4 0.1 252 / 0.45);
+  box-shadow: 0 0 0 1.5px oklch(0.7 0.18 252 / 0.7);
+}
+
+.ai-edit-range--streaming {
+  animation: ai-edit-range-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes ai-edit-range-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1.5px oklch(0.7 0.18 252 / 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 3px oklch(0.7 0.18 252 / 0.85);
+  }
+}

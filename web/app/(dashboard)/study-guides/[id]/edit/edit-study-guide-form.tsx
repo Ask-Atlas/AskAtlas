@@ -111,6 +111,7 @@ export function EditStudyGuideForm({ guide }: EditStudyGuideFormProps) {
         onSubmit={handleSubmit}
         onCancel={handleCancel}
         grantActions={grantActions}
+        aiEdit={{ guideId: guide.id, title: guide.title }}
       />
 
       <div className="border-destructive/30 bg-destructive/5 flex flex-col gap-3 rounded-[10px] border p-5">

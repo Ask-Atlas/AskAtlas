@@ -1531,10 +1531,159 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/ping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Smoke test for the AI streaming pipeline (ASK-213)
+         * @description Internal smoke endpoint that exercises the OpenAI client +
+         *     SSE plumbing end-to-end. Streams a short response (default
+         *     "pong") from GPT-4.1-nano as a series of `text/event-stream`
+         *     events: `delta`, `usage`, `done`. Used by `curl -N` and the
+         *     backend health checks to verify wiring; not part of any
+         *     product feature. Kept under `/ai/*` so it shares the routing
+         *     bypass (no 60s timeout) that real AI endpoints will need.
+         */
+        post: operations["AIPing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/study-guides/{study_guide_id}/ai/edit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stream an AI rewrite of a selected span (ASK-215)
+         * @description User selects text in the study-guide editor, gives an
+         *     instruction (e.g. "make this clearer", "add an example"),
+         *     and the model streams a replacement. The full replacement
+         *     is captured server-side and persisted to the
+         *     `study_guide_edits` audit table; the user's accept/reject
+         *     decision is recorded later via PATCH on
+         *     `/study-guides/{id}/ai/edits/{edit_id}`.
+         *
+         *     Per the ticket Decision: server returns the FULL
+         *     replacement, NOT a diff syntax. The frontend computes the
+         *     diff client-side from `original_span` (echoed back) and
+         *     the streamed `delta` events.
+         */
+        post: operations["AIEdit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/study-guides/{study_guide_id}/ai/edits/{edit_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Record accept/reject for a streamed AI edit (ASK-215)
+         * @description Called by the frontend after the user resolves the diff
+         *     overlay. Sets `accepted` + `accepted_at` on the audit row.
+         *     Idempotent -- last write wins, so a misclick can be
+         *     corrected by PATCHing again.
+         */
+        patch: operations["UpdateAIEdit"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @description Request body for POST /api/study-guides/{id}/ai/edit (ASK-215).
+         *     `selection_text` is the exact text the user highlighted in
+         *     the editor; `selection_start` / `selection_end` are character
+         *     offsets in the rendered article body (TipTap coordinate
+         *     space). `doc_context` provides bounded preceding/following
+         *     context so the model can grade tone + formatting; both sides
+         *     are capped at ~1500 chars by the frontend.
+         */
+        AIEditRequest: {
+            selection_text: string;
+            selection_start: number;
+            selection_end: number;
+            /** @description Free-form rewrite directive, e.g. "make this clearer and add an example". */
+            instruction: string;
+            doc_context?: components["schemas"]["AIEditDocContext"];
+        };
+        /**
+         * @description Optional bounded surrounding context. Each side capped client
+         *     side; server doesn't enforce -- the OpenAPI validator's
+         *     maxLength is the hard ceiling.
+         */
+        AIEditDocContext: {
+            title?: string;
+            preceding?: string;
+            following?: string;
+        };
+        /**
+         * @description Request body for PATCH /api/study-guides/{id}/ai/edits/{edit_id}.
+         *     Frontend calls this after the user resolves the diff overlay.
+         */
+        UpdateAIEditRequest: {
+            /** @description Whether the user accepted the AI edit. False = rejected. */
+            accepted: boolean;
+        };
+        /**
+         * @description One row from study_guide_edits, returned by the PATCH
+         *     endpoint. Includes the full original/replacement text so the
+         *     frontend can re-render history without a separate fetch.
+         */
+        AIEditAuditRow: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            study_guide_id: string;
+            instruction: string;
+            selection_start: number;
+            selection_end: number;
+            original_span: string;
+            replacement: string;
+            model: string;
+            input_tokens: number;
+            output_tokens: number;
+            accepted?: boolean | null;
+            /** Format: date-time */
+            accepted_at?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /**
+         * @description Request body for POST /api/ai/ping (ASK-213 smoke endpoint).
+         *     `prompt` is optional -- when omitted the handler asks GPT-4.1-
+         *     nano to reply "pong", which is enough to exercise SSE wiring
+         *     without burning tokens.
+         */
+        AIPingRequest: {
+            /** @description Override the default smoke prompt (defaults to "Reply with the single word 'pong'."). */
+            prompt?: string;
+        };
         /**
          * @description Request body for POST /api/refs/resolve (ASK-208). `refs` is a
          *     list of `(type, id)` pairs to hydrate. Bounded at 50 entries --
@@ -4607,6 +4756,104 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    AIPing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AIPingRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description SSE event stream. Event types: `delta` (text chunk),
+             *     `usage` (final token + cache counts), `done` (terminator),
+             *     `error` (mid-stream failure). Each event's `data:` payload
+             *     is JSON.
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    AIEdit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                study_guide_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AIEditRequest"];
+            };
+        };
+        responses: {
+            /**
+             * @description SSE event stream. Event types: `delta` (text chunk),
+             *     `usage` (final token counts), `done` (terminator),
+             *     `error` (mid-stream failure).
+             */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    UpdateAIEdit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                study_guide_id: string;
+                edit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateAIEditRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated audit row. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AIEditAuditRow"];
+                };
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];

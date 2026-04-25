@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input";
 import { ContentEditor } from "./content-editor";
 import { GrantsManager, type GrantsManagerActions } from "./grants-manager";
 import { VisibilityChip } from "./visibility-chip";
+import type { AiEditTarget } from "./wysiwyg/editor";
 import type {
   CreateStudyGuideRequest,
   StudyGuideDetailResponse,
@@ -79,13 +80,19 @@ interface StudyGuideFormProps {
    * this falls back to the same "save first" hint as create mode.
    */
   grantActions?: GrantsManagerActions;
+  /**
+   * Provide to enable the editor's "Ask AI" bubble menu (ASK-216).
+   * Edit-mode pages pass `{ guideId, title }`; create-mode pages
+   * omit it -- the bubble menu still renders formatting buttons.
+   */
+  aiEdit?: AiEditTarget;
 }
 
 export const StudyGuideForm = forwardRef<
   StudyGuideFormHandle,
   StudyGuideFormProps
 >(function StudyGuideForm(
-  { mode, initial, onSubmit, onCancel, grantActions },
+  { mode, initial, onSubmit, onCancel, grantActions, aiEdit },
   ref: ForwardedRef<StudyGuideFormHandle>,
 ) {
   const form = useForm<FormValues>({
@@ -180,6 +187,7 @@ export const StudyGuideForm = forwardRef<
                   placeholder="Write your study guide — paste a study-guide / quiz / file / course URL to embed a live card."
                   disabled={isSubmitting}
                   className="[&_.ProseMirror]:!border-0 [&_.ProseMirror]:!px-0 [&_.ProseMirror]:!min-h-[20rem]"
+                  aiEdit={aiEdit}
                 />
               </FormControl>
               <FormMessage className="px-0" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { TiptapEditor } from "./wysiwyg/editor";
+import { TiptapEditor, type AiEditTarget } from "./wysiwyg/editor";
 
 interface ContentEditorProps {
   value: string;
@@ -12,6 +12,7 @@ interface ContentEditorProps {
   disabled?: boolean;
   className?: string;
   allowedHosts?: string[];
+  aiEdit?: AiEditTarget;
 }
 
 function resolveAllowedHosts(explicit?: string[]): string[] {
@@ -33,6 +34,7 @@ export function ContentEditor({
   disabled,
   className,
   allowedHosts,
+  aiEdit,
 }: ContentEditorProps) {
   return (
     <div className={className} onBlur={onBlur}>
@@ -42,6 +44,7 @@ export function ContentEditor({
         disabled={disabled}
         placeholder={placeholder}
         allowedHosts={resolveAllowedHosts(allowedHosts)}
+        aiEdit={aiEdit}
       />
     </div>
   );

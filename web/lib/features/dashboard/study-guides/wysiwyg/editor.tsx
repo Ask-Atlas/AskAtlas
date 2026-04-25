@@ -14,8 +14,22 @@ import { EntityRefProvider } from "../refs/entity-ref-context";
 import { extractRefs } from "../refs/extract-refs";
 import { rewritePastedUrl } from "../paste-rewriter";
 
+import { AiSelectionRange } from "./ai-selection-range";
+import { EditorBubbleMenu } from "./editor-bubble-menu";
 import { EntityRefNode, type EntityType } from "./entity-ref-node";
 import { preprocessMarkdown } from "./markdown-codec";
+
+/**
+ * Per-guide AI edit target. When provided, the bubble menu shows an
+ * "Ask AI" entry that calls `POST /api/study-guides/{guideId}/ai/edit`
+ * (ASK-215). Omitted in create-mode -- the BubbleMenu still renders
+ * formatting buttons.
+ */
+export interface AiEditTarget {
+  guideId: string;
+  /** Best-effort title for prompt cache + model context. */
+  title?: string;
+}
 
 interface TiptapEditorProps {
   value: string;
@@ -25,6 +39,7 @@ interface TiptapEditorProps {
   className?: string;
   allowedHosts?: string[];
   initialRefs?: Record<string, RefSummary | null>;
+  aiEdit?: AiEditTarget;
 }
 
 function resolveHosts(explicit?: string[]): string[] {
@@ -46,6 +61,7 @@ export function TiptapEditor({
   className,
   allowedHosts,
   initialRefs,
+  aiEdit,
 }: TiptapEditorProps) {
   const hosts = useMemo(() => resolveHosts(allowedHosts), [allowedHosts]);
   const refs = useMemo(() => extractRefs(value), [value]);
@@ -64,6 +80,7 @@ export function TiptapEditor({
         transformCopiedText: false,
       }),
       EntityRefNode,
+      AiSelectionRange,
     ],
     content: preprocessMarkdown(value),
     editorProps: {
@@ -126,6 +143,9 @@ export function TiptapEditor({
   return (
     <EntityRefProvider refs={refs} initial={initialRefs}>
       <EditorContent editor={editor} className={className} />
+      {editor && !disabled ? (
+        <EditorBubbleMenu editor={editor} aiEdit={aiEdit} />
+      ) : null}
     </EntityRefProvider>
   );
 }

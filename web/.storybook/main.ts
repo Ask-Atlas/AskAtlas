@@ -1,4 +1,9 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 import type { StorybookConfig } from "@storybook/nextjs-vite";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
 
 const config: StorybookConfig = {
   stories: [
@@ -21,6 +26,13 @@ const config: StorybookConfig = {
     // Normalize: empty -> root, always trailing slash so Vite's `base`
     // produces correct relative resolution for every chunk.
     config.base = !raw ? "/" : raw.endsWith("/") ? raw : `${raw}/`;
+    // Stub @clerk/nextjs so stories that indirectly mount components
+    // calling useAuth/useUser don't crash without a real provider.
+    config.resolve = config.resolve ?? {};
+    config.resolve.alias = {
+      ...(config.resolve.alias as Record<string, string> | undefined),
+      "@clerk/nextjs": path.resolve(here, "clerk-stub.tsx"),
+    };
     return config;
   },
 };
