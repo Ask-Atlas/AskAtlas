@@ -118,7 +118,7 @@ describe("StudyGuideForm / create mode", () => {
     await typeTag(user, "concurrency");
     await typeTag(user, "threads");
     await typeTag(user, "systems");
-    await user.click(screen.getByRole("button", { name: /save as draft/i }));
+    await user.click(screen.getByRole("button", { name: /create/i }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect(onSubmit).toHaveBeenCalledWith({
       title: "Concurrency notes",
@@ -142,9 +142,7 @@ describe("StudyGuideForm / create mode", () => {
       screen.getByLabelText(/content/i),
       "Body long enough to satisfy the min-length requirement.",
     );
-    expect(
-      screen.getByRole("button", { name: /save as draft/i }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: /create/i })).toBeDisabled();
     await waitFor(() =>
       expect(
         screen.getByText("Title must be at least 3 characters"),
@@ -163,9 +161,7 @@ describe("StudyGuideForm / create mode", () => {
     );
     await user.type(screen.getByLabelText(/title/i), "Valid title");
     await user.type(screen.getByLabelText(/content/i), "short");
-    expect(
-      screen.getByRole("button", { name: /save as draft/i }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: /create/i })).toBeDisabled();
     await waitFor(() =>
       expect(
         screen.getByText("Content must be at least 10 characters"),
@@ -375,33 +371,38 @@ describe("StudyGuideForm / visibility (ASK-212)", () => {
     );
   }
 
-  it("Save as draft submits visibility=private and exposes no visibility chip", async () => {
+  it("defaults to Private in create mode and submits visibility=private", async () => {
     const user = userEvent.setup();
     const onSubmit = jest.fn().mockResolvedValue(undefined);
     render(
       <StudyGuideForm mode="create" onSubmit={onSubmit} onCancel={jest.fn()} />,
     );
-    // Create-mode no longer renders the visibility chip -- the action
-    // buttons are the visibility selector.
     expect(
-      screen.queryByRole("button", { name: /visibility:/i }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: /visibility: private/i }),
+    ).toBeInTheDocument();
     await fillRequiredFields(user);
-    await user.click(screen.getByRole("button", { name: /save as draft/i }));
+    await user.click(screen.getByRole("button", { name: /create/i }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ visibility: "private" }),
     );
   });
 
-  it("Publish submits visibility=public", async () => {
+  it("flips to Public via the popover radio and submits visibility=public", async () => {
     const user = userEvent.setup();
     const onSubmit = jest.fn().mockResolvedValue(undefined);
     render(
       <StudyGuideForm mode="create" onSubmit={onSubmit} onCancel={jest.fn()} />,
     );
     await fillRequiredFields(user);
-    await user.click(screen.getByRole("button", { name: /^publish$/i }));
+    await user.click(
+      screen.getByRole("button", { name: /visibility: private/i }),
+    );
+    await user.click(await screen.findByRole("radio", { name: /public/i }));
+    expect(
+      await screen.findByRole("button", { name: /visibility: public/i }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /create/i }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ visibility: "public" }),
@@ -422,7 +423,8 @@ describe("StudyGuideForm / visibility (ASK-212)", () => {
     ).toBeInTheDocument();
   });
 
-  it("does not mount the grants manager in create mode", () => {
+  it("hides the grants manager in create mode and shows the save-first hint", async () => {
+    const user = userEvent.setup();
     render(
       <StudyGuideForm
         mode="create"
@@ -430,9 +432,12 @@ describe("StudyGuideForm / visibility (ASK-212)", () => {
         onCancel={jest.fn()}
       />,
     );
-    // Create mode replaces the visibility popover with explicit
-    // Save-as-draft / Publish buttons; sharing lives on the edit page
-    // where the guide already has an id.
+    await user.click(
+      screen.getByRole("button", { name: /visibility: private/i }),
+    );
+    expect(
+      await screen.findByText(/save the guide first to share/i),
+    ).toBeInTheDocument();
     expect(screen.queryByTestId("grants-manager-stub")).not.toBeInTheDocument();
   });
 

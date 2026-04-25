@@ -119,27 +119,34 @@ export const StudyGuideForm = forwardRef<
 
   const { isSubmitting, isValid } = form.formState;
 
-  const submitWith = (visibility: "private" | "public" | null) =>
-    form.handleSubmit(async (values) => {
-      // In create mode the action button drives visibility, so we
-      // ignore the form field. In edit mode visibility comes from
-      // the popover chip and we only forward it when it changed.
-      const finalVisibility = visibility ?? values.visibility;
-      const visibilityChanged =
-        mode === "create" || initial?.visibility !== finalVisibility;
-      await onSubmit({
-        title: values.title,
-        content: values.content,
-        tags: values.tags,
-        ...(visibilityChanged ? { visibility: finalVisibility } : {}),
-      });
+  const handleSubmit = async (values: FormValues) => {
+    // Only forward `visibility` when it actually changed (or in create
+    // mode). PATCH-ing it on every save would silently force pre-
+    // backfill rows with a missing/null visibility into "private".
+    const visibilityChanged =
+      mode === "create" || initial?.visibility !== values.visibility;
+    await onSubmit({
+      title: values.title,
+      content: values.content,
+      tags: values.tags,
+      ...(visibilityChanged ? { visibility: values.visibility } : {}),
     });
+  };
 
-  const editSubmitLabel = isSubmitting ? "Saving…" : "Save";
+  const submitLabel = isSubmitting
+    ? mode === "create"
+      ? "Creating…"
+      : "Saving…"
+    : mode === "create"
+      ? "Create"
+      : "Save";
 
   return (
     <Form {...form}>
-      <form onSubmit={submitWith(null)} className="flex flex-col">
+      <form
+        onSubmit={form.handleSubmit(handleSubmit)}
+        className="flex flex-col"
+      >
         <FormField
           control={form.control}
           name="title"
@@ -203,34 +210,32 @@ export const StudyGuideForm = forwardRef<
                 </FormItem>
               )}
             />
-            {mode === "edit" ? (
-              <FormField
-                control={form.control}
-                name="visibility"
-                render={({ field }) => (
-                  <FormItem className="space-y-1">
-                    <FormControl>
-                      <VisibilityChip
-                        visibility={field.value}
-                        grantCount={grantCount}
+            <FormField
+              control={form.control}
+              name="visibility"
+              render={({ field }) => (
+                <FormItem className="space-y-1">
+                  <FormControl>
+                    <VisibilityChip
+                      visibility={field.value}
+                      grantCount={mode === "edit" ? grantCount : 0}
+                      disabled={isSubmitting}
+                    >
+                      <VisibilityPopoverBody
+                        mode={mode}
+                        studyGuideId={initial?.id}
+                        value={field.value}
+                        onChange={field.onChange}
                         disabled={isSubmitting}
-                      >
-                        <VisibilityPopoverBody
-                          mode={mode}
-                          studyGuideId={initial?.id}
-                          value={field.value}
-                          onChange={field.onChange}
-                          disabled={isSubmitting}
-                          onGrantCountChange={handleGrantCountChange}
-                          grantActions={grantActions}
-                        />
-                      </VisibilityChip>
-                    </FormControl>
-                    <FormMessage className="px-0" />
-                  </FormItem>
-                )}
-              />
-            ) : null}
+                        onGrantCountChange={handleGrantCountChange}
+                        grantActions={grantActions}
+                      />
+                    </VisibilityChip>
+                  </FormControl>
+                  <FormMessage className="px-0" />
+                </FormItem>
+              )}
+            />
           </div>
           <div className="flex shrink-0 justify-end gap-2">
             <Button
@@ -241,29 +246,9 @@ export const StudyGuideForm = forwardRef<
             >
               Cancel
             </Button>
-            {mode === "create" ? (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={submitWith("private")}
-                  disabled={!isValid || isSubmitting}
-                >
-                  {isSubmitting ? "Saving draft…" : "Save as draft"}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={submitWith("public")}
-                  disabled={!isValid || isSubmitting}
-                >
-                  {isSubmitting ? "Publishing…" : "Publish"}
-                </Button>
-              </>
-            ) : (
-              <Button type="submit" disabled={!isValid || isSubmitting}>
-                {editSubmitLabel}
-              </Button>
-            )}
+            <Button type="submit" disabled={!isValid || isSubmitting}>
+              {submitLabel}
+            </Button>
           </div>
         </div>
       </form>
