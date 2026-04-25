@@ -5,7 +5,10 @@
 // from Node's built-ins so the SSE-byte plumbing works under test.
 // Response is duck-typed below so we don't need to polyfill it.
 import { ReadableStream as NodeReadableStream } from "node:stream/web";
-import { TextDecoder as NodeTextDecoder, TextEncoder as NodeTextEncoder } from "node:util";
+import {
+  TextDecoder as NodeTextDecoder,
+  TextEncoder as NodeTextEncoder,
+} from "node:util";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 if (typeof (globalThis as any).TextEncoder === "undefined") {

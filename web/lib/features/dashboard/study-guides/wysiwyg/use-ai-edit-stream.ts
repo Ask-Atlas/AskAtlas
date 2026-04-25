@@ -151,20 +151,17 @@ export function useAiEditStream(
 
       let response: Response;
       try {
-        response = await fetch(
-          `${API_BASE}/study-guides/${guideId}/ai/edit`,
-          {
-            method: "POST",
-            credentials: "same-origin",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "text/event-stream",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-            body: JSON.stringify(body),
-            signal: controller.signal,
+        response = await fetch(`${API_BASE}/study-guides/${guideId}/ai/edit`, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "text/event-stream",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-        );
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
       } catch (err) {
         if (generationRef.current !== generation) return;
         if (controller.signal.aborted) {
