@@ -16,6 +16,7 @@ type CompositeHandler struct {
 	*DashboardHandler
 	*RefsHandler
 	*AIHandler
+	*AIEditHandler
 }
 
 // NewCompositeHandler creates a handler that delegates to every
@@ -34,6 +35,7 @@ func NewCompositeHandler(
 	dh *DashboardHandler,
 	refsh *RefsHandler,
 	aih *AIHandler,
+	aieh *AIEditHandler,
 ) *CompositeHandler {
 	return &CompositeHandler{
 		FileHandler:            fh,
@@ -49,5 +51,6 @@ func NewCompositeHandler(
 		DashboardHandler:       dh,
 		RefsHandler:            refsh,
 		AIHandler:              aih,
+		AIEditHandler:          aieh,
 	}
 }

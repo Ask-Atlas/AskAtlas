@@ -2811,6 +2811,100 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}/ai/edit:
+    post:
+      operationId: AIEdit
+      summary: Stream an AI rewrite of a selected span (ASK-215)
+      description: |
+        User selects text in the study-guide editor, gives an
+        instruction (e.g. "make this clearer", "add an example"),
+        and the model streams a replacement. The full replacement
+        is captured server-side and persisted to the
+        `study_guide_edits` audit table; the user's accept/reject
+        decision is recorded later via PATCH on
+        `/study-guides/{id}/ai/edits/{edit_id}`.
+
+        Per the ticket Decision: server returns the FULL
+        replacement, NOT a diff syntax. The frontend computes the
+        diff client-side from `original_span` (echoed back) and
+        the streamed `delta` events.
+      parameters:
+        - name: study_guide_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AIEditRequest'
+      responses:
+        '200':
+          description: |
+            SSE event stream. Event types: `delta` (text chunk),
+            `usage` (final token counts), `done` (terminator),
+            `error` (mid-stream failure).
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /study-guides/{study_guide_id}/ai/edits/{edit_id}:
+    patch:
+      operationId: UpdateAIEdit
+      summary: Record accept/reject for a streamed AI edit (ASK-215)
+      description: |
+        Called by the frontend after the user resolves the diff
+        overlay. Sets `accepted` + `accepted_at` on the audit row.
+        Idempotent -- last write wins, so a misclick can be
+        corrected by PATCHing again.
+      parameters:
+        - name: study_guide_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: edit_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAIEditRequest'
+      responses:
+        '200':
+          description: Updated audit row.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIEditAuditRow'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
 components:
   securitySchemes:
@@ -2819,6 +2913,101 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    AIEditRequest:
+      type: object
+      description: |
+        Request body for POST /api/study-guides/{id}/ai/edit (ASK-215).
+        `selection_text` is the exact text the user highlighted in
+        the editor; `selection_start` / `selection_end` are character
+        offsets in the rendered article body (TipTap coordinate
+        space). `doc_context` provides bounded preceding/following
+        context so the model can grade tone + formatting; both sides
+        are capped at ~1500 chars by the frontend.
+      required: [selection_text, selection_start, selection_end, instruction]
+      properties:
+        selection_text:
+          type: string
+          minLength: 1
+          maxLength: 8000
+        selection_start:
+          type: integer
+          minimum: 0
+        selection_end:
+          type: integer
+          minimum: 0
+        instruction:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Free-form rewrite directive, e.g. "make this clearer and add an example".
+        doc_context:
+          $ref: '#/components/schemas/AIEditDocContext'
+    AIEditDocContext:
+      type: object
+      description: |
+        Optional bounded surrounding context. Each side capped client
+        side; server doesn't enforce -- the OpenAPI validator's
+        maxLength is the hard ceiling.
+      properties:
+        title:
+          type: string
+          maxLength: 500
+        preceding:
+          type: string
+          maxLength: 8000
+        following:
+          type: string
+          maxLength: 8000
+    UpdateAIEditRequest:
+      type: object
+      description: |
+        Request body for PATCH /api/study-guides/{id}/ai/edits/{edit_id}.
+        Frontend calls this after the user resolves the diff overlay.
+      required: [accepted]
+      properties:
+        accepted:
+          type: boolean
+          description: Whether the user accepted the AI edit. False = rejected.
+    AIEditAuditRow:
+      type: object
+      description: |
+        One row from study_guide_edits, returned by the PATCH
+        endpoint. Includes the full original/replacement text so the
+        frontend can re-render history without a separate fetch.
+      required: [id, study_guide_id, instruction, selection_start, selection_end, original_span, replacement, model, input_tokens, output_tokens, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        study_guide_id:
+          type: string
+          format: uuid
+        instruction:
+          type: string
+        selection_start:
+          type: integer
+        selection_end:
+          type: integer
+        original_span:
+          type: string
+        replacement:
+          type: string
+        model:
+          type: string
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        accepted:
+          type: boolean
+          nullable: true
+        accepted_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
     AIPingRequest:
       type: object
       description: |

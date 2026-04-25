@@ -1,0 +1,26 @@
+meta {
+  name: Update A I Edit
+  type: http
+  seq: 12
+}
+
+patch {
+  url: {{baseUrl}}/api/study-guides/{{studyGuideId}}/ai/edits/{{editId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "accepted": false
+  }
+}
+
+docs {
+  # Record accept/reject for a streamed AI edit (ASK-215)
+
+  Called by the frontend after the user resolves the diff
+  overlay. Sets `accepted` + `accepted_at` on the audit row.
+  Idempotent -- last write wins, so a misclick can be
+  corrected by PATCHing again.
+}

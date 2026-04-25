@@ -658,6 +658,23 @@ type StudyGuide struct {
 	Visibility  StudyGuideVisibility `json:"visibility"`
 }
 
+type StudyGuideEdit struct {
+	ID             pgtype.UUID        `json:"id"`
+	StudyGuideID   pgtype.UUID        `json:"study_guide_id"`
+	UserID         pgtype.UUID        `json:"user_id"`
+	Instruction    string             `json:"instruction"`
+	SelectionStart int32              `json:"selection_start"`
+	SelectionEnd   int32              `json:"selection_end"`
+	OriginalSpan   string             `json:"original_span"`
+	Replacement    string             `json:"replacement"`
+	Model          string             `json:"model"`
+	InputTokens    int64              `json:"input_tokens"`
+	OutputTokens   int64              `json:"output_tokens"`
+	Accepted       pgtype.Bool        `json:"accepted"`
+	AcceptedAt     pgtype.Timestamptz `json:"accepted_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
 type StudyGuideFavorite struct {
 	UserID       pgtype.UUID        `json:"user_id"`
 	StudyGuideID pgtype.UUID        `json:"study_guide_id"`
