@@ -21,6 +21,11 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 import {
+  AI_EDIT_PRESETS,
+  isPresetEligible,
+  type AiEditPreset,
+} from "../ai/presets";
+import {
   addRecentPrompt,
   getRecentPrompts,
   RECENT_PROMPTS_LIMIT,
@@ -34,10 +39,21 @@ interface AskAiPopoverProps {
   status: AiEditStreamStatus;
   replacement: string;
   error: AiEditStreamError | null;
-  /** Submit triggers the SSE call. Caller owns selection capture. */
-  onSubmit: (instruction: string) => void;
+  /**
+   * Submit triggers the SSE call. Caller owns selection capture.
+   * `presetId` is supplied when the user clicked a preset chip; the
+   * bubble menu uses it to apply any preset-specific transform to
+   * the model's reply (TL;DR, etc.) before seeding the diff overlay.
+   */
+  onSubmit: (instruction: string, presetId?: string) => void;
   /** Cancels in-flight request and closes the popover. */
   onCancel: () => void;
+  /**
+   * Whether the captured selection spans more than one block. Drives
+   * the disabled state of multi-paragraph-only presets ("Reorganize"
+   * per the ticket spec).
+   */
+  selectionSpansMultipleBlocks?: boolean;
 }
 
 /**
@@ -50,11 +66,11 @@ interface AskAiPopoverProps {
  *   - Esc cancels (caller closes the popover).
  *   - Submit fires `onSubmit(instruction)` and persists the prompt
  *     to localStorage so the recents dropdown reflects it next open.
- *   - While `status === "streaming"`, show a loading affordance and
- *     a live-streamed preview of the replacement so the user sees
- *     the model is working. ASK-217 will replace this preview block
- *     with the diff overlay; this component intentionally does NOT
- *     write the replacement back into the editor.
+ *   - Preset chips above the input fire `onSubmit(instruction, id)`
+ *     with the canned instruction and don't get persisted to recents
+ *     (presets aren't user-authored).
+ *   - Once the stream is done the bubble menu swaps this body for
+ *     the diff overlay (ASK-217); we never write back into the doc.
  */
 export function AskAiPopover({
   status,
@@ -62,6 +78,7 @@ export function AskAiPopover({
   error,
   onSubmit,
   onCancel,
+  selectionSpansMultipleBlocks = false,
 }: AskAiPopoverProps) {
   const [instruction, setInstruction] = useState("");
   // Lazy initializer reads localStorage once on mount. SSR-safe via
@@ -91,6 +108,11 @@ export function AskAiPopover({
     onSubmit(trimmed);
   };
 
+  const handlePreset = (preset: AiEditPreset) => {
+    if (isStreaming) return;
+    onSubmit(preset.instruction, preset.id);
+  };
+
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -101,6 +123,11 @@ export function AskAiPopover({
 
   return (
     <div className="flex w-80 flex-col gap-3" role="group" aria-label="Ask AI">
+      <PresetChipRow
+        disabled={isStreaming}
+        selectionSpansMultipleBlocks={selectionSpansMultipleBlocks}
+        onPick={handlePreset}
+      />
       <form onSubmit={handleSubmit} className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <Input
@@ -167,6 +194,54 @@ export function AskAiPopover({
           {error.message}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+interface PresetChipRowProps {
+  disabled: boolean;
+  selectionSpansMultipleBlocks: boolean;
+  onPick: (preset: AiEditPreset) => void;
+}
+
+function PresetChipRow({
+  disabled,
+  selectionSpansMultipleBlocks,
+  onPick,
+}: PresetChipRowProps) {
+  return (
+    <div
+      className="flex flex-wrap gap-1"
+      role="group"
+      aria-label="Quick edit actions"
+    >
+      {AI_EDIT_PRESETS.map((preset) => {
+        const eligible = isPresetEligible(preset, {
+          selectionSpansMultipleBlocks,
+        });
+        const isDisabled = disabled || !eligible;
+        const tooltip = !eligible
+          ? "Select more than one paragraph to enable"
+          : undefined;
+        return (
+          <button
+            key={preset.id}
+            type="button"
+            onClick={() => onPick(preset)}
+            disabled={isDisabled}
+            title={tooltip}
+            aria-label={preset.label}
+            className={cn(
+              "border-border bg-background text-foreground rounded-full border px-2.5 py-1 text-[11px] font-medium leading-none transition-colors",
+              "hover:bg-accent hover:text-accent-foreground focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
+              "disabled:cursor-not-allowed disabled:opacity-40",
+            )}
+            data-preset-id={preset.id}
+          >
+            {preset.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

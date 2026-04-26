@@ -82,12 +82,12 @@ export const WithAskAI: Story = {
 };
 
 export const PopoverIdle: Story = {
-  name: "Popover · idle",
+  name: "Popover · idle (single-paragraph selection)",
   parameters: {
     docs: {
       description: {
         story:
-          "Standalone view of the AskAiPopover body in its initial state, before the user submits a prompt. The recent-prompts dropdown only renders when there's localStorage history.",
+          "AskAiPopover in its initial state. Single-paragraph selection -- the **Reorganize** chip is disabled per ASK-218 (it only enables on multi-paragraph selections).",
       },
     },
   },
@@ -97,7 +97,37 @@ export const PopoverIdle: Story = {
         status="idle"
         replacement=""
         error={null}
-        onSubmit={() => undefined}
+        onSubmit={(instruction, presetId) =>
+          // eslint-disable-next-line no-console -- storybook demo
+          console.log("submit", { instruction, presetId })
+        }
+        onCancel={() => undefined}
+      />
+    </div>
+  ),
+};
+
+export const PopoverIdleMultiParagraph: Story = {
+  name: "Popover · idle (multi-paragraph selection)",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "Same popover with `selectionSpansMultipleBlocks={true}` -- the **Reorganize** preset is now enabled. Open the browser console to see the (instruction, presetId) tuple each chip submits.",
+      },
+    },
+  },
+  render: () => (
+    <div className="bg-popover w-fit rounded-md border p-3 shadow-md">
+      <AskAiPopover
+        status="idle"
+        replacement=""
+        error={null}
+        selectionSpansMultipleBlocks
+        onSubmit={(instruction, presetId) =>
+          // eslint-disable-next-line no-console -- storybook demo
+          console.log("submit", { instruction, presetId })
+        }
         onCancel={() => undefined}
       />
     </div>
