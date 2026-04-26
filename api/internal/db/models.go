@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	pgvector "github.com/pgvector/pgvector-go"
 )
 
 type AiFeature string
@@ -685,6 +686,18 @@ type StudyGuideFile struct {
 	FileID       pgtype.UUID        `json:"file_id"`
 	StudyGuideID pgtype.UUID        `json:"study_guide_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type StudyGuideFileChunk struct {
+	ID        pgtype.UUID        `json:"id"`
+	FileID    pgtype.UUID        `json:"file_id"`
+	ChunkIdx  int32              `json:"chunk_idx"`
+	Text      string             `json:"text"`
+	Embedding pgvector.Vector    `json:"embedding"`
+	Page      pgtype.Int4        `json:"page"`
+	Heading   pgtype.Text        `json:"heading"`
+	Tokens    int32              `json:"tokens"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type StudyGuideGrant struct {
