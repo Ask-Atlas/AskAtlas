@@ -103,3 +103,69 @@ func (_c *MockQStashPublisher_PublishDeleteFile_Call) RunAndReturn(run func(ctx 
 	_c.Call.Return(run)
 	return _c
 }
+
+// PublishExtractFile provides a mock function for the type MockQStashPublisher
+func (_mock *MockQStashPublisher) PublishExtractFile(ctx context.Context, msg qstashclient.ExtractFileMessage) (string, error) {
+	ret := _mock.Called(ctx, msg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PublishExtractFile")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, qstashclient.ExtractFileMessage) (string, error)); ok {
+		return returnFunc(ctx, msg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, qstashclient.ExtractFileMessage) string); ok {
+		r0 = returnFunc(ctx, msg)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, qstashclient.ExtractFileMessage) error); ok {
+		r1 = returnFunc(ctx, msg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockQStashPublisher_PublishExtractFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PublishExtractFile'
+type MockQStashPublisher_PublishExtractFile_Call struct {
+	*mock.Call
+}
+
+// PublishExtractFile is a helper method to define mock.On call
+//   - ctx context.Context
+//   - msg qstashclient.ExtractFileMessage
+func (_e *MockQStashPublisher_Expecter) PublishExtractFile(ctx interface{}, msg interface{}) *MockQStashPublisher_PublishExtractFile_Call {
+	return &MockQStashPublisher_PublishExtractFile_Call{Call: _e.mock.On("PublishExtractFile", ctx, msg)}
+}
+
+func (_c *MockQStashPublisher_PublishExtractFile_Call) Run(run func(ctx context.Context, msg qstashclient.ExtractFileMessage)) *MockQStashPublisher_PublishExtractFile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 qstashclient.ExtractFileMessage
+		if args[1] != nil {
+			arg1 = args[1].(qstashclient.ExtractFileMessage)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockQStashPublisher_PublishExtractFile_Call) Return(s string, err error) *MockQStashPublisher_PublishExtractFile_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *MockQStashPublisher_PublishExtractFile_Call) RunAndReturn(run func(ctx context.Context, msg qstashclient.ExtractFileMessage) (string, error)) *MockQStashPublisher_PublishExtractFile_Call {
+	_c.Call.Return(run)
+	return _c
+}

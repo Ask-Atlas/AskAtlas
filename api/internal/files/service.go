@@ -379,6 +379,7 @@ type DeleteFileParams struct {
 // Allows the concrete qstashclient.Client to be swapped for a test double.
 type QStashPublisher interface {
 	PublishDeleteFile(ctx context.Context, msg qstashclient.DeleteFileMessage) (string, error)
+	PublishExtractFile(ctx context.Context, msg qstashclient.ExtractFileMessage) (string, error)
 }
 
 // DeleteFile soft-deletes the file within a transaction, then publishes an async
@@ -429,6 +430,40 @@ func (s *Service) DeleteFile(ctx context.Context, p DeleteFileParams, publisher 
 		slog.Error("DeleteFile: failed to set deletion_job_id", "file_id", p.FileID, "error", err)
 	}
 
+	return nil
+}
+
+// EnqueueExtractJob publishes an ai.files.extract message for the
+// given file (ASK-220). Called by the file UpdateFile handler after a
+// pending->complete transition. Re-fetches s3_key + mime_type so the
+// publish payload reflects the post-update DB state. Best-effort: the
+// caller logs and ignores publish failures because the upload itself
+// has already succeeded.
+//
+// Owner check is intentional -- the caller has just authorized the
+// PATCH, but a re-check here is cheap defense-in-depth: a misuse from
+// elsewhere in the codebase that called this with a foreign owner_id
+// would otherwise leak the file's s3_key into a QStash payload it
+// shouldn't see.
+func (s *Service) EnqueueExtractJob(ctx context.Context, fileID, ownerID uuid.UUID, publisher QStashPublisher) error {
+	row, err := s.repo.GetFileByOwner(ctx, db.GetFileByOwnerParams{
+		FileID:  utils.UUID(fileID),
+		OwnerID: utils.UUID(ownerID),
+	})
+	if err != nil {
+		return fmt.Errorf("EnqueueExtractJob: lookup: %w", err)
+	}
+
+	_, err = publisher.PublishExtractFile(ctx, qstashclient.ExtractFileMessage{
+		FileID:      fileID.String(),
+		S3Key:       row.S3Key,
+		MimeType:    row.MimeType,
+		UserID:      ownerID.String(),
+		RequestedAt: time.Now().UTC().Format(time.RFC3339),
+	})
+	if err != nil {
+		return fmt.Errorf("EnqueueExtractJob: publish: %w", err)
+	}
 	return nil
 }
 

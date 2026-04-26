@@ -230,6 +230,52 @@ func (ns NullPermission) Value() (driver.Value, error) {
 	return string(ns.Permission), nil
 }
 
+type ProcessingStatus string
+
+const (
+	ProcessingStatusUploaded   ProcessingStatus = "uploaded"
+	ProcessingStatusExtracting ProcessingStatus = "extracting"
+	ProcessingStatusExtracted  ProcessingStatus = "extracted"
+	ProcessingStatusEmbedding  ProcessingStatus = "embedding"
+	ProcessingStatusReady      ProcessingStatus = "ready"
+	ProcessingStatusFailed     ProcessingStatus = "failed"
+)
+
+func (e *ProcessingStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ProcessingStatus(s)
+	case string:
+		*e = ProcessingStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ProcessingStatus: %T", src)
+	}
+	return nil
+}
+
+type NullProcessingStatus struct {
+	ProcessingStatus ProcessingStatus `json:"processing_status"`
+	Valid            bool             `json:"valid"` // Valid is true if ProcessingStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullProcessingStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.ProcessingStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ProcessingStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullProcessingStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ProcessingStatus), nil
+}
+
 type QuestionType string
 
 const (
@@ -513,20 +559,22 @@ type CourseSection struct {
 }
 
 type File struct {
-	ID             pgtype.UUID            `json:"id"`
-	UserID         pgtype.UUID            `json:"user_id"`
-	S3Key          string                 `json:"s3_key"`
-	Name           string                 `json:"name"`
-	MimeType       string                 `json:"mime_type"`
-	Size           int64                  `json:"size"`
-	Checksum       pgtype.Text            `json:"checksum"`
-	Status         UploadStatus           `json:"status"`
-	CreatedAt      pgtype.Timestamptz     `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
-	DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
-	DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
-	S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
-	DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
+	ID               pgtype.UUID            `json:"id"`
+	UserID           pgtype.UUID            `json:"user_id"`
+	S3Key            string                 `json:"s3_key"`
+	Name             string                 `json:"name"`
+	MimeType         string                 `json:"mime_type"`
+	Size             int64                  `json:"size"`
+	Checksum         pgtype.Text            `json:"checksum"`
+	Status           UploadStatus           `json:"status"`
+	CreatedAt        pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz     `json:"updated_at"`
+	DeletionStatus   NullFileDeletionStatus `json:"deletion_status"`
+	DeletedAt        pgtype.Timestamptz     `json:"deleted_at"`
+	S3DeletedAt      pgtype.Timestamptz     `json:"s3_deleted_at"`
+	DeletionJobID    pgtype.Text            `json:"deletion_job_id"`
+	ProcessingStatus ProcessingStatus       `json:"processing_status"`
+	StatusError      pgtype.Text            `json:"status_error"`
 }
 
 type FileFavorite struct {
@@ -556,6 +604,13 @@ type FileView struct {
 	FileID   pgtype.UUID        `json:"file_id"`
 	UserID   pgtype.UUID        `json:"user_id"`
 	ViewedAt pgtype.Timestamptz `json:"viewed_at"`
+}
+
+type FilesExtractedText struct {
+	FileID      pgtype.UUID        `json:"file_id"`
+	Text        string             `json:"text"`
+	PageOffsets []int32            `json:"page_offsets"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type PracticeAnswer struct {

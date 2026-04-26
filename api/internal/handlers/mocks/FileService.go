@@ -168,6 +168,75 @@ func (_c *MockFileService_DeleteFile_Call) RunAndReturn(run func(ctx context.Con
 	return _c
 }
 
+// EnqueueExtractJob provides a mock function for the type MockFileService
+func (_mock *MockFileService) EnqueueExtractJob(ctx context.Context, fileID uuid.UUID, ownerID uuid.UUID, publisher files.QStashPublisher) error {
+	ret := _mock.Called(ctx, fileID, ownerID, publisher)
+
+	if len(ret) == 0 {
+		panic("no return value specified for EnqueueExtractJob")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, uuid.UUID, uuid.UUID, files.QStashPublisher) error); ok {
+		r0 = returnFunc(ctx, fileID, ownerID, publisher)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockFileService_EnqueueExtractJob_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EnqueueExtractJob'
+type MockFileService_EnqueueExtractJob_Call struct {
+	*mock.Call
+}
+
+// EnqueueExtractJob is a helper method to define mock.On call
+//   - ctx context.Context
+//   - fileID uuid.UUID
+//   - ownerID uuid.UUID
+//   - publisher files.QStashPublisher
+func (_e *MockFileService_Expecter) EnqueueExtractJob(ctx interface{}, fileID interface{}, ownerID interface{}, publisher interface{}) *MockFileService_EnqueueExtractJob_Call {
+	return &MockFileService_EnqueueExtractJob_Call{Call: _e.mock.On("EnqueueExtractJob", ctx, fileID, ownerID, publisher)}
+}
+
+func (_c *MockFileService_EnqueueExtractJob_Call) Run(run func(ctx context.Context, fileID uuid.UUID, ownerID uuid.UUID, publisher files.QStashPublisher)) *MockFileService_EnqueueExtractJob_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 uuid.UUID
+		if args[1] != nil {
+			arg1 = args[1].(uuid.UUID)
+		}
+		var arg2 uuid.UUID
+		if args[2] != nil {
+			arg2 = args[2].(uuid.UUID)
+		}
+		var arg3 files.QStashPublisher
+		if args[3] != nil {
+			arg3 = args[3].(files.QStashPublisher)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+		)
+	})
+	return _c
+}
+
+func (_c *MockFileService_EnqueueExtractJob_Call) Return(err error) *MockFileService_EnqueueExtractJob_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockFileService_EnqueueExtractJob_Call) RunAndReturn(run func(ctx context.Context, fileID uuid.UUID, ownerID uuid.UUID, publisher files.QStashPublisher) error) *MockFileService_EnqueueExtractJob_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetDownloadURL provides a mock function for the type MockFileService
 func (_mock *MockFileService) GetDownloadURL(ctx context.Context, viewerID uuid.UUID, fileID uuid.UUID) (string, error) {
 	ret := _mock.Called(ctx, viewerID, fileID)

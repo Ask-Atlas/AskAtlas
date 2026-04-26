@@ -382,6 +382,11 @@ func TestFileHandler_UpdateFile_StatusForwarded(t *testing.T) {
 		UpdatedAt: now,
 	}, nil)
 
+	// ASK-220: a pending->complete transition fires the extract job.
+	// The publisher is nil in this test setup; the service's
+	// EnqueueExtractJob is mocked away so we don't exercise that path.
+	mockSvc.EXPECT().EnqueueExtractJob(mock.Anything, fileID, userID, mock.Anything).Return(nil)
+
 	r := fileTestRouter(t, h)
 	r.ServeHTTP(w, req)
 
