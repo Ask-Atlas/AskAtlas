@@ -24,6 +24,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
+import { findPreset } from "../ai/presets";
 import { AiDiffOverlayUi } from "./ai-diff-overlay-ui";
 import { aiDiffPluginKey } from "./ai-diff-overlay";
 import {
@@ -70,6 +71,7 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
     from: number;
     to: number;
     text: string;
+    spansMultipleBlocks: boolean;
   } | null>(null);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [inDiffReview, setInDiffReview] = useState(false);
@@ -79,6 +81,11 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
   // Avoid double-firing the seed effect if React re-runs the effect
   // for a transient reason after a successful seed.
   const diffSeededRef = useRef(false);
+  // Tracks the preset id of the chip that kicked off this stream
+  // (null for free-form prompts). Read in the seed effect so the
+  // preset's transformReplacement (e.g. TL;DR's prepend) can run
+  // before the diff overlay is seeded.
+  const activePresetIdRef = useRef<string | null>(null);
 
   const stream = useAiEditStream({ guideId: aiEdit?.guideId ?? "" });
   const { status, replacement, error, editId, start, cancel, reset } = stream;
@@ -131,7 +138,13 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
     if (!captured) return;
     diffSeededRef.current = false;
     editIdRef.current = null;
-    setTarget(captured);
+    activePresetIdRef.current = null;
+    setTarget({
+      from: captured.from,
+      to: captured.to,
+      text: captured.text,
+      spansMultipleBlocks: captured.spansMultipleBlocks,
+    });
     setAnchorRect(captured.rect);
     setHighlight({ from: captured.from, to: captured.to, status: "idle" });
     setInDiffReview(false);
@@ -149,6 +162,7 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
     }
     diffSeededRef.current = false;
     editIdRef.current = null;
+    activePresetIdRef.current = null;
     setInDiffReview(false);
     setAskOpen(false);
     setTarget(null);
@@ -157,7 +171,7 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
     reset();
   }, [cancel, reset, setHighlight, editor]);
 
-  const handleSubmit = (instruction: string) => {
+  const handleSubmit = (instruction: string, presetId?: string) => {
     if (!aiEdit || !target) return;
     const live = aiSelectionPluginKey.getState(editor.state);
     const from = live?.from ?? target.from;
@@ -167,6 +181,7 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
         ? editor.state.doc.textBetween(from, to, "\n", "\n")
         : target.text;
     const docContext = buildDocContext(editor, { from, to }, aiEdit.title);
+    activePresetIdRef.current = presetId ?? null;
     void start({
       selectionText: text,
       selectionStart: from,
@@ -212,10 +227,23 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
         ? editor.state.doc.textBetween(from, to, "\n", "\n")
         : target.text;
     editIdRef.current = editId;
+    // Apply any preset-specific client-side transform BEFORE seeding
+    // the diff. TL;DR uses this to wrap the model's reply as a
+    // blockquote prepended to the original instead of replacing it.
+    const presetId = activePresetIdRef.current;
+    const preset = presetId ? findPreset(presetId) : undefined;
+    const finalReplacement =
+      preset?.transformReplacement?.(replacement, originalText) ?? replacement;
     const ok = editor
       .chain()
       .focus()
-      .seedAiDiff({ editId, originalText, replacement, from, to })
+      .seedAiDiff({
+        editId,
+        originalText,
+        replacement: finalReplacement,
+        from,
+        to,
+      })
       .run();
     if (ok) {
       setHighlight(null);
@@ -370,6 +398,9 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
                 error={error}
                 onSubmit={handleSubmit}
                 onCancel={closeAsk}
+                selectionSpansMultipleBlocks={
+                  target?.spansMultipleBlocks ?? false
+                }
               />
             )}
           </PopoverContent>
@@ -454,6 +485,14 @@ interface CapturedSelection {
   to: number;
   text: string;
   rect: DOMRect;
+  /**
+   * Whether the selection straddles a block boundary (paragraph,
+   * heading, list item, etc.). Drives multi-paragraph-only preset
+   * eligibility (ASK-218 "Reorganize"). `textBetween` emits "\n" at
+   * each block boundary so a newline in the captured text means we
+   * spanned more than one block.
+   */
+  spansMultipleBlocks: boolean;
 }
 
 function captureSelection(editor: Editor): CapturedSelection | null {
@@ -468,7 +507,7 @@ function captureSelection(editor: Editor): CapturedSelection | null {
   } catch {
     return null;
   }
-  return { from, to, text, rect };
+  return { from, to, text, rect, spansMultipleBlocks: text.includes("\n") };
 }
 
 function buildDocContext(
