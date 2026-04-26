@@ -17,6 +17,7 @@ require (
 	github.com/oapi-codegen/nethttp-middleware v1.1.2
 	github.com/oapi-codegen/runtime v1.2.0
 	github.com/openai/openai-go v1.12.0
+	github.com/pgvector/pgvector-go v0.3.0
 	github.com/tmaxmax/go-sse v0.11.0
 	github.com/upstash/qstash-go v1.0.0
 )

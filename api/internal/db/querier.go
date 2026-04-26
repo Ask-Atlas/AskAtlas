@@ -101,6 +101,10 @@ type Querier interface {
 	// array). Separate from courses.CourseExists only because sqlc-generated
 	// queriers are per-file; the predicate is identical.
 	CourseExistsForGuides(ctx context.Context, id pgtype.UUID) (bool, error)
+	// Manual chunk delete. Cascade from `files` already removes them on
+	// file delete; this is for the worker's "re-chunk this file" path
+	// where we want to wipe the previous chunking before re-inserting.
+	DeleteChunksByFile(ctx context.Context, fileID pgtype.UUID) error
 	// Removes the (file_id, study_guide_id) join row. Returns rows-
 	// affected so the service can detect the concurrency-race case
 	// (0 rows = a parallel detach already removed it, still maps to
@@ -193,6 +197,9 @@ type Querier interface {
 	// Returns sql.ErrNoRows when no incomplete session exists; the
 	// service treats that as the "create new" signal.
 	FindIncompleteSession(ctx context.Context, arg FindIncompleteSessionParams) (FindIncompleteSessionRow, error)
+	// All chunks for a file in chunk order. Used by the file-detail
+	// diagnostic view + by the worker's count-reconciliation step.
+	GetChunksByFile(ctx context.Context, fileID pgtype.UUID) ([]StudyGuideFileChunk, error)
 	// Returns the text of the option marked is_correct for an MCQ or
 	// TF question. Used by ASK-137 to compare against user_answer:
 	//   * multiple-choice -- exact string equality with this text
@@ -558,6 +565,23 @@ type Querier interface {
 	// (TipTap coordinate space, same one the selection toolbar uses).
 	// instruction is the user's free-form rewrite directive.
 	InsertStudyGuideEdit(ctx context.Context, arg InsertStudyGuideEditParams) (StudyGuideEdit, error)
+	// Queries for the chunk + embedding store (ASK-219).
+	//
+	// Two consumer surfaces (separate tickets ship them):
+	//
+	//   * ASK-221 chunk+embed worker writes rows after extracting +
+	//     chunking a file. Idempotent via UPSERT on (file_id, chunk_idx)
+	//     so re-runs are safe.
+	//   * ASK-223 grounded generation reads top-k chunks via
+	//     SearchChunksByEmbedding, filtered to the files the user
+	//     attached to the active study guide.
+	//
+	// This ticket (ASK-219) only ships the schema + queries; the workers
+	// and retrieval endpoint land in separate PRs.
+	// Single-row insert with UPSERT semantics: re-running the embed
+	// worker on the same (file_id, chunk_idx) overwrites the row,
+	// which keeps the worker idempotent across retries.
+	InsertStudyGuideFileChunk(ctx context.Context, arg InsertStudyGuideFileChunkParams) (StudyGuideFileChunk, error)
 	// ============================================================================
 	// Study-guide grants (ASK-211). Parallel to file_grants. The study_guide_grants
 	// table lives in migration 20260424192951 (ASK-207 phase 1); these queries
@@ -1015,6 +1039,20 @@ type Querier interface {
 	// matching grant" (0 rows -> 404). Spec parity with file_grants: not
 	// idempotent.
 	RevokeStudyGuideGrant(ctx context.Context, arg RevokeStudyGuideGrantParams) (int64, error)
+	// Top-k cosine similarity search over a fixed set of files. The
+	// caller (ASK-223 grounded generation) passes the list of file ids
+	// the user attached to a study guide so retrieval is naturally
+	// scoped to that user's content.
+	//
+	// Returns chunks ordered by ascending cosine *distance*, i.e. most
+	// similar first. The HNSW index uses `vector_cosine_ops` so this
+	// ORDER BY clause is index-backed.
+	//
+	// The `<=>` operator is pgvector's cosine-distance operator. We
+	// expose distance back to the caller (`distance` column) so the
+	// ranker can filter on a similarity threshold without a second
+	// query.
+	SearchChunksByEmbedding(ctx context.Context, arg SearchChunksByEmbeddingParams) ([]SearchChunksByEmbeddingRow, error)
 	// Verifies the section exists AND belongs to the supplied course. A
 	// section UUID that targets a different course is treated as not found
 	// to avoid leaking the existence of unrelated sections via the URL path.
