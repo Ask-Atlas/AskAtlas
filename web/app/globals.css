@@ -165,3 +165,54 @@
     box-shadow: 0 0 0 3px oklch(0.7 0.18 252 / 0.85);
   }
 }
+
+/* ASK-217: ins/del marks rendered by the AiDiff TipTap mark. The
+   styling is intentionally subtle so per-hunk decisions don't dazzle
+   the user out of the doc; both runs stay readable in light + dark. */
+.ai-diff-ins {
+  background-color: oklch(0.94 0.07 145);
+  text-decoration: underline;
+  text-decoration-color: oklch(0.65 0.16 145);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+  padding-inline: 1px;
+  border-radius: 2px;
+  transition: background-color 120ms ease;
+}
+
+.dark .ai-diff-ins {
+  background-color: oklch(0.4 0.1 145 / 0.45);
+  text-decoration-color: oklch(0.78 0.18 145);
+}
+
+.ai-diff-del {
+  background-color: oklch(0.94 0.07 25);
+  text-decoration: line-through;
+  text-decoration-color: oklch(0.6 0.18 25);
+  text-decoration-thickness: 2px;
+  color: oklch(0.45 0.18 25);
+  padding-inline: 1px;
+  border-radius: 2px;
+  transition: background-color 120ms ease;
+}
+
+.dark .ai-diff-del {
+  background-color: oklch(0.4 0.1 25 / 0.45);
+  text-decoration-color: oklch(0.78 0.18 25);
+  color: oklch(0.85 0.12 25);
+}
+
+/* AC: "Reduced-motion users get static diff (no transition flash)."
+   Drop the running pulse animation on the selection range overlay
+   AND the soft cross-fade on ins/del runs when the user has set
+   prefers-reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+  .ai-edit-range--streaming {
+    animation: none;
+  }
+  .ai-edit-range,
+  .ai-diff-ins,
+  .ai-diff-del {
+    transition: none;
+  }
+}

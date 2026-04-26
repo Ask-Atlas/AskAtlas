@@ -130,7 +130,9 @@ describe("useAiEditStream", () => {
       handle.push(
         'event: usage\ndata: {"input_tokens":12,"output_tokens":3,"cache_read_tokens":0,"cache_write_tokens":0}\n\n',
       );
-      handle.push("event: done\ndata: {}\n\n");
+      handle.push(
+        'event: done\ndata: {"edit_id":"33333333-4444-5555-6666-777777777777"}\n\n',
+      );
       handle.close();
     });
 
@@ -142,6 +144,28 @@ describe("useAiEditStream", () => {
       cacheReadTokens: 0,
       cacheWriteTokens: 0,
     });
+    expect(result.current.editId).toBe("33333333-4444-5555-6666-777777777777");
+  });
+
+  it("leaves editId null when the done payload is empty", async () => {
+    const { body, handle } = makeStream();
+    (global.fetch as jest.Mock).mockResolvedValue(streamingResponse(body));
+
+    const { result } = renderHook(() => useAiEditStream({ guideId: GUIDE_ID }));
+
+    await act(async () => {
+      void result.current.start(VALID_PARAMS);
+    });
+    await waitFor(() => expect(result.current.status).toBe("streaming"));
+
+    await act(async () => {
+      handle.push('event: delta\ndata: {"text":"x"}\n\n');
+      handle.push("event: done\ndata: {}\n\n");
+      handle.close();
+    });
+
+    await waitFor(() => expect(result.current.status).toBe("done"));
+    expect(result.current.editId).toBeNull();
   });
 
   it("sends Authorization header + correct request body", async () => {

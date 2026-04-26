@@ -142,8 +142,6 @@ func (h *AIEditHandler) AIEdit(w http.ResponseWriter, r *http.Request, studyGuid
 
 	var replacement strings.Builder
 	var captured ai.Usage
-	var streamFailed bool
-	var streamCompleted bool
 
 	heartbeat := time.NewTicker(ai.HeartbeatInterval)
 	defer heartbeat.Stop()
@@ -167,48 +165,77 @@ streamLoop:
 			switch ev.Kind {
 			case ai.EventDelta:
 				replacement.WriteString(ev.Delta)
+				if writeAIEditEvent(session, ev) != nil {
+					break streamLoop
+				}
 			case ai.EventUsage:
 				if ev.Usage != nil {
 					captured = *ev.Usage
 				}
+				if writeAIEditEvent(session, ev) != nil {
+					break streamLoop
+				}
 			case ai.EventError:
-				streamFailed = true
+				if writeAIEditEvent(session, ev) != nil {
+					break streamLoop
+				}
 			case ai.EventDone:
-				streamCompleted = true
-			}
-			if writeAIEditEvent(session, ev) != nil {
-				break streamLoop
+				// Persist the audit row INLINE before emitting `done`
+				// so we can include the edit_id in the payload. The
+				// ASK-217 diff overlay needs this id to PATCH the user's
+				// accept/reject outcome -- without it, the eval signal
+				// for that user is lost. Detached context inside
+				// persistAuditRow keeps the write robust to a client
+				// tab closing in the ~50ms persist window.
+				editID := h.persistAuditRow(guideID, viewerID, body, replacement.String(), model, captured)
+				if writeAIEditDone(session, editID) != nil {
+					break streamLoop
+				}
 			}
 			heartbeat.Reset(ai.HeartbeatInterval)
 		}
 	}
 
-	// Persist the audit row only on a fully successful stream. Mid-
-	// stream client disconnects (Context().Done before EventDone) and
-	// upstream errors leave streamCompleted=false; we'd otherwise
-	// record a half-baked replacement that the user never even saw.
-	if !streamCompleted || streamFailed || replacement.Len() == 0 {
-		return
-	}
+	// On streams that didn't reach EventDone (mid-stream client
+	// disconnect or upstream error) we deliberately do NOT persist:
+	// the EventDone branch above is the ONLY place that calls
+	// persistAuditRow, so recording a half-baked replacement the
+	// user never saw is structurally impossible.
+}
 
-	// Detached context so a client disconnect after the last delta
-	// doesn't kill the audit write.
+// persistAuditRow writes the study_guide_edits row for a successful
+// AI edit stream. Returns the new row's ID (or uuid.Nil on failure)
+// so the caller can include it in the `done` SSE event.
+func (h *AIEditHandler) persistAuditRow(
+	guideID uuid.UUID,
+	viewerID uuid.UUID,
+	body api.AIEditJSONRequestBody,
+	replacement string,
+	model ai.Model,
+	usage ai.Usage,
+) uuid.UUID {
+	if replacement == "" {
+		return uuid.Nil
+	}
 	insertCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if _, err := h.edits.RecordEdit(insertCtx, aiedits.RecordEditParams{
+	edit, err := h.edits.RecordEdit(insertCtx, aiedits.RecordEditParams{
 		StudyGuideID:   guideID,
 		UserID:         viewerID,
 		Instruction:    body.Instruction,
 		SelectionStart: int32(body.SelectionStart),
 		SelectionEnd:   int32(body.SelectionEnd),
 		OriginalSpan:   body.SelectionText,
-		Replacement:    replacement.String(),
+		Replacement:    replacement,
 		Model:          string(model),
-		InputTokens:    captured.InputTokens,
-		OutputTokens:   captured.OutputTokens,
-	}); err != nil {
+		InputTokens:    usage.InputTokens,
+		OutputTokens:   usage.OutputTokens,
+	})
+	if err != nil {
 		slog.Error("AIEdit: persist audit row failed", "error", err, "study_guide_id", guideID, "user_id", viewerID)
+		return uuid.Nil
 	}
+	return edit.ID
 }
 
 // UpdateAIEdit handles PATCH /api/study-guides/{study_guide_id}/ai/edits/{edit_id}.
@@ -299,6 +326,31 @@ func writeAIEditEvent(session *gosse.Session, ev ai.Event) error {
 		return fmt.Errorf("encode %s payload: %w", ev.Kind, err)
 	}
 	msg.AppendData(string(payload))
+	if err := session.Send(msg); err != nil {
+		return err
+	}
+	return session.Flush()
+}
+
+// writeAIEditDone emits the terminal `done` event. The payload
+// includes the persisted audit row's id so the frontend can PATCH
+// the accept/reject outcome (ASK-217). `editID == uuid.Nil` means
+// the persist failed -- we still emit `done` so the user sees the
+// final reply, but `edit_id` is empty, which the frontend uses to
+// hide the accept/reject controls.
+func writeAIEditDone(session *gosse.Session, editID uuid.UUID) error {
+	payload := struct {
+		EditID string `json:"edit_id,omitempty"`
+	}{}
+	if editID != uuid.Nil {
+		payload.EditID = editID.String()
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("encode done payload: %w", err)
+	}
+	msg := &gosse.Message{Type: gosse.Type(string(ai.EventDone))}
+	msg.AppendData(string(encoded))
 	if err := session.Send(msg); err != nil {
 		return err
 	}

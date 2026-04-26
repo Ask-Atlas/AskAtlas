@@ -64,6 +64,9 @@ export {
   updateStudyGuide,
 } from "./actions/study-guides";
 
+// --- AI edits (ASK-217) ---
+export { updateAIEdit } from "./actions/ai-edits";
+
 // --- Quizzes ---
 export {
   addQuizQuestion,
