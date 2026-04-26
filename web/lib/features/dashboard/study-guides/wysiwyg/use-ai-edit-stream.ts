@@ -57,6 +57,14 @@ export interface UseAiEditStreamReturn {
   replacement: string;
   usage: AiEditStreamUsage | null;
   error: AiEditStreamError | null;
+  /**
+   * The persisted study_guide_edits row id, set when the stream
+   * emits its terminal `done` event. Null until that point, and may
+   * stay null if the server's audit-row insert failed -- callers
+   * (ASK-217 diff overlay) MUST treat null as "PATCH endpoint
+   * unavailable" and skip the accept/reject persistence.
+   */
+  editId: string | null;
   start: (params: AiEditStartParams) => Promise<void>;
   cancel: () => void;
   reset: () => void;
@@ -77,6 +85,10 @@ interface ErrorPayload {
   message?: string;
 }
 
+interface DonePayload {
+  edit_id?: string;
+}
+
 const NEWLINE = /\r?\n/;
 
 export function useAiEditStream(
@@ -89,6 +101,7 @@ export function useAiEditStream(
   const [replacement, setReplacement] = useState("");
   const [usage, setUsage] = useState<AiEditStreamUsage | null>(null);
   const [error, setError] = useState<AiEditStreamError | null>(null);
+  const [editId, setEditId] = useState<string | null>(null);
 
   const controllerRef = useRef<AbortController | null>(null);
   // Identifies the active stream so out-of-order updates from a
@@ -110,6 +123,7 @@ export function useAiEditStream(
     setReplacement("");
     setUsage(null);
     setError(null);
+    setEditId(null);
   }, [cancel]);
 
   // Cancel any in-flight stream when the consumer unmounts so we
@@ -132,6 +146,7 @@ export function useAiEditStream(
       setReplacement("");
       setUsage(null);
       setError(null);
+      setEditId(null);
 
       let token: string | null = null;
       try {
@@ -220,6 +235,7 @@ export function useAiEditStream(
             } else if (event.type === "done") {
               setStatus("done");
               if (receivedUsage) setUsage(receivedUsage);
+              if (event.editId) setEditId(event.editId);
               controllerRef.current = null;
               return;
             }
@@ -250,7 +266,7 @@ export function useAiEditStream(
     [getToken, guideId],
   );
 
-  return { status, replacement, usage, error, start, cancel, reset };
+  return { status, replacement, usage, error, editId, start, cancel, reset };
 }
 
 interface ParsedEvent {
@@ -258,6 +274,7 @@ interface ParsedEvent {
   text?: string;
   usage: AiEditStreamUsage;
   message?: string;
+  editId?: string;
 }
 
 function parseFrame(frame: string): ParsedEvent {
@@ -308,6 +325,11 @@ function parseFrame(frame: string): ParsedEvent {
     } else if (result.type === "error" && isObject(parsed)) {
       const err = parsed as ErrorPayload;
       result.message = typeof err.message === "string" ? err.message : "";
+    } else if (result.type === "done" && isObject(parsed)) {
+      const done = parsed as DonePayload;
+      if (typeof done.edit_id === "string" && done.edit_id !== "") {
+        result.editId = done.edit_id;
+      }
     }
   } catch {
     // malformed JSON -- treat as unknown

@@ -28,6 +28,9 @@ const config: StorybookConfig = {
     config.base = !raw ? "/" : raw.endsWith("/") ? raw : `${raw}/`;
     // Stub @clerk/nextjs so stories that indirectly mount components
     // calling useAuth/useUser don't crash without a real provider.
+    // The /server subpath is aliased too because some stories pull
+    // server actions from @/lib/api which import @clerk/nextjs/server
+    // -- Vite can't resolve that subpath outside Next.js without help.
     config.resolve = config.resolve ?? {};
     config.resolve.alias = {
       ...(config.resolve.alias as Record<string, string> | undefined),

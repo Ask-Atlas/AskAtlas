@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@clerk/nextjs";
 import { posToDOMRect } from "@tiptap/core";
 import type { Editor } from "@tiptap/core";
 import { BubbleMenu } from "@tiptap/react/menus";
@@ -9,9 +10,11 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useRef,
   useState,
 } from "react";
 
+import { API_BASE } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -21,6 +24,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
+import { AiDiffOverlayUi } from "./ai-diff-overlay-ui";
+import { aiDiffPluginKey } from "./ai-diff-overlay";
 import {
   aiSelectionPluginKey,
   type AiSelectionStatus,
@@ -44,39 +49,66 @@ const CONTEXT_WINDOW = 500;
 
 /**
  * Floating selection toolbar (TipTap v3 BubbleMenu, Floating UI under
- * the hood). Shows on non-empty text selection and exposes:
- *   - Inline formatting toggles (bold / italic / strike / inline code)
- *   - "Ask AI" entry (when {@link aiEdit} is provided) that opens a
- *     Radix Popover anchored to the selection. The popover hosts the
- *     prompt input, recent-prompts dropdown, and streaming preview.
+ * the hood). Two-phase popover lifecycle:
+ *
+ *   1. Prompt phase (ASK-216): user submits an instruction; the SSE
+ *      stream returns a `replacement` and the persisted audit row's
+ *      `editId`.
+ *   2. Diff review phase (ASK-217): on stream `done`, we seed the
+ *      AiDiffOverlay ProseMirror plugin which replaces the selection
+ *      range with a merged ins/del fragment in the doc. The popover
+ *      swaps in `<AiDiffOverlayUi>` for per-hunk accept/reject. On
+ *      resolution we PATCH the audit row with the overall outcome.
  *
  * The visible "you're editing this text" highlight is owned by the
- * AiSelectionRange ProseMirror plugin (see ./ai-selection-range.ts):
- * we dispatch `setMeta(aiSelectionPluginKey, { from, to, status })`
- * on open and on stream-state transitions, then clear it on close.
- * The plugin renders the highlight as an inline Decoration so it
- * tracks the text on scroll, doc edits, and resize without any JS
- * measurement.
+ * AiSelectionRange ProseMirror plugin during the prompt phase; once
+ * the diff is seeded, the marks themselves provide the visual.
  */
 export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
   const [askOpen, setAskOpen] = useState(false);
-  // Captured at the moment the user clicks "Ask AI" -- the selection
-  // can change once focus moves into the popover input.
   const [target, setTarget] = useState<{
     from: number;
     to: number;
     text: string;
   } | null>(null);
-  // Anchor rect for the Radix Popover. Recomputed on scroll / resize
-  // via posToDOMRect so the popover follows its target.
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+  const [inDiffReview, setInDiffReview] = useState(false);
+  // Capture the editId once we transition into diff review so we can
+  // PATCH it on resolution even after the stream hook resets.
+  const editIdRef = useRef<string | null>(null);
+  // Avoid double-firing the seed effect if React re-runs the effect
+  // for a transient reason after a successful seed.
+  const diffSeededRef = useRef(false);
 
   const stream = useAiEditStream({ guideId: aiEdit?.guideId ?? "" });
-  const { status, replacement, error, start, cancel, reset } = stream;
+  const { status, replacement, error, editId, start, cancel, reset } = stream;
 
-  // Keep the bubble menu visible while the popover is open even
-  // though the editor has lost focus. Once the popover closes we
-  // fall back to the default selection-based visibility rule.
+  // Browser-side PATCH for the diff resolution. Avoids the server-
+  // action chain (lib/api/server-client.ts -> @clerk/nextjs/server)
+  // so this component stays bundle-clean for storybook + tests.
+  const { getToken } = useAuth();
+  const patchAiEdit = useCallback(
+    async (guideId: string, id: string, accepted: boolean) => {
+      let token: string | null = null;
+      try {
+        token = await getToken();
+      } catch {
+        token = null;
+      }
+      await fetch(`${API_BASE}/study-guides/${guideId}/ai/edits/${id}`, {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ accepted }),
+      });
+    },
+    [getToken],
+  );
+
   const shouldShow = useCallback(
     ({ state }: { state: { selection: { empty: boolean } } }) => {
       if (askOpen) return true;
@@ -97,29 +129,36 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
     if (!aiEdit) return;
     const captured = captureSelection(editor);
     if (!captured) return;
+    diffSeededRef.current = false;
+    editIdRef.current = null;
     setTarget(captured);
     setAnchorRect(captured.rect);
     setHighlight({ from: captured.from, to: captured.to, status: "idle" });
+    setInDiffReview(false);
     reset();
     setAskOpen(true);
   };
 
   const closeAsk = useCallback(() => {
     cancel();
+    // If a diff was seeded but never resolved, drop any del-marked
+    // text + clear the plugin state so a half-review doesn't bleed
+    // into the next save.
+    if (aiDiffPluginKey.getState(editor.state)) {
+      editor.chain().focus().clearAiDiff().run();
+    }
+    diffSeededRef.current = false;
+    editIdRef.current = null;
+    setInDiffReview(false);
     setAskOpen(false);
     setTarget(null);
     setAnchorRect(null);
     setHighlight(null);
     reset();
-  }, [cancel, reset, setHighlight]);
+  }, [cancel, reset, setHighlight, editor]);
 
   const handleSubmit = (instruction: string) => {
     if (!aiEdit || !target) return;
-    // Read live mapped positions from the plugin state -- if the doc
-    // was edited while the popover was open, the AiSelectionRange
-    // plugin has already remapped (from, to) through `tr.mapping`.
-    // Falling back to the captured target keeps the call safe even
-    // if some upstream transaction cleared the plugin state.
     const live = aiSelectionPluginKey.getState(editor.state);
     const from = live?.from ?? target.from;
     const to = live?.to ?? target.to;
@@ -139,10 +178,9 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
 
   // Mirror stream status into the highlight so the decoration pulses
   // while the model streams and stops once we hit done / error.
-  // Reads live (mapped) positions from the plugin state so the
-  // highlight doesn't snap back to a stale target after doc edits.
   useEffect(() => {
     if (!askOpen) return;
+    if (inDiffReview) return; // highlight handed off to the diff marks
     const live = aiSelectionPluginKey.getState(editor.state);
     if (!live) return;
     setHighlight({
@@ -150,12 +188,62 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
       to: live.to,
       status: status === "streaming" ? "streaming" : "idle",
     });
-  }, [askOpen, status, setHighlight, editor]);
+  }, [askOpen, status, setHighlight, editor, inDiffReview]);
+
+  // On stream `done`, seed the diff overlay. We pull live (mapped)
+  // positions from the selection-range plugin so concurrent edits
+  // upstream of the selection don't put the diff in the wrong place.
+  /* eslint-disable react-hooks/set-state-in-effect --
+   * The setInDiffReview / setHighlight calls below are the response
+   * to an external state transition (stream status -> "done") and are
+   * guarded by diffSeededRef so they can't cascade.
+   */
+  useEffect(() => {
+    if (status !== "done") return;
+    if (!target) return;
+    if (replacement.length === 0) return;
+    if (diffSeededRef.current) return;
+    diffSeededRef.current = true;
+    const live = aiSelectionPluginKey.getState(editor.state);
+    const from = live?.from ?? target.from;
+    const to = live?.to ?? target.to;
+    const originalText =
+      live && live.from !== target.from
+        ? editor.state.doc.textBetween(from, to, "\n", "\n")
+        : target.text;
+    editIdRef.current = editId;
+    const ok = editor
+      .chain()
+      .focus()
+      .seedAiDiff({ editId, originalText, replacement, from, to })
+      .run();
+    if (ok) {
+      setHighlight(null);
+      setInDiffReview(true);
+    } else {
+      closeAsk();
+    }
+  }, [status, target, replacement, editId, editor, closeAsk, setHighlight]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  const handleResolved = useCallback(
+    (accepted: boolean) => {
+      const guideId = aiEdit?.guideId;
+      const id = editIdRef.current;
+      // Best-effort PATCH: a failure here loses the eval signal for
+      // this edit, but the user's accept/reject is already reflected
+      // in the doc, so we don't show a blocking error.
+      if (guideId && id) {
+        void patchAiEdit(guideId, id, accepted).catch(() => {});
+      }
+      closeAsk();
+    },
+    [aiEdit?.guideId, closeAsk, patchAiEdit],
+  );
 
   // Recompute the popover anchor rect on scroll, resize, AND every
   // editor transaction so the popover stays glued to the highlighted
-  // range even after typing into the doc. Layout effect so we measure
-  // after the DOM commits but before paint.
+  // range even after typing into the doc.
   useLayoutEffect(() => {
     if (!askOpen || !target) return;
     const update = () => {
@@ -226,9 +314,6 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
               type="button"
               variant="ghost"
               size="sm"
-              // Prevent the editor's blur on mousedown so the doc
-              // selection is still intact when our click handler reads
-              // it back via captureSelection.
               onMouseDown={(e) => e.preventDefault()}
               onClick={handleOpenAsk}
               className="gap-1.5"
@@ -263,11 +348,6 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
               closeAsk();
             }}
             onInteractOutside={(e) => {
-              // Radix DropdownMenu portals to <body>, so clicking a
-              // recents item is technically "outside" this popover.
-              // Skip the dismiss when the event target sits inside any
-              // portalled menu/listbox so picking a recent prompt
-              // doesn't slam the popover shut.
               const target = e.detail.originalEvent.target;
               if (
                 target instanceof Element &&
@@ -281,13 +361,17 @@ export function EditorBubbleMenu({ editor, aiEdit }: EditorBubbleMenuProps) {
               }
             }}
           >
-            <AskAiPopover
-              status={status}
-              replacement={replacement}
-              error={error}
-              onSubmit={handleSubmit}
-              onCancel={closeAsk}
-            />
+            {inDiffReview ? (
+              <AiDiffOverlayUi editor={editor} onResolved={handleResolved} />
+            ) : (
+              <AskAiPopover
+                status={status}
+                replacement={replacement}
+                error={error}
+                onSubmit={handleSubmit}
+                onCancel={closeAsk}
+              />
+            )}
           </PopoverContent>
         </Popover>
       ) : null}
@@ -331,8 +415,6 @@ function FormatButton({
       type="button"
       variant="ghost"
       size="icon"
-      // Block the default mousedown so the editor's selection isn't
-      // collapsed when the user clicks a toolbar button.
       onMouseDown={(e) => e.preventDefault()}
       onClick={handleClick}
       aria-pressed={isActive}
@@ -348,15 +430,6 @@ interface SelectionAnchorProps {
   rect: DOMRect;
 }
 
-/**
- * Invisible positioning hint for the Radix Popover. The visible
- * highlight is rendered by the AiSelectionRange ProseMirror plugin
- * as an inline Decoration; this div exists only so Radix has an
- * anchor element it can measure.
- *
- * Ref-forwarding is required because `<PopoverAnchor asChild>` uses
- * Radix's Slot and needs to attach its measurement ref to this node.
- */
 const SelectionAnchor = forwardRef<HTMLDivElement, SelectionAnchorProps>(
   function SelectionAnchor({ rect }, ref) {
     return (
@@ -389,10 +462,6 @@ function captureSelection(editor: Editor): CapturedSelection | null {
   if (from === to) return null;
   const text = state.doc.textBetween(from, to, "\n", "\n");
   if (!text.trim()) return null;
-  // posToDOMRect is TipTap's blessed helper -- it walks the view's
-  // DOM mapping for the [from, to] range so multi-line selections
-  // get a sensible bounding rect, unlike coordsAtPos which only
-  // returns the cursor box at a single position.
   let rect: DOMRect;
   try {
     rect = posToDOMRect(editor.view, from, to);

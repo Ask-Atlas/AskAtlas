@@ -60,3 +60,14 @@ export function SignUpButton({ children }: { children?: ReactNode }) {
 export function UserButton() {
   return null;
 }
+
+// Server subpath (`@clerk/nextjs/server`) -- aliased to the same file
+// in main.ts. Exposes the bits the server-action client uses so
+// stories that indirectly pull `@/lib/api` don't crash on import.
+export async function auth() {
+  return {
+    userId: null as string | null,
+    sessionId: null as string | null,
+    getToken: async (): Promise<string | null> => null,
+  };
+}

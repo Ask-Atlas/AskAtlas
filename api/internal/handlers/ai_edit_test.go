@@ -37,6 +37,8 @@ func (f *fakeStudyGuideReader) GetStudyGuide(_ context.Context, _ studyguides.Ge
 type fakeAIEditService struct {
 	recordedParams aiedits.RecordEditParams
 	recordCalls    int
+	recordErr      error
+	recordReturnID uuid.UUID
 	updateErr      error
 	lastUpdate     aiedits.UpdateAcceptanceParams
 }
@@ -44,7 +46,14 @@ type fakeAIEditService struct {
 func (f *fakeAIEditService) RecordEdit(_ context.Context, params aiedits.RecordEditParams) (aiedits.Edit, error) {
 	f.recordCalls++
 	f.recordedParams = params
-	return aiedits.Edit{ID: uuid.New(), StudyGuideID: params.StudyGuideID, UserID: params.UserID}, nil
+	if f.recordErr != nil {
+		return aiedits.Edit{}, f.recordErr
+	}
+	id := f.recordReturnID
+	if id == uuid.Nil {
+		id = uuid.New()
+	}
+	return aiedits.Edit{ID: id, StudyGuideID: params.StudyGuideID, UserID: params.UserID}, nil
 }
 
 func (f *fakeAIEditService) UpdateAcceptance(_ context.Context, params aiedits.UpdateAcceptanceParams) (aiedits.Edit, error) {
@@ -101,8 +110,9 @@ func TestAIEdit_Stream_PersistsAuditRow(t *testing.T) {
 
 	creator := uuid.New()
 	guideID := uuid.New()
+	editID := uuid.New()
 	reader := &fakeStudyGuideReader{creatorID: creator}
-	svc := &fakeAIEditService{}
+	svc := &fakeAIEditService{recordReturnID: editID}
 	streamer := &fakeStreamer{events: []ai.Event{
 		{Kind: ai.EventDelta, Delta: "Hel"},
 		{Kind: ai.EventDelta, Delta: "lo "},
@@ -123,7 +133,13 @@ func TestAIEdit_Stream_PersistsAuditRow(t *testing.T) {
 		t.Fatalf("status = %d, want 200, body=%q", rec.Code, rec.Body.String())
 	}
 	wireBody := rec.Body.String()
-	for _, want := range []string{`"text":"Hel"`, `"text":"lo "`, `"text":"world."`, `"input_tokens":50`, "event: done"} {
+	wantEditID := fmt.Sprintf(`"edit_id":%q`, editID.String())
+	for _, want := range []string{
+		`"text":"Hel"`, `"text":"lo "`, `"text":"world."`,
+		`"input_tokens":50`,
+		"event: done",
+		wantEditID,
+	} {
 		if !strings.Contains(wireBody, want) {
 			t.Errorf("missing %q in body:\n%s", want, wireBody)
 		}
@@ -144,6 +160,38 @@ func TestAIEdit_Stream_PersistsAuditRow(t *testing.T) {
 	}
 	if got.UserID != creator {
 		t.Errorf("UserID = %v, want %v", got.UserID, creator)
+	}
+}
+
+func TestAIEdit_DoneOmitsEditID_WhenPersistFails(t *testing.T) {
+	t.Parallel()
+
+	creator := uuid.New()
+	guideID := uuid.New()
+	reader := &fakeStudyGuideReader{creatorID: creator}
+	svc := &fakeAIEditService{recordErr: errors.New("db unreachable")}
+	streamer := &fakeStreamer{events: []ai.Event{
+		{Kind: ai.EventDelta, Delta: "ok"},
+		{Kind: ai.EventDone},
+	}}
+	h := handlers.NewAIEditHandler(reader, svc, streamer)
+
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/study-guides/%s/ai/edit", guideID), strings.NewReader(string(aiEditBody(t, "do x", "y")))).
+		WithContext(authctx.WithUserID(context.Background(), creator))
+	rec := httptest.NewRecorder()
+	h.AIEdit(rec, req, openapi_types.UUID(guideID))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	wireBody := rec.Body.String()
+	if !strings.Contains(wireBody, "event: done") {
+		t.Fatalf("missing done event in body:\n%s", wireBody)
+	}
+	// `omitempty` on the EditID JSON tag means the field should not
+	// appear at all when the persist failed.
+	if strings.Contains(wireBody, `"edit_id"`) {
+		t.Errorf("done payload included edit_id despite persist failure:\n%s", wireBody)
 	}
 }
 

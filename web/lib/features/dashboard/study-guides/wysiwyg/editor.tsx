@@ -14,6 +14,8 @@ import { EntityRefProvider } from "../refs/entity-ref-context";
 import { extractRefs } from "../refs/extract-refs";
 import { rewritePastedUrl } from "../paste-rewriter";
 
+import { AiDiffMark } from "./ai-diff-mark";
+import { AiDiffOverlay } from "./ai-diff-overlay";
 import { AiSelectionRange } from "./ai-selection-range";
 import { EditorBubbleMenu } from "./editor-bubble-menu";
 import { EntityRefNode, type EntityType } from "./entity-ref-node";
@@ -81,6 +83,8 @@ export function TiptapEditor({
       }),
       EntityRefNode,
       AiSelectionRange,
+      AiDiffMark,
+      AiDiffOverlay,
     ],
     content: preprocessMarkdown(value),
     editorProps: {
