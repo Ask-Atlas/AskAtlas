@@ -412,6 +412,65 @@ SET
 WHERE id = sqlc.arg(file_id)::uuid
   AND user_id = sqlc.arg(owner_id)::uuid;
 
+-- name: GetFileForExtraction :one
+-- Worker-context probe used by the ASK-220 extract worker. Returns the
+-- bare minimum the worker needs (s3_key, mime_type, processing_status)
+-- so it can decide whether to skip (idempotency: already past
+-- 'extracting'), download, parse, or fail. No grant check -- the worker
+-- runs as a trusted QStash callback whose authority is the signing-key
+-- middleware, not the caller's user_id. Soft-deleted files are filtered
+-- so a delete-during-extraction race produces sql.ErrNoRows -> 404 at
+-- the handler instead of zombie extraction work.
+SELECT id, user_id, s3_key, mime_type, processing_status
+FROM files
+WHERE id = sqlc.arg(file_id)::uuid
+  AND deletion_status IS NULL;
+
+-- name: SetFileProcessingStatus :exec
+-- Advances files.processing_status to the next pipeline state. Single
+-- writer pattern -- the worker owns the column for the duration of the
+-- job; if a parallel run lands here the second one stays idempotent
+-- because the worker rechecks via GetFileForExtraction first.
+-- Clears status_error on every transition so a retry that succeeds
+-- doesn't leave a stale failure message lying around.
+UPDATE files
+SET
+    processing_status = sqlc.arg(processing_status)::processing_status,
+    status_error      = NULL,
+    updated_at        = NOW()
+WHERE id = sqlc.arg(file_id)::uuid;
+
+-- name: MarkFileProcessingFailed :exec
+-- Terminal failure path. Sets processing_status='failed' and records
+-- the error so the frontend (ASK-222) can surface it. Kept separate
+-- from SetFileProcessingStatus because the success path explicitly
+-- clears status_error -- collapsing both into one query would force a
+-- nullable narg parameter that's easy to misuse.
+UPDATE files
+SET
+    processing_status = 'failed',
+    status_error      = sqlc.arg(status_error)::text,
+    updated_at        = NOW()
+WHERE id = sqlc.arg(file_id)::uuid;
+
+-- name: UpsertExtractedText :exec
+-- Stores the extracted plaintext + per-page char-offset array for the
+-- chunk+embed worker (ASK-221) to consume. ON CONFLICT DO UPDATE makes
+-- the extract worker idempotent on retry: a second successful run
+-- silently overwrites the previous text rather than colliding on the
+-- file_id PK. ASK-221 is responsible for deleting the row once chunks
+-- are written.
+INSERT INTO files_extracted_text (file_id, text, page_offsets)
+VALUES (
+    sqlc.arg(file_id)::uuid,
+    sqlc.arg(text)::text,
+    sqlc.narg(page_offsets)::integer[]
+)
+ON CONFLICT (file_id) DO UPDATE SET
+    text         = EXCLUDED.text,
+    page_offsets = EXCLUDED.page_offsets,
+    created_at   = NOW();
+
 -- name: GetFileForUpdate :one
 -- Existence + state probe used by PATCH /api/files/{file_id} (ASK-113).
 -- Returns the row's user_id and current status so the service can:

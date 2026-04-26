@@ -30,6 +30,7 @@ type FileService interface {
 	ListFiles(ctx context.Context, params files.ListFilesParams) ([]files.File, *string, error)
 	DeleteFile(ctx context.Context, params files.DeleteFileParams, publisher files.QStashPublisher) error
 	UpdateFile(ctx context.Context, params files.UpdateFileParams) (files.File, error)
+	EnqueueExtractJob(ctx context.Context, fileID, ownerID uuid.UUID, publisher files.QStashPublisher) error
 	RecordFileView(ctx context.Context, viewerID, fileID uuid.UUID) error
 }
 
@@ -171,6 +172,13 @@ func (h *FileHandler) RecordFileView(w http.ResponseWriter, r *http.Request, fil
 // malformed JSON before this runs; an explicit decode error here just
 // means the wrapper passed through a payload we still couldn't parse,
 // so it surfaces as a generic 400.
+//
+// On a successful pending->complete transition we publish an
+// ai.files.extract job (ASK-220) so the extract worker picks the new
+// file up. The publish is best-effort: a failure logs and the 200
+// still goes out -- the upload itself succeeded; a future
+// reconciliation job (out of scope for ASK-220) is expected to sweep
+// any complete-but-uploaded rows.
 func (h *FileHandler) UpdateFile(w http.ResponseWriter, r *http.Request, fileId openapi_types.UUID) {
 	viewerID, appErr := viewerIDFromContext(r)
 	if appErr != nil {
@@ -208,6 +216,13 @@ func (h *FileHandler) UpdateFile(w http.ResponseWriter, r *http.Request, fileId 
 		}
 		apperrors.RespondWithError(w, sysErr)
 		return
+	}
+
+	if statusPtr != nil && *statusPtr == "complete" && file.Status == "complete" {
+		if err := h.service.EnqueueExtractJob(r.Context(), file.ID, viewerID, h.publisher); err != nil {
+			slog.Error("UpdateFile: failed to enqueue extract job",
+				"file_id", file.ID, "error", err)
+		}
 	}
 
 	respondJSON(w, http.StatusOK, toDTOFileResponse(file))

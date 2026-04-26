@@ -227,6 +227,15 @@ type Querier interface {
 	// the cross-package read keeps the service layer aware of file
 	// ownership without reaching into the files package.
 	GetFileForAttach(ctx context.Context, id pgtype.UUID) (GetFileForAttachRow, error)
+	// Worker-context probe used by the ASK-220 extract worker. Returns the
+	// bare minimum the worker needs (s3_key, mime_type, processing_status)
+	// so it can decide whether to skip (idempotency: already past
+	// 'extracting'), download, parse, or fail. No grant check -- the worker
+	// runs as a trusted QStash callback whose authority is the signing-key
+	// middleware, not the caller's user_id. Soft-deleted files are filtered
+	// so a delete-during-extraction race produces sql.ErrNoRows -> 404 at
+	// the handler instead of zombie extraction work.
+	GetFileForExtraction(ctx context.Context, fileID pgtype.UUID) (GetFileForExtractionRow, error)
 	// Existence + state probe used by PATCH /api/files/{file_id} (ASK-113).
 	// Returns the row's user_id and current status so the service can:
 	//   * 404 when the row is missing or in any deletion state.
@@ -983,6 +992,12 @@ type Querier interface {
 	LockSessionForCompletion(ctx context.Context, id pgtype.UUID) (PracticeSession, error)
 	// Called by the cleanup job handler once S3 deletion is confirmed.
 	MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error
+	// Terminal failure path. Sets processing_status='failed' and records
+	// the error so the frontend (ASK-222) can surface it. Kept separate
+	// from SetFileProcessingStatus because the success path explicitly
+	// clears status_error -- collapsing both into one query would force a
+	// nullable narg parameter that's easy to misuse.
+	MarkFileProcessingFailed(ctx context.Context, arg MarkFileProcessingFailedParams) error
 	// Sets completed_at = now() and returns the timestamp the row
 	// now carries. The service uses the returned timestamp to
 	// assemble the response without a re-fetch (the rest of the
@@ -1059,6 +1074,13 @@ type Querier interface {
 	SectionInCourseExists(ctx context.Context, arg SectionInCourseExistsParams) (bool, error)
 	// Records the QStash message ID after publishing the async cleanup job.
 	SetFileDeletionJobID(ctx context.Context, arg SetFileDeletionJobIDParams) error
+	// Advances files.processing_status to the next pipeline state. Single
+	// writer pattern -- the worker owns the column for the duration of the
+	// job; if a parallel run lands here the second one stays idempotent
+	// because the worker rechecks via GetFileForExtraction first.
+	// Clears status_error on every transition so a retry that succeeds
+	// doesn't leave a stale failure message lying around.
+	SetFileProcessingStatus(ctx context.Context, arg SetFileProcessingStatusParams) error
 	// Atomic snapshot + total_questions fix-up. Inserts one
 	// practice_session_questions row per current quiz_questions row in
 	// a single CTE, then updates the session's total_questions to the
@@ -1206,6 +1228,13 @@ type Querier interface {
 	// PATCH-ing again. Last write wins.
 	UpdateStudyGuideEditAcceptance(ctx context.Context, arg UpdateStudyGuideEditAcceptanceParams) (StudyGuideEdit, error)
 	UpsertClerkUser(ctx context.Context, arg UpsertClerkUserParams) (User, error)
+	// Stores the extracted plaintext + per-page char-offset array for the
+	// chunk+embed worker (ASK-221) to consume. ON CONFLICT DO UPDATE makes
+	// the extract worker idempotent on retry: a second successful run
+	// silently overwrites the previous text rather than colliding on the
+	// file_id PK. ASK-221 is responsible for deleting the row once chunks
+	// are written.
+	UpsertExtractedText(ctx context.Context, arg UpsertExtractedTextParams) error
 	// Per-(user, file) most-recent-view timestamp for POST /api/files/{file_id}/view
 	// (ASK-134). Powers the recents sidebar (ASK-145). The PK is
 	// (user_id, file_id) so a repeat view by the same user is a write to

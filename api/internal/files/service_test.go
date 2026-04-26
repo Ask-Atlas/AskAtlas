@@ -11,6 +11,7 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/files"
 	mock_files "github.com/Ask-Atlas/AskAtlas/api/internal/files/mocks"
+	qstashclient "github.com/Ask-Atlas/AskAtlas/api/internal/qstash"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/google/uuid"
@@ -785,4 +786,68 @@ func TestService_GetDownloadURL_PresignerErrorBubblesUp(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "presign")
 	assert.Contains(t, err.Error(), "aws creds missing")
+}
+
+func TestService_EnqueueExtractJob_PublishesWithS3KeyAndMime(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	pub := mock_files.NewMockQStashPublisher(t)
+	svc := files.NewService(repo)
+
+	fileID, ownerID := uuid.New(), uuid.New()
+	repo.EXPECT().GetFileByOwner(mock.Anything, db.GetFileByOwnerParams{
+		FileID:  utils.UUID(fileID),
+		OwnerID: utils.UUID(ownerID),
+	}).Return(db.GetFileByOwnerRow{
+		ID:       utils.UUID(fileID),
+		UserID:   utils.UUID(ownerID),
+		S3Key:    "uploads/abc.pdf",
+		MimeType: "application/pdf",
+		Status:   "complete",
+	}, nil)
+
+	pub.EXPECT().PublishExtractFile(mock.Anything, mock.MatchedBy(func(msg qstashclient.ExtractFileMessage) bool {
+		return msg.FileID == fileID.String() &&
+			msg.S3Key == "uploads/abc.pdf" &&
+			msg.MimeType == "application/pdf" &&
+			msg.UserID == ownerID.String() &&
+			msg.RequestedAt != ""
+	})).Return("qstash-msg-id-123", nil)
+
+	require.NoError(t, svc.EnqueueExtractJob(context.Background(), fileID, ownerID, pub))
+}
+
+func TestService_EnqueueExtractJob_NotFoundIsErrNotFound(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	pub := mock_files.NewMockQStashPublisher(t)
+	svc := files.NewService(repo)
+
+	fileID, ownerID := uuid.New(), uuid.New()
+	repo.EXPECT().GetFileByOwner(mock.Anything, mock.Anything).
+		Return(db.GetFileByOwnerRow{}, apperrors.ErrNotFound)
+
+	err := svc.EnqueueExtractJob(context.Background(), fileID, ownerID, pub)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, apperrors.ErrNotFound))
+	// Publisher must not be called when lookup fails.
+	pub.AssertNotCalled(t, "PublishExtractFile", mock.Anything, mock.Anything)
+}
+
+func TestService_EnqueueExtractJob_PublishErrorPropagates(t *testing.T) {
+	repo := mock_files.NewMockRepository(t)
+	pub := mock_files.NewMockQStashPublisher(t)
+	svc := files.NewService(repo)
+
+	fileID, ownerID := uuid.New(), uuid.New()
+	repo.EXPECT().GetFileByOwner(mock.Anything, mock.Anything).
+		Return(db.GetFileByOwnerRow{
+			ID: utils.UUID(fileID), UserID: utils.UUID(ownerID),
+			S3Key: "k", MimeType: "text/plain", Status: "complete",
+		}, nil)
+	pub.EXPECT().PublishExtractFile(mock.Anything, mock.Anything).
+		Return("", errors.New("qstash 503"))
+
+	err := svc.EnqueueExtractJob(context.Background(), fileID, ownerID, pub)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "publish")
+	assert.Contains(t, err.Error(), "qstash 503")
 }

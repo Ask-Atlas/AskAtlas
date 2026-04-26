@@ -86,6 +86,42 @@ func (q *Queries) GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) 
 	return i, err
 }
 
+const getFileForExtraction = `-- name: GetFileForExtraction :one
+SELECT id, user_id, s3_key, mime_type, processing_status
+FROM files
+WHERE id = $1::uuid
+  AND deletion_status IS NULL
+`
+
+type GetFileForExtractionRow struct {
+	ID               pgtype.UUID      `json:"id"`
+	UserID           pgtype.UUID      `json:"user_id"`
+	S3Key            string           `json:"s3_key"`
+	MimeType         string           `json:"mime_type"`
+	ProcessingStatus ProcessingStatus `json:"processing_status"`
+}
+
+// Worker-context probe used by the ASK-220 extract worker. Returns the
+// bare minimum the worker needs (s3_key, mime_type, processing_status)
+// so it can decide whether to skip (idempotency: already past
+// 'extracting'), download, parse, or fail. No grant check -- the worker
+// runs as a trusted QStash callback whose authority is the signing-key
+// middleware, not the caller's user_id. Soft-deleted files are filtered
+// so a delete-during-extraction race produces sql.ErrNoRows -> 404 at
+// the handler instead of zombie extraction work.
+func (q *Queries) GetFileForExtraction(ctx context.Context, fileID pgtype.UUID) (GetFileForExtractionRow, error) {
+	row := q.db.QueryRow(ctx, getFileForExtraction, fileID)
+	var i GetFileForExtractionRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.S3Key,
+		&i.MimeType,
+		&i.ProcessingStatus,
+	)
+	return i, err
+}
+
 const getFileForUpdate = `-- name: GetFileForUpdate :one
 SELECT id, user_id, status
 FROM files
@@ -115,7 +151,7 @@ func (q *Queries) GetFileForUpdate(ctx context.Context, fileID pgtype.UUID) (Get
 }
 
 const getFileIfViewable = `-- name: GetFileIfViewable :one
-SELECT f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id
+SELECT f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id, f.processing_status, f.status_error
 FROM files f
 WHERE f.id = $1
   AND f.deletion_status IS NULL
@@ -195,6 +231,8 @@ func (q *Queries) GetFileIfViewable(ctx context.Context, arg GetFileIfViewablePa
 		&i.DeletedAt,
 		&i.S3DeletedAt,
 		&i.DeletionJobID,
+		&i.ProcessingStatus,
+		&i.StatusError,
 	)
 	return i, err
 }
@@ -202,7 +240,7 @@ func (q *Queries) GetFileIfViewable(ctx context.Context, arg GetFileIfViewablePa
 const insertFile = `-- name: InsertFile :one
 INSERT INTO files (id, user_id, s3_key, name, mime_type, size, status)
 VALUES ($1, $2, $3, $4, $5, $6, 'pending')
-RETURNING id, user_id, s3_key, name, mime_type, size, checksum, status, created_at, updated_at, deletion_status, deleted_at, s3_deleted_at, deletion_job_id
+RETURNING id, user_id, s3_key, name, mime_type, size, checksum, status, created_at, updated_at, deletion_status, deleted_at, s3_deleted_at, deletion_job_id, processing_status, status_error
 `
 
 type InsertFileParams struct {
@@ -239,6 +277,8 @@ func (q *Queries) InsertFile(ctx context.Context, arg InsertFileParams) (File, e
 		&i.DeletedAt,
 		&i.S3DeletedAt,
 		&i.DeletionJobID,
+		&i.ProcessingStatus,
+		&i.StatusError,
 	)
 	return i, err
 }
@@ -314,7 +354,7 @@ func (q *Queries) InsertFileView(ctx context.Context, arg InsertFileViewParams) 
 
 const listOwnedFilesCreatedAsc = `-- name: ListOwnedFilesCreatedAsc :many
 SELECT
-  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id,
+  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id, f.processing_status, f.status_error,
   fav.created_at AS favorited_at,
   lv.viewed_at   AS last_viewed_at
 FROM files f
@@ -359,22 +399,24 @@ type ListOwnedFilesCreatedAscParams struct {
 }
 
 type ListOwnedFilesCreatedAscRow struct {
-	ID             pgtype.UUID            `json:"id"`
-	UserID         pgtype.UUID            `json:"user_id"`
-	S3Key          string                 `json:"s3_key"`
-	Name           string                 `json:"name"`
-	MimeType       string                 `json:"mime_type"`
-	Size           int64                  `json:"size"`
-	Checksum       pgtype.Text            `json:"checksum"`
-	Status         UploadStatus           `json:"status"`
-	CreatedAt      pgtype.Timestamptz     `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
-	DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
-	DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
-	S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
-	DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
-	FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
-	LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
+	ID               pgtype.UUID            `json:"id"`
+	UserID           pgtype.UUID            `json:"user_id"`
+	S3Key            string                 `json:"s3_key"`
+	Name             string                 `json:"name"`
+	MimeType         string                 `json:"mime_type"`
+	Size             int64                  `json:"size"`
+	Checksum         pgtype.Text            `json:"checksum"`
+	Status           UploadStatus           `json:"status"`
+	CreatedAt        pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz     `json:"updated_at"`
+	DeletionStatus   NullFileDeletionStatus `json:"deletion_status"`
+	DeletedAt        pgtype.Timestamptz     `json:"deleted_at"`
+	S3DeletedAt      pgtype.Timestamptz     `json:"s3_deleted_at"`
+	DeletionJobID    pgtype.Text            `json:"deletion_job_id"`
+	ProcessingStatus ProcessingStatus       `json:"processing_status"`
+	StatusError      pgtype.Text            `json:"status_error"`
+	FavoritedAt      pgtype.Timestamptz     `json:"favorited_at"`
+	LastViewedAt     pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 
 func (q *Queries) ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFilesCreatedAscParams) ([]ListOwnedFilesCreatedAscRow, error) {
@@ -416,6 +458,8 @@ func (q *Queries) ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFil
 			&i.DeletedAt,
 			&i.S3DeletedAt,
 			&i.DeletionJobID,
+			&i.ProcessingStatus,
+			&i.StatusError,
 			&i.FavoritedAt,
 			&i.LastViewedAt,
 		); err != nil {
@@ -431,7 +475,7 @@ func (q *Queries) ListOwnedFilesCreatedAsc(ctx context.Context, arg ListOwnedFil
 
 const listOwnedFilesCreatedDesc = `-- name: ListOwnedFilesCreatedDesc :many
 SELECT
-  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id,
+  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id, f.processing_status, f.status_error,
   fav.created_at AS favorited_at,
   lv.viewed_at   AS last_viewed_at
 FROM files f
@@ -476,22 +520,24 @@ type ListOwnedFilesCreatedDescParams struct {
 }
 
 type ListOwnedFilesCreatedDescRow struct {
-	ID             pgtype.UUID            `json:"id"`
-	UserID         pgtype.UUID            `json:"user_id"`
-	S3Key          string                 `json:"s3_key"`
-	Name           string                 `json:"name"`
-	MimeType       string                 `json:"mime_type"`
-	Size           int64                  `json:"size"`
-	Checksum       pgtype.Text            `json:"checksum"`
-	Status         UploadStatus           `json:"status"`
-	CreatedAt      pgtype.Timestamptz     `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
-	DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
-	DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
-	S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
-	DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
-	FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
-	LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
+	ID               pgtype.UUID            `json:"id"`
+	UserID           pgtype.UUID            `json:"user_id"`
+	S3Key            string                 `json:"s3_key"`
+	Name             string                 `json:"name"`
+	MimeType         string                 `json:"mime_type"`
+	Size             int64                  `json:"size"`
+	Checksum         pgtype.Text            `json:"checksum"`
+	Status           UploadStatus           `json:"status"`
+	CreatedAt        pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz     `json:"updated_at"`
+	DeletionStatus   NullFileDeletionStatus `json:"deletion_status"`
+	DeletedAt        pgtype.Timestamptz     `json:"deleted_at"`
+	S3DeletedAt      pgtype.Timestamptz     `json:"s3_deleted_at"`
+	DeletionJobID    pgtype.Text            `json:"deletion_job_id"`
+	ProcessingStatus ProcessingStatus       `json:"processing_status"`
+	StatusError      pgtype.Text            `json:"status_error"`
+	FavoritedAt      pgtype.Timestamptz     `json:"favorited_at"`
+	LastViewedAt     pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 
 func (q *Queries) ListOwnedFilesCreatedDesc(ctx context.Context, arg ListOwnedFilesCreatedDescParams) ([]ListOwnedFilesCreatedDescRow, error) {
@@ -533,6 +579,8 @@ func (q *Queries) ListOwnedFilesCreatedDesc(ctx context.Context, arg ListOwnedFi
 			&i.DeletedAt,
 			&i.S3DeletedAt,
 			&i.DeletionJobID,
+			&i.ProcessingStatus,
+			&i.StatusError,
 			&i.FavoritedAt,
 			&i.LastViewedAt,
 		); err != nil {
@@ -548,7 +596,7 @@ func (q *Queries) ListOwnedFilesCreatedDesc(ctx context.Context, arg ListOwnedFi
 
 const listOwnedFilesMimeAsc = `-- name: ListOwnedFilesMimeAsc :many
 SELECT
-  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id,
+  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id, f.processing_status, f.status_error,
   fav.created_at AS favorited_at,
   lv.viewed_at   AS last_viewed_at
 FROM files f
@@ -593,22 +641,24 @@ type ListOwnedFilesMimeAscParams struct {
 }
 
 type ListOwnedFilesMimeAscRow struct {
-	ID             pgtype.UUID            `json:"id"`
-	UserID         pgtype.UUID            `json:"user_id"`
-	S3Key          string                 `json:"s3_key"`
-	Name           string                 `json:"name"`
-	MimeType       string                 `json:"mime_type"`
-	Size           int64                  `json:"size"`
-	Checksum       pgtype.Text            `json:"checksum"`
-	Status         UploadStatus           `json:"status"`
-	CreatedAt      pgtype.Timestamptz     `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
-	DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
-	DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
-	S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
-	DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
-	FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
-	LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
+	ID               pgtype.UUID            `json:"id"`
+	UserID           pgtype.UUID            `json:"user_id"`
+	S3Key            string                 `json:"s3_key"`
+	Name             string                 `json:"name"`
+	MimeType         string                 `json:"mime_type"`
+	Size             int64                  `json:"size"`
+	Checksum         pgtype.Text            `json:"checksum"`
+	Status           UploadStatus           `json:"status"`
+	CreatedAt        pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz     `json:"updated_at"`
+	DeletionStatus   NullFileDeletionStatus `json:"deletion_status"`
+	DeletedAt        pgtype.Timestamptz     `json:"deleted_at"`
+	S3DeletedAt      pgtype.Timestamptz     `json:"s3_deleted_at"`
+	DeletionJobID    pgtype.Text            `json:"deletion_job_id"`
+	ProcessingStatus ProcessingStatus       `json:"processing_status"`
+	StatusError      pgtype.Text            `json:"status_error"`
+	FavoritedAt      pgtype.Timestamptz     `json:"favorited_at"`
+	LastViewedAt     pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 
 func (q *Queries) ListOwnedFilesMimeAsc(ctx context.Context, arg ListOwnedFilesMimeAscParams) ([]ListOwnedFilesMimeAscRow, error) {
@@ -650,6 +700,8 @@ func (q *Queries) ListOwnedFilesMimeAsc(ctx context.Context, arg ListOwnedFilesM
 			&i.DeletedAt,
 			&i.S3DeletedAt,
 			&i.DeletionJobID,
+			&i.ProcessingStatus,
+			&i.StatusError,
 			&i.FavoritedAt,
 			&i.LastViewedAt,
 		); err != nil {
@@ -665,7 +717,7 @@ func (q *Queries) ListOwnedFilesMimeAsc(ctx context.Context, arg ListOwnedFilesM
 
 const listOwnedFilesMimeDesc = `-- name: ListOwnedFilesMimeDesc :many
 SELECT
-  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id,
+  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id, f.processing_status, f.status_error,
   fav.created_at AS favorited_at,
   lv.viewed_at   AS last_viewed_at
 FROM files f
@@ -710,22 +762,24 @@ type ListOwnedFilesMimeDescParams struct {
 }
 
 type ListOwnedFilesMimeDescRow struct {
-	ID             pgtype.UUID            `json:"id"`
-	UserID         pgtype.UUID            `json:"user_id"`
-	S3Key          string                 `json:"s3_key"`
-	Name           string                 `json:"name"`
-	MimeType       string                 `json:"mime_type"`
-	Size           int64                  `json:"size"`
-	Checksum       pgtype.Text            `json:"checksum"`
-	Status         UploadStatus           `json:"status"`
-	CreatedAt      pgtype.Timestamptz     `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
-	DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
-	DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
-	S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
-	DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
-	FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
-	LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
+	ID               pgtype.UUID            `json:"id"`
+	UserID           pgtype.UUID            `json:"user_id"`
+	S3Key            string                 `json:"s3_key"`
+	Name             string                 `json:"name"`
+	MimeType         string                 `json:"mime_type"`
+	Size             int64                  `json:"size"`
+	Checksum         pgtype.Text            `json:"checksum"`
+	Status           UploadStatus           `json:"status"`
+	CreatedAt        pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz     `json:"updated_at"`
+	DeletionStatus   NullFileDeletionStatus `json:"deletion_status"`
+	DeletedAt        pgtype.Timestamptz     `json:"deleted_at"`
+	S3DeletedAt      pgtype.Timestamptz     `json:"s3_deleted_at"`
+	DeletionJobID    pgtype.Text            `json:"deletion_job_id"`
+	ProcessingStatus ProcessingStatus       `json:"processing_status"`
+	StatusError      pgtype.Text            `json:"status_error"`
+	FavoritedAt      pgtype.Timestamptz     `json:"favorited_at"`
+	LastViewedAt     pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 
 func (q *Queries) ListOwnedFilesMimeDesc(ctx context.Context, arg ListOwnedFilesMimeDescParams) ([]ListOwnedFilesMimeDescRow, error) {
@@ -767,6 +821,8 @@ func (q *Queries) ListOwnedFilesMimeDesc(ctx context.Context, arg ListOwnedFiles
 			&i.DeletedAt,
 			&i.S3DeletedAt,
 			&i.DeletionJobID,
+			&i.ProcessingStatus,
+			&i.StatusError,
 			&i.FavoritedAt,
 			&i.LastViewedAt,
 		); err != nil {
@@ -782,7 +838,7 @@ func (q *Queries) ListOwnedFilesMimeDesc(ctx context.Context, arg ListOwnedFiles
 
 const listOwnedFilesNameAsc = `-- name: ListOwnedFilesNameAsc :many
 SELECT
-  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id,
+  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id, f.processing_status, f.status_error,
   fav.created_at AS favorited_at,
   lv.viewed_at   AS last_viewed_at
 FROM files f
@@ -827,22 +883,24 @@ type ListOwnedFilesNameAscParams struct {
 }
 
 type ListOwnedFilesNameAscRow struct {
-	ID             pgtype.UUID            `json:"id"`
-	UserID         pgtype.UUID            `json:"user_id"`
-	S3Key          string                 `json:"s3_key"`
-	Name           string                 `json:"name"`
-	MimeType       string                 `json:"mime_type"`
-	Size           int64                  `json:"size"`
-	Checksum       pgtype.Text            `json:"checksum"`
-	Status         UploadStatus           `json:"status"`
-	CreatedAt      pgtype.Timestamptz     `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
-	DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
-	DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
-	S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
-	DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
-	FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
-	LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
+	ID               pgtype.UUID            `json:"id"`
+	UserID           pgtype.UUID            `json:"user_id"`
+	S3Key            string                 `json:"s3_key"`
+	Name             string                 `json:"name"`
+	MimeType         string                 `json:"mime_type"`
+	Size             int64                  `json:"size"`
+	Checksum         pgtype.Text            `json:"checksum"`
+	Status           UploadStatus           `json:"status"`
+	CreatedAt        pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz     `json:"updated_at"`
+	DeletionStatus   NullFileDeletionStatus `json:"deletion_status"`
+	DeletedAt        pgtype.Timestamptz     `json:"deleted_at"`
+	S3DeletedAt      pgtype.Timestamptz     `json:"s3_deleted_at"`
+	DeletionJobID    pgtype.Text            `json:"deletion_job_id"`
+	ProcessingStatus ProcessingStatus       `json:"processing_status"`
+	StatusError      pgtype.Text            `json:"status_error"`
+	FavoritedAt      pgtype.Timestamptz     `json:"favorited_at"`
+	LastViewedAt     pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 
 func (q *Queries) ListOwnedFilesNameAsc(ctx context.Context, arg ListOwnedFilesNameAscParams) ([]ListOwnedFilesNameAscRow, error) {
@@ -884,6 +942,8 @@ func (q *Queries) ListOwnedFilesNameAsc(ctx context.Context, arg ListOwnedFilesN
 			&i.DeletedAt,
 			&i.S3DeletedAt,
 			&i.DeletionJobID,
+			&i.ProcessingStatus,
+			&i.StatusError,
 			&i.FavoritedAt,
 			&i.LastViewedAt,
 		); err != nil {
@@ -899,7 +959,7 @@ func (q *Queries) ListOwnedFilesNameAsc(ctx context.Context, arg ListOwnedFilesN
 
 const listOwnedFilesNameDesc = `-- name: ListOwnedFilesNameDesc :many
 SELECT
-  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id,
+  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id, f.processing_status, f.status_error,
   fav.created_at AS favorited_at,
   lv.viewed_at   AS last_viewed_at
 FROM files f
@@ -944,22 +1004,24 @@ type ListOwnedFilesNameDescParams struct {
 }
 
 type ListOwnedFilesNameDescRow struct {
-	ID             pgtype.UUID            `json:"id"`
-	UserID         pgtype.UUID            `json:"user_id"`
-	S3Key          string                 `json:"s3_key"`
-	Name           string                 `json:"name"`
-	MimeType       string                 `json:"mime_type"`
-	Size           int64                  `json:"size"`
-	Checksum       pgtype.Text            `json:"checksum"`
-	Status         UploadStatus           `json:"status"`
-	CreatedAt      pgtype.Timestamptz     `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
-	DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
-	DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
-	S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
-	DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
-	FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
-	LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
+	ID               pgtype.UUID            `json:"id"`
+	UserID           pgtype.UUID            `json:"user_id"`
+	S3Key            string                 `json:"s3_key"`
+	Name             string                 `json:"name"`
+	MimeType         string                 `json:"mime_type"`
+	Size             int64                  `json:"size"`
+	Checksum         pgtype.Text            `json:"checksum"`
+	Status           UploadStatus           `json:"status"`
+	CreatedAt        pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz     `json:"updated_at"`
+	DeletionStatus   NullFileDeletionStatus `json:"deletion_status"`
+	DeletedAt        pgtype.Timestamptz     `json:"deleted_at"`
+	S3DeletedAt      pgtype.Timestamptz     `json:"s3_deleted_at"`
+	DeletionJobID    pgtype.Text            `json:"deletion_job_id"`
+	ProcessingStatus ProcessingStatus       `json:"processing_status"`
+	StatusError      pgtype.Text            `json:"status_error"`
+	FavoritedAt      pgtype.Timestamptz     `json:"favorited_at"`
+	LastViewedAt     pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 
 func (q *Queries) ListOwnedFilesNameDesc(ctx context.Context, arg ListOwnedFilesNameDescParams) ([]ListOwnedFilesNameDescRow, error) {
@@ -1001,6 +1063,8 @@ func (q *Queries) ListOwnedFilesNameDesc(ctx context.Context, arg ListOwnedFiles
 			&i.DeletedAt,
 			&i.S3DeletedAt,
 			&i.DeletionJobID,
+			&i.ProcessingStatus,
+			&i.StatusError,
 			&i.FavoritedAt,
 			&i.LastViewedAt,
 		); err != nil {
@@ -1016,7 +1080,7 @@ func (q *Queries) ListOwnedFilesNameDesc(ctx context.Context, arg ListOwnedFiles
 
 const listOwnedFilesSizeAsc = `-- name: ListOwnedFilesSizeAsc :many
 SELECT
-  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id,
+  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id, f.processing_status, f.status_error,
   fav.created_at AS favorited_at,
   lv.viewed_at   AS last_viewed_at
 FROM files f
@@ -1061,22 +1125,24 @@ type ListOwnedFilesSizeAscParams struct {
 }
 
 type ListOwnedFilesSizeAscRow struct {
-	ID             pgtype.UUID            `json:"id"`
-	UserID         pgtype.UUID            `json:"user_id"`
-	S3Key          string                 `json:"s3_key"`
-	Name           string                 `json:"name"`
-	MimeType       string                 `json:"mime_type"`
-	Size           int64                  `json:"size"`
-	Checksum       pgtype.Text            `json:"checksum"`
-	Status         UploadStatus           `json:"status"`
-	CreatedAt      pgtype.Timestamptz     `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
-	DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
-	DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
-	S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
-	DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
-	FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
-	LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
+	ID               pgtype.UUID            `json:"id"`
+	UserID           pgtype.UUID            `json:"user_id"`
+	S3Key            string                 `json:"s3_key"`
+	Name             string                 `json:"name"`
+	MimeType         string                 `json:"mime_type"`
+	Size             int64                  `json:"size"`
+	Checksum         pgtype.Text            `json:"checksum"`
+	Status           UploadStatus           `json:"status"`
+	CreatedAt        pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz     `json:"updated_at"`
+	DeletionStatus   NullFileDeletionStatus `json:"deletion_status"`
+	DeletedAt        pgtype.Timestamptz     `json:"deleted_at"`
+	S3DeletedAt      pgtype.Timestamptz     `json:"s3_deleted_at"`
+	DeletionJobID    pgtype.Text            `json:"deletion_job_id"`
+	ProcessingStatus ProcessingStatus       `json:"processing_status"`
+	StatusError      pgtype.Text            `json:"status_error"`
+	FavoritedAt      pgtype.Timestamptz     `json:"favorited_at"`
+	LastViewedAt     pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 
 func (q *Queries) ListOwnedFilesSizeAsc(ctx context.Context, arg ListOwnedFilesSizeAscParams) ([]ListOwnedFilesSizeAscRow, error) {
@@ -1118,6 +1184,8 @@ func (q *Queries) ListOwnedFilesSizeAsc(ctx context.Context, arg ListOwnedFilesS
 			&i.DeletedAt,
 			&i.S3DeletedAt,
 			&i.DeletionJobID,
+			&i.ProcessingStatus,
+			&i.StatusError,
 			&i.FavoritedAt,
 			&i.LastViewedAt,
 		); err != nil {
@@ -1133,7 +1201,7 @@ func (q *Queries) ListOwnedFilesSizeAsc(ctx context.Context, arg ListOwnedFilesS
 
 const listOwnedFilesSizeDesc = `-- name: ListOwnedFilesSizeDesc :many
 SELECT
-  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id,
+  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id, f.processing_status, f.status_error,
   fav.created_at AS favorited_at,
   lv.viewed_at   AS last_viewed_at
 FROM files f
@@ -1178,22 +1246,24 @@ type ListOwnedFilesSizeDescParams struct {
 }
 
 type ListOwnedFilesSizeDescRow struct {
-	ID             pgtype.UUID            `json:"id"`
-	UserID         pgtype.UUID            `json:"user_id"`
-	S3Key          string                 `json:"s3_key"`
-	Name           string                 `json:"name"`
-	MimeType       string                 `json:"mime_type"`
-	Size           int64                  `json:"size"`
-	Checksum       pgtype.Text            `json:"checksum"`
-	Status         UploadStatus           `json:"status"`
-	CreatedAt      pgtype.Timestamptz     `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
-	DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
-	DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
-	S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
-	DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
-	FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
-	LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
+	ID               pgtype.UUID            `json:"id"`
+	UserID           pgtype.UUID            `json:"user_id"`
+	S3Key            string                 `json:"s3_key"`
+	Name             string                 `json:"name"`
+	MimeType         string                 `json:"mime_type"`
+	Size             int64                  `json:"size"`
+	Checksum         pgtype.Text            `json:"checksum"`
+	Status           UploadStatus           `json:"status"`
+	CreatedAt        pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz     `json:"updated_at"`
+	DeletionStatus   NullFileDeletionStatus `json:"deletion_status"`
+	DeletedAt        pgtype.Timestamptz     `json:"deleted_at"`
+	S3DeletedAt      pgtype.Timestamptz     `json:"s3_deleted_at"`
+	DeletionJobID    pgtype.Text            `json:"deletion_job_id"`
+	ProcessingStatus ProcessingStatus       `json:"processing_status"`
+	StatusError      pgtype.Text            `json:"status_error"`
+	FavoritedAt      pgtype.Timestamptz     `json:"favorited_at"`
+	LastViewedAt     pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 
 func (q *Queries) ListOwnedFilesSizeDesc(ctx context.Context, arg ListOwnedFilesSizeDescParams) ([]ListOwnedFilesSizeDescRow, error) {
@@ -1235,6 +1305,8 @@ func (q *Queries) ListOwnedFilesSizeDesc(ctx context.Context, arg ListOwnedFiles
 			&i.DeletedAt,
 			&i.S3DeletedAt,
 			&i.DeletionJobID,
+			&i.ProcessingStatus,
+			&i.StatusError,
 			&i.FavoritedAt,
 			&i.LastViewedAt,
 		); err != nil {
@@ -1250,7 +1322,7 @@ func (q *Queries) ListOwnedFilesSizeDesc(ctx context.Context, arg ListOwnedFiles
 
 const listOwnedFilesStatusAsc = `-- name: ListOwnedFilesStatusAsc :many
 SELECT
-  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id,
+  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id, f.processing_status, f.status_error,
   fav.created_at AS favorited_at,
   lv.viewed_at   AS last_viewed_at
 FROM files f
@@ -1295,22 +1367,24 @@ type ListOwnedFilesStatusAscParams struct {
 }
 
 type ListOwnedFilesStatusAscRow struct {
-	ID             pgtype.UUID            `json:"id"`
-	UserID         pgtype.UUID            `json:"user_id"`
-	S3Key          string                 `json:"s3_key"`
-	Name           string                 `json:"name"`
-	MimeType       string                 `json:"mime_type"`
-	Size           int64                  `json:"size"`
-	Checksum       pgtype.Text            `json:"checksum"`
-	Status         UploadStatus           `json:"status"`
-	CreatedAt      pgtype.Timestamptz     `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
-	DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
-	DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
-	S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
-	DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
-	FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
-	LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
+	ID               pgtype.UUID            `json:"id"`
+	UserID           pgtype.UUID            `json:"user_id"`
+	S3Key            string                 `json:"s3_key"`
+	Name             string                 `json:"name"`
+	MimeType         string                 `json:"mime_type"`
+	Size             int64                  `json:"size"`
+	Checksum         pgtype.Text            `json:"checksum"`
+	Status           UploadStatus           `json:"status"`
+	CreatedAt        pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz     `json:"updated_at"`
+	DeletionStatus   NullFileDeletionStatus `json:"deletion_status"`
+	DeletedAt        pgtype.Timestamptz     `json:"deleted_at"`
+	S3DeletedAt      pgtype.Timestamptz     `json:"s3_deleted_at"`
+	DeletionJobID    pgtype.Text            `json:"deletion_job_id"`
+	ProcessingStatus ProcessingStatus       `json:"processing_status"`
+	StatusError      pgtype.Text            `json:"status_error"`
+	FavoritedAt      pgtype.Timestamptz     `json:"favorited_at"`
+	LastViewedAt     pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 
 func (q *Queries) ListOwnedFilesStatusAsc(ctx context.Context, arg ListOwnedFilesStatusAscParams) ([]ListOwnedFilesStatusAscRow, error) {
@@ -1352,6 +1426,8 @@ func (q *Queries) ListOwnedFilesStatusAsc(ctx context.Context, arg ListOwnedFile
 			&i.DeletedAt,
 			&i.S3DeletedAt,
 			&i.DeletionJobID,
+			&i.ProcessingStatus,
+			&i.StatusError,
 			&i.FavoritedAt,
 			&i.LastViewedAt,
 		); err != nil {
@@ -1367,7 +1443,7 @@ func (q *Queries) ListOwnedFilesStatusAsc(ctx context.Context, arg ListOwnedFile
 
 const listOwnedFilesStatusDesc = `-- name: ListOwnedFilesStatusDesc :many
 SELECT
-  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id,
+  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id, f.processing_status, f.status_error,
   fav.created_at AS favorited_at,
   lv.viewed_at   AS last_viewed_at
 FROM files f
@@ -1412,22 +1488,24 @@ type ListOwnedFilesStatusDescParams struct {
 }
 
 type ListOwnedFilesStatusDescRow struct {
-	ID             pgtype.UUID            `json:"id"`
-	UserID         pgtype.UUID            `json:"user_id"`
-	S3Key          string                 `json:"s3_key"`
-	Name           string                 `json:"name"`
-	MimeType       string                 `json:"mime_type"`
-	Size           int64                  `json:"size"`
-	Checksum       pgtype.Text            `json:"checksum"`
-	Status         UploadStatus           `json:"status"`
-	CreatedAt      pgtype.Timestamptz     `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
-	DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
-	DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
-	S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
-	DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
-	FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
-	LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
+	ID               pgtype.UUID            `json:"id"`
+	UserID           pgtype.UUID            `json:"user_id"`
+	S3Key            string                 `json:"s3_key"`
+	Name             string                 `json:"name"`
+	MimeType         string                 `json:"mime_type"`
+	Size             int64                  `json:"size"`
+	Checksum         pgtype.Text            `json:"checksum"`
+	Status           UploadStatus           `json:"status"`
+	CreatedAt        pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz     `json:"updated_at"`
+	DeletionStatus   NullFileDeletionStatus `json:"deletion_status"`
+	DeletedAt        pgtype.Timestamptz     `json:"deleted_at"`
+	S3DeletedAt      pgtype.Timestamptz     `json:"s3_deleted_at"`
+	DeletionJobID    pgtype.Text            `json:"deletion_job_id"`
+	ProcessingStatus ProcessingStatus       `json:"processing_status"`
+	StatusError      pgtype.Text            `json:"status_error"`
+	FavoritedAt      pgtype.Timestamptz     `json:"favorited_at"`
+	LastViewedAt     pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 
 func (q *Queries) ListOwnedFilesStatusDesc(ctx context.Context, arg ListOwnedFilesStatusDescParams) ([]ListOwnedFilesStatusDescRow, error) {
@@ -1469,6 +1547,8 @@ func (q *Queries) ListOwnedFilesStatusDesc(ctx context.Context, arg ListOwnedFil
 			&i.DeletedAt,
 			&i.S3DeletedAt,
 			&i.DeletionJobID,
+			&i.ProcessingStatus,
+			&i.StatusError,
 			&i.FavoritedAt,
 			&i.LastViewedAt,
 		); err != nil {
@@ -1484,7 +1564,7 @@ func (q *Queries) ListOwnedFilesStatusDesc(ctx context.Context, arg ListOwnedFil
 
 const listOwnedFilesUpdatedAsc = `-- name: ListOwnedFilesUpdatedAsc :many
 SELECT
-  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id,
+  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id, f.processing_status, f.status_error,
   fav.created_at AS favorited_at,
   lv.viewed_at   AS last_viewed_at
 FROM files f
@@ -1529,22 +1609,24 @@ type ListOwnedFilesUpdatedAscParams struct {
 }
 
 type ListOwnedFilesUpdatedAscRow struct {
-	ID             pgtype.UUID            `json:"id"`
-	UserID         pgtype.UUID            `json:"user_id"`
-	S3Key          string                 `json:"s3_key"`
-	Name           string                 `json:"name"`
-	MimeType       string                 `json:"mime_type"`
-	Size           int64                  `json:"size"`
-	Checksum       pgtype.Text            `json:"checksum"`
-	Status         UploadStatus           `json:"status"`
-	CreatedAt      pgtype.Timestamptz     `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
-	DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
-	DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
-	S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
-	DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
-	FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
-	LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
+	ID               pgtype.UUID            `json:"id"`
+	UserID           pgtype.UUID            `json:"user_id"`
+	S3Key            string                 `json:"s3_key"`
+	Name             string                 `json:"name"`
+	MimeType         string                 `json:"mime_type"`
+	Size             int64                  `json:"size"`
+	Checksum         pgtype.Text            `json:"checksum"`
+	Status           UploadStatus           `json:"status"`
+	CreatedAt        pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz     `json:"updated_at"`
+	DeletionStatus   NullFileDeletionStatus `json:"deletion_status"`
+	DeletedAt        pgtype.Timestamptz     `json:"deleted_at"`
+	S3DeletedAt      pgtype.Timestamptz     `json:"s3_deleted_at"`
+	DeletionJobID    pgtype.Text            `json:"deletion_job_id"`
+	ProcessingStatus ProcessingStatus       `json:"processing_status"`
+	StatusError      pgtype.Text            `json:"status_error"`
+	FavoritedAt      pgtype.Timestamptz     `json:"favorited_at"`
+	LastViewedAt     pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 
 func (q *Queries) ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFilesUpdatedAscParams) ([]ListOwnedFilesUpdatedAscRow, error) {
@@ -1586,6 +1668,8 @@ func (q *Queries) ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFil
 			&i.DeletedAt,
 			&i.S3DeletedAt,
 			&i.DeletionJobID,
+			&i.ProcessingStatus,
+			&i.StatusError,
 			&i.FavoritedAt,
 			&i.LastViewedAt,
 		); err != nil {
@@ -1601,7 +1685,7 @@ func (q *Queries) ListOwnedFilesUpdatedAsc(ctx context.Context, arg ListOwnedFil
 
 const listOwnedFilesUpdatedDesc = `-- name: ListOwnedFilesUpdatedDesc :many
 SELECT
-  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id,
+  f.id, f.user_id, f.s3_key, f.name, f.mime_type, f.size, f.checksum, f.status, f.created_at, f.updated_at, f.deletion_status, f.deleted_at, f.s3_deleted_at, f.deletion_job_id, f.processing_status, f.status_error,
   fav.created_at AS favorited_at,
   lv.viewed_at   AS last_viewed_at
 FROM files f
@@ -1646,22 +1730,24 @@ type ListOwnedFilesUpdatedDescParams struct {
 }
 
 type ListOwnedFilesUpdatedDescRow struct {
-	ID             pgtype.UUID            `json:"id"`
-	UserID         pgtype.UUID            `json:"user_id"`
-	S3Key          string                 `json:"s3_key"`
-	Name           string                 `json:"name"`
-	MimeType       string                 `json:"mime_type"`
-	Size           int64                  `json:"size"`
-	Checksum       pgtype.Text            `json:"checksum"`
-	Status         UploadStatus           `json:"status"`
-	CreatedAt      pgtype.Timestamptz     `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz     `json:"updated_at"`
-	DeletionStatus NullFileDeletionStatus `json:"deletion_status"`
-	DeletedAt      pgtype.Timestamptz     `json:"deleted_at"`
-	S3DeletedAt    pgtype.Timestamptz     `json:"s3_deleted_at"`
-	DeletionJobID  pgtype.Text            `json:"deletion_job_id"`
-	FavoritedAt    pgtype.Timestamptz     `json:"favorited_at"`
-	LastViewedAt   pgtype.Timestamptz     `json:"last_viewed_at"`
+	ID               pgtype.UUID            `json:"id"`
+	UserID           pgtype.UUID            `json:"user_id"`
+	S3Key            string                 `json:"s3_key"`
+	Name             string                 `json:"name"`
+	MimeType         string                 `json:"mime_type"`
+	Size             int64                  `json:"size"`
+	Checksum         pgtype.Text            `json:"checksum"`
+	Status           UploadStatus           `json:"status"`
+	CreatedAt        pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz     `json:"updated_at"`
+	DeletionStatus   NullFileDeletionStatus `json:"deletion_status"`
+	DeletedAt        pgtype.Timestamptz     `json:"deleted_at"`
+	S3DeletedAt      pgtype.Timestamptz     `json:"s3_deleted_at"`
+	DeletionJobID    pgtype.Text            `json:"deletion_job_id"`
+	ProcessingStatus ProcessingStatus       `json:"processing_status"`
+	StatusError      pgtype.Text            `json:"status_error"`
+	FavoritedAt      pgtype.Timestamptz     `json:"favorited_at"`
+	LastViewedAt     pgtype.Timestamptz     `json:"last_viewed_at"`
 }
 
 func (q *Queries) ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFilesUpdatedDescParams) ([]ListOwnedFilesUpdatedDescRow, error) {
@@ -1703,6 +1789,8 @@ func (q *Queries) ListOwnedFilesUpdatedDesc(ctx context.Context, arg ListOwnedFi
 			&i.DeletedAt,
 			&i.S3DeletedAt,
 			&i.DeletionJobID,
+			&i.ProcessingStatus,
+			&i.StatusError,
 			&i.FavoritedAt,
 			&i.LastViewedAt,
 		); err != nil {
@@ -1729,6 +1817,30 @@ WHERE id = $1::uuid
 // Called by the cleanup job handler once S3 deletion is confirmed.
 func (q *Queries) MarkFileDeleted(ctx context.Context, fileID pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, markFileDeleted, fileID)
+	return err
+}
+
+const markFileProcessingFailed = `-- name: MarkFileProcessingFailed :exec
+UPDATE files
+SET
+    processing_status = 'failed',
+    status_error      = $1::text,
+    updated_at        = NOW()
+WHERE id = $2::uuid
+`
+
+type MarkFileProcessingFailedParams struct {
+	StatusError string      `json:"status_error"`
+	FileID      pgtype.UUID `json:"file_id"`
+}
+
+// Terminal failure path. Sets processing_status='failed' and records
+// the error so the frontend (ASK-222) can surface it. Kept separate
+// from SetFileProcessingStatus because the success path explicitly
+// clears status_error -- collapsing both into one query would force a
+// nullable narg parameter that's easy to misuse.
+func (q *Queries) MarkFileProcessingFailed(ctx context.Context, arg MarkFileProcessingFailedParams) error {
+	_, err := q.db.Exec(ctx, markFileProcessingFailed, arg.StatusError, arg.FileID)
 	return err
 }
 
@@ -1866,6 +1978,31 @@ func (q *Queries) SetFileDeletionJobID(ctx context.Context, arg SetFileDeletionJ
 	return err
 }
 
+const setFileProcessingStatus = `-- name: SetFileProcessingStatus :exec
+UPDATE files
+SET
+    processing_status = $1::processing_status,
+    status_error      = NULL,
+    updated_at        = NOW()
+WHERE id = $2::uuid
+`
+
+type SetFileProcessingStatusParams struct {
+	ProcessingStatus ProcessingStatus `json:"processing_status"`
+	FileID           pgtype.UUID      `json:"file_id"`
+}
+
+// Advances files.processing_status to the next pipeline state. Single
+// writer pattern -- the worker owns the column for the duration of the
+// job; if a parallel run lands here the second one stays idempotent
+// because the worker rechecks via GetFileForExtraction first.
+// Clears status_error on every transition so a retry that succeeds
+// doesn't leave a stale failure message lying around.
+func (q *Queries) SetFileProcessingStatus(ctx context.Context, arg SetFileProcessingStatusParams) error {
+	_, err := q.db.Exec(ctx, setFileProcessingStatus, arg.ProcessingStatus, arg.FileID)
+	return err
+}
+
 const softDeleteFile = `-- name: SoftDeleteFile :execrows
 UPDATE files
 SET
@@ -1909,6 +2046,36 @@ type UpdateFileStatusParams struct {
 
 func (q *Queries) UpdateFileStatus(ctx context.Context, arg UpdateFileStatusParams) error {
 	_, err := q.db.Exec(ctx, updateFileStatus, arg.Status, arg.FileID, arg.OwnerID)
+	return err
+}
+
+const upsertExtractedText = `-- name: UpsertExtractedText :exec
+INSERT INTO files_extracted_text (file_id, text, page_offsets)
+VALUES (
+    $1::uuid,
+    $2::text,
+    $3::integer[]
+)
+ON CONFLICT (file_id) DO UPDATE SET
+    text         = EXCLUDED.text,
+    page_offsets = EXCLUDED.page_offsets,
+    created_at   = NOW()
+`
+
+type UpsertExtractedTextParams struct {
+	FileID      pgtype.UUID `json:"file_id"`
+	Text        string      `json:"text"`
+	PageOffsets []int32     `json:"page_offsets"`
+}
+
+// Stores the extracted plaintext + per-page char-offset array for the
+// chunk+embed worker (ASK-221) to consume. ON CONFLICT DO UPDATE makes
+// the extract worker idempotent on retry: a second successful run
+// silently overwrites the previous text rather than colliding on the
+// file_id PK. ASK-221 is responsible for deleting the row once chunks
+// are written.
+func (q *Queries) UpsertExtractedText(ctx context.Context, arg UpsertExtractedTextParams) error {
+	_, err := q.db.Exec(ctx, upsertExtractedText, arg.FileID, arg.Text, arg.PageOffsets)
 	return err
 }
 
