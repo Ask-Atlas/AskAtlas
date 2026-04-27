@@ -31,7 +31,15 @@ export default async function MyStudyGuidesPage() {
             </span>
           </div>
           <p className="text-muted-foreground text-sm">
-            Access and manage the study guides you have created.
+            Drafts and guides you&rsquo;ve written. Looking for everything in
+            your courses?{" "}
+            <Link
+              href="/study-guides"
+              className="text-foreground font-medium underline-offset-2 hover:underline"
+            >
+              Browse by course
+            </Link>
+            .
           </p>
         </div>
         <Button asChild className="h-9">
@@ -45,12 +53,17 @@ export default async function MyStudyGuidesPage() {
       {guides.length === 0 ? (
         <EmptyState
           icon={<BookOpen className="size-8" aria-hidden={true} />}
-          title="No study guides yet"
-          body="Start your first study guide to capture notes, outlines, or cheat sheets."
+          title="You haven&rsquo;t written any guides yet"
+          body="Start your first one, or browse what's already in your courses."
           action={
-            <Button asChild>
-              <Link href="/study-guides/new">Create one</Link>
-            </Button>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <Button asChild>
+                <Link href="/study-guides/new">Create one</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/study-guides">Browse by course</Link>
+              </Button>
+            </div>
           }
           className="border-border bg-muted/30 rounded-[10px] border py-14"
         />

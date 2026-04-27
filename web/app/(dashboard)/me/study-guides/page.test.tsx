@@ -67,7 +67,9 @@ describe("MyStudyGuidesPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "My study guides" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("No study guides yet")).toBeInTheDocument();
+    expect(
+      screen.getByText("You haven’t written any guides yet"),
+    ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /create one/i })).toHaveAttribute(
       "href",
       "/study-guides/new",
