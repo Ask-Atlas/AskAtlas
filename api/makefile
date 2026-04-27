@@ -31,7 +31,7 @@ define prod-confirm
 	fi
 endef
 
-.PHONY: dev stage prod build install format format-check lint test tidy tidy-check \
+.PHONY: dev stage prod build install format format-check lint test test-integration tidy tidy-check \
 	sqlc/generate docker-build docker-run mockery seed seed-schools seed-courses \
 	seed-study-guides seed-demo-content e2e generate-docs bruno
 
@@ -61,6 +61,13 @@ lint:
 
 test:
 	go test ./...
+
+# Runs integration tests gated by the `integration` build tag (e.g.
+# the ASK-220 file-extraction worker tests that spin up Postgres via
+# testcontainers-go). Requires Docker locally; the integration-test
+# CI job runs this via the same -tags=integration switch.
+test-integration:
+	go test -tags=integration ./...
 
 mockery:
 	go tool mockery
