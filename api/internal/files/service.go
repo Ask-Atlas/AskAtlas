@@ -380,6 +380,7 @@ type DeleteFileParams struct {
 type QStashPublisher interface {
 	PublishDeleteFile(ctx context.Context, msg qstashclient.DeleteFileMessage) (string, error)
 	PublishExtractFile(ctx context.Context, msg qstashclient.ExtractFileMessage) (string, error)
+	PublishChunkEmbedFile(ctx context.Context, msg qstashclient.ChunkEmbedFileMessage) (string, error)
 }
 
 // DeleteFile soft-deletes the file within a transaction, then publishes an async

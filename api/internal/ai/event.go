@@ -77,6 +77,10 @@ const (
 	FeatureQA           Feature = "qa"
 	FeatureQuiz         Feature = "quiz"
 	FeatureRefSuggest   Feature = "ref_suggest"
+	// FeatureEmbedding tags chunk-embed worker spend (ASK-221) so the
+	// per-feature cost log + ai_usage ledger keep retrieval ingestion
+	// separately accountable from interactive AI features.
+	FeatureEmbedding Feature = "embedding"
 )
 
 // StreamRequest is the input to Client.Stream. Mirrors the subset of

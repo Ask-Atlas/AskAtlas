@@ -31,6 +31,18 @@ type ExtractFileMessage struct {
 	Environment string `json:"environment,omitempty"`
 }
 
+// ChunkEmbedFileMessage is the payload published to the chunk-embed
+// job queue (ASK-221). The worker re-fetches everything from the DB
+// (extracted text, file metadata), so the only field that must be
+// correct is FileID; the rest is for log correlation when something
+// goes wrong.
+type ChunkEmbedFileMessage struct {
+	FileID      string `json:"file_id"`
+	UserID      string `json:"user_id"`
+	RequestedAt string `json:"requested_at"`
+	Environment string `json:"environment,omitempty"`
+}
+
 // Client wraps the QStash SDK for publishing job messages.
 type Client struct {
 	client     *qstash.Client
@@ -98,6 +110,33 @@ func (c *Client) PublishExtractFile(ctx context.Context, msg ExtractFileMessage)
 	})
 	if err != nil {
 		return "", fmt.Errorf("qstashclient.PublishExtractFile: publish: %w", err)
+	}
+
+	return res.MessageId, nil
+}
+
+// PublishChunkEmbedFile sends a chunk-embed-file message to QStash
+// (ASK-221). The extract worker fires this at the end of a successful
+// extract run so the chunk+embed pipeline picks the file up.
+func (c *Client) PublishChunkEmbedFile(ctx context.Context, msg ChunkEmbedFileMessage) (string, error) {
+	if msg.Environment == "" {
+		msg.Environment = c.env
+	}
+
+	body, err := json.Marshal(msg)
+	if err != nil {
+		return "", fmt.Errorf("qstashclient.PublishChunkEmbedFile: marshal: %w", err)
+	}
+
+	res, err := c.client.Publish(qstash.PublishOptions{
+		Url:             c.jobBaseURL + "/chunk-embed-file",
+		Body:            string(body),
+		Method:          http.MethodPost,
+		ContentType:     "application/json",
+		FailureCallback: c.jobBaseURL + "/chunk-embed-file-failed",
+	})
+	if err != nil {
+		return "", fmt.Errorf("qstashclient.PublishChunkEmbedFile: publish: %w", err)
 	}
 
 	return res.MessageId, nil

@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
+	qstashclient "github.com/Ask-Atlas/AskAtlas/api/internal/qstash"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/google/uuid"
@@ -30,17 +32,30 @@ type S3Downloader interface {
 	GetObject(ctx context.Context, key string) ([]byte, error)
 }
 
+// ChunkEmbedPublisher is the publish surface the extract worker uses
+// to hand off to the ASK-221 chunk+embed worker after a successful
+// extract. Narrow on purpose: tests use a hand-rolled fake, the
+// production qstashclient.Client satisfies it directly. May be nil
+// in test setups that don't exercise the post-extract handoff.
+type ChunkEmbedPublisher interface {
+	PublishChunkEmbedFile(ctx context.Context, msg qstashclient.ChunkEmbedFileMessage) (string, error)
+}
+
 // ExtractWorker drives a single extract job from the QStash callback.
 // Stateless across calls -- every Process invocation resolves its own
 // row, downloads, parses, and persists.
 type ExtractWorker struct {
 	repo       ExtractRepository
 	downloader S3Downloader
+	publisher  ChunkEmbedPublisher // nil-safe; logs and continues
 }
 
 // NewExtractWorker constructs the worker with its required collaborators.
-func NewExtractWorker(repo ExtractRepository, downloader S3Downloader) *ExtractWorker {
-	return &ExtractWorker{repo: repo, downloader: downloader}
+// publisher may be nil -- the worker logs an error and skips the
+// chunk+embed handoff when nil, which keeps existing test setups
+// working without the new dep.
+func NewExtractWorker(repo ExtractRepository, downloader S3Downloader, publisher ChunkEmbedPublisher) *ExtractWorker {
+	return &ExtractWorker{repo: repo, downloader: downloader, publisher: publisher}
 }
 
 // Process executes one extract job. Idempotency contract:
@@ -121,11 +136,29 @@ func (w *ExtractWorker) Process(ctx context.Context, fileID uuid.UUID) error {
 		return fmt.Errorf("ExtractWorker.Process: mark extracted: %w", err)
 	}
 
-	// Note: the chunk+embed enqueue step lands in ASK-221. That ticket
-	// will either add a publisher hook here or run a backfill scan over
-	// processing_status='extracted' rows. We deliberately do not
-	// publish to a topic with no consumer in this PR -- doing so would
-	// trigger the QStash failure callback in a steady-state loop.
+	// Hand off to the ASK-221 chunk+embed worker. Best-effort: a
+	// publish failure here doesn't unwind the extracted-text write
+	// (the row is canonical and the next pipeline run can be
+	// triggered by a manual republish). Surface it loudly so ops
+	// notices instead of silently leaving the row stuck at
+	// 'extracted' forever.
+	ownerID, ownerErr := utils.PgxToGoogleUUID(row.UserID)
+	if ownerErr == nil && w.publisher != nil {
+		if _, err := w.publisher.PublishChunkEmbedFile(ctx, qstashclient.ChunkEmbedFileMessage{
+			FileID:      fileID.String(),
+			UserID:      ownerID.String(),
+			RequestedAt: time.Now().UTC().Format(time.RFC3339),
+		}); err != nil {
+			slog.Error("extract worker: publish chunk-embed failed",
+				"file_id", fileID, "error", err)
+		}
+	} else if w.publisher == nil {
+		slog.Error("extract worker: chunk-embed publisher not configured; skipping handoff",
+			"file_id", fileID)
+	} else {
+		slog.Error("extract worker: decode owner_id for chunk-embed handoff failed",
+			"file_id", fileID, "error", ownerErr)
+	}
 
 	slog.Info("extract worker: done",
 		"file_id", fileID,

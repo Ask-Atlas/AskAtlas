@@ -50,7 +50,7 @@ func newExtractRequest(t *testing.T, msg qstashclient.ExtractFileMessage) *http.
 
 func TestExtractFileJob_HappyPath(t *testing.T) {
 	extractor := mock_handlers.NewMockFileExtractor(t)
-	h := handlers.NewJobHandler(nil, nil, extractor)
+	h := handlers.NewJobHandler(nil, nil, extractor, nil)
 
 	fileID := uuid.New()
 	extractor.EXPECT().Process(mock.Anything, fileID).Return(nil)
@@ -66,7 +66,7 @@ func TestExtractFileJob_HappyPath(t *testing.T) {
 
 func TestExtractFileJob_BadFileID(t *testing.T) {
 	extractor := mock_handlers.NewMockFileExtractor(t)
-	h := handlers.NewJobHandler(nil, nil, extractor)
+	h := handlers.NewJobHandler(nil, nil, extractor, nil)
 
 	req := newExtractRequest(t, qstashclient.ExtractFileMessage{FileID: "not-a-uuid"})
 	w := httptest.NewRecorder()
@@ -78,7 +78,7 @@ func TestExtractFileJob_BadFileID(t *testing.T) {
 
 func TestExtractFileJob_BadJSON(t *testing.T) {
 	extractor := mock_handlers.NewMockFileExtractor(t)
-	h := handlers.NewJobHandler(nil, nil, extractor)
+	h := handlers.NewJobHandler(nil, nil, extractor, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/jobs/extract-file",
 		bytes.NewBufferString(`{"file_id`)) // truncated JSON
@@ -91,7 +91,7 @@ func TestExtractFileJob_BadJSON(t *testing.T) {
 
 func TestExtractFileJob_WorkerErrorYields500(t *testing.T) {
 	extractor := mock_handlers.NewMockFileExtractor(t)
-	h := handlers.NewJobHandler(nil, nil, extractor)
+	h := handlers.NewJobHandler(nil, nil, extractor, nil)
 
 	fileID := uuid.New()
 	extractor.EXPECT().Process(mock.Anything, fileID).Return(errors.New("s3 down"))
@@ -108,7 +108,7 @@ func TestExtractFileJob_WorkerErrorYields500(t *testing.T) {
 
 func TestExtractFileFailedJob_UnwrapsEnvelopeAndMarksRowFailed(t *testing.T) {
 	extractor := mock_handlers.NewMockFileExtractor(t)
-	h := handlers.NewJobHandler(nil, nil, extractor)
+	h := handlers.NewJobHandler(nil, nil, extractor, nil)
 
 	fileID := uuid.New()
 	// Reason should embed the source message id + final HTTP status
@@ -136,7 +136,7 @@ func TestExtractFileFailedJob_UnwrapsEnvelopeAndMarksRowFailed(t *testing.T) {
 
 func TestExtractFileFailedJob_BadEnvelopeJSONStill200(t *testing.T) {
 	extractor := mock_handlers.NewMockFileExtractor(t)
-	h := handlers.NewJobHandler(nil, nil, extractor)
+	h := handlers.NewJobHandler(nil, nil, extractor, nil)
 
 	req := httptest.NewRequest(http.MethodPost, "/jobs/extract-file-failed",
 		bytes.NewBufferString(`{`))
@@ -157,7 +157,7 @@ func TestExtractFileFailedJob_BadEnvelopeJSONStill200(t *testing.T) {
 // invoke MarkFailed (which would mark with a zero-uuid file_id).
 func TestExtractFileFailedJob_BadInnerJSONStill200(t *testing.T) {
 	extractor := mock_handlers.NewMockFileExtractor(t)
-	h := handlers.NewJobHandler(nil, nil, extractor)
+	h := handlers.NewJobHandler(nil, nil, extractor, nil)
 
 	// Envelope is valid JSON; sourceBody is base64 of garbage that
 	// won't unmarshal into ExtractFileMessage. (Empty {} is technically
@@ -182,4 +182,87 @@ func TestExtractFileFailedJob_BadInnerJSONStill200(t *testing.T) {
 // closure for clarity.
 func contains(haystack, needle string) bool {
 	return bytes.Contains([]byte(haystack), []byte(needle))
+}
+
+// --- ASK-221 ChunkEmbedFile* handler tests ---
+
+func newChunkEmbedRequest(t *testing.T, msg qstashclient.ChunkEmbedFileMessage) *http.Request {
+	t.Helper()
+	body, err := json.Marshal(msg)
+	require.NoError(t, err)
+	return httptest.NewRequest(http.MethodPost, "/jobs/chunk-embed-file", bytes.NewReader(body))
+}
+
+func TestChunkEmbedFileJob_HappyPath(t *testing.T) {
+	chunkEmbedder := mock_handlers.NewMockFileChunkEmbedder(t)
+	h := handlers.NewJobHandler(nil, nil, nil, chunkEmbedder)
+
+	fileID := uuid.New()
+	chunkEmbedder.EXPECT().Process(mock.Anything, fileID).Return(nil)
+
+	req := newChunkEmbedRequest(t, qstashclient.ChunkEmbedFileMessage{FileID: fileID.String()})
+	w := httptest.NewRecorder()
+	h.ChunkEmbedFileJob(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestChunkEmbedFileJob_BadFileID(t *testing.T) {
+	chunkEmbedder := mock_handlers.NewMockFileChunkEmbedder(t)
+	h := handlers.NewJobHandler(nil, nil, nil, chunkEmbedder)
+
+	req := newChunkEmbedRequest(t, qstashclient.ChunkEmbedFileMessage{FileID: "not-a-uuid"})
+	w := httptest.NewRecorder()
+	h.ChunkEmbedFileJob(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	chunkEmbedder.AssertNotCalled(t, "Process", mock.Anything, mock.Anything)
+}
+
+func TestChunkEmbedFileJob_WorkerErrorYields500(t *testing.T) {
+	chunkEmbedder := mock_handlers.NewMockFileChunkEmbedder(t)
+	h := handlers.NewJobHandler(nil, nil, nil, chunkEmbedder)
+
+	fileID := uuid.New()
+	chunkEmbedder.EXPECT().Process(mock.Anything, fileID).Return(errors.New("embed 503"))
+
+	req := newChunkEmbedRequest(t, qstashclient.ChunkEmbedFileMessage{FileID: fileID.String()})
+	w := httptest.NewRecorder()
+	h.ChunkEmbedFileJob(w, req)
+
+	assert.GreaterOrEqual(t, w.Code, 500)
+}
+
+func TestChunkEmbedFileFailedJob_UnwrapsEnvelopeAndMarksRowFailed(t *testing.T) {
+	chunkEmbedder := mock_handlers.NewMockFileChunkEmbedder(t)
+	h := handlers.NewJobHandler(nil, nil, nil, chunkEmbedder)
+
+	fileID := uuid.New()
+	chunkEmbedder.EXPECT().MarkFailed(mock.Anything, fileID, mock.MatchedBy(func(reason string) bool {
+		return contains(reason, "source_msg=msg_ce") && contains(reason, "http_status=500")
+	})).Return(nil)
+
+	envelope := wrapAsFailureCallback(t, qstashclient.ChunkEmbedFileMessage{
+		FileID: fileID.String(),
+	}, "msg_ce", 500, 3)
+
+	req := httptest.NewRequest(http.MethodPost, "/jobs/chunk-embed-file-failed",
+		bytes.NewReader(envelope))
+	w := httptest.NewRecorder()
+	h.ChunkEmbedFileFailedJob(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestChunkEmbedFileFailedJob_BadEnvelopeStill200(t *testing.T) {
+	chunkEmbedder := mock_handlers.NewMockFileChunkEmbedder(t)
+	h := handlers.NewJobHandler(nil, nil, nil, chunkEmbedder)
+
+	req := httptest.NewRequest(http.MethodPost, "/jobs/chunk-embed-file-failed",
+		bytes.NewBufferString(`{`))
+	w := httptest.NewRecorder()
+	h.ChunkEmbedFileFailedJob(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	chunkEmbedder.AssertNotCalled(t, "MarkFailed", mock.Anything, mock.Anything, mock.Anything)
 }
