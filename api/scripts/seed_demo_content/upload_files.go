@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -73,7 +74,11 @@ func uploadFileBinaries(ctx context.Context, bucket string, files []fileEntry, l
 	keyBySlug := make(map[string]string, len(files))
 	for _, f := range files {
 		mimeBySlug[f.Slug] = f.MimeType
-		keyBySlug[f.Slug] = "seed-demo/" + f.Slug + "/" + f.Filename
+		// path.Clean + path.Base sanitize against a malformed fixture
+		// (e.g. `slug: "../prod"`) producing a key outside the
+		// seed-demo/ prefix. Defense in depth — fixtures.yaml is
+		// repo-controlled, but operator + CI safety wins on cheap.
+		keyBySlug[f.Slug] = "seed-demo/" + path.Clean(f.Slug) + "/" + path.Base(f.Filename)
 	}
 
 	for slug, body := range localBytes {
@@ -87,5 +92,12 @@ func uploadFileBinaries(ctx context.Context, bucket string, files []fileEntry, l
 		uploaded++
 	}
 	log.Printf("upload: pushed %d local-corpus files to s3 (%d errors)", uploaded, failed)
+	if failed > 0 {
+		// Surface the partial-failure count to the caller so the
+		// `make seed-demo-content` invocation exits non-zero. DB
+		// state is already committed, so re-running the seeder is
+		// the documented retry path (PutObject overwrites).
+		return fmt.Errorf("%d/%d local-corpus uploads failed; re-run the seed to retry", failed, uploaded+failed)
+	}
 	return nil
 }
