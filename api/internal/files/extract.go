@@ -75,10 +75,26 @@ func extractPlainText(body []byte) (ExtractedDocument, error) {
 
 // extractPDF reads each page in order and concatenates the page text
 // with a single "\n\n" separator. PageOffsets[i] is the rune-count
-// offset where page i+1 begins. ledongthuc/pdf returns a single
-// io.Reader for "all pages joined" via GetPlainText, but we need
+// offset where page i+1's text begins. ledongthuc/pdf exposes a single
+// io.Reader for "all pages joined" via Reader.GetPlainText, but we need
 // per-page boundaries for citation cards (ASK-224), so we walk pages
 // manually via Page(i).GetPlainText.
+//
+// Implementation invariants (load-bearing for ASK-224 citations):
+//   - The separator "\n\n" is written BEFORE the page's offset is
+//     recorded, so PageOffsets[i] points at the first rune of the
+//     page's own text, not at the trailing separator from the
+//     previous page. Earlier draft had this reversed (CodeRabbit
+//     #114) and shifted every page-2+ offset by 2.
+//   - A running rune count is kept in lockstep with the buffer
+//     instead of recounting via utf8.RuneCountInString(buf.String())
+//     each iteration. The latter is O(N^2) for many-page PDFs.
+//   - We do NOT TrimSpace the joined output. Trimming would shift
+//     PageOffsets out of sync with the returned Text whenever page 1
+//     had leading whitespace. Whitespace cleanup is the chunker's
+//     job (ASK-221). We still reject documents whose entire content
+//     is whitespace via a TrimSpace check that doesn't mutate the
+//     buffer.
 func extractPDF(body []byte) (ExtractedDocument, error) {
 	reader, err := pdf.NewReader(bytes.NewReader(body), int64(len(body)))
 	if err != nil {
@@ -86,19 +102,21 @@ func extractPDF(body []byte) (ExtractedDocument, error) {
 	}
 
 	var (
-		buf       strings.Builder
-		offsets   []int32
-		fontCache = make(map[string]*pdf.Font)
+		buf        strings.Builder
+		offsets    []int32
+		runeCount  int // running rune count of buf; kept in lockstep
+		fontCache  = make(map[string]*pdf.Font)
+		totalPages = reader.NumPage()
 	)
 
-	totalPages := reader.NumPage()
 	for pageIdx := 1; pageIdx <= totalPages; pageIdx++ {
 		page := reader.Page(pageIdx)
 		if page.V.IsNull() || page.V.Key("Contents").Kind() == pdf.Null {
-			// Empty / image-only page. Still record the offset so the
-			// page count matches reality and the chunker doesn't
-			// off-by-one when stamping page numbers on chunks.
-			offsets = append(offsets, int32(utf8.RuneCountInString(buf.String())))
+			// Empty / image-only page. Record where this page WOULD
+			// start in the joined text (== current rune count) so the
+			// PageOffsets array stays page-aligned for downstream
+			// binary-search lookups. No content + no separator written.
+			offsets = append(offsets, int32(runeCount))
 			continue
 		}
 
@@ -107,15 +125,22 @@ func extractPDF(body []byte) (ExtractedDocument, error) {
 			return ExtractedDocument{}, fmt.Errorf("files.extractPDF: page %d: %w", pageIdx, err)
 		}
 
-		offsets = append(offsets, int32(utf8.RuneCountInString(buf.String())))
+		// Add the separator FIRST when there's previous content, so
+		// the offset we record next points at the page's own text and
+		// not at the separator we just wrote.
 		if buf.Len() > 0 {
 			buf.WriteString("\n\n")
+			runeCount += 2 // "\n\n" is 2 ASCII runes
 		}
+		offsets = append(offsets, int32(runeCount))
+		runeCount += utf8.RuneCountInString(pageText)
 		buf.WriteString(pageText)
 	}
 
-	text := strings.TrimSpace(buf.String())
-	if text == "" {
+	text := buf.String()
+	// Reject whitespace-only documents (nearly always image-only PDFs)
+	// without mutating Text -- mutating would desync PageOffsets.
+	if strings.TrimSpace(text) == "" {
 		return ExtractedDocument{}, ErrEmptyExtraction
 	}
 	return ExtractedDocument{Text: text, PageOffsets: offsets}, nil

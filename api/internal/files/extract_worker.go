@@ -2,12 +2,14 @@ package files
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
+	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/google/uuid"
 )
 
@@ -54,6 +56,17 @@ func NewExtractWorker(repo ExtractRepository, downloader S3Downloader) *ExtractW
 func (w *ExtractWorker) Process(ctx context.Context, fileID uuid.UUID) error {
 	row, err := w.repo.GetFileForExtraction(ctx, fileID)
 	if err != nil {
+		// File was deleted between the PATCH that enqueued this job
+		// and the worker actually running. Treat as terminal-success:
+		// log + return nil so QStash stops retrying. The eventual
+		// failure callback would also UPDATE zero rows in
+		// MarkFileProcessingFailed, so retries until budget
+		// exhaustion are pure waste.
+		if errors.Is(err, apperrors.ErrNotFound) {
+			slog.Warn("extract worker: file vanished before extract; skipping",
+				"file_id", fileID)
+			return nil
+		}
 		return fmt.Errorf("ExtractWorker.Process: load: %w", err)
 	}
 
@@ -151,6 +164,13 @@ func NewExtractRepository(queries *db.Queries) ExtractRepository {
 func (r *extractRepoAdapter) GetFileForExtraction(ctx context.Context, fileID uuid.UUID) (db.GetFileForExtractionRow, error) {
 	row, err := r.queries.GetFileForExtraction(ctx, utils.UUID(fileID))
 	if err != nil {
+		// Translate the sql-level "no rows" sentinel to the
+		// project-wide apperrors.ErrNotFound so the worker's
+		// errors.Is check finds it. Mirrors sqlc_repository.go's
+		// pattern for every other :one query.
+		if errors.Is(err, sql.ErrNoRows) {
+			return db.GetFileForExtractionRow{}, fmt.Errorf("GetFileForExtraction: %w", apperrors.ErrNotFound)
+		}
 		return db.GetFileForExtractionRow{}, fmt.Errorf("GetFileForExtraction: %w", err)
 	}
 	return row, nil

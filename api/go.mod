@@ -19,6 +19,8 @@ require (
 	github.com/oapi-codegen/runtime v1.2.0
 	github.com/openai/openai-go v1.12.0
 	github.com/pgvector/pgvector-go v0.3.0
+	github.com/testcontainers/testcontainers-go v0.42.0
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.42.0
 	github.com/tmaxmax/go-sse v0.11.0
 	github.com/upstash/qstash-go v1.0.0
 )
@@ -118,8 +120,6 @@ require (
 	github.com/shirou/gopsutil/v4 v4.26.3 // indirect
 	github.com/sqlc-dev/sqlc v1.30.0 // indirect
 	github.com/stoewer/go-strcase v1.2.0 // indirect
-	github.com/testcontainers/testcontainers-go v0.42.0 // indirect
-	github.com/testcontainers/testcontainers-go/modules/postgres v0.42.0 // indirect
 	github.com/tetratelabs/wazero v1.9.0 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect

@@ -8,6 +8,7 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/files"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
+	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -184,6 +185,24 @@ func TestExtractWorker_Process_IdempotentSkipsFailed(t *testing.T) {
 	require.NoError(t, w.Process(context.Background(), uuid.New()))
 	assert.Empty(t, repo.transitions)
 	assert.Empty(t, repo.failedReasons, "already-failed rows are not re-failed")
+}
+
+// TestExtractWorker_Process_VanishedFileTerminalSuccess covers the
+// race where the file row is deleted between the PATCH that enqueued
+// the job and the worker actually running. The repo returns
+// apperrors.ErrNotFound; the worker must treat that as terminal
+// success (return nil) so QStash stops retrying. Without this
+// short-circuit (CodeRabbit major on extract_worker.go:68), retries
+// run until budget exhaustion and the failure callback then UPDATEs
+// zero rows -- pure waste.
+func TestExtractWorker_Process_VanishedFileTerminalSuccess(t *testing.T) {
+	repo := &fakeExtractRepo{getErr: apperrors.ErrNotFound}
+	w := files.NewExtractWorker(repo, &fakeDownloader{})
+
+	err := w.Process(context.Background(), uuid.New())
+	require.NoError(t, err, "vanished-file should be terminal-success, not transient")
+	assert.Empty(t, repo.transitions, "no status writes on a vanished row")
+	assert.Empty(t, repo.failedReasons)
 }
 
 func TestExtractWorker_MarkFailed(t *testing.T) {

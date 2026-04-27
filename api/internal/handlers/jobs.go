@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 
@@ -14,6 +16,43 @@ import (
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/google/uuid"
 )
+
+// failureCallbackEnvelope is the JSON wrapper QStash POSTs to a
+// FailureCallback URL after exhausting retries. See:
+//
+//	https://upstash.com/docs/qstash/features/callbacks
+//
+// QStash does NOT replay the original message body to the failure
+// callback URL -- it sends an envelope where the original body is
+// base64-encoded inside `sourceBody`. The earlier draft of these
+// handlers tried to decode that envelope as the original message
+// directly, which silently produced zero-value fields and left the
+// row stuck in `extracting` (CodeRabbit critical, jobs_test.go:105
+// + jobs.go:172). We only need a few fields: SourceBody to recover
+// the typed message, SourceMessageID for log correlation, Status to
+// record the final HTTP code in status_error.
+type failureCallbackEnvelope struct {
+	SourceMessageID string `json:"sourceMessageId"`
+	SourceBody      string `json:"sourceBody"` // base64-encoded original
+	Status          int    `json:"status"`
+	Retried         int    `json:"retried"`
+}
+
+// decodeFailureCallbackBody reads the failure-callback envelope from
+// r and returns the base64-decoded original message body plus the
+// envelope metadata for log correlation. Returns the envelope even
+// on body-decode failure so the caller can log what it received.
+func decodeFailureCallbackBody(r io.Reader) ([]byte, failureCallbackEnvelope, error) {
+	var env failureCallbackEnvelope
+	if err := json.NewDecoder(r).Decode(&env); err != nil {
+		return nil, env, fmt.Errorf("decode envelope: %w", err)
+	}
+	body, err := base64.StdEncoding.DecodeString(env.SourceBody)
+	if err != nil {
+		return nil, env, fmt.Errorf("base64 decode sourceBody: %w", err)
+	}
+	return body, env, nil
+}
 
 // FileExtractor processes one extract job and (separately) marks a
 // job terminally failed when QStash exhausts retries.
@@ -77,10 +116,25 @@ func (h *JobHandler) DeleteFileJob(w http.ResponseWriter, r *http.Request) {
 
 // DeleteFileFailedJob handles POST /jobs/delete-file-failed.
 // Called by QStash when the delete-file job fails after all retries.
+// The request body is the QStash failure-callback envelope (NOT the
+// original DeleteFileMessage); we recover the message via base64
+// decode of envelope.SourceBody.
 func (h *JobHandler) DeleteFileFailedJob(w http.ResponseWriter, r *http.Request) {
+	rawBody, env, err := decodeFailureCallbackBody(r.Body)
+	if err != nil {
+		slog.Error("DeleteFileFailedJob: failed to decode failure callback envelope", "error", err)
+		// Still 200 -- QStash has already given up on the original
+		// dispatch; failing the failure-callback would just trigger
+		// another retry cycle on the callback itself.
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	var body qstashclient.DeleteFileMessage
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		slog.Error("DeleteFileFailedJob: failed to parse body", "error", err)
+	if err := json.Unmarshal(rawBody, &body); err != nil {
+		slog.Error("DeleteFileFailedJob: failed to parse inner message",
+			"source_message_id", env.SourceMessageID,
+			"error", err)
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -91,6 +145,9 @@ func (h *JobHandler) DeleteFileFailedJob(w http.ResponseWriter, r *http.Request)
 		"user_id", body.UserID,
 		"environment", body.Environment,
 		"requested_at", body.RequestedAt,
+		"source_message_id", env.SourceMessageID,
+		"final_http_status", env.Status,
+		"retried", env.Retried,
 	)
 
 	w.WriteHeader(http.StatusOK)
@@ -133,22 +190,42 @@ func (h *JobHandler) ExtractFileJob(w http.ResponseWriter, r *http.Request) {
 // by QStash when the extract-file job exhausts retries; we mark the
 // row terminally failed so the user sees the failure in the file UI
 // (ASK-222) instead of a permanently 'extracting' state.
+//
+// The request body is the QStash failure-callback envelope, NOT the
+// original ExtractFileMessage. We unwrap it via decodeFailureCallbackBody
+// before parsing the inner message.
 func (h *JobHandler) ExtractFileFailedJob(w http.ResponseWriter, r *http.Request) {
+	rawBody, env, err := decodeFailureCallbackBody(r.Body)
+	if err != nil {
+		slog.Error("ExtractFileFailedJob: failed to decode failure callback envelope", "error", err)
+		// 200 so QStash doesn't retry the failure callback itself.
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	var body qstashclient.ExtractFileMessage
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		slog.Error("ExtractFileFailedJob: failed to parse body", "error", err)
+	if err := json.Unmarshal(rawBody, &body); err != nil {
+		slog.Error("ExtractFileFailedJob: failed to parse inner message",
+			"source_message_id", env.SourceMessageID,
+			"error", err)
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
 	fileID, err := uuid.Parse(body.FileID)
 	if err != nil {
-		slog.Error("ExtractFileFailedJob: invalid file_id", "file_id", body.FileID, "error", err)
+		slog.Error("ExtractFileFailedJob: invalid file_id",
+			"file_id", body.FileID,
+			"source_message_id", env.SourceMessageID,
+			"error", err)
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	reason := fmt.Sprintf("extract job exhausted retries (mime=%s)", body.MimeType)
+	reason := fmt.Sprintf(
+		"extract job exhausted retries (mime=%s, source_msg=%s, http_status=%d)",
+		body.MimeType, env.SourceMessageID, env.Status,
+	)
 	if err := h.extractor.MarkFailed(r.Context(), fileID, reason); err != nil {
 		// We still 200 -- QStash has already given up; returning 5xx
 		// just spawns more failure-callback retries. The error is
@@ -156,6 +233,7 @@ func (h *JobHandler) ExtractFileFailedJob(w http.ResponseWriter, r *http.Request
 		slog.Error("ExtractFileFailedJob: failed to mark row failed",
 			"file_id", body.FileID,
 			"environment", body.Environment,
+			"source_message_id", env.SourceMessageID,
 			"error", err,
 		)
 	}
@@ -166,6 +244,9 @@ func (h *JobHandler) ExtractFileFailedJob(w http.ResponseWriter, r *http.Request
 		"user_id", body.UserID,
 		"environment", body.Environment,
 		"requested_at", body.RequestedAt,
+		"source_message_id", env.SourceMessageID,
+		"final_http_status", env.Status,
+		"retried", env.Retried,
 	)
 
 	w.WriteHeader(http.StatusOK)
