@@ -154,7 +154,7 @@ seed-study-guides:
 	$(call prod-confirm)
 	infisical run --env=$(ENV) -- go run $(SEED_STUDY_GUIDES_PATH) -guides=$(STUDY_GUIDES_CSV)
 
-## make seed-demo-content [ENV=dev|staging|prod] [ACTION=seed|clean] [SYNTH_USERS=1000] [SEED=42]
+## make seed-demo-content [ENV=dev|staging|prod] [ACTION=seed|clean] [SYNTH_USERS=1000] [SEED=42] [ADOPT_CLERK_ID=user_xxx ADOPT_EMAIL=you@example.com]
 ##
 ## Phase 3 demo-data loader. ACTION=seed (default) reads the Phase 1+2
 ## validated YAML/MD fixtures at scripts/seed_demo/fixtures/ and writes
@@ -185,7 +185,9 @@ seed-demo-content:
 	infisical run --env=$(ENV) -- go run ./scripts/seed_demo_content/ \
 		--action=$(ACTION) \
 		--synth-users=$(or $(SYNTH_USERS),1000) \
-		--seed=$(or $(SEED),42)
+		--seed=$(or $(SEED),42) \
+		--adopt-clerk-id=$(or $(ADOPT_CLERK_ID),) \
+		--adopt-email=$(or $(ADOPT_EMAIL),)
 
 ## make e2e E2E_TOKEN=<token> [ENV=dev|staging]
 e2e:

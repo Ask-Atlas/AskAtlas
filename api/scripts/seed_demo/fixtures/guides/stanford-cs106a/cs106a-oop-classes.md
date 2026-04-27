@@ -6,11 +6,15 @@ course:
   number: "106A"
 title: "Classes and Object-Oriented Programming — CS 106A"
 description: "Defining classes, instance state, methods, and the dunder protocol Python uses to make objects feel native."
-tags: ["python", "oop", "classes", "objects", "final"]
+tags: ["python", "oop", "classes", "objects", "final", "demo-hero"]
 author_role: bot
+recommended: true
 quiz_slug: cs106a-oop-classes-quiz
 attached_files:
   - stanford-cs106a-classes-oop-template
+  - stanford-cs106a-debugging-techniques
+  - stanford-cs106a-list-comprehensions-cheatsheet
+  - stanford-cs106a-recursion-primer
 attached_resources: []
 ---
 

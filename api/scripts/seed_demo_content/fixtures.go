@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -70,7 +71,13 @@ type guideEntry struct {
 	QuizSlug          string    `yaml:"quiz_slug,omitempty"`
 	AttachedFiles     []string  `yaml:"attached_files"`
 	AttachedResources []string  `yaml:"attached_resources"`
-	Body              string    `yaml:"-"`
+	// Recommended marks this guide as a curated demo highlight. The
+	// activity layer adds a `study_guide_recommendations` row
+	// attributed to the seed bot user so it surfaces on the home
+	// page's "Recommended" rail without depending on the random
+	// every-3rd-guide fallback.
+	Recommended bool   `yaml:"recommended,omitempty"`
+	Body        string `yaml:"-"`
 }
 
 type questionOption struct {
@@ -162,6 +169,13 @@ func loadGuides(rootDir string) ([]guideEntry, error) {
 
 func loadQuizzes(rootDir string) ([]quizEntry, error) {
 	var out []quizEntry
+	// Demo-only constraint: freeform questions are scored server-side
+	// by case-insensitive trimmed string match, which feels broken to
+	// users who phrase their answer slightly differently. Strip them
+	// at load time so no freeform ever lands in the seed dataset; if
+	// the filter empties a quiz, drop the quiz too (the API requires
+	// >=1 question per quiz).
+	var droppedQuestions, droppedQuizzes int
 	err := filepath.WalkDir(rootDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -177,9 +191,26 @@ func loadQuizzes(rootDir string) ([]quizEntry, error) {
 		if err := yaml.Unmarshal(raw, &q); err != nil {
 			return fmt.Errorf("parse %s: %w", path, err)
 		}
+		filtered := make([]questionEntry, 0, len(q.Questions))
+		for _, qq := range q.Questions {
+			if qq.Type == "freeform" {
+				droppedQuestions++
+				continue
+			}
+			filtered = append(filtered, qq)
+		}
+		q.Questions = filtered
+		if len(q.Questions) == 0 {
+			droppedQuizzes++
+			log.Printf("WARN quiz %q dropped — every question was freeform", q.Slug)
+			return nil
+		}
 		out = append(out, q)
 		return nil
 	})
+	if droppedQuestions > 0 || droppedQuizzes > 0 {
+		log.Printf("freeform filter: dropped %d questions, dropped %d empty quizzes", droppedQuestions, droppedQuizzes)
+	}
 	if err != nil {
 		return nil, err
 	}

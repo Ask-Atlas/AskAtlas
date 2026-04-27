@@ -1,6 +1,7 @@
 package s3client
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -131,6 +132,25 @@ func (c *Client) DeleteObject(ctx context.Context, key string) error {
 		return fmt.Errorf("s3client.DeleteObject: %w", err)
 	}
 
+	return nil
+}
+
+// PutObject uploads the given body bytes to the S3 key with the
+// supplied Content-Type. Used by the demo seeder to push local
+// corpus binaries directly (the production upload flow goes through
+// presigned URLs, but the seeder runs server-side with full
+// credentials and bypasses the presign hop).
+func (c *Client) PutObject(ctx context.Context, key string, body []byte, contentType string) error {
+	_, err := c.svc.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:        aws.String(c.bucket),
+		Key:           aws.String(key),
+		Body:          bytes.NewReader(body),
+		ContentType:   aws.String(contentType),
+		ContentLength: aws.Int64(int64(len(body))),
+	})
+	if err != nil {
+		return fmt.Errorf("s3client.PutObject: %w", err)
+	}
 	return nil
 }
 

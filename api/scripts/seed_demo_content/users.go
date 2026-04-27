@@ -48,8 +48,21 @@ func ensureBotUser(ctx context.Context, tx pgx.Tx) (uuid.UUID, error) {
 	return ensureUser(ctx, tx, "seed_bot", "seed.bot@askatlas.example", "AskAtlas", "Editorial")
 }
 
-func ensureDemoUser(ctx context.Context, tx pgx.Tx) (uuid.UUID, error) {
-	return ensureUser(ctx, tx, "seed_demo", "seed.demo@askatlas.example", "Demo", "Student")
+// ensureDemoUser creates / fetches the row that owns all demo activity
+// (enrollments, favorites, recents, practice sessions). When
+// `adoptClerkID` is non-empty, the row is keyed to that real Clerk id
+// + email instead of the synthetic `seed_demo` placeholder, so a real
+// user signing in with that Clerk id lands on the fully-populated
+// dashboard. Both adopt args must be supplied together; either both
+// empty (synthetic mode) or both non-empty (adopt mode).
+func ensureDemoUser(ctx context.Context, tx pgx.Tx, adoptClerkID, adoptEmail string) (uuid.UUID, error) {
+	clerkID := "seed_demo"
+	email := "seed.demo@askatlas.example"
+	if adoptClerkID != "" {
+		clerkID = adoptClerkID
+		email = adoptEmail
+	}
+	return ensureUser(ctx, tx, clerkID, email, "Demo", "Student")
 }
 
 // ensureSyntheticUsers creates `n` deterministic synthetic users using a
