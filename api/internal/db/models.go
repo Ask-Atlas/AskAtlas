@@ -22,6 +22,7 @@ const (
 	AiFeatureQuiz         AiFeature = "quiz"
 	AiFeatureRefSuggest   AiFeature = "ref_suggest"
 	AiFeatureOther        AiFeature = "other"
+	AiFeatureEmbedding    AiFeature = "embedding"
 )
 
 func (e *AiFeature) Scan(src interface{}) error {

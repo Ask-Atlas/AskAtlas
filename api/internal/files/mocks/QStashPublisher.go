@@ -38,6 +38,72 @@ func (_m *MockQStashPublisher) EXPECT() *MockQStashPublisher_Expecter {
 	return &MockQStashPublisher_Expecter{mock: &_m.Mock}
 }
 
+// PublishChunkEmbedFile provides a mock function for the type MockQStashPublisher
+func (_mock *MockQStashPublisher) PublishChunkEmbedFile(ctx context.Context, msg qstashclient.ChunkEmbedFileMessage) (string, error) {
+	ret := _mock.Called(ctx, msg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PublishChunkEmbedFile")
+	}
+
+	var r0 string
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, qstashclient.ChunkEmbedFileMessage) (string, error)); ok {
+		return returnFunc(ctx, msg)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, qstashclient.ChunkEmbedFileMessage) string); ok {
+		r0 = returnFunc(ctx, msg)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, qstashclient.ChunkEmbedFileMessage) error); ok {
+		r1 = returnFunc(ctx, msg)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockQStashPublisher_PublishChunkEmbedFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PublishChunkEmbedFile'
+type MockQStashPublisher_PublishChunkEmbedFile_Call struct {
+	*mock.Call
+}
+
+// PublishChunkEmbedFile is a helper method to define mock.On call
+//   - ctx context.Context
+//   - msg qstashclient.ChunkEmbedFileMessage
+func (_e *MockQStashPublisher_Expecter) PublishChunkEmbedFile(ctx interface{}, msg interface{}) *MockQStashPublisher_PublishChunkEmbedFile_Call {
+	return &MockQStashPublisher_PublishChunkEmbedFile_Call{Call: _e.mock.On("PublishChunkEmbedFile", ctx, msg)}
+}
+
+func (_c *MockQStashPublisher_PublishChunkEmbedFile_Call) Run(run func(ctx context.Context, msg qstashclient.ChunkEmbedFileMessage)) *MockQStashPublisher_PublishChunkEmbedFile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 qstashclient.ChunkEmbedFileMessage
+		if args[1] != nil {
+			arg1 = args[1].(qstashclient.ChunkEmbedFileMessage)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockQStashPublisher_PublishChunkEmbedFile_Call) Return(s string, err error) *MockQStashPublisher_PublishChunkEmbedFile_Call {
+	_c.Call.Return(s, err)
+	return _c
+}
+
+func (_c *MockQStashPublisher_PublishChunkEmbedFile_Call) RunAndReturn(run func(ctx context.Context, msg qstashclient.ChunkEmbedFileMessage) (string, error)) *MockQStashPublisher_PublishChunkEmbedFile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PublishDeleteFile provides a mock function for the type MockQStashPublisher
 func (_mock *MockQStashPublisher) PublishDeleteFile(ctx context.Context, msg qstashclient.DeleteFileMessage) (string, error) {
 	ret := _mock.Called(ctx, msg)

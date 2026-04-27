@@ -147,7 +147,7 @@ func TestExtractWorker_Integration_PlainText(t *testing.T) {
 	fileID := seedFile(t, ctx, pool, "text/plain")
 
 	repo := files.NewExtractRepository(queries)
-	w := files.NewExtractWorker(repo, &fakeDownloader{body: []byte("Hello, integration.")})
+	w := files.NewExtractWorker(repo, &fakeDownloader{body: []byte("Hello, integration.")}, nil)
 
 	if err := w.Process(ctx, fileID); err != nil {
 		t.Fatalf("Process: %v", err)
@@ -193,7 +193,7 @@ func TestExtractWorker_Integration_PDF(t *testing.T) {
 	}
 
 	repo := files.NewExtractRepository(queries)
-	w := files.NewExtractWorker(repo, &fakeDownloader{body: body})
+	w := files.NewExtractWorker(repo, &fakeDownloader{body: body}, nil)
 
 	if err := w.Process(ctx, fileID); err != nil {
 		t.Fatalf("Process: %v", err)
@@ -224,7 +224,7 @@ func TestExtractWorker_Integration_TerminalUnsupportedMime(t *testing.T) {
 	fileID := seedFile(t, ctx, pool, "application/zip")
 
 	repo := files.NewExtractRepository(queries)
-	w := files.NewExtractWorker(repo, &fakeDownloader{body: []byte("doesn't matter")})
+	w := files.NewExtractWorker(repo, &fakeDownloader{body: []byte("doesn't matter")}, nil)
 
 	if err := w.Process(ctx, fileID); err != nil {
 		t.Fatalf("Process should swallow terminal failure; got: %v", err)
@@ -257,14 +257,14 @@ func TestExtractWorker_Integration_Idempotent(t *testing.T) {
 	fileID := seedFile(t, ctx, pool, "text/plain")
 
 	repo := files.NewExtractRepository(queries)
-	w := files.NewExtractWorker(repo, &fakeDownloader{body: []byte("first run")})
+	w := files.NewExtractWorker(repo, &fakeDownloader{body: []byte("first run")}, nil)
 	if err := w.Process(ctx, fileID); err != nil {
 		t.Fatalf("first Process: %v", err)
 	}
 
 	// Second run: the worker sees processing_status='extracted' and
 	// no-ops. Even if it didn't, UPSERT keeps row count at 1.
-	w2 := files.NewExtractWorker(repo, &fakeDownloader{body: []byte("ignored")})
+	w2 := files.NewExtractWorker(repo, &fakeDownloader{body: []byte("ignored")}, nil)
 	if err := w2.Process(ctx, fileID); err != nil {
 		t.Fatalf("second Process: %v", err)
 	}
@@ -301,7 +301,7 @@ func TestExtractWorker_Integration_TransientPropagates(t *testing.T) {
 	fileID := seedFile(t, ctx, pool, "text/plain")
 
 	repo := files.NewExtractRepository(queries)
-	w := files.NewExtractWorker(repo, &fakeDownloader{err: errors.New("connection refused")})
+	w := files.NewExtractWorker(repo, &fakeDownloader{err: errors.New("connection refused")}, nil)
 
 	if err := w.Process(ctx, fileID); err == nil {
 		t.Fatal("expected transient error to propagate, got nil")

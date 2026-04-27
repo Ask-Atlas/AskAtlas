@@ -7,6 +7,7 @@ import (
 
 	"github.com/Ask-Atlas/AskAtlas/api/internal/db"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/files"
+	qstashclient "github.com/Ask-Atlas/AskAtlas/api/internal/qstash"
 	"github.com/Ask-Atlas/AskAtlas/api/internal/utils"
 	"github.com/Ask-Atlas/AskAtlas/api/pkg/apperrors"
 	"github.com/google/uuid"
@@ -72,6 +73,21 @@ func (f *fakeDownloader) GetObject(ctx context.Context, key string) ([]byte, err
 	return f.body, f.err
 }
 
+// fakeChunkEmbedPublisher records PublishChunkEmbedFile calls so the
+// extract worker's hand-off can be asserted in unit tests.
+type fakeChunkEmbedPublisher struct {
+	calls []qstashclient.ChunkEmbedFileMessage
+	err   error
+}
+
+func (f *fakeChunkEmbedPublisher) PublishChunkEmbedFile(ctx context.Context, msg qstashclient.ChunkEmbedFileMessage) (string, error) {
+	f.calls = append(f.calls, msg)
+	if f.err != nil {
+		return "", f.err
+	}
+	return "msg_id_fake", nil
+}
+
 func newRow(s3Key, mime string, status db.ProcessingStatus) db.GetFileForExtractionRow {
 	return db.GetFileForExtractionRow{
 		ID:               utils.UUID(uuid.New()),
@@ -87,7 +103,7 @@ func TestExtractWorker_Process_HappyPathPlainText(t *testing.T) {
 		row: newRow("k", "text/plain", db.ProcessingStatusUploaded),
 	}
 	dl := &fakeDownloader{body: []byte("Hello world.")}
-	w := files.NewExtractWorker(repo, dl)
+	w := files.NewExtractWorker(repo, dl, nil)
 
 	require.NoError(t, w.Process(context.Background(), uuid.New()))
 
@@ -105,7 +121,7 @@ func TestExtractWorker_Process_HappyPathPDF(t *testing.T) {
 		row: newRow("k", "application/pdf", db.ProcessingStatusUploaded),
 	}
 	dl := &fakeDownloader{body: loadPDFFixture(t)}
-	w := files.NewExtractWorker(repo, dl)
+	w := files.NewExtractWorker(repo, dl, nil)
 
 	require.NoError(t, w.Process(context.Background(), uuid.New()))
 
@@ -120,7 +136,7 @@ func TestExtractWorker_Process_TerminalUnsupportedMime(t *testing.T) {
 		row: newRow("k", "application/zip", db.ProcessingStatusUploaded),
 	}
 	dl := &fakeDownloader{body: []byte("anything")}
-	w := files.NewExtractWorker(repo, dl)
+	w := files.NewExtractWorker(repo, dl, nil)
 
 	// Returns nil so QStash does not retry.
 	require.NoError(t, w.Process(context.Background(), uuid.New()))
@@ -139,7 +155,7 @@ func TestExtractWorker_Process_TerminalEmptyExtraction(t *testing.T) {
 		row: newRow("k", "text/plain", db.ProcessingStatusUploaded),
 	}
 	dl := &fakeDownloader{body: []byte("   \n  ")}
-	w := files.NewExtractWorker(repo, dl)
+	w := files.NewExtractWorker(repo, dl, nil)
 
 	require.NoError(t, w.Process(context.Background(), uuid.New()))
 
@@ -152,7 +168,7 @@ func TestExtractWorker_Process_TransientS3Error(t *testing.T) {
 		row: newRow("k", "text/plain", db.ProcessingStatusUploaded),
 	}
 	dl := &fakeDownloader{err: errors.New("connection refused")}
-	w := files.NewExtractWorker(repo, dl)
+	w := files.NewExtractWorker(repo, dl, nil)
 
 	err := w.Process(context.Background(), uuid.New())
 	require.Error(t, err, "transient errors must propagate so QStash retries")
@@ -169,7 +185,7 @@ func TestExtractWorker_Process_IdempotentSkipsExtracted(t *testing.T) {
 		row: newRow("k", "text/plain", db.ProcessingStatusExtracted),
 	}
 	dl := &fakeDownloader{body: []byte("ignored")}
-	w := files.NewExtractWorker(repo, dl)
+	w := files.NewExtractWorker(repo, dl, nil)
 
 	require.NoError(t, w.Process(context.Background(), uuid.New()))
 	assert.Empty(t, repo.transitions, "no transitions when already extracted")
@@ -180,7 +196,7 @@ func TestExtractWorker_Process_IdempotentSkipsFailed(t *testing.T) {
 	repo := &fakeExtractRepo{
 		row: newRow("k", "application/zip", db.ProcessingStatusFailed),
 	}
-	w := files.NewExtractWorker(repo, &fakeDownloader{})
+	w := files.NewExtractWorker(repo, &fakeDownloader{}, nil)
 
 	require.NoError(t, w.Process(context.Background(), uuid.New()))
 	assert.Empty(t, repo.transitions)
@@ -197,7 +213,7 @@ func TestExtractWorker_Process_IdempotentSkipsFailed(t *testing.T) {
 // zero rows -- pure waste.
 func TestExtractWorker_Process_VanishedFileTerminalSuccess(t *testing.T) {
 	repo := &fakeExtractRepo{getErr: apperrors.ErrNotFound}
-	w := files.NewExtractWorker(repo, &fakeDownloader{})
+	w := files.NewExtractWorker(repo, &fakeDownloader{}, nil)
 
 	err := w.Process(context.Background(), uuid.New())
 	require.NoError(t, err, "vanished-file should be terminal-success, not transient")
@@ -207,9 +223,50 @@ func TestExtractWorker_Process_VanishedFileTerminalSuccess(t *testing.T) {
 
 func TestExtractWorker_MarkFailed(t *testing.T) {
 	repo := &fakeExtractRepo{}
-	w := files.NewExtractWorker(repo, &fakeDownloader{})
+	w := files.NewExtractWorker(repo, &fakeDownloader{}, nil)
 
 	require.NoError(t, w.MarkFailed(context.Background(), uuid.New(), "qstash retries exhausted"))
 	require.Len(t, repo.failedReasons, 1)
 	assert.Equal(t, "qstash retries exhausted", repo.failedReasons[0])
+}
+
+// TestExtractWorker_Process_PublishesChunkEmbedOnSuccess covers the
+// ASK-221 hand-off: a successful extract must publish to the
+// chunk-embed queue. Without this, files end up at
+// processing_status='extracted' but the chunk+embed pipeline never
+// fires.
+func TestExtractWorker_Process_PublishesChunkEmbedOnSuccess(t *testing.T) {
+	repo := &fakeExtractRepo{
+		row: newRow("k", "text/plain", db.ProcessingStatusUploaded),
+	}
+	pub := &fakeChunkEmbedPublisher{}
+	w := files.NewExtractWorker(repo, &fakeDownloader{body: []byte("Hello.")}, pub)
+
+	require.NoError(t, w.Process(context.Background(), uuid.New()))
+
+	require.Len(t, pub.calls, 1, "exactly one chunk-embed publish on success")
+	assert.NotEmpty(t, pub.calls[0].FileID, "FileID populated")
+	assert.NotEmpty(t, pub.calls[0].UserID, "UserID populated")
+	assert.NotEmpty(t, pub.calls[0].RequestedAt, "RequestedAt populated")
+}
+
+// TestExtractWorker_Process_PublishFailureNonFatal verifies that a
+// chunk-embed publish failure does NOT roll back the extract -- the
+// row still ends at processing_status='extracted', the extracted-text
+// row still lands. Operationally this becomes an alert (logged
+// error) rather than a user-visible failure.
+func TestExtractWorker_Process_PublishFailureNonFatal(t *testing.T) {
+	repo := &fakeExtractRepo{
+		row: newRow("k", "text/plain", db.ProcessingStatusUploaded),
+	}
+	pub := &fakeChunkEmbedPublisher{err: errors.New("qstash 503")}
+	w := files.NewExtractWorker(repo, &fakeDownloader{body: []byte("Hello.")}, pub)
+
+	require.NoError(t, w.Process(context.Background(), uuid.New()),
+		"publish failure should not bubble out of Process")
+	assert.Equal(t,
+		[]db.ProcessingStatus{db.ProcessingStatusExtracting, db.ProcessingStatusExtracted},
+		repo.transitions,
+		"extract still completes when publish fails")
+	require.Len(t, repo.upsertedTexts, 1)
 }

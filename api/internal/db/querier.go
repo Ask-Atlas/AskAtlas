@@ -105,6 +105,12 @@ type Querier interface {
 	// file delete; this is for the worker's "re-chunk this file" path
 	// where we want to wipe the previous chunking before re-inserting.
 	DeleteChunksByFile(ctx context.Context, fileID pgtype.UUID) error
+	// Drop the transient extracted-text row after ASK-221 has persisted
+	// chunks. The chunks themselves are the canonical store; the
+	// extracted-text table is a pipeline handoff only. No FK references
+	// this row, so DELETE is unconditionally safe; idempotent if nothing
+	// matches.
+	DeleteExtractedText(ctx context.Context, fileID pgtype.UUID) error
 	// Removes the (file_id, study_guide_id) join row. Returns rows-
 	// affected so the service can detect the concurrency-race case
 	// (0 rows = a parallel detach already removed it, still maps to
@@ -212,6 +218,15 @@ type Querier interface {
 	// validation should have prevented it).
 	GetCorrectOptionText(ctx context.Context, questionID pgtype.UUID) (string, error)
 	GetCourse(ctx context.Context, id pgtype.UUID) (GetCourseRow, error)
+	// Read-side query for the ASK-221 chunk+embed worker. Returns the
+	// extracted plaintext + per-page offsets that ASK-220's extract
+	// worker landed in files_extracted_text. The chunk+embed worker
+	// consumes this row, splits the text, embeds, persists chunks, and
+	// (eventually) deletes this row via DeleteExtractedText. sql.ErrNoRows
+	// maps to apperrors.ErrNotFound at the adapter, which the worker
+	// treats as terminal-success (the file was deleted between extract
+	// and chunk-embed; nothing to do).
+	GetExtractedText(ctx context.Context, fileID pgtype.UUID) (GetExtractedTextRow, error)
 	// Fetches a file only if it belongs to the given user and has not been soft-deleted.
 	// Returns sql.ErrNoRows if not found or already in a deletion state.
 	GetFileByOwner(ctx context.Context, arg GetFileByOwnerParams) (GetFileByOwnerRow, error)

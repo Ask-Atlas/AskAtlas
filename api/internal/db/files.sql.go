@@ -30,6 +30,48 @@ func (q *Queries) CheckUserExists(ctx context.Context, userID pgtype.UUID) (int3
 	return column_1, err
 }
 
+const deleteExtractedText = `-- name: DeleteExtractedText :exec
+DELETE FROM files_extracted_text
+WHERE file_id = $1::uuid
+`
+
+// Drop the transient extracted-text row after ASK-221 has persisted
+// chunks. The chunks themselves are the canonical store; the
+// extracted-text table is a pipeline handoff only. No FK references
+// this row, so DELETE is unconditionally safe; idempotent if nothing
+// matches.
+func (q *Queries) DeleteExtractedText(ctx context.Context, fileID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteExtractedText, fileID)
+	return err
+}
+
+const getExtractedText = `-- name: GetExtractedText :one
+SELECT file_id, text, page_offsets
+FROM files_extracted_text
+WHERE file_id = $1::uuid
+`
+
+type GetExtractedTextRow struct {
+	FileID      pgtype.UUID `json:"file_id"`
+	Text        string      `json:"text"`
+	PageOffsets []int32     `json:"page_offsets"`
+}
+
+// Read-side query for the ASK-221 chunk+embed worker. Returns the
+// extracted plaintext + per-page offsets that ASK-220's extract
+// worker landed in files_extracted_text. The chunk+embed worker
+// consumes this row, splits the text, embeds, persists chunks, and
+// (eventually) deletes this row via DeleteExtractedText. sql.ErrNoRows
+// maps to apperrors.ErrNotFound at the adapter, which the worker
+// treats as terminal-success (the file was deleted between extract
+// and chunk-embed; nothing to do).
+func (q *Queries) GetExtractedText(ctx context.Context, fileID pgtype.UUID) (GetExtractedTextRow, error) {
+	row := q.db.QueryRow(ctx, getExtractedText, fileID)
+	var i GetExtractedTextRow
+	err := row.Scan(&i.FileID, &i.Text, &i.PageOffsets)
+	return i, err
+}
+
 const getFileByOwner = `-- name: GetFileByOwner :one
 SELECT id, user_id, s3_key, name, mime_type, size, checksum,
        status, deletion_status, deleted_at, s3_deleted_at, deletion_job_id,

@@ -61,18 +61,28 @@ type FileExtractor interface {
 	MarkFailed(ctx context.Context, fileID uuid.UUID, reason string) error
 }
 
-// JobHandler handles async job requests from QStash.
-type JobHandler struct {
-	s3        *s3client.Client
-	db        *db.Queries
-	extractor FileExtractor
+// FileChunkEmbedder processes one chunk+embed job (ASK-221) and
+// (separately) marks the job terminally failed on retry exhaustion.
+// Same shape as FileExtractor so the JobHandler stays uniform across
+// pipeline stages.
+type FileChunkEmbedder interface {
+	Process(ctx context.Context, fileID uuid.UUID) error
+	MarkFailed(ctx context.Context, fileID uuid.UUID, reason string) error
 }
 
-// NewJobHandler creates a JobHandler with S3, DB, and extract-worker
-// dependencies. The extractor is required for the ASK-220 extract-file
-// route; pass a real *files.ExtractWorker in main, a fake in tests.
-func NewJobHandler(s3 *s3client.Client, queries *db.Queries, extractor FileExtractor) *JobHandler {
-	return &JobHandler{s3: s3, db: queries, extractor: extractor}
+// JobHandler handles async job requests from QStash.
+type JobHandler struct {
+	s3            *s3client.Client
+	db            *db.Queries
+	extractor     FileExtractor
+	chunkEmbedder FileChunkEmbedder
+}
+
+// NewJobHandler creates a JobHandler with S3, DB, extract-worker, and
+// chunk-embed-worker dependencies. Pass a real *files.ExtractWorker
+// + *files.ChunkEmbedWorker in main, fakes in tests.
+func NewJobHandler(s3 *s3client.Client, queries *db.Queries, extractor FileExtractor, chunkEmbedder FileChunkEmbedder) *JobHandler {
+	return &JobHandler{s3: s3, db: queries, extractor: extractor, chunkEmbedder: chunkEmbedder}
 }
 
 // DeleteFileJob handles POST /jobs/delete-file.
@@ -241,6 +251,92 @@ func (h *JobHandler) ExtractFileFailedJob(w http.ResponseWriter, r *http.Request
 	slog.Error("ExtractFileFailedJob: extract job exhausted retries",
 		"file_id", body.FileID,
 		"s3_key", body.S3Key,
+		"user_id", body.UserID,
+		"environment", body.Environment,
+		"requested_at", body.RequestedAt,
+		"source_message_id", env.SourceMessageID,
+		"final_http_status", env.Status,
+		"retried", env.Retried,
+	)
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// ChunkEmbedFileJob handles POST /jobs/chunk-embed-file (ASK-221).
+// Body is the original ChunkEmbedFileMessage QStash forwarded from
+// the publish call (extract worker's hand-off). 5xx triggers retry;
+// 200 means done.
+func (h *JobHandler) ChunkEmbedFileJob(w http.ResponseWriter, r *http.Request) {
+	var body qstashclient.ChunkEmbedFileMessage
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("invalid request body", nil))
+		return
+	}
+
+	fileID, err := uuid.Parse(body.FileID)
+	if err != nil {
+		apperrors.RespondWithError(w, apperrors.NewBadRequest("invalid file_id", nil))
+		return
+	}
+
+	if err := h.chunkEmbedder.Process(r.Context(), fileID); err != nil {
+		slog.Error("ChunkEmbedFileJob: chunk-embed failed",
+			"file_id", body.FileID,
+			"environment", body.Environment,
+			"error", err,
+		)
+		apperrors.RespondWithError(w, apperrors.NewInternalError())
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// ChunkEmbedFileFailedJob handles POST /jobs/chunk-embed-file-failed.
+// QStash sends the failure-callback envelope (NOT the original
+// message); we unwrap it via decodeFailureCallbackBody before parsing.
+func (h *JobHandler) ChunkEmbedFileFailedJob(w http.ResponseWriter, r *http.Request) {
+	rawBody, env, err := decodeFailureCallbackBody(r.Body)
+	if err != nil {
+		slog.Error("ChunkEmbedFileFailedJob: failed to decode failure callback envelope", "error", err)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	var body qstashclient.ChunkEmbedFileMessage
+	if err := json.Unmarshal(rawBody, &body); err != nil {
+		slog.Error("ChunkEmbedFileFailedJob: failed to parse inner message",
+			"source_message_id", env.SourceMessageID,
+			"error", err)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	fileID, err := uuid.Parse(body.FileID)
+	if err != nil {
+		slog.Error("ChunkEmbedFileFailedJob: invalid file_id",
+			"file_id", body.FileID,
+			"source_message_id", env.SourceMessageID,
+			"error", err)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	reason := fmt.Sprintf(
+		"chunk-embed job exhausted retries (source_msg=%s, http_status=%d)",
+		env.SourceMessageID, env.Status,
+	)
+	if err := h.chunkEmbedder.MarkFailed(r.Context(), fileID, reason); err != nil {
+		slog.Error("ChunkEmbedFileFailedJob: failed to mark row failed",
+			"file_id", body.FileID,
+			"environment", body.Environment,
+			"source_message_id", env.SourceMessageID,
+			"error", err,
+		)
+	}
+
+	slog.Error("ChunkEmbedFileFailedJob: chunk-embed job exhausted retries",
+		"file_id", body.FileID,
 		"user_id", body.UserID,
 		"environment", body.Environment,
 		"requested_at", body.RequestedAt,

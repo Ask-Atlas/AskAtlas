@@ -88,8 +88,7 @@ func main() {
 	qstashClient := qstashclient.New(cfg.QStashToken, jobBaseURL, cfg.AppEnv)
 	qstashVerifier := middleware.QStashVerifier(cfg.QStashCurrentSigningKey, cfg.QStashNextSigningKey)
 
-	extractWorker := files.NewExtractWorker(files.NewExtractRepository(queries), s3Client)
-	jobHandler := handlers.NewJobHandler(s3Client, queries, extractWorker)
+	extractWorker := files.NewExtractWorker(files.NewExtractRepository(queries), s3Client, qstashClient)
 
 	fileRepo := files.NewSQLCRepository(connPool, queries)
 	fileService := files.NewService(fileRepo, files.WithDownloadURLGenerator(s3Client))
@@ -146,6 +145,16 @@ func main() {
 	aiEditsService := aiedits.NewService(aiEditsRepo)
 	aiEditHandler := handlers.NewAIEditHandler(studyGuidesService, aiEditsService, aiClient)
 
+	// chunk-embed worker depends on aiClient (Embed method) so it has
+	// to come after aiClient. The job handler then takes both workers
+	// since /jobs/extract-file and /jobs/chunk-embed-file route
+	// through the same JobHandler.
+	chunkEmbedWorker := files.NewChunkEmbedWorker(
+		files.NewChunkEmbedRepository(connPool, queries),
+		aiClient,
+	)
+	jobHandler := handlers.NewJobHandler(s3Client, queries, extractWorker, chunkEmbedWorker)
+
 	clerkAuth := middleware.ClerkAuth(userService)
 
 	// Default 60s timeout for non-streaming endpoints. AI routes
@@ -169,6 +178,8 @@ func main() {
 		r.With(qstashVerifier).Post("/delete-file-failed", jobHandler.DeleteFileFailedJob)
 		r.With(qstashVerifier).Post("/extract-file", jobHandler.ExtractFileJob)
 		r.With(qstashVerifier).Post("/extract-file-failed", jobHandler.ExtractFileFailedJob)
+		r.With(qstashVerifier).Post("/chunk-embed-file", jobHandler.ChunkEmbedFileJob)
+		r.With(qstashVerifier).Post("/chunk-embed-file-failed", jobHandler.ChunkEmbedFileFailedJob)
 	})
 
 	swagger, err := api.GetSwagger()

@@ -471,6 +471,28 @@ ON CONFLICT (file_id) DO UPDATE SET
     page_offsets = EXCLUDED.page_offsets,
     created_at   = NOW();
 
+-- name: GetExtractedText :one
+-- Read-side query for the ASK-221 chunk+embed worker. Returns the
+-- extracted plaintext + per-page offsets that ASK-220's extract
+-- worker landed in files_extracted_text. The chunk+embed worker
+-- consumes this row, splits the text, embeds, persists chunks, and
+-- (eventually) deletes this row via DeleteExtractedText. sql.ErrNoRows
+-- maps to apperrors.ErrNotFound at the adapter, which the worker
+-- treats as terminal-success (the file was deleted between extract
+-- and chunk-embed; nothing to do).
+SELECT file_id, text, page_offsets
+FROM files_extracted_text
+WHERE file_id = sqlc.arg(file_id)::uuid;
+
+-- name: DeleteExtractedText :exec
+-- Drop the transient extracted-text row after ASK-221 has persisted
+-- chunks. The chunks themselves are the canonical store; the
+-- extracted-text table is a pipeline handoff only. No FK references
+-- this row, so DELETE is unconditionally safe; idempotent if nothing
+-- matches.
+DELETE FROM files_extracted_text
+WHERE file_id = sqlc.arg(file_id)::uuid;
+
 -- name: GetFileForUpdate :one
 -- Existence + state probe used by PATCH /api/files/{file_id} (ASK-113).
 -- Returns the row's user_id and current status so the service can:
