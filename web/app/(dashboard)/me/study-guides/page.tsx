@@ -19,18 +19,18 @@ export default async function MyStudyGuidesPage() {
   const guides = res.study_guides.filter((g) => g.deleted_at === null);
 
   return (
-    <section className="mx-auto flex w-full max-w-[1184px] flex-col gap-6 px-10 py-8">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-col gap-1.5">
+    <section className="flex flex-col gap-8 py-2">
+      <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="space-y-1.5">
           <div className="flex items-center gap-3">
-            <h1 className="text-foreground text-[22px] font-semibold leading-tight tracking-[-0.4px]">
-              My Study Guides
+            <h1 className="text-foreground text-[28px] font-semibold leading-tight tracking-[-0.4px]">
+              My study guides
             </h1>
             <span className="bg-muted text-muted-foreground rounded-md px-2 py-0.5 font-mono text-[12px] font-semibold">
               {guides.length}
             </span>
           </div>
-          <p className="text-muted-foreground text-[13px]">
+          <p className="text-muted-foreground text-sm">
             Access and manage the study guides you have created.
           </p>
         </div>

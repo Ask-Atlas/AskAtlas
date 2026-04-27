@@ -65,7 +65,7 @@ describe("MyStudyGuidesPage", () => {
     await renderPage();
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "My Study Guides" }),
+      screen.getByRole("heading", { level: 1, name: "My study guides" }),
     ).toBeInTheDocument();
     expect(screen.getByText("No study guides yet")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /create one/i })).toHaveAttribute(
