@@ -72,7 +72,11 @@ export function TiptapEditor({
     immediatelyRender: false,
     editable: !disabled,
     extensions: [
-      StarterKit,
+      // StarterKit since v3 bundles a Link extension; disable its
+      // copy so our explicit Link.configure() (openOnClick: false +
+      // autolink) wins without TipTap warning about a duplicate
+      // extension name on every Fast Refresh.
+      StarterKit.configure({ link: false }),
       Link.configure({ openOnClick: false, autolink: true }),
       Placeholder.configure({ placeholder }),
       Markdown.configure({
