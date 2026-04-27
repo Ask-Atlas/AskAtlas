@@ -80,7 +80,7 @@ func main() {
 		slog.Error("failed to create S3 client", "error", err)
 		os.Exit(1)
 	}
-	jobBaseURL, err := url.JoinPath(cfg.AppBaseURL, "jobs")
+	jobBaseURL, err := url.JoinPath(cfg.JobBaseURL, "jobs")
 	if err != nil {
 		slog.Error("failed to construct job base URL", "error", err)
 		os.Exit(1)
