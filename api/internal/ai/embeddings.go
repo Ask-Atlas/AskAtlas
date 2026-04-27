@@ -47,12 +47,31 @@ const (
 	embedRetryBaseDelay = 1 * time.Second
 	embedRetryMaxDelay  = 30 * time.Second
 
-	// usdPerMillionTokensTextEmbed3Small is the OpenAI-published
-	// price for text-embedding-3-small as of 2026-04. Recorded with
-	// the cost log line so dashboards can sum USD without a join to
-	// a rate table. Update if OpenAI repricing happens.
-	usdPerMillionTokensTextEmbed3Small = 0.02
+	// recordUsageTimeout bounds the ai_usage write so a slow Postgres
+	// can't stall the embedding worker indefinitely. Mirrors the 5s
+	// envelope ASK-214's chat path uses.
+	recordUsageTimeout = 5 * time.Second
 )
+
+// embeddingModelPriceUSDPerM maps known embedding model identifiers
+// to their per-million-token list price. Adding a new model means
+// adding it here so the cost log doesn't silently misreport. An
+// unmapped model returns 0 (the cost log will show 0.0 USD with a
+// warning) rather than guessing -- prefer "I don't know the price"
+// over "I made one up".
+var embeddingModelPriceUSDPerM = map[EmbeddingModel]float64{
+	EmbeddingModelTextEmbedding3Small: 0.02,
+}
+
+// usdForEmbedding returns (cost_usd, knownPrice) for tokens consumed
+// by the given model.
+func usdForEmbedding(model EmbeddingModel, tokens int64) (float64, bool) {
+	rate, ok := embeddingModelPriceUSDPerM[model]
+	if !ok {
+		return 0, false
+	}
+	return float64(tokens) * rate / 1_000_000, true
+}
 
 // EmbedRequest is the input to Client.Embed.
 type EmbedRequest struct {
@@ -216,10 +235,11 @@ func isRetryableEmbedError(err error) bool {
 
 // logEmbedCost emits the structured cost log for an Embed call.
 // Mirrors logCost's shape but encodes input_tokens only (embeddings
-// have no output tokens) and adds an explicit cost_usd field that
-// pre-computes the price using the canonical rate constant.
+// have no output tokens) and adds a per-model cost_usd lookup. An
+// unmapped model logs cost_usd=0 + a warning attr so dashboards
+// don't silently report a wrong number.
 func (c *Client) logEmbedCost(userID uuid.UUID, feature Feature, model EmbeddingModel, requestID string, tokens int64, err error) {
-	cost := float64(tokens) * usdPerMillionTokensTextEmbed3Small / 1_000_000
+	cost, knownPrice := usdForEmbedding(model, tokens)
 	attrs := []slog.Attr{
 		slog.String("feature", string(feature)),
 		slog.String("user_id", userID.String()),
@@ -227,6 +247,7 @@ func (c *Client) logEmbedCost(userID uuid.UUID, feature Feature, model Embedding
 		slog.String("request_id", requestID),
 		slog.Int64("input_tokens", tokens),
 		slog.Float64("cost_usd", cost),
+		slog.Bool("price_known", knownPrice),
 	}
 	if err != nil {
 		attrs = append(attrs, slog.String("error", err.Error()))
@@ -240,11 +261,18 @@ func (c *Client) logEmbedCost(userID uuid.UUID, feature Feature, model Embedding
 // wired, so the daily quota service sees embedding spend alongside
 // chat / edit. Skipped silently when c.recorder is nil (test path
 // or partial wiring).
+//
+// Bounded with recordUsageTimeout so a slow / unavailable Postgres
+// can't stall the worker indefinitely. The cost log line above
+// remains the audit-only sibling of this row, so a dropped record
+// here is recoverable from logs.
 func (c *Client) recordEmbedUsage(userID uuid.UUID, feature Feature, model EmbeddingModel, requestID string, tokens int64) {
 	if c.recorder == nil {
 		return
 	}
-	if err := c.recorder.RecordUsage(context.Background(), UsageRecord{
+	ctx, cancel := context.WithTimeout(context.Background(), recordUsageTimeout)
+	defer cancel()
+	if err := c.recorder.RecordUsage(ctx, UsageRecord{
 		UserID:    userID,
 		Feature:   feature,
 		Model:     Model(model),

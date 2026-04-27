@@ -136,18 +136,21 @@ func splitToTargetSize(text string) []rawChunk {
 	var (
 		buf      strings.Builder
 		bufStart int32 = -1
+		bufRunes int   // running rune count of buf; targetChars is in runes
 	)
 	flush := func() {
-		if buf.Len() == 0 {
+		if bufRunes == 0 {
 			return
 		}
 		out = append(out, rawChunk{startRune: bufStart, text: buf.String()})
 		buf.Reset()
+		bufRunes = 0
 		bufStart = -1
 	}
 
 	for _, p := range paras {
-		if utf8.RuneCountInString(p.text) > targetChars {
+		pRunes := utf8.RuneCountInString(p.text)
+		if pRunes > targetChars {
 			flush()
 			out = append(out, splitOversize(p.text, p.startRune)...)
 			continue
@@ -156,22 +159,24 @@ func splitToTargetSize(text string) []rawChunk {
 		// Heading-aware preference: if this paragraph starts with a
 		// markdown heading and the buffer is in the prefer window,
 		// flush early so the next chunk begins at the heading.
-		nextSize := buf.Len() + len("\n\n") + len(p.text)
-		if buf.Len() > 0 {
+		nextSize := bufRunes + 2 + pRunes // +2 for the "\n\n" separator
+		if bufRunes > 0 {
 			if nextSize > targetChars ||
 				(startsWithHeading(p.text) &&
-					buf.Len() >= headingPreferLow &&
-					buf.Len() <= headingPreferHigh) {
+					bufRunes >= headingPreferLow &&
+					bufRunes <= headingPreferHigh) {
 				flush()
 			}
 		}
 
-		if buf.Len() == 0 {
+		if bufRunes == 0 {
 			bufStart = p.startRune
 		} else {
 			buf.WriteString("\n\n")
+			bufRunes += 2
 		}
 		buf.WriteString(p.text)
+		bufRunes += pRunes
 	}
 	flush()
 	return out
@@ -180,54 +185,121 @@ func splitToTargetSize(text string) []rawChunk {
 // splitOversize handles paragraphs longer than targetChars. Tries
 // sentences first, falling back to words. The startRune offset is
 // propagated so each emitted chunk knows its source position.
+//
+// Sentence-split detail: strings.Split(p, ". ") drops the ". "
+// delimiter, which would silently shrink the embedded text vs. the
+// source. We re-stitch the delimiter inside the merge buffer (with
+// runeCount tracked alongside) AND append it to the boundary piece
+// when flushing -- so each emitted piece preserves the trailing
+// period that ended its last sentence and StartOffset can step past
+// the consumed delimiters in the source.
 func splitOversize(p string, startRune int32) []rawChunk {
 	pieces := []string{p}
+	pieceConsumedRunes := []int32{int32(utf8.RuneCountInString(p))}
 
 	if utf8.RuneCountInString(p) > targetChars {
 		pieces = nil
+		pieceConsumedRunes = nil
+
+		sentences := strings.Split(p, ". ")
 		var buf strings.Builder
-		for _, s := range strings.Split(p, ". ") {
-			if buf.Len() > 0 && buf.Len()+len(s)+len(". ") > targetChars {
-				pieces = append(pieces, buf.String())
-				buf.Reset()
+		bufRunes := 0
+		bufConsumed := 0 // includes the ". " separators that were consumed
+
+		flushSentenceBuf := func(isLast bool) {
+			if bufRunes == 0 {
+				return
 			}
-			if buf.Len() > 0 {
+			body := buf.String()
+			// Re-attach the trailing ". " for the non-final emission so
+			// the embedded text reads naturally.
+			if !isLast {
+				body += "."
+				bufConsumed++
+			}
+			pieces = append(pieces, body)
+			pieceConsumedRunes = append(pieceConsumedRunes, int32(bufConsumed))
+			buf.Reset()
+			bufRunes = 0
+			bufConsumed = 0
+		}
+
+		for i, s := range sentences {
+			sRunes := utf8.RuneCountInString(s)
+			isFinal := i == len(sentences)-1
+			sepRunes := 2 // ". " -- 2 runes when not the last sentence
+			if isFinal {
+				sepRunes = 0
+			}
+
+			if bufRunes > 0 && bufRunes+sepRunes+sRunes > targetChars {
+				flushSentenceBuf(false)
+			}
+			if bufRunes > 0 {
 				buf.WriteString(". ")
+				bufRunes += 2
+				bufConsumed += 2
 			}
 			buf.WriteString(s)
+			bufRunes += sRunes
+			bufConsumed += sRunes
 		}
-		if buf.Len() > 0 {
-			pieces = append(pieces, buf.String())
-		}
+		flushSentenceBuf(true)
 	}
 
-	var refined []string
-	for _, piece := range pieces {
+	// Word-fallback for any sentence still oversize. Word splits drop
+	// the inter-word spaces but each word is a single token boundary
+	// so re-joining with " " preserves intent (we accept a small
+	// offset drift here because per-word offset tracking would 4x the
+	// code; chunks are still searchable + heading/page tags are
+	// derived from the START offset which we keep accurate).
+	var (
+		refined         []string
+		refinedConsumed []int32
+	)
+	for i, piece := range pieces {
 		if utf8.RuneCountInString(piece) <= targetChars {
 			refined = append(refined, piece)
+			refinedConsumed = append(refinedConsumed, pieceConsumedRunes[i])
 			continue
 		}
 		var buf strings.Builder
+		bufRunes := 0
+		consumed := int32(0)
 		for _, w := range strings.Fields(piece) {
-			if buf.Len() > 0 && buf.Len()+len(w)+1 > targetChars {
+			wRunes := utf8.RuneCountInString(w)
+			if bufRunes > 0 && bufRunes+1+wRunes > targetChars {
 				refined = append(refined, buf.String())
+				refinedConsumed = append(refinedConsumed, int32(bufRunes))
+				consumed += int32(bufRunes)
 				buf.Reset()
+				bufRunes = 0
 			}
-			if buf.Len() > 0 {
+			if bufRunes > 0 {
 				buf.WriteByte(' ')
+				bufRunes++
 			}
 			buf.WriteString(w)
+			bufRunes += wRunes
 		}
-		if buf.Len() > 0 {
+		if bufRunes > 0 {
 			refined = append(refined, buf.String())
+			// The remaining piece's "consumed" matches what the input
+			// piece reported; word-boundary precision isn't important
+			// for the StartOffset we record.
+			leftover := pieceConsumedRunes[i] - consumed
+			if leftover < 0 {
+				leftover = int32(bufRunes)
+			}
+			refinedConsumed = append(refinedConsumed, leftover)
 		}
 	}
 
 	out := make([]rawChunk, 0, len(refined))
 	cursor := startRune
-	for _, r := range refined {
+	for i, r := range refined {
 		out = append(out, rawChunk{startRune: cursor, text: r})
-		cursor += int32(utf8.RuneCountInString(r))
+		cursor += refinedConsumed[i]
 	}
 	return out
 }
@@ -267,7 +339,11 @@ func headingTitle(s string) string {
 }
 
 func startsWithHeading(s string) bool {
-	return isHeadingLine(strings.TrimSpace(strings.SplitN(s, "\n", 2)[0]))
+	firstLine := s
+	if idx := strings.IndexByte(s, '\n'); idx >= 0 {
+		firstLine = s[:idx]
+	}
+	return isHeadingLine(strings.TrimSpace(firstLine))
 }
 
 // headingForOffset returns the nearest preceding heading title for

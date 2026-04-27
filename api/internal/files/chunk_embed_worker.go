@@ -19,9 +19,12 @@ import (
 )
 
 // Embedder is the slice of ai.Client the chunk+embed worker needs.
-// Defined here (rather than as ai.Embedder) so the worker package
-// owns its dependency contract -- and test doubles don't have to
-// import the ai package.
+// Defined here so the worker package owns its dependency contract
+// (and depends only on the single embedding method it uses). Test
+// doubles still need the ai package because the method signature
+// uses ai.EmbedRequest / ai.EmbedResponse -- a fully ai-free
+// signature would mean re-implementing those request/response shapes
+// inside files/, which is not worth the extra layer.
 type Embedder interface {
 	Embed(ctx context.Context, req ai.EmbedRequest) (ai.EmbedResponse, error)
 }
