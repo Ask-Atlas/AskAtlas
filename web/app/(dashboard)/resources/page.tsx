@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toggleFileFavorite } from "@/lib/api";
+import { API_BASE } from "@/lib/api/client";
 import type { FileResponse, ListFilesResponse } from "@/lib/api/types";
 import { FileCard } from "@/lib/features/dashboard/files/file-card";
 import { FavoriteButton } from "@/lib/features/shared/favorite-button";
@@ -43,7 +44,7 @@ function DocumentViewer({ document, onClose }: DocumentViewerProps) {
   // The Go API responds with a 302 to a 15-min presigned S3 URL; using
   // `/download` is the canonical path. Browsers follow 302 transparently
   // for `<img>` and `<iframe>` srcs.
-  const fileUrl = `/api/files/${document.id}/download`;
+  const fileUrl = `${API_BASE}/files/${document.id}/download`;
 
   const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 3));
   const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.25, 0.5));
@@ -185,7 +186,7 @@ export default function ResourcesPage() {
     // 302 → cross-origin S3, so `<a download>` is silently ignored.
     // Open in a new tab; Content-Disposition decides view vs save.
     window.open(
-      `/api/files/${file.id}/download`,
+      `${API_BASE}/files/${file.id}/download`,
       "_blank",
       "noopener,noreferrer",
     );

@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Separator } from "@/components/ui/separator";
 import { deleteStudyGuide, recordFileView } from "@/lib/api";
+import { API_BASE } from "@/lib/api/client";
 import type {
   ResourceSummary,
   StudyGuideDetailResponse,
@@ -251,7 +252,7 @@ function SectionEmpty({ body }: { body: string }) {
 function FileRow({ file }: { file: StudyGuideFileSummary }) {
   const handleOpen = () => {
     void recordFileView(file.id).catch(() => undefined);
-    window.open(`/api/files/${file.id}/download`, "_blank", "noopener");
+    window.open(`${API_BASE}/files/${file.id}/download`, "_blank", "noopener");
   };
   return (
     <button

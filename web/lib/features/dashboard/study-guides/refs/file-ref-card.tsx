@@ -3,6 +3,7 @@
 import { Download, FileText } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { API_BASE } from "@/lib/api/client";
 
 import { useEntityRef } from "./entity-ref-context";
 import { MissingRef } from "./study-guide-ref-card";
@@ -27,7 +28,7 @@ export function FileRefCard({ id, inline }: Props) {
     return <MissingRef label="File" inline={inline} status={status} />;
   }
 
-  const downloadHref = `/api/files/${id}/download`;
+  const downloadHref = `${API_BASE}/files/${id}/download`;
 
   if (inline) {
     return (
