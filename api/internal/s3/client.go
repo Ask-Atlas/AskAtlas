@@ -3,6 +3,7 @@ package s3client
 import (
 	"context"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -131,4 +132,26 @@ func (c *Client) DeleteObject(ctx context.Context, key string) error {
 	}
 
 	return nil
+}
+
+// GetObject downloads the object at key and returns the body bytes.
+// Used by the ASK-220 extract worker to fetch the raw file before
+// parsing. The buffered-bytes shape (vs. an io.ReadCloser) matches
+// the pdf-parser entry points and keeps lifecycle simple -- the
+// upload size cap (100MB at the API boundary) bounds memory.
+func (c *Client) GetObject(ctx context.Context, key string) ([]byte, error) {
+	out, err := c.svc.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(c.bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("s3client.GetObject: %w", err)
+	}
+	defer out.Body.Close()
+
+	body, err := io.ReadAll(out.Body)
+	if err != nil {
+		return nil, fmt.Errorf("s3client.GetObject: read body: %w", err)
+	}
+	return body, nil
 }

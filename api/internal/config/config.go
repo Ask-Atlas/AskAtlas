@@ -15,10 +15,18 @@ type Config struct {
 	QStashCurrentSigningKey string
 	QStashNextSigningKey    string
 	AppBaseURL              string
-	AppEnv                  string
-	S3Bucket                string
-	Port                    string
-	OpenAIAPIKey            string
+	// JobBaseURL is the public origin QStash should POST callbacks to
+	// (e.g. https://api-staging.askatlas.study). Defaults to AppBaseURL
+	// when JOB_BASE_URL is unset, but the two differ in practice:
+	// AppBaseURL is the Next.js frontend, while QStash callbacks must
+	// land on the Go API where /jobs/* is registered. Folding them into
+	// one var was a latent bug -- every dispatch was hitting the
+	// frontend, which 404s.
+	JobBaseURL   string
+	AppEnv       string
+	S3Bucket     string
+	Port         string
+	OpenAIAPIKey string
 }
 
 // Load reads and validates runtime configuration from environment variables.
@@ -31,6 +39,7 @@ func Load() (Config, error) {
 		QStashCurrentSigningKey: strings.TrimSpace(os.Getenv("QSTASH_CURRENT_SIGNING_KEY")),
 		QStashNextSigningKey:    strings.TrimSpace(os.Getenv("QSTASH_NEXT_SIGNING_KEY")),
 		AppBaseURL:              strings.TrimSpace(os.Getenv("APP_BASE_URL")),
+		JobBaseURL:              strings.TrimSpace(os.Getenv("JOB_BASE_URL")),
 		S3Bucket:                strings.TrimSpace(os.Getenv("S3_BUCKET")),
 		Port:                    strings.TrimSpace(os.Getenv("PORT")),
 		OpenAIAPIKey:            strings.TrimSpace(os.Getenv("OPENAI_API_KEY")),
@@ -66,6 +75,13 @@ func Load() (Config, error) {
 	}
 	if cfg.AppBaseURL == "" {
 		return Config{}, fmt.Errorf("APP_BASE_URL environment variable is not set")
+	}
+	// JobBaseURL is intentionally optional -- when unset, QStash
+	// callbacks fall back to AppBaseURL so envs that haven't been
+	// updated keep their (broken-but-existing) behavior. Net-new envs
+	// should set JOB_BASE_URL to the API origin explicitly.
+	if cfg.JobBaseURL == "" {
+		cfg.JobBaseURL = cfg.AppBaseURL
 	}
 	if cfg.S3Bucket == "" {
 		return Config{}, fmt.Errorf("S3_BUCKET environment variable is not set")

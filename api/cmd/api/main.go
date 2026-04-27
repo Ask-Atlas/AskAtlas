@@ -80,14 +80,16 @@ func main() {
 		slog.Error("failed to create S3 client", "error", err)
 		os.Exit(1)
 	}
-	jobBaseURL, err := url.JoinPath(cfg.AppBaseURL, "jobs")
+	jobBaseURL, err := url.JoinPath(cfg.JobBaseURL, "jobs")
 	if err != nil {
 		slog.Error("failed to construct job base URL", "error", err)
 		os.Exit(1)
 	}
 	qstashClient := qstashclient.New(cfg.QStashToken, jobBaseURL, cfg.AppEnv)
 	qstashVerifier := middleware.QStashVerifier(cfg.QStashCurrentSigningKey, cfg.QStashNextSigningKey)
-	jobHandler := handlers.NewJobHandler(s3Client, queries)
+
+	extractWorker := files.NewExtractWorker(files.NewExtractRepository(queries), s3Client)
+	jobHandler := handlers.NewJobHandler(s3Client, queries, extractWorker)
 
 	fileRepo := files.NewSQLCRepository(connPool, queries)
 	fileService := files.NewService(fileRepo, files.WithDownloadURLGenerator(s3Client))
@@ -165,6 +167,8 @@ func main() {
 		r.Use(defaultTimeout)
 		r.With(qstashVerifier).Post("/delete-file", jobHandler.DeleteFileJob)
 		r.With(qstashVerifier).Post("/delete-file-failed", jobHandler.DeleteFileFailedJob)
+		r.With(qstashVerifier).Post("/extract-file", jobHandler.ExtractFileJob)
+		r.With(qstashVerifier).Post("/extract-file-failed", jobHandler.ExtractFileFailedJob)
 	})
 
 	swagger, err := api.GetSwagger()

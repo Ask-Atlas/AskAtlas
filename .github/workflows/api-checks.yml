@@ -20,7 +20,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.24.1"
+          go-version: "1.25.0"
       - name: Install dependencies
         run: make install
       - name: Lint
@@ -34,7 +34,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.24.1"
+          go-version: "1.25.0"
       - name: Install dependencies
         run: make install
       - name: Lint
@@ -47,7 +47,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.24.1"
+          go-version: "1.25.0"
       - name: Install dependencies
         run: make install
       - name: Tidy Check
@@ -61,7 +61,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.24.1"
+          go-version: "1.25.0"
       - name: Install dependencies
         run: make install
       - name: Test
@@ -75,7 +75,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.24.1"
+          go-version: "1.25.0"
       - name: Install dependencies
         run: make install
       - name: Build
@@ -89,7 +89,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.24.1"
+          go-version: "1.25.0"
       - name: Generate API Code
         run: make generate-api
       - name: Check for uncommitted generated API code
