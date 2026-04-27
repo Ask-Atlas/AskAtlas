@@ -41,12 +41,21 @@ import (
 
 func main() {
 	var (
-		fixturesDir = flag.String("fixtures-dir", "scripts/seed_demo/fixtures", "Path to Phase 1+2 fixtures directory")
-		nSynth      = flag.Int("synth-users", 1000, "Number of synthetic users to seed")
-		seed        = flag.Int64("seed", 42, "Random seed for deterministic Faker + activity generation")
-		action      = flag.String("action", "seed", "Action to run: `seed` or `clean`. `clean` reverses every insert + removes Garage objects under seed-demo/.")
+		fixturesDir  = flag.String("fixtures-dir", "scripts/seed_demo/fixtures", "Path to Phase 1+2 fixtures directory")
+		nSynth       = flag.Int("synth-users", 1000, "Number of synthetic users to seed")
+		seed         = flag.Int64("seed", 42, "Random seed for deterministic Faker + activity generation")
+		action       = flag.String("action", "seed", "Action to run: `seed` or `clean`. `clean` reverses every insert + removes Garage objects under seed-demo/.")
+		adoptClerkID = flag.String("adopt-clerk-id", "", "Real Clerk user id (e.g. user_2abc...) to adopt as the demo user. When set, all demo activity is owned by this real Clerk id so signing in with it lands on a populated dashboard. Requires --adopt-email.")
+		adoptEmail   = flag.String("adopt-email", "", "Email of the user identified by --adopt-clerk-id. Required when --adopt-clerk-id is set.")
 	)
 	flag.Parse()
+
+	// Adopt flags must travel together: a clerk_id without an email
+	// would write a NULL email on a real user's row, and an email
+	// without a clerk_id can't anchor sign-in.
+	if (*adoptClerkID != "") != (*adoptEmail != "") {
+		log.Fatal("--adopt-clerk-id and --adopt-email must be supplied together")
+	}
 
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
@@ -100,6 +109,17 @@ func main() {
 	log.Printf("loaded fixtures: %d files, %d resources, %d guides, %d quizzes",
 		len(files), len(resources), len(guides), len(quizzes))
 
+	// Pre-load local-corpus file binaries BEFORE the tx so a missing
+	// pandoc-built artifact aborts seed before we touch the DB. The
+	// post-commit upload step (after tx.Commit below) PUTs these to S3
+	// so the bytes the API serves via `/api/files/{id}/download`
+	// actually exist.
+	localBytes, err := loadLocalFileBytes(*fixturesDir, files)
+	if err != nil {
+		log.Fatalf("load local file binaries: %v", err)
+	}
+	log.Printf("loaded %d local-corpus file binaries (~%d KB total)", len(localBytes), totalBytes(localBytes)/1024)
+
 	tx, err := conn.Begin(ctx)
 	if err != nil {
 		log.Fatalf("begin tx: %v", err)
@@ -113,11 +133,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("bot user: %v", err)
 	}
-	demoID, err := ensureDemoUser(ctx, tx)
+	demoID, err := ensureDemoUser(ctx, tx, *adoptClerkID, *adoptEmail)
 	if err != nil {
 		log.Fatalf("demo user: %v", err)
 	}
-	log.Printf("identity: bot=%s demo=%s", botID, demoID)
+	if *adoptClerkID != "" {
+		log.Printf("identity: bot=%s demo=%s (adopted clerk_id=%s)", botID, demoID, *adoptClerkID)
+	} else {
+		log.Printf("identity: bot=%s demo=%s (synthetic seed_demo)", botID, demoID)
+	}
 
 	syntheticIDs, err := ensureSyntheticUsers(ctx, tx, fk, *nSynth)
 	if err != nil {
@@ -187,7 +211,12 @@ func main() {
 			log.Fatalf("guide %s: %v", g.Slug, err)
 		}
 		guideIDs[g.Slug] = gid
-		guideRefs = append(guideRefs, guideRef{id: gid, courseID: cid, createdAt: createdAt})
+		guideRefs = append(guideRefs, guideRef{
+			id:          gid,
+			courseID:    cid,
+			createdAt:   createdAt,
+			recommended: g.Recommended,
+		})
 
 		for _, fileSlug := range g.AttachedFiles {
 			fid, ok := fileIDs[fileSlug]
@@ -265,6 +294,7 @@ func main() {
 	// ---------------------------------------------------------------
 	if err := seedActivity(ctx, tx, activityInputs{
 		demoUserID:   demoID,
+		botUserID:    botID,
 		syntheticIDs: syntheticIDs,
 		courseIDs:    courseIDsBySlug,
 		guides:       guideRefs,
@@ -280,7 +310,25 @@ func main() {
 	if err := tx.Commit(ctx); err != nil {
 		log.Fatalf("commit: %v", err)
 	}
-	log.Printf("done — all 3 layers committed (idempotent re-run safe)")
+	log.Printf("layer1-3: all rows committed")
+
+	// Phase 4: PUT each local-corpus binary to S3. Runs post-commit so
+	// a partial S3 failure leaves consistent DB rows; the next seed
+	// run retries each key idempotently (PutObject overwrites).
+	if err := uploadFileBinaries(ctx, os.Getenv("S3_BUCKET"), files, localBytes); err != nil {
+		log.Fatalf("file binary upload: %v", err)
+	}
+	log.Printf("done — all 4 phases committed (idempotent re-run safe)")
+}
+
+// totalBytes sums the lengths of every value in `m` for the
+// "loaded N KB" log line. Used only for telemetry.
+func totalBytes(m map[string][]byte) int {
+	n := 0
+	for _, b := range m {
+		n += len(b)
+	}
+	return n
 }
 
 // resolveCourse looks up a course UUID by slug, caching the result so

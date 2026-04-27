@@ -104,6 +104,11 @@ type guideRef struct {
 	id        uuid.UUID
 	courseID  uuid.UUID
 	createdAt time.Time
+	// recommended carries the `recommended: true` frontmatter flag
+	// from the guide markdown so seedRecommendations can promote it
+	// explicitly (attributed to the bot user) on top of the random
+	// every-3rd-guide fallback.
+	recommended bool
 }
 
 // optionRef is a single answer option with its correctness marker —
@@ -136,6 +141,7 @@ type quizRef struct {
 // activityInputs is what main.go hands to seedActivity after layer 1+2.
 type activityInputs struct {
 	demoUserID   uuid.UUID
+	botUserID    uuid.UUID // attributes explicit `recommended: true` rows
 	syntheticIDs []uuid.UUID
 	courseIDs    map[string]uuid.UUID // slug → uuid (e.g. "wsu/cpts121")
 	guides       []guideRef
@@ -291,17 +297,24 @@ func seedVotes(
 	return execBatch(ctx, tx, batch, "votes")
 }
 
-// seedRecommendations — every 3rd guide gets recommended by 1–3 random users.
+// seedRecommendations — every 3rd guide gets recommended by 1–3 random
+// users. Guides with `recommended: true` in frontmatter are ALSO
+// recommended by the bot user, so they always surface on the
+// home-page rail regardless of the random fallback.
 func seedRecommendations(
 	ctx context.Context, tx pgx.Tx,
-	guides []guideRef, syntheticIDs []uuid.UUID,
+	guides []guideRef, syntheticIDs []uuid.UUID, botID uuid.UUID,
 	rng *rand.Rand, winEnd time.Time,
 ) error {
-	if len(syntheticIDs) == 0 {
-		return nil
-	}
 	batch := &pgx.Batch{}
 	for i, g := range guides {
+		if g.recommended {
+			ts := backdatedTimestamp(rng, g.createdAt, winEnd).Truncate(time.Microsecond)
+			batch.Queue(insertRecommendationSQL, g.id, botID, ts)
+		}
+		if len(syntheticIDs) == 0 {
+			continue
+		}
 		if i%3 != 0 {
 			continue
 		}
@@ -648,7 +661,7 @@ func seedActivity(ctx context.Context, tx pgx.Tx, in activityInputs) error {
 	if err := seedVotes(ctx, tx, in.guides, in.syntheticIDs, in.rng, in.windowStart, in.windowEnd); err != nil {
 		return fmt.Errorf("votes: %w", err)
 	}
-	if err := seedRecommendations(ctx, tx, in.guides, in.syntheticIDs, in.rng, in.windowEnd); err != nil {
+	if err := seedRecommendations(ctx, tx, in.guides, in.syntheticIDs, in.botUserID, in.rng, in.windowEnd); err != nil {
 		return fmt.Errorf("recommendations: %w", err)
 	}
 	if err := seedFavoritesAndRecents(ctx, tx, in.demoUserID, in.syntheticIDs, in.guides, in.courseIDs, in.rng, in.windowStart, in.windowEnd); err != nil {

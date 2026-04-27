@@ -154,7 +154,7 @@ seed-study-guides:
 	$(call prod-confirm)
 	infisical run --env=$(ENV) -- go run $(SEED_STUDY_GUIDES_PATH) -guides=$(STUDY_GUIDES_CSV)
 
-## make seed-demo-content [ENV=dev|staging|prod] [ACTION=seed|clean] [SYNTH_USERS=1000] [SEED=42]
+## make seed-demo-content [ENV=dev|staging|prod] [ACTION=seed|clean] [SYNTH_USERS=1000] [SEED=42] [ADOPT_CLERK_ID=user_xxx ADOPT_EMAIL=you@example.com]
 ##
 ## Phase 3 demo-data loader. ACTION=seed (default) reads the Phase 1+2
 ## validated YAML/MD fixtures at scripts/seed_demo/fixtures/ and writes
@@ -180,12 +180,30 @@ seed-study-guides:
 ## catalog are never touched.
 ##
 ## ENV=prod requires interactive [y] confirmation on both actions.
+##
+## ADOPT_CLERK_ID + ADOPT_EMAIL together rewire the demo user row to a
+## real Clerk id, so that user signing in lands on the fully-populated
+## dashboard. Both must be supplied together. Multi-user adoption is
+## supported by re-running the seed (without ACTION=clean between runs)
+## with a different ADOPT_CLERK_ID each time — every adopted user gets
+## their own activity rows and the shared catalog (guides, files,
+## quizzes, synthetic users) is not duplicated. Vary SEED per run if
+## you want each user's activity profile to differ.
+##
+## Phase 4 (post-commit): every local-corpus binary under
+## scripts/seed_demo/fixtures/files_local/generated/ is PUT to
+## seed-demo/<slug>/<filename> in the target bucket so file downloads
+## actually return bytes. External-host source_urls (openstax,
+## ocw.mit.edu) are intentionally skipped — those file cards exist
+## in the DB but downloads will 404.
 seed-demo-content:
 	$(call prod-confirm)
 	infisical run --env=$(ENV) -- go run ./scripts/seed_demo_content/ \
 		--action=$(ACTION) \
 		--synth-users=$(or $(SYNTH_USERS),1000) \
-		--seed=$(or $(SEED),42)
+		--seed=$(or $(SEED),42) \
+		--adopt-clerk-id=$(or $(ADOPT_CLERK_ID),) \
+		--adopt-email=$(or $(ADOPT_EMAIL),)
 
 ## make e2e E2E_TOKEN=<token> [ENV=dev|staging]
 e2e:
