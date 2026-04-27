@@ -40,7 +40,10 @@ function DocumentViewer({ document, onClose }: DocumentViewerProps) {
 
   const isImage = document.mime_type.startsWith("image/");
   const isPDF = document.mime_type === "application/pdf";
-  const fileUrl = `/api/files/${document.id}`;
+  // The Go API responds with a 302 to a 15-min presigned S3 URL; using
+  // `/download` is the canonical path. Browsers follow 302 transparently
+  // for `<img>` and `<iframe>` srcs.
+  const fileUrl = `/api/files/${document.id}/download`;
 
   const handleZoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 3));
   const handleZoomOut = () => setZoom((prev) => Math.max(prev - 0.25, 0.5));
@@ -50,11 +53,11 @@ function DocumentViewer({ document, onClose }: DocumentViewerProps) {
   };
   const handleRotate = () => setRotation((prev) => (prev + 90) % 360);
 
+  // The 302 lands on S3 (cross-origin), so an `<a download>` attribute
+  // is silently ignored by browsers. Open in a new tab; the user gets
+  // an inline view or a save dialog depending on Content-Disposition.
   const handleDownload = () => {
-    const link = window.document.createElement("a");
-    link.href = fileUrl;
-    link.download = document.name || "Untitled";
-    link.click();
+    window.open(fileUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -179,10 +182,13 @@ export default function ResourcesPage() {
   }, []);
 
   const handleDownload = (file: FileResponse) => {
-    const link = window.document.createElement("a");
-    link.href = `/api/files/${file.id}`;
-    link.download = file.name || "Untitled";
-    link.click();
+    // 302 → cross-origin S3, so `<a download>` is silently ignored.
+    // Open in a new tab; Content-Disposition decides view vs save.
+    window.open(
+      `/api/files/${file.id}/download`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   };
 
   const rowMenu = (file: FileResponse) => (
