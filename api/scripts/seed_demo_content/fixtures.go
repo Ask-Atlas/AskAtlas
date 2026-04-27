@@ -258,9 +258,13 @@ const (
 		SELECT id FROM study_guides
 		WHERE course_id = $1 AND title = $2 AND deleted_at IS NULL
 	`
+	// Demo guides are bot-authored editorial content visible to every
+	// signed-in viewer. Override the column default of 'private' so
+	// course detail pages and "browse" surfaces actually render the
+	// seeded catalog without needing per-user grants.
 	insertGuideSQL = `
-		INSERT INTO study_guides (course_id, creator_id, title, description, content, tags, view_count, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
+		INSERT INTO study_guides (course_id, creator_id, title, description, content, tags, view_count, created_at, updated_at, visibility)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, 'public')
 		RETURNING id
 	`
 	updateGuideContentSQL = `UPDATE study_guides SET content = $1 WHERE id = $2`

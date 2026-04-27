@@ -6,11 +6,14 @@ course:
   number: "121"
 title: "Pointers, Arrays, and Memory in C — CPTS 121 Cheatsheet"
 description: "Common pointer patterns from CPTS 121 lectures + lab notes, with worked memory diagrams."
-tags: ["c", "pointers", "memory", "midterm"]
+tags: ["c", "pointers", "memory", "midterm", "demo-hero"]
 author_role: bot
+recommended: true
 quiz_slug: cpts121-pointers-quiz
 attached_files:
   - wsu-cpts121-pointers-cheatsheet
+  - wsu-cpts121-arrays-and-strings
+  - wsu-cpts121-kr-excerpt-commentary
   - wikimedia-modern-c-gustedt-pdf
 ---
 
