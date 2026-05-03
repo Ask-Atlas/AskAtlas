@@ -31,11 +31,27 @@ const config: StorybookConfig = {
     // The /server subpath is aliased too because some stories pull
     // server actions from @/lib/api which import @clerk/nextjs/server
     // -- Vite can't resolve that subpath outside Next.js without help.
+    //
+    // Array form with anchored regexes is required: object-form aliases
+    // do prefix matching, so a `@clerk/nextjs` entry would rewrite
+    // `@clerk/nextjs/server` to `clerk-stub.tsx/server` and crash the
+    // build with UNLOADABLE_DEPENDENCY.
+    const stub = path.resolve(here, "clerk-stub.tsx");
     config.resolve = config.resolve ?? {};
-    config.resolve.alias = {
-      ...(config.resolve.alias as Record<string, string> | undefined),
-      "@clerk/nextjs": path.resolve(here, "clerk-stub.tsx"),
-    };
+    const existing = config.resolve.alias;
+    const existingArray = Array.isArray(existing)
+      ? existing
+      : existing
+        ? Object.entries(existing).map(([find, replacement]) => ({
+            find,
+            replacement: replacement as string,
+          }))
+        : [];
+    config.resolve.alias = [
+      { find: /^@clerk\/nextjs\/server$/, replacement: stub },
+      { find: /^@clerk\/nextjs$/, replacement: stub },
+      ...existingArray,
+    ];
     return config;
   },
 };
